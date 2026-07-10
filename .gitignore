@@ -1,0 +1,59 @@
+node_modules/
+.svelte-kit/
+.wrangler/
+build/
+dist/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.local
+/wrangler.toml
+
+# Local source data with personal data must not be committed.
+*.accdb
+*.mdb
+*.xlsm
+KindElternDaten*
+/references/excel_admin/**
+
+# Operational source material stays local: it contains personal data,
+# organization details, Office metadata, absolute paths, or unlicensed legacy
+# code. Only the adjacent sanitized README/profile files are public.
+/references/vorlage/*
+!/references/vorlage/README.md
+/references/schedule/*
+!/references/schedule/README.md
+/references/pricing/Price.xlsx
+/references/pricing/vba/**
+/references/current_app/**
+
+# Stage-by-stage agent prompts are local working aids. Canonical requirements,
+# stage scopes and acceptance criteria remain in tracked documentation.
+/docs/prompts/**
+
+# Generated import/export artifacts.
+tmp/
+out/
+exports/
+imports/*.json
+imports/*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

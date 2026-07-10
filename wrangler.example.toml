@@ -1,0 +1,54 @@
+# Copy to wrangler.toml after creating Cloudflare resources.
+# Do not commit real database ids, bucket names for production, or secrets.
+
+#:schema node_modules/wrangler/config-schema.json
+name = "reg-allgemein"
+main = ".svelte-kit/cloudflare/_worker.js"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".svelte-kit/cloudflare/assets"
+binding = "ASSETS"
+
+[browser]
+binding = "BROWSER"
+
+[vars]
+APP_ENV = "development"
+EMAIL_PROVIDER = "resend"
+EMAIL_FROM = "Example Anmeldung <noreply@example.invalid>"
+EMAIL_REPLY_TO = "Example Anmeldung <reply@example.invalid>"
+TURNSTILE_SITE_KEY = "replace-me"
+DEFAULT_GROUP_CAPACITY = "12"
+DEFAULT_DANCE_CAPACITY = "15"
+INDIVIDUAL_PRICE_CENTS_PER_45_MIN = "3000"
+GROUP_DURATION_FALLBACK_MINUTES = "90"
+MISSING_DURATION_YEARLY_CENTS_PER_45_MIN = "2300"
+MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN = "3000"
+CONTRACT_PDF_MAX_HTML_BYTES = "2097152"
+CONTRACT_PDF_MAX_BYTES = "10485760"
+BROWSER_RUN_DAILY_BUDGET_MS = "540000"
+TELEGRAM_BUSINESS_TIMEZONE = "Europe/Berlin"
+TELEGRAM_BUSINESS_HOURS = "Mo-Fr 09:00-17:00"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "reg-allgemein-db"
+database_id = "replace-me"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "reg-allgemein-documents"
+preview_bucket_name = "reg-allgemein-documents-preview"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Secrets:
+# JWT_SECRET
+# RESEND_API_KEY
+# TURNSTILE_SECRET_KEY
+# TELEGRAM_BOT_TOKEN
+# TELEGRAM_CHAT_ID
+# CRON_SECRET
