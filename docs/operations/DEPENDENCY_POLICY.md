@@ -64,6 +64,12 @@
 
 ## Release gate
 
+Этот gate является обязательной строкой сводного
+[production-readiness contract](PRODUCTION_READINESS.md). Его нельзя считать
+закрытым только по устаревшему audit snapshot выше: в release evidence
+фиксируются фактические результаты текущего clean install, команд, advisory
+classification и каждого принятого исключения.
+
 Перед production:
 
 ```bash

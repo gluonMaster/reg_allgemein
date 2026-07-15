@@ -16,7 +16,7 @@ Office author metadata. Originals остаются read-only, игнорирую
 | `group_yearly` | Годовой групповой договор, DOCX | Нет Word fields/content controls/bookmarks; упоминается отдельное приложение |
 | `group_monthly` | Месячный групповой договор, DOCX | Нет template fields; встречаются дубли и незавершённые формулировки |
 | `individual_hourly` | Договор индивидуальных занятий, legacy DOC | Нет template fields; lifecycle оплаты и срока требует нормализации |
-| `nachhilfe_hourly` | Соглашение Nachhilfe, legacy DOC | Нет template fields; плательщик Jobcenter/Sozialamt моделируется отдельно |
+| `nachhilfe_hourly` | Соглашение Nachhilfe, legacy DOC | Нет template fields; в портале хранятся funding kind, документ и даты, без отдельной payer-модели |
 
 ## Правила использования
 

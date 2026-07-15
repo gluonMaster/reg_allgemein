@@ -1,6 +1,6 @@
 # Документация проекта
 
-Актуально на 2026-07-10. Документация разделена по назначению, чтобы требования,
+Актуально на 2026-07-15. Документация разделена по назначению, чтобы требования,
 архитектура и рабочие материалы не конкурировали как источники истины.
 
 ## С чего начинать
@@ -13,9 +13,22 @@
 4. [Roadmap](implementation/ROADMAP.md) и persistent handoff предыдущего этапа —
    только когда начинается реализация.
 
-Нерешенные бизнес-вопросы собраны в
-[OPEN_QUESTIONS.md](spec/OPEN_QUESTIONS.md). Безопасное временное поведение из
-этого файла не следует принимать за окончательное решение владельца продукта.
+Owner/product decisions и ещё не закрытые вопросы отслеживаются в
+[OPEN_QUESTIONS.md](spec/OPEN_QUESTIONS.md). На 2026-07-15 открытых
+owner/product-вопросов нет; этап 01 готов к началу. Statutory release checks
+конкретной template version описываются в
+тематическом legal gate и не подменяются повторным вопросом владельцу.
+
+## Ключевая системная граница
+
+Репозиторий описывает самостоятельное приложение регистрации со своим
+deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — внешний
+официальный сайт на другой инфраструктуре. Интеграция между ними в MVP
+только ссылочная; общий бренд и навигация не означают общую codebase,
+базу, сессии или deployment. Подробная граница задана в
+[architecture/OVERVIEW.md](architecture/OVERVIEW.md). Любая запись в CMS/файлы
+официального сайта или замена его ссылок требует отдельного прямого
+поручения.
 
 ## Карта источников истины
 
@@ -29,11 +42,14 @@
 | Типы занятий и вместимость | [domain/COURSES.md](domain/COURSES.md) |
 | Расчет и пересмотр цены | [domain/PRICING.md](domain/PRICING.md) |
 | Договоры и шаблоны | [domain/CONTRACTS.md](domain/CONTRACTS.md) |
+| Privacy, удаление и retention | [domain/PRIVACY_RETENTION.md](domain/PRIVACY_RETENTION.md) |
 | Состояния и пользовательские процессы | [domain/WORKFLOWS.md](domain/WORKFLOWS.md) |
 | Обращения, email и Telegram | [domain/MESSAGING.md](domain/MESSAGING.md) |
 | Внешние данные | [operations/DATA_SOURCES.md](operations/DATA_SOURCES.md) |
 | Импорт и сверка | [operations/IMPORT_PIPELINE.md](operations/IMPORT_PIPELINE.md) |
 | Политика зависимостей | [operations/DEPENDENCY_POLICY.md](operations/DEPENDENCY_POLICY.md) |
+| R2 и безопасность uploads | [operations/STORAGE_AND_UPLOAD_SECURITY.md](operations/STORAGE_AND_UPLOAD_SECURITY.md) |
+| Production gates и будущие operator runbooks | [operations/PRODUCTION_READINESS.md](operations/PRODUCTION_READINESS.md) |
 | Этапы реализации | [implementation/ROADMAP.md](implementation/ROADMAP.md) |
 | Стратегия тестирования | [implementation/TEST_PLAN.md](implementation/TEST_PLAN.md) |
 | Persistent handoff этапов | [implementation/handoffs/README.md](implementation/handoffs/README.md) |

@@ -17,9 +17,31 @@ MVP готов, когда:
 - секреты, source PII и generated artifacts отсутствуют в git и build output;
 - production-конфигурация, миграции и rollback описаны; backup/restore для D1
   и R2 документирован, а тестовое восстановление в непроизводственную среду
-  успешно проверено до production. (`REL-02`)
-- все production blockers из `OPEN_QUESTIONS.md` закрыты либо функция, которой
-  они касаются, явно отключена в production.
+  успешно проверено до production. (`REL-02`, `OPS-01`)
+- каждый применимый owner, legal, security, provider и operational gate из
+  `operations/PRODUCTION_READINESS.md` имеет evidence и status `passed` либо
+  соответствующий production path технически выключен со status
+  `feature_disabled`; `blocked` не совместим с production-ready. Это относится
+  и к открытым вопросам, но не ограничивается ими. (`OPS-01`)
+
+## 1A. Системная граница портала и официального сайта
+
+- Портал собирается, разворачивается и выполняет auth/catalog/cabinet smoke без
+  исходников, CMS/API, credentials, cookies, session или доступности runtime
+  официального сайта. Его Worker, D1/R2 bindings, secrets и release rollback
+  перечислены отдельно. (`SYS-01`)
+- Переход между сайтом и порталом является обычной HTTPS-навигацией и не требует
+  iframe, reverse proxy, CORS-интеграции или общей сессии. Portal session cookie
+  host-only и не содержит `Domain`. (`SYS-01`, `SYS-02`, `SYS-03`)
+- Все absolute portal links используют валидированный `PORTAL_PUBLIC_ORIGIN`;
+  подмена origin внешним host или origin официального сайта отклоняется.
+  Release manifest содержит итоговый portal origin и утверждённый список link
+  surfaces сайта, а не молча выбирает одну страницу расписания. (`SYS-02`,
+  `SYS-03`)
+- Без отдельного прямого поручения deployment портала не меняет CMS, DNS или
+  инфраструктуру официального сайта. Размещение/откат обычных ссылок является
+  отдельной go-live операцией и не смешивается с rollback портала. (`SYS-02`,
+  `SYS-03`)
 
 ## 2. Auth и изоляция данных
 
@@ -57,28 +79,56 @@ MVP готов, когда:
 
 ## 3. Legacy claim
 
-- До email verification ответы и UI одинаковы независимо от наличия legacy-
-  совпадения. (`CLAIM-01`)
-- После email verification учитываются все совпавшие нормализованные legacy-
-  email аккаунта и показывается только обезличенное предложение claim; до
-  явного подтверждения семья, дети и занятия не связываются. (`CLAIM-02`)
-- Один email с несколькими `FamilyID` связывает выбранный набор атомарно и
-  создает review task; повтор запроса возвращает тот же результат. (`CLAIM-03`,
-  `CLAIM-04`)
-- Два аккаунта, одновременно претендующие на одну семью, не получают два
-  владения; проигравшая операция создает ручную проверку без утечки PII.
+- До email verification ответы/UI одинаковы независимо от legacy-совпадения;
+  unverified account не имеет/не видит FamilyID или маску legacy-email.
+  (`CLAIM-01`)
+- Первая successful verification атомарно завершает family assignment. Fixture
+  без exact legacy-email получает следующий unique namespace `2`; fixture с
+  ровно одной eligible unowned family по normalized email получает её namespace
+  `1` и связанные children/services. Concurrent/replayed finalization возвращает
+  одно назначение, без пропуска/двойного owner. (`CLAIM-02`)
+- При отсутствии current promoted legacy snapshot, lookup error или concurrent
+  promotion verification/finalization откатывается без consumed token, FamilyID
+  и namespace-2 gap; retry на стабильном snapshot даёт обычный 0/1/multiple
+  результат. (`CLAIM-02`, `REL-01`)
+- Ноль matches, несколько FamilyID по одному email, collision и already-owned
+  family дают один namespace `2` и typed admin review; parent не получает список
+  кандидатов/FamilyID/адресов. Ни один неоднозначный вариант не claim-ится.
   (`CLAIM-05`)
-- Родитель не может сменить owning account ребёнка через UI или прямой API.
-  Исправление владельца администратором требует причины, оставляет audit event
-  и не создаёт у ребёнка двух владельцев. (`CLAIM-08`)
-- Семья без email и совпадение только по имени никогда не self-claim. (`CLAIM-06`)
+- При ровно одном deterministic, unowned совпадении фамилии+имени и одном ином
+  usable legacy-email кабинет namespace-2 account показывает предложение с маской
+  вида `el*****n@gmail.com`, но не полный адрес. Local part короче четырёх
+  символов скрыт строже и никогда не раскрывается целиком. Любой parent-name
+  match, включая exact-email case, создаёт admin review task. (`CLAIM-03`,
+  `CLAIM-06`)
+- Opt-in ставит proof email в outbox полного legacy-recipient без его появления
+  в UI/URL/audit/log. Token hashed, one-time, expiring, rate-limited и связан с
+  user/candidate/family version; GET не меняет state, confirmation POST требует
+  authenticated session того же user и CSRF. (`CLAIM-04`, `AUTH-07`)
+- Valid proof одной transaction меняет current FamilyID account `2.* -> 1.*`,
+  связывает legacy data и обновляет `family_number_id` всех его детей. Invalid,
+  expired, replayed, foreign-session token или ownership race не меняет account/
+  child, а повтор success идемпотентен. (`CLAIM-04`, `REL-01`)
+- Два аккаунта, одновременно претендующие на одну семью, не получают два
+  владения; проигравшая операция сохраняет прежний namespace `2` и создаёт
+  ручную проверку без утечки PII. Последующая смена login-email сама по себе
+  FamilyID не меняет. (`CLAIM-05`)
+- Родитель не может сменить owning account/FamilyID ребёнка через UI или прямой
+  API. У verified parent ровно один current FamilyID; каждый его child имеет
+  ровно тот же `family_number_id`. Unclaimed legacy child допускает null owner,
+  но не null FamilyID; invalid/missing/colliding source family остаётся review
+  row без canonical orphan child. (`CLAIM-08`)
+- Семья без usable email и совпадение только по имени никогда не self-claim;
+  ambiguous name parse не создаёт selectable parent candidate. (`CLAIM-06`)
 - Одинаковые имена детей с разными датами рождения не объединяются; пустая или
   конфликтующая дата создает warning/review. (`CLAIM-07`)
 - Approved correction legacy child переживает повторный import: source value
   обновляется отдельно, а effective override сохраняется. (`CHILD-02`)
-- Verified parent без legacy claim может создать ребёнка только с непустыми
-  `full_name` и `birth_date`; без сохранённого owned child trial/request submit
-  отклоняется. (`CHILD-01`)
+- Verified parent с assigned current family может создать ребёнка только с
+  непустыми `full_name` и `birth_date`; child получает тот же FamilyID в create
+  transaction. Unverified/unassigned parent и попытка null/foreign FamilyID
+  отклоняются без orphan row; без saved owned child trial/request submit
+  отклоняется. (`CHILD-01`, `CLAIM-08`)
 - Create/update/select child повторно проверяет owner на сервере. Возможный
   дубликат внутри одного аккаунта требует явного решения пользователя, а
   публичный API не выполняет и не раскрывает cross-account сравнение детей.
@@ -87,27 +137,38 @@ MVP готов, когда:
   наследует claim/owner и stable child, но получает новые period enrollments.
   Контактный/child конфликт или ошибочное повторное использование FamilyID
   создаёт continuity review без передачи owner. (`CLAIM-09`)
+- Exact-email candidate, впервые появившийся после reimport или смены profile/
+  login-email, создаёт review, но background job не меняет current FamilyID;
+  переход возможен только approved claim/admin correction path. (`CLAIM-09`)
 - Access row `ID` уникален только внутри source namespace + academic period:
   одинаковое значение в новом периоде не перезаписывает старую source row.
 
-### Кабинет родителя
+## 3A. Кабинет родителя
 
 - На fixture с импортированным и portal-child кабинет показывает профиль,
   owned children, будущие импортированные занятия, активные enrollments, trials,
   requests/service engagements, contract offers и обращения; закрытие
   enrollment/engagement не удаляет хронологию заключения, активации и
-  Kündigung договора. (`CAB-01`)
-- Месячный итог включает только текущие цены активных `group|dance_group`
-  enrollments. Trial, inactive/future enrollment, `individual`, `nachhilfe`,
-  платежи и задолженность в сумму не входят, что явно указано рядом с итогом.
+  Kündigung digital договора. Claimed legacy record виден как строка активной
+  услуги без contract label, PDF или download link. (`CAB-01`)
+- Base-price total включает только известные подтверждённые текущие base prices
+  активных `group|dance_group` услуг. Trial, inactive/future enrollment,
+  `individual`, `nachhilfe`, unknown legacy amount, holiday adjustments,
+  платежи и задолженность в сумму не входят; UI прямо говорит, что это не invoice
+  и не фактическая payable amount.
   (`CAB-02`)
 - Self-pay `individual` показывает configured тариф за 45 минут (default 3000
   cents) и предупреждение об отсутствии учёта фактически проведённых уроков.
-  `nachhilfe` показывает утверждённые authority, срок и объём, но не self-pay
-  тариф или сумму к оплате родителем. (`CAB-03`)
-- До решения `OQ-002` кабинет дословно показывает `payment_due_text` принятого
-  договора и не вычисляет срок, задолженность или признак получения платежа.
-  (`CAB-04`)
+  `nachhilfe` показывает funding kind и inclusive dates; unit rate 3000 cents/
+  45 минут содержится в договоре, но не выводится как сумма к оплате родителем.
+  (`CAB-03`)
+- Для `existing_external_sepa` кабинет показывает только информационный текст
+  о внешнем списании фактической суммы и не задаёт due day; для
+  `manual_payment` — оплату фактической суммы с внешними корректировками не
+  позднее 7-го
+  числа следующего месяца. Base price не выдаётся за payable. Ни один вариант не создаёт mandate, ledger, debt или признак
+  получения платежа. Funded Nachhilfe использует `not_applicable` без parent
+  due text. (`CAB-04`)
 - Ни HTML кабинета, ни его API response не содержат admin notes, import
   diagnostics, служебные source/import identifiers или данные другой семьи.
   (`CAB-05`)
@@ -175,38 +236,74 @@ MVP готов, когда:
 
 - Для quote кандидату при `N` активных местах lookup использует
   `min(N + 1, 6)`; для пересмотра существующих enrollments после изменения
-  состава при `N > 0` используется `min(N, 6)`, без второго `+1`. При `N = 0`
-  price lookup/items не создаются.
+  состава при `N > 0` используется `min(N, 6)`, без второго `+1`. Для
+  пересмотра при `N = 0` price lookup/items не создаются.
 - Capacity 12/15 не меняет price lookup cap 6.
 - Legacy occupancy и portal occupancy объединяются без двойного учета связанной
   записи и вычисляются на выбранную дату.
-- Public quote использует regular `Preis`; `Sonderpreis` не выбирается по
-  клиентскому вводу или автоматически перенесенной заметке.
-- Self-pay `individual` показывает configured tariff за 45 минут. `nachhilfe`
-  не получает self-pay quote/сумму к оплате родителем и до одобренного
-  Jobcenter/Sozialamt funding/payer snapshot остаётся в admin review.
-- В contract draft только admin может выбрать `ov_special`/manual с reason,
-  immutable snapshot и audit; подмена mode/amount родителем отклоняется. Право
-  на special не выводится автоматически до решения `OQ-006`.
+- `group_yearly` quote берёт месячную ставку `Preis`, а `group_monthly` —
+  месячную ставку из исторически названной `Sonderpreis`; `O/V|V/O` означает
+  monthly contract, а не льготу. Клиентский payload не меняет contract kind/
+  source column. (`PRICE-01`)
+- Self-pay `individual` использует configured тариф с default 3000 cents, а
+  funded `nachhilfe` — фиксированные 3000 cents за 45 минут. Nachhilfe не
+  получает сумму к оплате parent и до approved document,
+  funding kind и inclusive dates остаётся в admin review. (`PRICE-02`)
+- Только admin может создать `manual_override`: отдельный экран показывает
+  base/override/delta и warning, требует reason и повторное подтверждение,
+  сохраняет immutable base/rule/source snapshot и audit. Override меняет mode/
+  final, но не теряет provenance. Parent tampering, bulk
+  default, `O/V`, notes и колонка `Sonderpreis` override не создают.
+  (`PRICE-04`)
 - Exact lookup учитывает key, subject-duration vector и child count. Равные или
   неоднозначные кандидаты возвращают `needs_admin_review`.
 - Для однозначного `group|dance_group` с пустым `PlusBText!T`, известными
   `group_yearly|group_monthly` и price key разрешён только quote-fallback 90
   минут: `2 × 2300 = 4600` либо `2 × 3000 = 6000` cents. Он помечен
   `ESTIMATED_MISSING_DURATION`, показывает немецкое предупреждение и требует
-  admin confirmation длительности, суммы и billing period.
+  admin confirmation длительности/суммы; billing period сразу
+  `calendar_month`. (`PRICE-02`)
 - Fallback не меняет source `null`, не входит в monthly total/repricing и не
   используется в отправленном offer до admin confirmation. Он запрещён для
   `individual|nachhilfe|group_nachhilfe`, unknown/ambiguous mapping или contract
   kind, непустого/невалидного `T` и missing/ambiguous price key.
-- Manual override имеет приоритет над base/discount, содержит причину и admin
-  audit; итог не может быть отрицательным.
+- Manual override полностью заменяет base, содержит причину и admin audit;
+  итог не может быть отрицательным, автоматического discount нет.
 - Старый quote после смены price/schedule version или occupancy пересчитывается
   при создании offer и не считается гарантированной ценой.
-- Один price review batch создает отдельный item для каждого затронутого
-  enrollment; согласие одного родителя не меняет статусы остальных.
-- Price increase не вступает задним числом; неполученное согласие не активирует
-  новую цену и создает manual contact task.
+- Публикация новой active price version сама по себе не создаёт client batch,
+  item или outbox message. Только явный auditable admin comparison запускает
+  соответствующий review; автоматические occupancy/boundary triggers остаются
+  отдельным источником по `CONTRACT-10`. (`PRICE-03`)
+- Один price review batch создаёт отдельный клиентский item только для
+  enrollment, где current accepted final price или mode отличается от
+  рассчитанного предложения; triggering enrollment с уже актуальным snapshot
+  item не получает. Empty batch завершается без сообщений; согласие одного
+  родителя не меняет статусы остальных.
+- Claimed legacy-only active service с однозначным owner/mapping и известной/
+  admin-confirmed price включается ровно один раз и проходит тот же email/
+  accept/second-admin-confirm/apply flow; apply создаёт effective price
+  assignment, не мутирует source и не создаёт contract/PDF. Unknown/unclaimed/
+  conflicting legacy имеет explicit decision code и
+  `manual_contact_required` без send/accept/apply. Represented legacy + portal
+  enrollment не дублируются. (`PRICE-03`)
+- `5↔6` меняет lookup и создаёт обычные review items. `7→6` и изменение только
+  выше cap 6 не меняют lookup и клиентских items не создают. (`PRICE-03`)
+- Первый admin approval разрешает только рассылку. Parent acceptance не меняет
+  service price; response deadline равен 14 календарным дням, каждый accepted
+  item требует второго явного admin confirmation. Decline немедленно уведомляет
+  admin, timeout создаёт manual-contact task.
+  (`PRICE-03`)
+- Increase/decrease не вступает задним числом. После второго admin confirmation
+  item планируется на первое число следующего календарного месяца в
+  `Europe/Berlin`; до idempotent apply действует старая base price. Отдельный
+  PDF-addendum не создаётся, evidence строится из item/hash/delivery/actions.
+  (`PRICE-03`)
+- Второе изменение occupancy/price version supersede несовместимые open items
+  предыдущего batch. Final admin confirmation/apply отклоняет stale count/rule,
+  изменённую old price/mode, ended/moved enrollment, closed account и newer item;
+  поздний parent response сохраняет evidence, но не оживляет stale item.
+  (`PRICE-03`, `REL-01`)
 
 ## 7. Requests и документы
 
@@ -223,19 +320,50 @@ MVP готов, когда:
   до создания contract/enrollment; `submitted` проходит явно проверяемые
   переходы, а не остается неописанным состоянием. (`REQ-02`)
 - Файл с ложным расширением, неподдерживаемой сигнатурой, превышением лимита или
-  количеством сверх лимита отклоняется до сохранения metadata. (`REQ-06`)
+  количеством сверх лимита отклоняется до сохранения metadata. ZIP, Office,
+  SVG/XML, executable и encrypted/password-protected PDF также отклоняются.
+  (`REQ-06`)
 - Несколько JPEG/PNG разрешены в пределах лимита; два повтора одной upload-
   операции не создают два документа.
 - Принятый upload хранится в private R2 под непредсказуемым ключом без public
   URL; D1 содержит metadata, checksum и начальное состояние `quarantined`, но
   не содержимое файла. (`REQ-05`)
 - Истекшее Jobcenter/Sozialamt-разрешение не используется для новой активации.
-  (`REQ-04`)
+  Inclusive start/end dates и funding kind хранятся отдельно от pages;
+  payer/reference/hours не копируются из документа в D1. (`REQ-04`)
+- Funding authorization допускает только
+  `pending_review -> approved|rejected` и
+  `approved -> revoked|superseded`; terminal status нельзя реактивировать.
+  Expiry вычисляется по inclusive `valid_until`, а замена approved content
+  создаёт новую version и сохраняет прежнее evidence. Approval, offer send и
+  activation требуют хотя бы один current document и запрещают любой его state,
+  кроме `approved`. (`REQ-04`, `REQ-05`)
+- Offer, чей term выходит за funding `valid_until`, остаётся в admin review и
+  не активируется. (`REQ-10`)
+- Parent не может заменить/удалить document, уже связанный с sent/accepted offer
+  или contract; replacement создаёт новую authorization version и не
+  переключает старый contract. Expiry/revoke/supersede active funding атомарно
+  supersede open offers, ставит engagement в `funding_review` и создаёт admin
+  task без silent contract termination. Продолжение после `funding_review`
+  требует нового approved funding и admin amendment; изменившиеся parent-facing
+  terms требуют нового offer/
+  acceptance. (`REQ-08`, `REQ-10`)
 - Удаленный/замененный файл недоступен пользователю, но audit metadata и событие
   удаления сохраняются. (`REQ-08`)
 - Новый файл остается `quarantined`; обычный/public download запрещен, доступ
-  admin возможен только через изолированный auditable viewer до решения
-  `OQ-009`.
+  admin возможен только как audited forced attachment без inline preview до
+  clean attestation. Manual `quarantined -> clean` требует предшествующий
+  download того же SHA-256 и versioned local-AV attestation. Только `clean`
+  может отдельно перейти в business `approved`; replacement/hash mismatch,
+  missing scanner label/attestation и direct approve fail closed. Clean, но
+  business-invalid/unreadable document переходит в `rejected` с reason и
+  request-reupload. (`REQ-05`, `REQ-06`)
+- Не получивший `approved` quarantine object становится допустимым к удалению
+  при `now >= uploaded_at + 14×24h` UTC и удаляется первым успешно завершившимся
+  cleanup после этого порога, но никогда раньше; download/scan/attestation TTL
+  не продлевают. Duplicate/retried cleanup идемпотентен, approved archive не
+  затрагивается, expired body нельзя восстановить через прежнюю ссылку.
+  (`REQ-08`)
 - `group_nachhilfe` отсутствует в публичном каталоге, quote и trial flow. Его
   создание через parent API отклоняется; admin обязан задать manual capacity,
   price и условия Jobcenter/Sozialamt. (`REQ-09`)
@@ -243,7 +371,7 @@ MVP готов, когда:
 ## 8. Договоры и price review
 
 - Созданный offer round-trip сохраняет immutable snapshot provider/сторон,
-  одной услуги, расписания, billing line items, price mode, срока/renewal/
+  одной услуги, расписания, billing line items, price source/mode, срока/renewal/
   termination, start date, payment/withdrawal terms, приложений, clause set и
   privacy notice; последующее изменение source-данных не мутирует этот snapshot.
   (`CONTRACT-02`)
@@ -285,10 +413,21 @@ MVP готов, когда:
   (`CONTRACT-01`, `CONTRACT-09`)
 - Parent acceptance не создаёт contract. Последующий admin approval той же
   version/hash одной transaction создаёт contract с обеими сторонами evidence и
-  formation timestamp. (`CONTRACT-08`, `CONTRACT-16`)
+  formation timestamp и immutable source formation certificate. Исходный offer
+  PDF не мутирует; отдельный certificate содержит номера, роли, оба timestamps
+  и offer/source hashes, но не собственный PDF hash или рисунки/изображения
+  подписей. Его PDF hash хранится отдельно. Retry использует тот же source
+  hash, ready certificate не перерендеривается и объединённый signed-copy PDF не
+  создаётся. (`CONTRACT-08`, `CONTRACT-16`)
+- Accept/decline, admin formation/activation и scheduled/manual price apply
+  непосредственно перед записью проверяют `users.account_status=active`.
+  Закрытый account отклоняется одинаково для UI, прямого API и queued/retried
+  operation; сохранённое immutable evidence не активируется. (`CONTRACT-05`,
+  `CONTRACT-08`, `PRIV-03`)
 - Contract child/service/funding и operational relation точно совпадают с
   approved offer и повторно выполняют XOR. Nachhilfe требует действующее
-  approved Jobcenter/Sozialamt funding; individual запрещает его.
+  approved Jobcenter/Sozialamt funding с inclusive dates/document, но не payer
+  snapshot/reference/hours; individual запрещает funding authorization.
   (`CONTRACT-01`, `CONTRACT-14`)
 - Изменившаяся после offer цена или вместимость требует явного admin review и,
   если условие договора изменилось, новой версии offer. (`CONTRACT-03`,
@@ -296,26 +435,108 @@ MVP готов, когда:
 - Accepted offer, который невозможно активировать, можно отменить с причиной
   или supersede новой version; прежнее acceptance не переносится.
   (`CONTRACT-12`)
-- Contract acceptance не заменяет privacy acknowledgement и не создаёт
-  media/SEPA/medical consent; эти поля отсутствуют до решения `OQ-016`.
-  (`CONTRACT-15`)
+- Contract acceptance не заменяет privacy acknowledgement или media decision и
+  не создаёт SEPA/medical consent. Media grant/decline выполняется отдельным
+  действием по capture `photo|video` и channel
+  `website|social_media|print`; публикация требует оба grant, refusal не
+  блокирует contract. Versioned media clause присутствует в применимом PDF;
+  decision snapshot допустим там только при отдельном pre-render event. После
+  send decision/revoke не мутируют artifact. Self-service revoke в cabinet/API
+  отсутствует. Withdrawal через office/email/phone создаёт append-only event с
+  фактическим `received_at`; admin не может approve/decline его или сдвинуть
+  effective date. Перед записью связь с owning parent проверяется без раскрытия
+  child data; evidence не хранит полный email body или запись звонка. Повтор с
+  тем же evidence/dedupe key не создаёт второй event.
+  UI/PDF показывают утверждённый немецкий текст и contacts из versioned
+  configuration со ссылками на официальные Impressum/Kontakt, а не hardcoded
+  реквизиты.
+  Портал не индексирует historical media и не обещает automated takedown;
+  withdrawal блокирует только новые capture/upload/post/repost/reprint по
+  отозванным scopes после receipt. Конкретно названный старый URL обрабатывается
+  отдельным manual privacy request. (`CONTRACT-15`)
+- Production capture нового media grant остаётся технически выключенным, пока
+  документированная compliance assessment не подтвердит, что утверждённый
+  office/email/phone withdrawal path для конкретного capture flow доступен столь
+  же легко, как выдача согласия, либо пока не реализован иной compliant path.
+  Простая запись `risk accepted` не переводит этот legal gate в `passed`; decline
+  и contract flow при этом продолжают работать независимо. (`CONTRACT-15`)
 - Production offer нельзя отправить до закрытия всех применимых строк blocker
   matrix из `domain/CONTRACTS.md`. Технический status `accepted_by_parent` сам
   не объявляет момент заключения договора.
   (`CONTRACT-11`, `CONTRACT-16`)
-- Отправка HTML/PDF создаёт deduped delivery evidence. Admin approval/activation
-  формирует один contract; будущий `effective_from` не меняет `formed_at` и не
-  попадает в occupancy раньше даты. Terminate/expire/void — append-only events
-  без мутации принятого offer. (`CONTRACT-17`)
+- Отправка offer HTML/PDF и formation certificate создаёт отдельные deduped
+  delivery evidence. Admin approval/activation формирует один contract; будущий
+  `effective_from` не меняет `formed_at` и не попадает в occupancy раньше даты.
+  Terminate/expire/void — append-only events без мутации принятого offer.
+  (`CONTRACT-17`)
 - Parent/admin history показывает formation, effective dates, Kündigung,
   termination/expiry/void и superseding contract после закрытия operational
   record. (`CONTRACT-18`)
-- Group activation обновляет occupancy один раз и создаёт один review batch на
-  одно состояние группы; service engagement не меняет occupancy и не запускает
-  group repricing. (`CONTRACT-10`)
-- Для yearly contract до решения `OQ-001` новая цена не отправляется
-  автоматически.
-- Sent price review item immutable; acceptance фиксирует item version/hash.
+- Applicable Widerruf и Kündigung сохраняют immutable receipt и немедленное
+  confirmation независимо от debt check. Admin может подтвердить/оспорить
+  effective date; `approved|declined` допустимы только для
+  `mutual_termination_request`. Group-monthly receipt в месяце M рассчитывает
+  end на последний день M; group-yearly receipt до contractual end блокирует
+  renewal, не сокращая term. Debt даты не меняет. Online send fail-closed без
+  approved `distance_legal_profile`; `widerruf_applicable` включает постоянно
+  доступную в срок public § 356a function, required identity/contract/contact
+  fields, immediate durable confirmation и отдельный early-performance request.
+  `widerruf_not_applicable_312g_2_9` требует approval evidence и утверждённого
+  notice, `offline_only` запрещает online send.
+  (`CONTRACT-19`)
+- Individual/Nachhilfe не создают trial или recurring fee: после полученного
+  notice «больше не посещаем» engagement становится `ended`, будущие
+  неоказанные units не возникают, а parent получает durable receipt. Contract
+  termination остаётся отдельным optional action. Уже
+  согласованный lesson может остаться к внешнему ручному выставлению только если
+  teacher фактически пришёл/начал ждать до фактического `received_at` notice;
+  receipt до прихода исключает требование. Delayed admin recording не сдвигает
+  `received_at`. Evidence содержит согласованные дату/место, teacher arrival/
+  waiting, notice receipt и recorded time; портал не создаёт invoice/charge.
+  (`CONTRACT-19`)
+- Public-function submission для применимого legal profile не требует owner
+  session, не
+  раскрывает существование contract/account, дедуплицируется и создаёт durable
+  receipt confirmation. § 356a принимает name, contract/part identifier и
+  electronic confirmation channel; § 312k использует обязательные поля своей
+  confirmation page. (`CONTRACT-19`, `AUTH-07`)
+- Legacy family отображается как `1. 3477`, online-only family — `2. 0001`, а
+  contracts — `1. 3477-1`/`2. 0001-1`. Unverified account номера не имеет;
+  успешная verification атомарно назначает exact eligible namespace `1` либо
+  новый namespace `2`, и child всегда копирует current family. Concurrent
+  pre-render reservation не дублирует number; decline/expiry оставляют gap и
+  номер не переиспользуется. Поздний approved claim/admin correction меняет
+  current account/children FamilyID и только будущую contract sequence; прежние
+  numbers/PDF/certificates остаются byte/hash-identical historical evidence,
+  старый FamilyID — только alias. Nonterminal offer со старым family snapshot
+  superseded и не принимается; collision/stale version fail-closed.
+  (`CONTRACT-20`)
+- Оба group template используют `monthly_group_fee`; individual —
+  `delivered_units`, Nachhilfe — `third_party_funded`, обе hourly unit rates
+  3000 cents/45 минут. Existing external SEPA/manual payment — только hashed
+  immutable informational terms; due-day manual path равен 7, а funded
+  Nachhilfe использует `not_applicable` без due day; external SEPA также не
+  получает portal due day. Group amount помечен как base price; holiday/
+  payable adjustment не рассчитывается. (`CAB-04`, `PRICE-02`)
+- Каждая permutation contract kind/template/service relation/billing model
+  вне закрытой матрицы отклоняется при draft validation, send и activation.
+  Nachhilfe дополнительно требует structured inclusive
+  `effective_from|effective_to` внутри authorization dates и approved current
+  documents. (`CONTRACT-01`, `CONTRACT-09`, `CONTRACT-14`, `REQ-10`)
+- Inclusive contract `effective_to` проецируется в exclusive operational
+  `active_until=calendar_day_after(effective_to)` для enrollment и engagement;
+  month/year/leap-day boundaries не теряют последний разрешённый день.
+  (`TIME-01`, `REQ-10`)
+- Parent получает только свои current/archived contract artifacts; admin read/
+  download требует RBAC, цели и audit event. Guess/cross-owner artifact ID
+  отклоняется без раскрытия существования объекта. (`AUTH-08`, `SEC-01`)
+- Любое transactional изменение group enrollment/occupancy создаёт не более
+  одного review batch на одно состояние группы; service engagement не меняет
+  occupancy и не запускает group repricing. Future activation/end заранее
+  создаёт batch на boundary date; duplicate scheduler/reconciler delivery не
+  создаёт второй. Pause/resume command/model в MVP отсутствует. (`CONTRACT-10`)
+- Sent price review item immutable; acceptance фиксирует item version/hash и
+  ещё не применяет цену без второго admin confirmation.
   Измененное условие создает superseding item и требует нового согласия.
 
 ## 9. Сообщения и outbox
@@ -348,6 +569,13 @@ MVP готов, когда:
   catalog/price, trials, requests/documents, contracts/enrollments, price
   reviews, messages и outbox; typed resolution меняет только разрешённую
   сущность. (`ADMIN-01`)
+- Каждый name-match виден admin как typed review. Family correction UI сначала
+  показывает source/destination, всех affected children, ownership/collision и
+  offer/contract consequences, затем требует reason, explicit confirmation и
+  idempotency key. Apply атомарно меняет account и всех children, supersede-ит
+  только nonterminal old-family offers и сохраняет immutable history. Free-form
+  непроверенный FamilyID, partial child update, тихий merge и destination
+  другого active account отклоняются. (`ADMIN-01`, `ADMIN-03`, `CLAIM-08`)
 - Изменение роли, family link, classification, price, capacity, status,
   contract, document или outbox создаёт audit record с actor, action, target,
   timestamp и безопасным diff без secret или file content. (`ADMIN-02`)
@@ -357,14 +585,27 @@ MVP готов, когда:
   (`ADMIN-03`)
 - Block user отзывает session; повтор block/unblock идемпотентен.
 - Public/admin forms и API не сохраняют поля вне утверждённой схемы, показывают
-  актуальную privacy notice там, где требуется сбор данных, а export/delete
-  создают audit event. Active contract/retention hold блокирует физическое
-  удаление до утверждённого срока хранения. (`PRIV-01`)
+  актуальную versioned/hash-fixed privacy notice там, где требуется сбор данных,
+  а export/delete создают audit event. Active contract блокирует closure;
+  retention hold блокирует purge соответствующего archive record, но не обязан
+  сохранять рабочий login после approved closure. (`PRIV-01`)
 - Export одного subject user не содержит данные другого пользователя и доступен
   только через private expiring artifact. (`PRIV-02`)
-- Delete dry-run перечисляет holds и связанные D1/R2 records. До закрытия
-  `OQ-005` held request остаётся `blocked_by_retention` и ничего не удаляет.
-  (`PRIV-03`)
+- Delete dry-run перечисляет active contracts, holds и связанные D1/R2 records.
+  Без active contracts approved process отзывает sessions и удаляет/
+  обезличивает неудерживаемый profile, а held contract evidence переносит в
+  закрытый archive. Request завершается `completed_with_retained_evidence`, а
+  каждый retained archive record имеет
+  `retention_controls.purge_status=disabled_by_policy`; `retain_until` не
+  планирует job;
+  результат ясно перечисляет retained categories/dates. Active contract даёт
+  `blocked_by_active_contract` без частичного closure. Closure lock отменяет
+  nonterminal offers/items/requests, сохраняет acceptance evidence и запрещает
+  последующие accept/admin formation/activation/price apply. Concurrent closure
+  и formation дают ровно один результат: active contract либо closed account,
+  но не оба. Successful closure атомарно создаёт по всем active media grants
+  append-only revoke с `source=account_deletion` и effective timestamp удаления;
+  повтор closure не дублирует события. (`PRIV-03`, `CONTRACT-15`)
 
 - Основные формы работают на мобильном экране и только с клавиатуры; focus и
   ошибки связаны с соответствующими полями. (`UI-01`)
@@ -377,3 +618,16 @@ MVP готов, когда:
   import report. (`SEC-02`)
 - Ошибка имеет correlation ID; админ может найти import/outbox/audit запись, а
   родитель не получает внутренний stack trace. (`OBS-01`)
+- Перед production существуют tracked и сверенные с реализацией
+  `PRODUCTION_DEPLOYMENT.md`, `OPERATIONS_RUNBOOK.md`,
+  `DISASTER_RECOVERY.md` и `PRODUCTION_READINESS_CHECKLIST.md`. Они написаны
+  пошагово на русском для оператора без опыта разработки, содержат prerequisites,
+  точные команды/поля без значений secrets, ожидаемый результат, stop conditions
+  и безопасный rollback. (`OPS-01`)
+- Незнакомый с проектом оператор выполняет cold-read/rehearsal в
+  non-production: clean provisioning/migrations, bootstrap admin, preview smoke,
+  production-shaped bindings, Browser/provider sandbox, cron inventory и
+  D1/R2 backup/restore/rollback. Evidence, дата и обнаруженные gaps записаны в
+  readiness checklist. Отсутствие разрешённого preview/remote доступа оставляет
+  соответствующий gate `blocked`, а не превращает проверку в optional.
+  (`OPS-01`, `REL-02`)

@@ -4,6 +4,8 @@
 
 ```mermaid
 flowchart LR
+    OfficialSite["Official site kolibri-dresden.de<br/>external infrastructure"]
+    OfficialSchedule["Approved official schedule page(s)"]
     Access["Access tblKartei"] --> Importer["Local importer"]
     PlusBText["Excel PlusBText"] --> Importer
     Price["Price.xlsx"] --> Importer
@@ -11,15 +13,36 @@ flowchart LR
     Importer --> Staging["Validated version / artifact"]
     Staging --> D1["Cloudflare D1"]
 
-    Parent["Parent portal"] --> Worker["SvelteKit / Worker"]
+    Parent["Registration public / parent UI"] --> Worker["Standalone SvelteKit / Worker"]
+    OfficialSite -->|"ordinary HTTPS link"| Parent
+    OfficialSchedule -->|"ordinary HTTPS link"| Parent
     Admin["Admin portal"] --> Worker
     Worker --> D1
-    Worker --> R2["Private R2"]
+    Worker --> Archive["Private EU R2 archives"]
+    Worker --> Quarantine["Private EU R2 quarantine"]
+    Quarantine --> ForcedDownload["Audited admin forced download"]
+    ForcedDownload --> LocalAV["Local approved antivirus"]
+    LocalAV --> Attestation["Hash-bound admin attestation"]
+    Attestation --> Archive
     Worker --> Browser["Cloudflare Browser Run /pdf"]
     Worker --> Email["Email provider"]
     Cron["Cron"] --> Worker
     Worker --> Telegram["Telegram bureau channel"]
 ```
+
+Узлы `Parent`, `Admin`, `Worker`, D1 и R2 образуют одно самостоятельное
+регистрационное приложение со своим deployment, public origin, secrets,
+auth/session и runtime-ресурсами. Оно не является страницей, плагином,
+модулем или deployment официального сайта.
+
+`https://kolibri-dresden.de/` и его страницы расписания живут во внешней
+отдельной инфраструктуре. Обязательная интеграция — обычные HTTPS-ссылки на
+портал с утверждённых внешних surfaces; обратные ссылки портала на
+Datenschutz, Impressum и Kontakt также остаются обычными внешними ссылками.
+Reverse proxy, iframe, общая CMS/база/сессия или server-side API
+интеграция с сайтом в MVP не предполагаются. Изменение CMS, кода,
+deployment или ссылок сайта — отдельная go-live операция только после
+прямого разрешения.
 
 Worker никогда не обращается к локальным host/сетевым дискам. Локальные файлы
 обрабатываются только importer-скриптами вне runtime. D1 является
@@ -28,13 +51,16 @@ runtime-источником истины; upstream-файлы остаются 
 
 ## Компоненты
 
-### Runtime Cloudflare
+### Самостоятельный runtime портала в Cloudflare
 
 - SvelteKit parent portal и admin UI;
 - server routes/API с Zod-валидацией;
 - auth/session, CSRF, RBAC и ownership middleware;
 - D1 repositories и транзакционные/conditional state transitions;
-- приватные R2 upload/download adapters;
+- приватные EU R2 archive/quarantine upload/download adapters;
+- утверждённый manual quarantine/local-AV/hash-attestation path с 14-дневным
+  quarantine TTL; interface оставляет возможность будущего automated scanner
+  adapter;
 - contract HTML/PDF adapter через Cloudflare Browser Run Quick Action и
   immutable R2 artifacts;
 - email и Telegram outboxes;
@@ -97,10 +123,13 @@ Claims, requests, trials, offers, enrollments и review items изменяютс
 
 - deny-by-default для server routes;
 - admin role невозможно получить из публичного payload;
-- `HttpOnly` auth cookie + CSRF для state-changing requests;
+- host-only `HttpOnly` auth cookie без `Domain` + CSRF для state-changing
+  requests; cookie не разделяется с официальным сайтом;
 - Turnstile и rate limiting на публичных формах;
 - object-level ownership для детей, документов, заявок и договоров;
-- R2 bucket приватный, object keys случайные;
+- R2 buckets приватные, `jurisdiction=eu`, object keys случайные; parent uploads
+  изолированы в quarantine по
+  [STORAGE_AND_UPLOAD_SECURITY.md](../operations/STORAGE_AND_UPLOAD_SECURITY.md);
 - query parameters и SQL параметризованы;
 - audit/log redaction исключает PII, токены и содержимое документов;
 - source PII никогда не отправляется клиенту до verified claim.
@@ -116,6 +145,12 @@ Claims, requests, trials, offers, enrollments и review items изменяютс
 ## Среды и конфигурация
 
 Нужны раздельные local/preview/production D1 и R2 и Browser Run binding.
+Preview и production дополнительно требуют валидный canonical HTTPS origin
+`PORTAL_PUBLIC_ORIGIN`. Все absolute verification, reset, cabinet, admin и
+contract links строятся от него, а не от `kolibri-dresden.de` или request-
+controlled host header. Финальный origin и утверждённый перечень внешних страниц,
+на которых должна стоять ссылка на портал, фиксируются как release inputs;
+их нельзя выводить из имени файла расписания или выбирать агентом.
 Production secrets задаются
 через Cloudflare secrets. При отсутствии `JWT_SECRET`, Turnstile secret или D1
 приложение должно fail closed. Отсутствие email/Telegram credentials не должно
@@ -131,8 +166,9 @@ Deploy и production migration не являются частью обычног
 
 ## Использование старого проекта
 
-Локальная ignored `references/current_app/`, если доступна, используется только
-для изучения инфраструктурных паттернов Cloudflare, auth, CSRF, Turnstile,
+Локальная ignored `references/current_app/`, если доступна, не является
+официальным сайтом или его deployment. Это только read-only reference для
+изучения инфраструктурных паттернов Cloudflare, auth, CSRF, Turnstile,
 email, R2 и UI. Старые таблицы и процессы
 `events`, `registrations`, `reviews` не переносятся. Любой скопированный паттерн
 должен быть повторно проверен по требованиям этого проекта.

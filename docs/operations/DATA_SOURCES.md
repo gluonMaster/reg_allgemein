@@ -20,7 +20,11 @@ repository находятся только безопасные обезличе
 ### Identity
 
 - `ID` — уникальный технический ключ строки Access в текущем snapshot;
-- `Value1` — FamilyID, повторяется у строк одной семьи и не является row ID;
+- `Value1` — FamilyID, повторяется у строк одной семьи и не является row ID.
+  Raw display имеет вид, например, `1. 3477` (точка и пробел значимы для
+  отображения) и стабилен между годами в namespace 1. Online-only families
+  получают отдельную namespace 2 с display `2. 0001`; contracts печатаются как
+  `1. 3477-1`/`2. 0001-1`. Allocation/alias policy не меняет source identity;
 - `Value48` — зеркало Excel `AV/ID`, которое нужно сверять с `ID`, но нельзя
   использовать вместо него без проверки.
 
@@ -40,6 +44,13 @@ namespace + academic period + `ID`, а mismatch/duplicate `Value48` записы
 - `Value7` — телефон;
 - `Value8` — мобильный;
 - `Value9` — email.
+
+`Value2` может участвовать только в post-verification candidate flow. Importer
+хранит raw value и создаёт versioned normalized фамилия+имя key лишь при
+однозначном разборе; ambiguous/unavailable value не становится публичным
+совпадением и уходит в admin review. `Value9` нормализуется для exact-email и
+alternate-email proof, но полный адрес не показывается parent: UI получает
+только маску по `CLAIM-06`.
 
 `Value4 = Zahlung` означает служебную строку, не ребенка/enrollment. Даже если
 текущий Access export таких строк не содержит, фильтр обязателен как защита от
@@ -72,13 +83,14 @@ Additional future packages: `Value42`–`Value46`, включая package 5.
 - `KN` — inactive, не участвует в occupancy;
 - `J` — yearly для подтвержденной ordinary/dance group;
 - `M` — monthly для подтвержденной ordinary/dance group;
-- `O/V` или `V/O` — legacy monthly marker с возможным special price semantics;
+- `O/V` или `V/O` — legacy monthly marker; использует месячную ставку из
+  исторически названной колонки `Sonderpreis`, но не означает льготу;
 - `NH`/`N` — Nachhilfe, не group monthly/yearly;
 - `IND` — individual;
 - `0`, пустое/неизвестное — не догадка: для надежно классифицированной обычной
   group допускается provisional monthly с warning; иначе admin review.
 
-Сначала определяется lesson kind, затем contract kind и price mode. Legacy
+Сначала определяется lesson kind, затем contract kind и price source. Legacy
 `Value18` сохраняется независимо от возможности нового lookup.
 
 ## Excel: PlusBText
@@ -144,10 +156,19 @@ Git из-за Office metadata/external links; публичный manifest нах
 - `Key`, `Preis`, `Dauer`, `Faecher`, `Sonderpreis`, `Kinder`;
 - formatted blank tail не является data.
 
+`Preis` — monthly fee для yearly group contract; `Sonderpreis` — monthly fee
+для monthly group contract. Настоящий exceptional `manual_override` не
+импортируется из workbook.
+
 Подробная семантика: [PRICING.md](../domain/PRICING.md). Importer должен найти
 header по именам, а не использовать первую строку `sheet_to_json`.
 
 ## Расписание
+
+Этот раздел описывает read-only upstream для отдельного регистрационного
+портала. Страницы расписания на `kolibri-dresden.de` не являются importer input,
+runtime source of truth или deployment target. Их нельзя скрейпить, перезаписывать
+или редактировать как часть import/publish pipeline портала.
 
 Основной текущий machine-readable source находится только в локальной
 игнорируемой рабочей копии:
@@ -171,6 +192,12 @@ HTML содержит те же blocks, но `.lesson-subject` отсутств�
 нет такого же надежного versioned contract. Поэтому HTML не
 является primary importer input. Он используется для count/field comparison и
 ручной визуальной проверки.
+
+Финальный `PORTAL_PUBLIC_ORIGIN` и утверждённый перечень внешних surfaces
+официального сайта, где должна появиться обычная ссылка на портал,
+являются approved release inputs. Они не выводятся из локального HTML, имён
+файлов или предположений агента. Их размещение/замена на сайте требует
+отдельного прямого поручения и не является частью import promotion.
 
 Стабильность block `id` между следующими generation должна быть подтверждена
 exporter contract. До этого любое исчезновение/смена IDs показывается в diff и

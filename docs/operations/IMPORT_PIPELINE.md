@@ -54,10 +54,15 @@ Access staging возможен без готового mapping, но его pro
 - читать data из логических columns, пропуская полностью пустой formatted tail;
 - parse decimal EUR в cents без binary-float;
 - сохранить ordered subject-duration vector;
-- валидировать positive child count, key, regular/special price;
+- валидировать non-empty key, positive integer child count и обе positive
+  integer ставки в cents; zero/negative yearly или monthly source rate создаёт
+  validation error, блокирует публикацию этой price version и не превращается в
+  бесплатное занятие, fallback или `manual_override`;
 - duplicate normalized rules без однозначного winner пометить ambiguous;
 - не менять active version при fatal/error threshold;
-- не применять `Sonderpreis` или discounts во время импорта.
+- импортировать обе source-ставки без назначения клиенту: contract kind позже
+  выбирает `Preis` (yearly) или `Sonderpreis` (monthly); не создавать
+  `manual_override`/discount из notes.
 
 Stable row key внутри immutable version:
 
@@ -104,6 +109,10 @@ Validation:
 - строки без child для непустой activity quarantine/skip с warning;
 - phone сохраняется как text, даты tolerant parse в ISO;
 - email normalizes trim/lower, но raw сохраняется для admin verification;
+- parent `Value2` сохраняется raw; versioned normalizer создаёт separate
+  first-name/last-name match key только при детерминированном разборе, иначе
+  `parent_name_match_status=ambiguous|unavailable` и self-service name-match
+  запрещён;
 - `Value15`–`Value20` извлекаются вместе;
 - `Value42`–`Value46` обрабатываются все пять.
 
@@ -122,7 +131,15 @@ Group name hash не входит: исправление/переименова
 
 - Stable family key = namespace + `Value1`; отдельный family-period snapshot =
   stable family + academic period;
-- все distinct family emails сохраняются, conflicts становятся issues;
+- raw `Value1` сохраняется без удаления точки/пробела в legacy namespace 1;
+  online-only family использует отдельную namespace 2. Family-number allocation
+  и printable contract format `1. 3477-1`/`2. 0001-1` валидируются отдельно, а
+  collision не объединяет source families;
+- missing/colliding/unapproved FamilyID сохраняет affected rows в staging/source
+  review, но не создаёт canonical child/enrollment без `family_number_id`;
+- все distinct family emails сохраняются, conflicts становятся issues; один
+  account/email с несколькими FamilyID и одна name-family с несколькими usable
+  emails не выбираются автоматически на claim-слое;
 - child merge только внутри stable family по normalized name + birthdate;
 - точное непротиворечивое совпадение FamilyID нового периода наследует claim/
   owner; редкая ID/contact/child collision создаёт continuity review;

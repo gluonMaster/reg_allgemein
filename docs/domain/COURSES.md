@@ -9,8 +9,12 @@ capacity и occupancy. Правила цены находятся в [PRICING.md
 к `academic_period_id`. Значение `future` как постоянная identity запрещено:
 после смены года оно теряет смысл.
 
-Публичный каталог использует только опубликованный schedule активного периода.
-Прошлые версии остаются для snapshots и аудита, но не смешиваются с текущей.
+Публичный каталог здесь означает route/read model самостоятельного
+регистрационного портала, а не страницу расписания на `kolibri-dresden.de`.
+Он использует только опубликованный schedule активного периода. Прошлые версии
+остаются для snapshots и аудита, но не смешиваются с текущей. Портал не
+заменяет, не встраивает и не редактирует внешнюю страницу расписания; она
+может только дать обычную ссылку на портал.
 
 ## Типы занятий
 
@@ -18,7 +22,7 @@ capacity и occupancy. Правила цены находятся в [PRICING.md
 | --- | --- | ---: | --- | --- |
 | `group` | Обычная группа | 12 | Trial request | Групповой lookup |
 | `dance_group` | Танцевальная группа | 15 | Trial request | Групповой lookup |
-| `nachhilfe` | Финансируемая индивидуальная Nachhilfe | 1 | Nachhilfe request | Funding/payer snapshot, только admin review |
+| `nachhilfe` | Финансируемая индивидуальная Nachhilfe | 1 | Nachhilfe request | 30 EUR / 45 min funded unit; document + dates, admin review |
 | `individual` | Другое индивидуальное занятие | 1 | Individual request | Config, default 30 EUR / 45 min |
 | `group_nachhilfe` | Админская групповая Nachhilfe | Только manual | Нет public trial | Только manual |
 

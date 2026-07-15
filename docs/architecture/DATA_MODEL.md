@@ -14,6 +14,10 @@
   участвующие в фильтрации, уникальности и переходах статусов.
 - Все mutable таблицы имеют `created_at`, `updated_at`; soft-retired/deleted
   сущности — соответствующий timestamp и actor/reason.
+- Retained evidence имеет или связывает `retention_class`,
+  `retention_started_on`, nullable informational `retain_until`, `legal_hold`,
+  basis/actor. Automatic legal-archive purge выключен; эти поля сами не создают
+  ни delete job, ни правовое основание хранения.
 
 ## Identity и доступ
 
@@ -23,7 +27,12 @@
 - `pending_email`, `pending_email_normalized`, `pending_email_expires_at`,
   `email_version`;
 - `email_verified_at`, `role`, `is_blocked`;
-- `first_name`, `last_name`, `phone`, `preferred_language`;
+- `account_status` (`active|deletion_requested|closed`), `closed_at`;
+- `first_name`, `last_name`, `first_name_normalized`, `last_name_normalized`,
+  `phone`, `preferred_language`;
+- `family_number_id` nullable для unverified/non-parent,
+  `family_assignment_status` (`pending_verification|assigned|review_required`),
+  `family_version`, `family_assignment_import_run_id` nullable;
 - `privacy_notice_version`, `privacy_accepted_at`;
 - `session_version`, `created_at`, `updated_at`.
 
@@ -32,18 +41,37 @@
 занят ни current, ни неистекшим pending email другого user. Регистрация и
 подтверждение выполняют ту же cross-field проверку; confirmation меняет current
 email только conditional transaction. `role` — только `parent|admin`.
+Для verified active parent `family_number_id` обязателен и указывает ровно на
+одну current assigned allocation. Первый successful verification атомарно
+назначает eligible legacy namespace 1 либо новый namespace 2 и увеличивает
+`family_version`; повтор finalization возвращает то же назначение. Admin account
+без parent cabinet family не требует.
+Family finalization хранит `family_assignment_import_run_id`/snapshot version, по которому
+был выполнен lookup. Отсутствие current promoted snapshot либо смена current
+version во время transaction откатывает verification/finalization целиком и не
+выделяет namespace 2 по ошибке.
+Approved closure отзывает sessions/tokens, очищает contact/profile и заменяет
+email identity непереиспользуемым non-contact tombstone; закрытый legal archive
+связан только через opaque tombstone `user_id`, а не через действующий
+login/email. Immutable acceptance/contract evidence при этом не мутирует, но
+неterminal operational records закрываются по правилу ниже.
 
 ### `auth_tokens`
 
-- `id`, `user_id`, `kind` (`email_verification|password_reset`);
+- `id`, `user_id`, `kind`
+  (`email_verification|password_reset|legacy_email_claim`);
 - `token_hash`, `target_email_normalized`, `email_version`;
+- `legacy_family_id` nullable, `family_version` nullable;
 - `expires_at`, `used_at`, `created_at`;
 - `requested_ip_hash` или минимизированные anti-abuse metadata.
 
 `UNIQUE(token_hash)`. Использование выполняется conditional update при
 `used_at IS NULL AND expires_at > now`; email token дополнительно требует
 совпадения current `email_version` и target current/pending address. Новый
-email-change request инвалидирует старый version.
+email-change request инвалидирует старый version. `legacy_email_claim` связан с
+конкретными user, candidate family и current `family_version`, требует active
+authenticated session того же user и при применении повторно проверяет family
+ownership. Любой token хранится только как hash.
 
 ### `auth_sessions`
 
@@ -67,20 +95,67 @@ email/телефон или содержимое support message.
 - `safe_summary`, `status` (`open|in_progress|resolved|dismissed`);
 - `assigned_to`, `resolution`, `created_at`, `resolved_at`.
 
-Используется для claim conflicts, import ambiguity, unknown mapping/price и
-других случаев, где автоматическая догадка запрещена.
+Используется для `family_name_match`, `family_claim_conflict`,
+`family_correction`, import ambiguity, unknown mapping/price и других случаев,
+где автоматическая догадка запрещена. Name-match task создаётся для каждого
+совпадения фамилии+имени независимо от результата exact-email assignment; safe
+summary не содержит полный email, а authorized admin открывает PII только через
+отдельный legacy/user detail.
 
 ### `privacy_requests`
 
-- `id`, `subject_user_id`, `requested_by_user_id`, `kind` (`export|delete`);
-- `status` (`requested|reviewing|blocked_by_retention|approved|processing|completed|failed|cancelled`);
+- `id`, `subject_user_id`, `requested_by_user_id`, `kind`
+  (`export|delete|media_content_request`);
+- `status`
+  (`requested|reviewing|blocked_by_active_contract|approved|processing|completed|completed_with_retained_evidence|failed|cancelled`);
 - `retention_holds_json`, `safe_summary_json`, `decision_reason`;
 - `artifact_r2_key`, `artifact_expires_at` для private export;
 - `reviewed_by`, `reviewed_at`, `completed_at`, timestamps.
 
-Export/delete actions используют audit и idempotency. Export artifact шифруется
+Export/delete/media-content actions используют audit и idempotency.
+`media_content_request` хранит предоставленный заявителем конкретный URL/post
+reference и safe summary, но не создаёт исторический media index и не является
+самим отзывом consent. Export artifact шифруется
 или выдаётся только через short-lived authenticated response. Delete dry-run не
-меняет данные. До решения `OQ-005` физическое удаление held records запрещено.
+меняет данные. Active contract блокирует закрытие кабинета; archive hold может
+блокировать purge конкретного evidence, но после approval не обязан сохранять
+рабочий login/profile. Физическое удаление retained archive records отсутствует
+в MVP и требует отдельного будущего утверждённого правила/поручения.
+
+Active contract блокирует весь account-closure request как
+`blocked_by_active_contract`. Retention hold не оставляет request зависшим:
+после успешного закрытия login/profile request получает
+`completed_with_retained_evidence`, а блокировка purge хранится per record в
+`retention_controls.purge_status=disabled_by_policy`. UI result перечисляет
+retained classes и доступные review/retain dates без payload.
+
+Approved closure без active contract сначала conditional-transaction переводит
+account в `deletion_requested` как lock. Затем отменяет/закрывает все
+nonterminal trials, requests, draft/contract_offered operational records,
+contract offers и price-review items; уже созданное acceptance evidence
+сохраняется с closure reason. Любые accept, admin formation/activation, final
+price confirmation/apply и новые user actions повторно требуют
+`users.account_status=active`. В race contract formation либо closure lock может
+победить только один: formed active contract блокирует closure, выигравший
+closure lock блокирует formation/apply. После cleanup account становится
+`closed`.
+
+### `retention_controls`
+
+- `id`, `target_kind`, `target_id`, `retention_class`, `legal_basis`;
+- `retention_started_on`, `retain_until` nullable informational;
+- `legal_hold`, `hold_reason`, `hold_set_by`, `hold_set_at`, `hold_review_on`;
+- `purge_status`
+  (`disabled_by_policy|held|scheduled|processing|completed|failed`),
+  `purged_or_anonymized_at`, timestamps.
+
+`UNIQUE(target_kind, target_id)`. Mutable retention metadata хранится отдельно
+от immutable offer/PDF/acceptance body. Hold/purge меняются только аудируемой
+идемпотентной операцией; policy version входит в decision evidence. Для legal
+archive/approved evidence default MVP status всегда `disabled_by_policy`;
+`retain_until` не переводит его в `scheduled`. Другие purge states зарезервированы
+для будущего отдельно утверждённого flow. Это не относится к самостоятельному
+14×24-hour cleanup quarantine objects.
 
 ### `idempotency_records`, `rate_limit_buckets`, `operation_locks`
 
@@ -142,9 +217,35 @@ Issues хранят безопасный контекст, достаточны�
 
 ## Legacy family и дети
 
+### `family_number_allocations`
+
+- `id`, `namespace` (`legacy_1|portal_2`), `sequence_number`;
+- `display_family_id`, `legacy_family_id` nullable, `owner_user_id` nullable;
+- `origin` (`legacy|portal`), `status`
+  (`pending|assigned|collision|merged_alias|retired`);
+- `assigned_at`, `merged_into_family_number_id` nullable, timestamps.
+
+`UNIQUE(namespace, sequence_number)` и `UNIQUE(display_family_id)`. Legacy raw
+`1. 3477` получает namespace 1; online-only family — отдельную сквозную
+sequence namespace 2 с display `2. 0001`. Unverified account allocation не
+получает. Email-verification family-finalization одной conditional transaction
+либо присваивает unique eligible legacy allocation, либо резервирует следующий
+portal sequence и связывает его с user. Для current assigned rows действуют
+partial unique constraints по `owner_user_id`: один parent account — одна current
+allocation, одна current allocation — один owner.
+
+Успешный late proof/admin correction переводит прежнюю current allocation в
+`merged_alias` с `merged_into_family_number_id=destination`, назначает destination
+current и увеличивает `users.family_version`. Это historical identity/audit
+reference, не второй FamilyID аккаунта. Reverse chain/cycle запрещены. Уже
+выданные contracts не перенумеровываются; old contract sequence остаётся для
+проверки history и больше не выдаёт новые номера.
+
 ### `legacy_families`
 
-- `id`, `source_namespace`, `source_family_id`;
+- `id`, `source_namespace`, `source_family_id`, `family_number_id` nullable;
+- `numbering_status`
+  (`valid|collision|missing|unapproved`);
 - `claimed_by_user_id`, `claimed_at`;
 - `continuity_status` (`stable|needs_review|corrected`);
 - `created_at`, `updated_at`.
@@ -153,15 +254,23 @@ Issues хранят безопасный контекст, достаточны�
 Claim owner наследуется новым period snapshot и не перезаписывается reimport.
 Конфликт/редкое изменение ID создаёт review; автоматический merge по имени,
 адресу или email запрещён.
+`source_family_id` хранит raw display (`1. 3477`) без нормализации точки/пробела.
+Он не участвует в identity/merge вне source namespace; family-number allocation
+и contract formatting проходят отдельный fail-closed collision check.
 
 ### `legacy_family_periods`
 
 - `id`, `legacy_family_id`, `academic_period_id`, `import_run_id`;
-- `parent_name_raw`, `address_raw`, `phone_raw`, `mobile_raw`;
+- `parent_name_raw`, `parent_first_name_normalized`,
+  `parent_last_name_normalized`, `parent_name_match_status`
+  (`eligible|ambiguous|unavailable`), `address_raw`, `phone_raw`, `mobile_raw`;
 - `last_seen_run_id`, `is_current`, `retired_at`, `created_at`, `updated_at`.
 
 `UNIQUE(legacy_family_id, academic_period_id)`. Source/contact snapshots и
 enrollments period-scoped; claim/owner и stable child identity — нет.
+Name-match key создаётся только когда `Value2` детерминированно разобран на
+фамилию+имя по versioned normalizer. Ambiguous/unavailable value не участвует в
+self-service matching и остаётся только для admin review.
 
 ### `legacy_family_emails`
 
@@ -175,14 +284,52 @@ issue; выбор «первого» email запрещен.
 ### `family_claims`
 
 - `id`, `legacy_family_id`, `user_id`;
-- `status` (`candidate|claimed|conflict|released`);
-- `consented_at`, `claimed_at`, `review_task_id`, `created_at`.
+- `status` (`candidate|claimed|conflict|released|superseded`);
+- `proof_kind` (`verified_login_email|legacy_email_token|admin_reassignment`),
+  `proof_at`, `consented_at` nullable, `claimed_at`, `review_task_id`,
+  `created_at`.
 
-`UNIQUE(legacy_family_id)` для активного `claimed`; claim выполняется атомарно.
+Partial `UNIQUE(legacy_family_id)` и `UNIQUE(user_id)` для active `claimed`:
+legacy family и parent account не могут иметь два current claim. Exact
+login-email claim не требует дополнительного consent, потому что та же
+одноразовая verification доказывает контроль адреса; name-match path требует
+opt-in request и отдельный `legacy_email_claim` token. Claim выполняется в той
+же транзакции, что смена current family/children.
+
+### `family_link_attempts`
+
+- `id`, `user_id`, `legacy_family_id`, `from_family_number_id`;
+- `match_kind` (`exact_email|parent_name`), `masked_email_snapshot` nullable;
+- `status`
+  (`candidate|proof_sent|confirmed|expired|conflict|cancelled`),
+  `family_version`, `review_task_id`, timestamps.
+
+Active self-service attempt допускается только для одного unambiguous, unowned
+candidate с одним distinct usable legacy-email. `masked_email_snapshot` содержит только
+разрешённую маску, полный recipient берётся server-side из current promoted
+legacy email при постановке outbox и не копируется в audit/log. Multiple exact
+email/name families или multiple candidate emails не создают selectable rows в
+parent API.
+
+### `family_reassignments`
+
+- `id`, `user_id`, `from_family_number_id`, `to_family_number_id`;
+- `source` (`legacy_email_token|admin_correction`), `reason_code`,
+  `reason_note` nullable;
+- `requested_by`, `confirmed_by`, `idempotency_key`, `family_version_before`;
+- `status` (`planned|applied|conflict|cancelled`), `safe_effects_json`,
+  timestamps.
+
+`UNIQUE(source, idempotency_key)`. Admin preview не является apply. Apply
+проверяет unchanged version, ownership/collision, destination и affected rows,
+затем атомарно меняет user/children/claims, supersede-ит nonterminal offers и
+записывает безопасный audit. Destination другого active account либо cycle
+завершается `conflict`, не создавая shared family.
 
 ### `children`
 
-- `id`, `owner_user_id`, `legacy_family_id`;
+- `id`, `owner_user_id` nullable только для unclaimed legacy,
+  `legacy_family_id` nullable, `family_number_id`;
 - `origin` (`portal|legacy`), `source_child_key`;
 - `source_full_name`, `source_full_name_normalized`, `source_birth_date`;
 - `full_name_override`, `birth_date_override`;
@@ -197,6 +344,18 @@ academic period.
 исправление legacy child идет через review/audited admin action. Reimport меняет
 только `source_*`; effective fields вычисляются как override или source и потому
 подтвержденная correction не теряется.
+
+`children.family_number_id` обязателен. Portal child создаётся только после
+family-finalization и копирует current family owning account в той же
+transaction; claimed child обязан иметь тот же FamilyID, что owner. Unclaimed
+legacy child может иметь `owner_user_id=null`, но использует валидную namespace-1
+allocation своей source family. Family с missing/colliding/unapproved FamilyID
+остаётся в source/staging/review tables и не создаёт canonical child/enrollment,
+пока allocation не разрешена. Legacy child сохраняет `legacy_family_id` как
+source identity; portal child может оставить его `null` даже после присоединения
+к legacy family, поскольку его origin не становится импортным. Family
+reassignment меняет `family_number_id` всех owned children account одной
+транзакцией; смешанный результат запрещён invariant check.
 
 ### `child_correction_requests`
 
@@ -226,7 +385,8 @@ Access snapshot `ID` является уникальным ключом стро
 - `academic_period_id`, `source_slot` (`main_next|package_1..package_5`);
 - `source_record_key`, `group_name_raw`, `course_group_id`;
 - `teacher_name`, `day_raw`, `duration_raw`, `subject_duration_vector_json`;
-- `status_code_raw`, `lesson_kind`, `contract_kind`, `price_mode`;
+- `status_code_raw`, `lesson_kind`, `contract_kind`, `price_source`,
+  `price_mode` (`rule_derived|manual_override`);
 - `planned_price_cents`, `notes_raw`, `needs_admin_review`;
 - `is_active_for_occupancy`, `represented_by_enrollment_id`;
 - `last_seen_run_id`, `is_current`, `retired_at`, `created_at`, `updated_at`.
@@ -285,33 +445,46 @@ mapping не выбирается автоматически.
 - `id`, `price_version_id`, `source_row_number`;
 - `key`, `duration_raw`, `subjects_raw`;
 - `subject_duration_vector_json`, `duration_total_minutes`;
-- `children_count`, `regular_price_cents`, `special_price_cents`;
+- `children_count`, `yearly_price_cents`, `monthly_price_cents`;
 - `raw_json`, `created_at`.
 
-Уникальность определяется всем normalized lookup contract. Дубли без
-однозначного winner блокируют автоматический lookup.
+Уникальность определяется всем normalized lookup contract. `children_count`,
+`yearly_price_cents` и `monthly_price_cents` обязаны быть positive integers;
+zero/negative source rate не создаёт publishable rule. Дубли без однозначного
+winner блокируют автоматический lookup.
 
 ### `price_quotes`
 
 - `id`, `user_id`, `child_id`, `course_group_id`, `planned_start_on`;
 - `active_children_count_as_of`, `lookup_children_count`;
-- `price_version_id`, `price_rule_id`, `price_mode`, `contract_kind`;
+- `price_version_id`, `price_rule_id`, `price_source`, `price_mode`,
+  `contract_kind`;
 - `duration_source`, `duration_minutes_used`, `billing_period_code`;
 - `estimated_missing_duration`, `requires_admin_confirmation`;
-- `base_price_cents`, `manual_discount_cents`, `manual_override_cents`;
+- `base_price_cents`, `manual_override_cents`, `manual_override_reason`;
 - `final_price_cents`, `decision_code`, `decision_json`;
 - `confirmed_by_admin_user_id`, `confirmed_at`, `confirmation_json`;
 - `status` (`quoted|needs_admin_confirmation|confirmed|stale|superseded`),
   `created_at`, `expires_at`.
 
-`price_mode`: `standard|ov_special|manual`. Public quote всегда `standard` до
-явного admin decision.
+`price_source`:
+`excel_yearly|excel_monthly|fallback_90|configured_individual_hourly|fixed_nachhilfe_hourly`.
+`price_mode`: `rule_derived|manual_override`.
+`group_yearly` выбирает `yearly_price_cents` из Excel `Preis`,
+`group_monthly` — `monthly_price_cents` из исторически названного
+`Sonderpreis`. `manual_override` меняет только mode/final amount, сохраняя
+исходный source/base/rule provenance; он требует high-friction admin
+confirmation, reason/base snapshot/audit и никогда не выводится из source
+marker или parent payload.
 
 `duration_source`: `plusbtext|price_rule|fallback_90|not_applicable`.
-`billing_period_code` для `fallback_90` равен `needs_admin_confirmation`, пока
-админ не подтвердит фактическую длительность, сумму и billing period. Такой
+`billing_period_code` для `fallback_90` всегда `calendar_month`; админ
+подтверждает длительность и сумму, но не угадывает период. Такой
 quote имеет `decision_code = ESTIMATED_MISSING_DURATION`, не участвует в
-monthly total/repricing и не может быть использован в отправленном offer.
+monthly total/repricing и не может быть использован в отправленном offer, пока
+имеет статус `needs_admin_confirmation`. После аудируемого подтверждения
+длительности и суммы его immutable confirmed snapshot разрешено использовать в
+offer.
 Подтверждение выполняется атомарно, требует reason/audit; изменение рассчитанных
 условий создаёт новый quote snapshot, а не переписывает исходный decision.
 
@@ -319,14 +492,22 @@ monthly total/repricing и не может быть использован в о
 
 - `id`, `user_id`, `child_id`, `course_group_id`, `legacy_enrollment_id`;
 - `lesson_kind`, `status`
-  (`draft|contract_offered|active|paused|cancelled|ended`);
+  (`draft|contract_offered|active|cancelled|ended`);
 - `contract_kind`, `active_from`, `active_until`;
-- `current_price_cents`, `price_mode`, `price_effective_from`;
+- `current_price_cents`, `price_source`, `price_mode`, `price_effective_from`;
+- `manual_override_reason`, `manual_override_by`, `manual_override_at`;
 - `source` (`legacy|portal|admin`), `created_at`, `updated_at`.
 
 Не более одного пересекающегося active enrollment для child/course. D1 не имеет
 полноценного exclusion constraint, поэтому это обеспечивается индексами на
 нормализованный active key плюс transactional check и тестами concurrency.
+
+Базовые переходы: `draft -> contract_offered -> active`,
+`draft|contract_offered -> cancelled`, `active -> ended|cancelled`;
+`ended|cancelled` terminal. Pause/resume в MVP не моделируются; неоднозначный
+legacy pause создаёт admin review. Любая транзакция, задающая или меняющая future
+`active_from|active_until`, создаёт/supersede deduped price-review boundary на
+эту дату; reconciler идемпотентно восстанавливает пропущенный trigger.
 
 ## Trials и индивидуальные запросы
 
@@ -358,10 +539,18 @@ self-pay tutoring intention в `individual`, но сервер проверяе�
 ### `service_engagements`
 
 - `id`, `user_id`, `child_id`, `individual_request_id`;
-- `request_kind` (`nachhilfe|individual`), `funding_authorization_id` nullable;
-- `status` (`draft|contract_offered|active|paused|cancelled|ended`);
-- `active_from`, `active_until`, `contract_id` nullable until activation;
+- `request_kind` (`nachhilfe|individual`),
+  `initial_funding_authorization_id` nullable,
+  `current_funding_authorization_id` nullable;
+- `status` (`draft|contract_offered|active|funding_review|cancelled|ended`);
+- `active_from`, `active_until`, `attendance_ceased_at` nullable,
+  `attendance_notice_id` nullable, `contract_id` nullable until activation;
 - `created_at`, `updated_at`.
+
+Как и enrollment, engagement использует inclusive `active_from` и exclusive
+`active_until`. При projection из inclusive contract `effective_to` действует
+`active_until = calendar_day_after(effective_to)`; null означает open-ended и
+запрещён для funded Nachhilfe.
 
 Для одного request допускается только один nonterminal engagement; activation
 защищена conditional unique и idempotency. Первый offer series атомарно создаёт
@@ -374,33 +563,99 @@ expiry последнего open offer отменяет draft/contract_offered e
 capacity/repricing. Фактически проведённые уроки и начисления вне MVP.
 
 Cross-field invariant: `nachhilfe` в `contract_offered|active` требует non-null
-`funding_authorization_id` со статусом `approved`, authority
-`jobcenter|socialamt` и действующим сроком на дату начала. `individual` требует
-`funding_authorization_id IS NULL` и исходный request с `funding_kind=self_pay`.
+current funding authorization со статусом `approved`, authority
+`jobcenter|socialamt`, действующим сроком на дату начала и хотя бы одним
+current document, причём все current documents имеют `review_status=approved`.
+`individual` требует обоих funding authorization ID `NULL` и исходный request с
+`funding_kind=self_pay`.
+Если requested term выходит за `valid_until`, offer остаётся fail-closed/manual
+и не обещает услугу за пределами authorization.
+
+Expiry либо `approved -> revoked|superseded` для authorization, связанного с
+sent/accepted offer или active Nachhilfe, не выполняется одиночным update:
+open offers supersede, active engagement атомарно переходит в `funding_review`,
+создаётся admin task, а accepted contract/evidence остаются immutable. New
+authorization не переключает существующий contract автоматически. Продолжение
+требует append-only admin-approved funding amendment; если parent-facing terms
+изменились, amendment запрещён и нужен новый offer/parent acceptance.
+
+### `funding_amendments`
+
+- `id`, `contract_id`, `service_engagement_id`;
+- `previous_authorization_id`, `new_authorization_id`;
+- `effective_from`, `reason`, `approved_by_admin_user_id`, `approved_at`;
+- `event_hash`, `idempotency_key`, `created_at`.
+
+Amendment разрешён только для той же child/service, approved current document и
+неизменных parent-facing terms. Он append-only, атомарно меняет только
+`service_engagements.current_funding_authorization_id`, переводит
+`funding_review -> active` на/после `effective_from` и пишет contract/audit
+event. Original contract/offer/PDF и initial authorization не мутируют.
 
 ### `funding_authorizations`
 
 - `id`, `request_id`, `kind` (`jobcenter|socialamt`);
-- `authority_name_snapshot`, `authority_reference`;
-- `status`, `valid_from`, `valid_until`, `approved_hours_total`;
+- `status` (`pending_review|approved|rejected|revoked|superseded`),
+  `valid_from`, `valid_until`, `supersedes_authorization_id` nullable;
 - `decision_notes`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at`.
 
-Срок и часы принадлежат разрешению, а не каждой странице документа. Остаток
-часов не рассчитывается, пока attendance/billing вне MVP.
+`valid_from`/`valid_until` — inclusive dates разрешения, не даты каждой страницы.
+Payer name/address, case/reference и approved hours не копируются в поля D1:
+они остаются только в private source document. Attendance/billing вне MVP.
+
+Новый record начинается `pending_review`, затем переходит в
+`approved|rejected`; approved record может стать `revoked` явным аудируемым
+решением либо `superseded` атомарно при approval новой version. Rejected/
+revoked/superseded terminal и не возвращаются в `approved`. Expiry вычисляется
+по inclusive `valid_until` на нужную дату, а не записывается mutable status.
+
+Approval разрешён только если есть хотя бы один non-deleted/non-replaced
+document и каждый current document имеет `review_status=approved`; карантинный
+либо любой non-clean файл блокирует approval. Замена content уже approved
+документа создаёт новый authorization/document record; старое evidence не
+перезаписывается. Offer send и activation повторно проверяют этот guard.
+
+Document, на который ссылается sent/accepted offer либо contract, становится
+immutable retained evidence: parent replace/delete не меняет его status/object.
+Replacement upload создаёт новую authorization/document version; прежнее
+evidence остаётся связано со старым offer/contract. Новый approval не переводит
+contract на новую authorization молча.
 
 ### `authorization_documents`
 
 - `id`, `authorization_id`, `user_id`, `child_id`;
-- `r2_key`, `original_filename`, `mime_type`, `detected_type`;
+- `r2_key`, `original_extension`, `mime_type`, `detected_type`;
 - `size_bytes`, `sha256`;
-- `review_status` (`quarantined|reviewable|approved|rejected|deleted`);
-- `quarantine_reason`, `released_by`, `released_at`;
-- `uploaded_at`, `deleted_at`, `replaced_by_document_id`.
+- `review_status`
+  (`quarantined|scan_pending|clean|infected|suspicious|scan_failed|approved|rejected|deleted`);
+- `quarantine_reason`, `scan_method` (`manual_local_av|automated_adapter`)
+  nullable, `scanner_label`, `scanner_version`, `signature_version`;
+- `quarantine_downloaded_by_admin_user_id`, `quarantine_downloaded_at`,
+  `download_audit_event_id`;
+- `scan_attested_by_admin_user_id`, `scan_attestation_text_version`,
+  `scanned_at`, `scan_attempts`;
+- `business_review_reason`, `released_by`, `released_at`,
+  `retention_control_id`;
+- `uploaded_at`, `quarantine_expires_at`, `quarantine_purged_at`, `deleted_at`,
+  `replaced_by_document_id`.
 
-R2 key уникален и случайный. До решения `OQ-009` новый файл остается
-`quarantined`; доступен только уполномоченному admin через изолированный viewer,
-а не обычный/public download. Переход из quarantine аудируется. Физическое
-удаление следует retention policy.
+R2 key уникален и случайный. Новый файл остаётся `quarantined`; inline preview/
+public/parent download запрещены. Admin получает
+только audited forced attachment как `application/octet-stream`. Ручной
+`quarantined -> clean` требует предшествующий download того же SHA-256 и
+hash-bound attestation с `scan_method=manual_local_av`; замена content
+инвалидирует её. `clean` допускает отдельное business решение
+`approved|rejected`. `scan_pending|suspicious|scan_failed` зарезервированы для
+будущего automated adapter и не используются как shortcut ручного approval.
+Нечитабельный/нерелевантный/неверный по датам document отклоняется с reason/
+request-reupload.
+Переходы и доступ аудируются. Физическое удаление следует retention policy и
+отдельному quarantine TTL: при upload `quarantine_expires_at = uploaded_at +
+14*24h` в UTC. Object без `review_status=approved` становится eligible для
+удаления только при `now >= quarantine_expires_at` и удаляется первым успешным
+cleanup после этого порога, но никогда раньше. Download/attestation не меняют
+expiry; duplicate cleanup идемпотентен. Approved artifact покидает quarantine
+lifecycle и получает business retention.
 
 ## Договоры
 
@@ -417,53 +672,123 @@ R2 key уникален и случайный. До решения `OQ-009` но
 - `approval_status` (`draft|approved|retired`);
 - `approval_basis`
   (`synthetic_fixture|authorized_verein_approval|legal_review`);
-- `approved_by`, `approved_at`, `valid_from`, `valid_to`, `created_at`.
+- `distance_legal_profile`
+  (`offline_only|widerruf_applicable|widerruf_not_applicable_312g_2_9`),
+  `distance_legal_basis_version`, `distance_legal_basis_hash`,
+  `kuendigung_function_required`;
+- `approved_by`, `approved_at`, `valid_from`, `valid_to`,
+  `retention_control_id`, `created_at`.
 
 `UNIQUE(template_id, template_version)`. После `approved` bundle и manifests
-immutable и удерживаются не короче связанных договоров по `OQ-005`: одного hash
-без сохраняемого source/assets недостаточно для воспроизведения.
+immutable и удерживаются не короче связанных договоров; automatic archive purge
+выключен. Одного hash без сохраняемого source/assets недостаточно для
+воспроизведения.
 `usage_scope=synthetic_test` разрешает send/accept только внутри изолированного
 test harness с синтетическими сторонами и никогда — при production config.
 Реальный offer
 требует одновременно `usage_scope=production` и
 `approval_status=approved` с
-`approval_basis=authorized_verein_approval|legal_review`.
+`approval_basis=authorized_verein_approval|legal_review`. Online send также
+требует `distance_legal_profile != offline_only` и соответствующие approved
+notice/function versions.
+
+### `contract_number_sequences`
+
+- `id`, `family_number_id`, `format_version`, `next_contract_sequence`;
+- `status` (`unapproved|active|collision|retired`), `updated_at`.
+
+`UNIQUE(family_number_id)`. Reservation выполняется conditional transaction и
+никогда не использует один full number дважды. Namespace 1/2 и family sequence
+берутся только из assigned canonical `family_number_allocations`. Full number
+форматируется как `1. 3477-1`/`2. 0001-1` и резервируется до production render/
+send. Increment коммитится даже при последующем decline/expiry/cancellation;
+gap допустим, reuse нет. При family reassignment old sequence перестаёт выдавать
+номера этому account, а future reservation использует sequence destination.
+Ни reassignment, ни новая policy version не переформатируют выданные номера.
+Отсутствие assigned current family, несовпадение child family с account,
+collision или stale `family_version` завершает reservation fail-closed.
 
 ### `contract_offers`
 
 - `id`, `series_id`, `version`, `offer_number`, `contract_number` nullable,
-  `user_id`, `child_id`;
+  `user_id`, `child_id`, `family_number_id_at_issue` nullable,
+  `family_display_id_at_issue` nullable, `family_version_at_issue` nullable;
 - `course_group_id`, `individual_request_id`, `funding_authorization_id`,
   `enrollment_id`, `service_engagement_id`;
 - `contract_kind`, `template_version_id`, `render_schema_version`,
-  `start_date`;
+  `effective_from`, `effective_to` nullable;
 - `billing_model`
-  (`annual_total_in_instalments|monthly_fixed|delivered_units|third_party_funded`),
-  `currency`, `unit_minutes`, `price_mode`, `price_cents`;
+  (`monthly_group_fee|delivered_units|third_party_funded`),
+  `currency`, `unit_minutes`, `price_source`, `price_mode`, `price_cents`,
+  `amount_semantics` (`base_price|unit_rate|third_party_rate`);
+- `payment_arrangement`
+  (`existing_external_sepa|manual_payment|not_applicable`),
+  `payment_due_day` nullable, `billing_period_code`;
 - `provider_snapshot_json`, `party_snapshot_json`, `service_snapshot_json`,
   `schedule_snapshot_json`;
 - `billing_snapshot_json`, `line_items_json`, `term_snapshot_json`,
   `termination_snapshot_json`, `withdrawal_snapshot_json`;
+- `distance_legal_profile_snapshot_json`, `distance_legal_basis_hash`;
+- `early_performance_request_version`, `early_performance_requested_at`
+  nullable, `wertersatz_notice_version` nullable;
 - `clauses_manifest_json`, `attachments_manifest_json`,
-  `privacy_notice_version`;
+  `privacy_notice_version`, `media_clause_version` nullable,
+  `media_decision_snapshot_json` nullable;
 - `render_input_hash`, `artifact_manifest_json`, `contract_html_r2_key`,
   `contract_pdf_r2_key`, `contract_hash`;
 - `render_status` (`not_started|rendering|ready|failed`);
 - `status` (`draft|sent|accepted_by_parent|declined_by_parent|approved_by_admin|cancelled|expired|superseded`);
 - `sent_at`, `expires_at`, `accepted_at`, `declined_at`;
 - `admin_approved_at`, `cancelled_at`, `status_reason`;
+- `retention_control_id` nullable;
 - `created_at`, `updated_at`.
 
 После `sent` содержимое immutable. Изменение условий создает новую version и
 делает старую `superseded`. Проверка требует ровно одну service relation:
-`course_group_id XOR individual_request_id`. Nachhilfe offer требует approved,
-действующий на `start_date` Jobcenter/Sozialamt `funding_authorization_id` и
-`billing_model=third_party_funded`; individual offer запрещает funding
-authorization. Group relation требует `enrollment_id` и запрещает
-`service_engagement_id`; request relation — наоборот.
+`course_group_id XOR individual_request_id`. Полная матрица fail-closed:
+
+- `group_yearly|group_monthly` требуют matching template ID, `course_group_id`,
+  `enrollment_id`, `billing_model=monthly_group_fee` и запрещают request,
+  engagement и funding authorization;
+- `individual_hourly` требует matching template ID, `individual_request_id`,
+  `service_engagement_id`, `billing_model=delivered_units`, request kind
+  `individual`/self-pay, `price_source=configured_individual_hourly` с immutable
+  snapshot фактического configured тарифа и запрещает course/enrollment/funding
+  authorization;
+- `nachhilfe_hourly` требует matching template ID, request/engagement kind
+  `nachhilfe`, `billing_model=third_party_funded` и approved Jobcenter/Sozialamt
+  `funding_authorization_id`, `price_source=fixed_nachhilfe_hourly` и фиксированный
+  unit rate 3000 cents/45 минут; все его current documents должны быть
+  `approved`.
+
+Любая другая permutation contract kind/template/service relation/billing model
+отклоняется при draft validation, send и повторно при activation. Для Nachhilfe
+structured `effective_from|effective_to` обязательны и должны целиком входить в
+inclusive `valid_from|valid_until`; null/out-of-range `effective_to` остаётся
+fail-closed. `term_snapshot_json` не заменяет эти поля.
+Offer/contract `effective_from|effective_to` — inclusive local calendar dates;
+enrollment/engagement `active_until` остаётся exclusive boundary. Если closed
+contract end-date проецируется в operational record, действует
+`active_until = calendar_day_after(effective_to)` в `Europe/Berlin`, одной
+протестированной calendar-date функцией, без duration arithmetic.
+`third_party_funded` требует `payment_arrangement=not_applicable` и null
+`payment_due_day`; parent-pay arrangement запрещает `not_applicable`.
+`manual_payment` требует due day 7, а `existing_external_sepa` — null due day,
+поскольку портал не обещает дату внешнего списания.
+Для `monthly_group_fee` `amount_semantics=base_price`: holiday/proration/other
+adjustments и фактическая payable amount не вычисляются и это входит в
+`billing_snapshot_json`/PDF text.
+`media_clause_version` входит в render/hash, если template содержит media clause.
+Optional `media_decision_snapshot_json` разрешён только для отдельного
+`media_consents` event, существовавшего до immutable render/send; решение после
+send и revoke не мутируют offer/PDF. Отсутствие explicit grant означает запрет
+publication. Production требует approved German text и immutable withdrawal
+contact snapshot/hash, но не меняет уже отправленный offer при последующем
+обновлении контактов.
 `UNIQUE(series_id, version)` и
 `UNIQUE(offer_number)`. Для непустого `contract_number` действует partial
-unique; момент назначения и связь номера с offer series определяет `OQ-013`.
+unique. В production `contract_number` обязателен до render и `sent`; null
+допустим только для synthetic test/draft до reservation.
 
 ### `contract_render_attempts`
 
@@ -483,7 +808,7 @@ hash имеют разные назначения.
 ### `contract_acceptances`
 
 - `id`, `contract_offer_id`, `user_id`, `accepted_at`;
-- `ip_retention_value`, `user_agent`, `acceptance_text_version`;
+- `ip_retention_value`, `ip_expires_at`, `user_agent`, `acceptance_text_version`;
 - `acceptance_text`, `contract_hash`, `idempotency_key`.
 
 `UNIQUE(contract_offer_id)`. Parent acceptance и последующее admin
@@ -491,7 +816,9 @@ approval/activation — разные действия; только второе
 
 ### `contract_deliveries`
 
-- `id`, `contract_offer_id`, `artifact_kind` (`html|pdf`), `artifact_hash`;
+- `id`, `contract_offer_id`, `contract_id` nullable,
+  `artifact_kind` (`offer_html|offer_pdf|formation_certificate_pdf`),
+  `artifact_hash`;
 - `channel` (`portal|email`), `recipient_user_id`, `delivery_status`;
 - `dedupe_key`, `delivered_at`, `access_expires_at`, `provider_message_id`,
   `created_at`.
@@ -499,19 +826,38 @@ approval/activation — разные действия; только второе
 Delivery evidence не содержит body договора. Повторная доставка имеет
 idempotency/dedupe key; ссылка на private artifact не заменяет запись события.
 
+### `contract_formation_certificates`
+
+- `id`, `contract_id`, `contract_offer_id`, `contract_number`;
+- `source_snapshot_json`, `source_hash`, `schema_version`, `template_version`;
+- `parent_acceptance_id`, `parent_accepted_at`, `formed_by_admin_user_id`,
+  `formed_at`, `offer_pdf_hash`;
+- `render_status` (`pending|rendering|ready|failed`), `attempts`, `error_code`;
+- `certificate_pdf_r2_key`, `certificate_pdf_hash`, `generated_at`,
+  `retention_control_id`, timestamps.
+
+`UNIQUE(contract_id)` и `UNIQUE(contract_offer_id)`. Formation transaction
+создаёт immutable source snapshot/hash с обеими сторонами/timestamps и pending
+certificate record. Renderer может retry только тот же source hash; первый
+успешный PDF становится immutable и доставляется обеим сторонам вместе с
+исходным offer PDF. Ready certificate не перерендеривается. Certificate не
+содержит изображения подписей и не объединяет/переписывает offer PDF.
+
 ### `contracts`
 
-- `id`, `contract_offer_id`, `contract_number` nullable, `user_id`, `child_id`;
+- `id`, `contract_offer_id`, `contract_number`, `user_id`, `child_id`;
 - `course_group_id`, `individual_request_id`, `funding_authorization_id`,
   `enrollment_id`, `service_engagement_id`;
 - `operational_status` (`active|terminated|expired|void`);
 - `parent_acceptance_id`, `formed_at`, `formed_by_admin_user_id`;
-- `activated_at`, `effective_from`, `effective_to`, `created_at`.
+- `activated_at`, `effective_from`, `effective_to`,
+  `auto_renewal_blocked_at` nullable, `retention_control_id`;
+- `created_at`.
 
 `UNIQUE(contract_offer_id)`. Contract указывает на immutable approved offer, а
 не копирует изменяемые profile/course данные. В production contract number
-обязателен по утверждённому lifecycle и имеет partial unique; synthetic test
-остаётся на `offer_number`.
+обязателен, точно наследуется из offer и unique; synthetic test может оставаться
+только на `offer_number` и не создавать production-shaped `contracts`.
 
 Child/service/funding/enrollment/engagement relations либо выводятся из
 approved offer, либо проверяются на точное равенство ему; для contract повторно
@@ -519,21 +865,145 @@ approved offer, либо проверяются на точное равенст
 сдвигается к будущему `effective_from`. Связанные enrollment/service engagement
 могут иметь `status=active` с будущим `active_from`; вычисления активности и
 occupancy обязаны учитывать date boundary, а не только status.
+Contract `effective_from|effective_to` наследует inclusive calendar-date
+semantics offer; для open-ended допустим null, кроме funded Nachhilfe safe path
+— для него end date обязателен и не выходит за current authorization.
+Enrollment `active_until` остаётся exclusive.
 
 ### `contract_events`
 
 - `id`, `contract_id`, `event_type`
-  (`formed|activated|amended|termination_requested|terminated|expired|voided`);
+  (`formed|activated|amended|funding_amended|attendance_ceased|withdrawal_received|withdrawn|termination_received|renewal_blocked|termination_effective_date_confirmed|termination_disputed|mutual_termination_approved|mutual_termination_declined|terminated|expired|voided`);
 - `effective_at`, `reason_code`, `source_offer_id`;
 - `actor_user_id`, `metadata_json`, `created_at`.
 
-События append-only. Amendment требует нового approved offer; событие хранит
-ссылку, но не переносит старое acceptance.
+События append-only. Обычное изменение parent-facing contract terms требует
+нового approved offer; событие хранит ссылку, но не переносит старое acceptance.
+`funding_amended` — узкое исключение из `funding_amendments`: оно меняет только
+current funding authorization при неизменных parent-facing terms и не мутирует
+исходный offer/PDF.
 
 `formed_at` совпадает с transactional admin approval после проверки
 `parent_acceptance_id` той же offer version/hash. Parent acceptance без admin
 approval не создаёт `contracts`. Parent/admin history строится из offer,
 acceptance, contract и events; закрытие enrollment/engagement ничего не удаляет.
+
+### `contract_end_requests`
+
+- `id`, `contract_id` nullable until safe match, `requested_by_user_id` nullable,
+  `submission_channel` (`authenticated_portal|public_function|admin_recorded`),
+  `requester_identity_evidence_json` nullable, `kind`
+  (`withdrawal|ordinary_termination|extraordinary_termination|mutual_termination_request`);
+- `requested_effective_on`, `received_at`, `recorded_at`,
+  `server_ingested_at`, `request_text_version`, `request_hash`, `idempotency_key`;
+- `status`
+  (`received|effective_date_confirmed|disputed|approved|declined|completed`);
+- `calculated_effective_on`, `admin_reason`, `reviewed_by`, `reviewed_at`;
+- `external_debt_check_result` nullable
+  (`not_checked|no_debt_reported|debt_reported|unknown`);
+- `confirmation_delivery_id`, `created_at`, `updated_at`.
+
+Receipt `withdrawal|ordinary_termination|extraordinary_termination` не ждёт
+admin/debt check и immutable после submit. `approved|declined` допустимы только
+для `mutual_termination_request`: его базовый переход
+`received -> approved|declined`, а необходимость ручного контакта оформляется
+отдельной admin task, не status request. Для Kündigung admin может подтвердить
+дату либо открыть `disputed`. Debt field — manual external attestation, не
+portal ledger. Для `group_monthly` calculated effective date — последний день
+месяца фактического `received_at`; для `group_yearly` receipt до contractual end
+фиксирует запрет renewal и сохраняет текущий effective end. Debt не меняет
+расчёт. Для individual/Nachhilfe уведомление прекращает будущие неоказанные
+units. Уже согласованный lesson может остаться к внешнему ручному выставлению
+только если teacher фактически пришёл/начал ждать раньше receipt notice; receipt
+до прихода teacher исключает требование. Произвольного minute cutoff нет, портал
+не создаёт invoice/charge.
+
+`public_function` нельзя строить как owner-session-only: unmatched submission
+сохраняется без раскрытия существования contract/account, проходит abuse guard
+и связывается с contract только безопасным match/manual review. Для applicable
+§ 356a flow identity payload содержит только name, contract/part identifier и
+electronic confirmation channel; § 312k flow использует обязательные поля своей
+confirmation page. `confirmation_delivery_id` фиксирует немедленную durable
+receipt delivery. Route включается только из approved legal-profile snapshot.
+Для portal/public submission `received_at=server_ingested_at`; при
+`admin_recorded` поле хранит подтверждённое время получения email/звонка/визита,
+а `recorded_at` — более позднее время ввода. Исправление времени требует
+superseding audit evidence, бесследное backdate запрещено.
+
+### `service_attendance_notices`
+
+- `id`, `contract_id`, `service_engagement_id`, `requested_by_user_id`;
+- `submission_channel` (`authenticated_portal|admin_recorded`),
+  `received_at`, `recorded_at`, `server_ingested_at`, `notice_text_version`,
+  `notice_hash`, `idempotency_key`;
+- `teacher_notification_task_id`, `confirmation_delivery_id`;
+- `scheduled_lesson_ref` nullable, `agreed_start_at` nullable,
+  `agreed_place_ref` nullable;
+- `teacher_arrived_at`, `teacher_waited_until`, `teacher_attested_by`,
+  `teacher_attested_at` nullable, `created_at`.
+
+Таблица только для `individual|nachhilfe`; это append-only notice «больше не
+посещаем», а не statutory Widerruf и не обязательная формальная Kündigung.
+Receipt одной transaction ставит engagement `ended`, фиксирует
+`attendance_ceased_at`, создаёт `attendance_ceased` event, teacher/admin task и
+durable confirmation. Любой unit после receipt запрещён. Если конкретный lesson
+уже был согласован, external manual billing review допустим только при
+`teacher_arrived_at < received_at` и attested actual arrival/waiting.
+Отсутствующий/более поздний arrival evidence либо receipt до arrival исключает
+требование. Портал не создаёт invoice/charge. Optional formal termination может
+быть отправлен отдельно через `contract_end_requests`. Для portal notice
+`received_at=server_ingested_at`; delayed admin entry сохраняет фактический
+external receipt отдельно от `recorded_at` и не превращает своевременное notice
+в no-show.
+
+### `media_consents`
+
+- `id`, `user_id`, `child_id`,
+  `capture_scopes_json` (`photo|video` only),
+  `publication_channels_json` (`website|social_media|print` only),
+  `text_version`, `withdrawal_contact_snapshot_json`,
+  `withdrawal_contact_snapshot_hash`;
+- `decision` (`granted|declined|revoked`), `decision_source`
+  (`portal|office|email|phone|account_deletion`), `decided_at`, `received_at`,
+  `effective_from`;
+- `recorded_by_user_id` nullable, `recorded_at`, `evidence_hash`,
+  `request_dedupe_key`;
+- `source_contract_offer_id`, `source_privacy_request_id` nullable;
+- `supersedes_consent_id` nullable, `created_at`.
+
+Каждое новое решение append-only/superseding. Contract acceptance не создаёт
+его автоматически; decline не блокирует contract. Publication конкретного
+material type разрешена только при grant этого capture type и target channel.
+Offer/PDF хранит snapshot решения, а последующий revoke меняет operational
+permission только на будущее — запрещает новые capture/upload/post/repost/
+reprint — и не перезаписывает accepted PDF. Media files и historical
+publication index в этой модели отсутствуют; specifically named legacy URL
+обрабатывается отдельным `privacy_requests(kind=media_content_request)`.
+
+Grant/decline может прийти из portal contract flow. Для revoke нет parent
+self-service endpoint: уполномоченный admin записывает полученный лично, по
+email или телефону факт без approve/decline, причём
+`effective_from=received_at`, а `recorded_at` может быть позже. Исправление
+ошибочной записи создаёт superseding event/audit и не переписывает историю.
+`request_dedupe_key` уникален в рамках consent stream, поэтому повтор ввода
+одного обращения не дублирует revoke. Evidence хранит hash/reference и result
+обычной identity linkage check, но не полный email body или запись звонка.
+
+Portal action `decision=granted` и любая publication, опирающаяся на него,
+доступны только при active документированной compliance assessment, которая
+подтверждает применимый withdrawal path по Art. 7(3) GDPR/EDPB guidance, либо
+при реализованном и утверждённом ином compliant path. Без такого gate grant UI/
+API disabled; `declined`/отсутствие grant не блокируют contract. Поле «risk
+accepted» или обычный admin override не может обойти этот invariant.
+
+Successful account closure одной transaction создаёт revoke для каждого current
+grant с `decision_source=account_deletion`,
+`received_at=effective_from=account_deleted_at` и затем минимизирует profile/
+child links. Эти events сохраняются только в минимальном объёме, допускаемом
+retention policy. Withdrawal contacts берутся из утверждённой versioned
+configuration со ссылками на официальный Impressum и официальную страницу
+Kontakt; runtime scraping и hardcoded contact fields не являются source of
+truth.
 
 ### `privacy_acknowledgements`
 
@@ -542,41 +1012,90 @@ acceptance, contract и events; закрытие enrollment/engagement ниче�
 
 `UNIQUE(user_id, privacy_notice_version)`. Поля на `users` могут кешировать
 последнюю принятую версию, но история acknowledgement не заменяется media
-consent или contract acceptance. Media/SEPA/medical consent tables не создаются
-до решения `OQ-016`.
+consent или contract acceptance. SEPA/medical consent tables в MVP не создаются.
 
 ## Пересмотр цены
 
 ### `price_review_batches`
 
 - `id`, `course_group_id`, `reason_code`;
-- `old_active_count`, `new_active_count`, `lookup_children_count`;
-- `price_version_id`, `effective_from`;
-- `status` (`draft|pending_admin|approved|processing|completed|cancelled`);
-- `created_at`, `approved_at`, `approved_by`.
+- `old_active_count`, `new_active_count`, `old_lookup_children_count`,
+  `new_lookup_children_count`;
+- `price_version_id`, `earliest_effective_from`;
+- `status`
+  (`draft|pending_notification_approval|notifications_approved|sending|awaiting_responses|completed|cancelled`);
+- `created_at`, `notification_approved_at`, `notification_approved_by`.
 
 ### `price_review_items`
 
-- `id`, `batch_id`, `version`, `enrollment_id`, `user_id`;
-- `old_price_cents`, `new_base_price_cents`, `new_final_price_cents`;
-- `old_price_mode`, `new_price_mode`, `decision_json`;
+- `id`, `batch_id`, `version`, `enrollment_id` nullable,
+  `legacy_enrollment_id` nullable, `user_id` nullable;
+- `old_price_cents`, `new_base_price_cents`, `new_final_price_cents` nullable;
+- `old_price_source`, `new_price_source`, `old_price_mode`, `new_price_mode`
+  nullable, `decision_code`, `decision_json`;
 - `terms_snapshot_json`, `item_hash`, `acceptance_text_version`;
-- `status` (`draft|approved|sent|accepted|declined|needs_manual_contact|applied|cancelled|superseded`);
-- `sent_at`, `response_deadline`, `responded_at`, `applied_at`.
+- `status`
+  (`draft|manual_contact_required|notification_approved|sent|accepted_by_parent|declined_by_parent|response_overdue|approved_by_admin|scheduled|applied|cancelled|superseded`);
+- `sent_at`, `response_deadline`, `responded_at`;
+- `final_admin_confirmed_at`, `final_admin_confirmed_by`,
+  `final_admin_confirmation_reason`;
+- `manual_contact_task_id`, `scheduled_for`, `applied_at`.
 
 После `sent` item immutable. Изменение price/effective/terms создает новую
 version и делает старую `superseded`; parent acceptance не переносится.
-`UNIQUE(batch_id, enrollment_id, version)`; для enrollment одновременно только
-один open item на одну effective date.
+Ровно одна target relation: `enrollment_id XOR legacy_enrollment_id`.
+Для этой XOR-модели создаются два partial unique index:
+`(batch_id, enrollment_id, version) WHERE enrollment_id IS NOT NULL` и
+`(batch_id, legacy_enrollment_id, version) WHERE legacy_enrollment_id IS NOT NULL`;
+для target одновременно только один open item на одну effective date.
+
+Sendable portal item создаётся только когда его принятый текущий
+`final_price_cents` или `price_mode` отличается от рассчитанного предложения;
+поэтому triggering enrollment с уже актуальным accepted price snapshot не
+получает лишнего item. Batch без таких items завершается без рассылки.
+Legacy-only target без digital acceptance остаётся
+sendable, если legacy family claimed этим active user, service mapping
+однозначен, а current amount/source/mode известны или подтверждены admin. Он
+проходит тот же parent/admin workflow, но apply создаёт
+`legacy_service_price_assignments`, не переписывает imported source и не создаёт
+contract/PDF. Represented legacy row второй item не создаёт. Unclaimed/
+conflicting/unknown legacy получает `manual_contact_required`; null amount/
+source/mode требует явный `decision_code` и запрещает send/accept/apply.
+Batch notification approval и per-item final admin confirmation — разные
+actions/actors/timestamps. `accepted_by_parent` не меняет enrollment;
+`declined_by_parent|response_overdue` создают deduped admin task. Только
+`approved_by_admin|scheduled` допускает idempotent apply. `response_deadline`
+равен 14 календарным дням после send. При final admin confirmation
+`scheduled_for = first_day_of_next_calendar_month(final_admin_confirmed_at,
+Europe/Berlin)`; apply до этой даты и retroactive apply запрещены.
+
+Новый trigger для той же group supersede каждый open prior-batch item, если
+count/price-version/rule/target state больше не совпадает. Final confirmation и
+apply conditional-transaction повторно требуют active account, qualifying
+active enrollment на effective date, exact current old price/mode, matching
+new count/version/rule и отсутствие newer open/applied item. Любой mismatch
+ставит `superseded`, сохраняет response evidence и не меняет enrollment.
 
 ### `price_change_acceptances`
 
 - `id`, `price_review_item_id`, `user_id`, `accepted_at`;
-- `ip_retention_value`, `user_agent`, `acceptance_text`;
+- `ip_retention_value`, `ip_expires_at`, `user_agent`, `acceptance_text`;
 - `acceptance_text_version`, `item_hash`, `idempotency_key`.
 
 `UNIQUE(price_review_item_id)`. Согласие относится к неизменяемой item
 version/hash, не к group batch.
+
+### `legacy_service_price_assignments`
+
+- `id`, `legacy_enrollment_id`, `price_review_item_id` nullable;
+- `base_price_cents`, `final_price_cents`, `price_source`, `price_mode`;
+- `effective_from`, `effective_until` nullable, `status` (`scheduled|active|ended`);
+- `applied_by_event_id`, `created_at`.
+
+Imported `Value18`/source row immutable. На дату действует максимум одна
+assignment; overlapping activation защищена conditional transaction/index.
+Cabinet и следующий price review используют current effective assignment, а
+при её отсутствии — подтверждённую imported planned price либо explicit unknown.
 
 ## Сообщения и уведомления
 
@@ -622,7 +1141,9 @@ active_children_count(course, as_of) =
 ```
 
 Учитываются `active_from <= as_of` и
-`active_until IS NULL OR as_of < active_until`. Статус без дат недостаточен.
+`active_until IS NULL OR as_of < active_until`; для portal enrollment
+дополнительно требуется `status=active`, для legacy — approved
+`is_active_for_occupancy`. Статус без дат недостаточен.
 
 ```text
 quote lookup count    = min(active_children_count(planned_start) + 1, 6)
@@ -631,4 +1152,4 @@ repricing lookup count = no lookup/items при active=0,
 ```
 
 Capacity и price lookup count — разные понятия. Trial не входит ни в один
-ценовой count.
+ценовой count. Поэтому `5↔6` меняет lookup, а `7→6` — нет.
