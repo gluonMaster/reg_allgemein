@@ -22,7 +22,10 @@ describe('foundation D1 migration and repositories', () => {
 	});
 
 	it('applies the immutable migration sequence to an empty D1', async () => {
-		expect(context.migrationIds).toEqual(['0001_foundation.sql']);
+		expect(context.migrationIds).toEqual([
+			'0001_foundation.sql',
+			'0002_price_schedule_imports.sql',
+		]);
 
 		const result = await context.db
 			.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")

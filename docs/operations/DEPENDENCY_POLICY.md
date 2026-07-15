@@ -25,12 +25,31 @@
 
 ## Текущий audit snapshot
 
-Повторно проверено 2026-07-10:
+Повторно проверено 2026-07-15 после этапа 02:
 
 - `npm run check` проходил;
+- `npm test` проходил;
 - `npm run build` проходил;
-- `npm audit` показывал `0 vulnerabilities` после удаления неиспользуемого
-  `xlsx@0.18.5`, для которого npm сообщал high advisories без fix.
+- `npm audit` показывал `0 vulnerabilities`;
+- `xlsx@0.18.5` не возвращён.
+
+Для локального allowlisted extract выбран `read-excel-file@9.3.1`:
+
+- MIT license, Node.js `>=18`, активный release на момент проверки;
+- находится только в `devDependencies` и не импортируется Worker runtime;
+- читает конкретный sheet `Tabelle8`, а числовой XML-текст передаётся в
+  собственный decimal-to-cents parser без binary-float arithmetic;
+- synthetic macro-enabled container с `vbaProject.bin` разбирается без
+  Office/COM/LibreOffice и без исполнения/экспорта VBA; hidden/veryHidden sheet
+  не попадает в extractor result;
+- encrypted/unsupported container и несовпадение sheet/header contract
+  завершаются fail-closed.
+
+`fflate` используется только тестом для создания synthetic XLSX/XLSM container,
+а `tsx` — только как Node runner локальных TypeScript CLI. Оба также остаются в
+`devDependencies`. XLSM allowlist для реального `PlusBText` и его structural
+fingerprint проверяется отдельно на этапе 03; успешный synthetic container не
+подменяет этот source-specific gate.
 
 Этот snapshot не является вечной гарантией. Перед release audit запускается
 повторно, результат и принятое исключение обновляются.
@@ -51,9 +70,9 @@
 
 ```json
 {
-  "overrides": {
-    "cookie": "^0.7.2"
-  }
+	"overrides": {
+		"cookie": "^0.7.2"
+	}
 }
 ```
 

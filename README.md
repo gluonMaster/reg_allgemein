@@ -47,15 +47,58 @@ Chromium устанавливается один раз в локальный ca
 репозиторий. Unit/integration tests используют только synthetic data и
 изолированную in-memory D1.
 
+Локальный импорт прайса и расписания требует заранее зарегистрированный
+учебный период. Следующий пример создаёт только локальную запись с явно
+переданными датами; importer никогда не определяет период по имени файла или
+текущей дате:
+
+```bash
+npm run db:period:local -- \
+  --academic-period 2026-2027 \
+  --display-name 2026/2027 \
+  --starts-on 2026-08-01 \
+  --ends-on 2027-07-31
+```
+
+Безопасный dry-run выполняет extract/normalize/stage/validate/diff и не меняет
+runtime current version. `--action promote` добавляет атомарную локальную
+публикацию; повтор уже опубликованного fingerprint возвращает `noop`:
+
+```bash
+npm run import:price:local -- --academic-period 2026-2027 --action dry-run
+npm run import:schedule:local -- --academic-period 2026-2027 --action dry-run
+npm run import:price:local -- --academic-period 2026-2027 --action promote
+npm run import:schedule:local -- --academic-period 2026-2027 --action promote
+npm run import:status:local -- --limit 10
+```
+
+По умолчанию команды читают только ignored read-only
+`references/pricing/Price.xlsx`, primary schedule JSON и контрольный HTML.
+Пути можно передать через `--source` и для расписания `--html`, но они никогда
+не сохраняются в D1/report. Просмотр одного запуска и rollback предыдущей
+опубликованной версии:
+
+```bash
+npm run import:status:local -- --run-id <opaque-run-id>
+npm run import:rollback:local -- \
+  --source-kind schedule \
+  --academic-period 2026-2027
+```
+
+Rollback и promotion в этих командах работают только с локальной D1 из
+`.wrangler/state/v3`. Production import/remote migration/deploy ими не
+выполняются.
+
 `PORTAL_PUBLIC_ORIGIN` задаётся явно. В preview/production принимается только
 отдельный canonical HTTPS origin портала; origin официального сайта отклоняется.
 Пример production-shaped конфигурации без идентификаторов и секретов находится
 в `wrangler.example.toml`, примеры локальных secret placeholders — в
 `.dev.vars.example`. Реальные secrets задаются вне Git.
 
-Сейчас реализована только foundation-инфраструктура. Auth, importer, каталог и
-business workflows добавляются последующими этапами roadmap; cron placeholder
-на этом этапе намеренно отсутствует.
+Сейчас реализованы foundation-инфраструктура и локальный versioned importer
+прайса/расписания. Auth, public catalog UI, pricing quote и остальные business
+workflows добавляются последующими этапами roadmap; cron placeholder намеренно
+отсутствует.
 
 Персональные базы данных, клиентские Excel-файлы, секреты и import artifacts в
 git не хранятся.

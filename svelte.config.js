@@ -11,7 +11,7 @@ const config = {
 		adapter: adapter({
 			platformProxy: {
 				configPath: 'wrangler.local.toml',
-				persist: { path: '.wrangler/state' },
+				persist: { path: '.wrangler/state/v3' },
 				remoteBindings: false,
 			},
 		}),
