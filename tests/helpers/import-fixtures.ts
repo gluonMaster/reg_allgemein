@@ -1,4 +1,5 @@
 import { strToU8, zipSync } from 'fflate';
+import type { AccessSourceRow } from '$lib/server/import/local/access-database';
 
 export interface SyntheticPriceRow {
 	key: string | null;
@@ -23,6 +24,17 @@ export interface SyntheticScheduleBlock {
 	includeHtmlSubject?: boolean;
 }
 
+export interface SyntheticPlusBTextRow {
+	e?: string | null;
+	f?: string | null;
+	k?: string | null;
+	l?: string | null;
+	m?: string | null;
+	n?: string | null;
+	t?: string | null;
+	extraVisibleValue?: string | null;
+}
+
 const xmlEscape = (value: string): string =>
 	value
 		.replaceAll('&', '&amp;')
@@ -37,6 +49,10 @@ function inlineCell(reference: string, value: string): string {
 
 function numericCell(reference: string, value: string): string {
 	return `<c r="${reference}"><v>${xmlEscape(value)}</v></c>`;
+}
+
+function sharedCell(reference: string, index: number): string {
+	return `<c r="${reference}" t="s"><v>${index}</v></c>`;
 }
 
 function priceRowXml(rowNumber: number, row: SyntheticPriceRow): string {
@@ -142,6 +158,139 @@ export function createSyntheticPriceWorkbook(input?: {
 	};
 	if (macroEnabled) files['xl/vbaProject.bin'] = strToU8('AUTO_OPEN_SYNTHETIC_MARKER');
 	return Buffer.from(zipSync(files));
+}
+
+export function createSyntheticPlusBTextWorkbook(input?: {
+	rows?: SyntheticPlusBTextRow[];
+	macroEnabled?: boolean;
+	includeSheet?: boolean;
+	headerMismatch?: boolean;
+}): Buffer {
+	const rows = input?.rows ?? [
+		{ e: '10', f: 'Old Group', k: null, l: null },
+		{
+			k: '10',
+			l: 'Target Group',
+			m: 'Teacher A',
+			n: 'Mo',
+			t: '90',
+			extraVisibleValue: 'visible-person@example.invalid',
+		},
+	];
+	const header = [
+		sharedCell('F1', 0),
+		inlineCell('L1', 'Target group'),
+		inlineCell('M1', 'Teacher'),
+		inlineCell('N1', 'Weekday'),
+		...(input?.headerMismatch ? [inlineCell('T1', 'Duration')] : []),
+	].join('');
+	const dataRows = rows.map((row, index) => {
+		const rowNumber = index + 2;
+		return `<row r="${rowNumber}">${[
+			row.extraVisibleValue ? sharedCell(`A${rowNumber}`, 1) : '',
+			row.e ? numericCell(`E${rowNumber}`, row.e) : '',
+			row.f ? inlineCell(`F${rowNumber}`, row.f) : '',
+			row.k
+				? /^\d+$/.test(row.k)
+					? numericCell(`K${rowNumber}`, row.k)
+					: inlineCell(`K${rowNumber}`, row.k)
+				: '',
+			row.l ? inlineCell(`L${rowNumber}`, row.l) : '',
+			row.m ? inlineCell(`M${rowNumber}`, row.m) : '',
+			row.n ? inlineCell(`N${rowNumber}`, row.n) : '',
+			row.t ? numericCell(`T${rowNumber}`, row.t) : '',
+		].join('')}</row>`;
+	});
+	const macroEnabled = input?.macroEnabled ?? true;
+	const includeSheet = input?.includeSheet ?? true;
+	const workbookContentType = macroEnabled
+		? 'application/vnd.ms-excel.sheet.macroEnabled.main+xml'
+		: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml';
+	const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+		<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+			<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+			<Default Extension="xml" ContentType="application/xml"/>
+			<Override PartName="/xl/workbook.xml" ContentType="${workbookContentType}"/>
+			<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+			<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+			<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+			<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+			${macroEnabled ? '<Override PartName="/xl/vbaProject.bin" ContentType="application/vnd.ms-office.vbaProject"/>' : ''}
+		</Types>`;
+	const files: Record<string, Uint8Array> = {
+		'[Content_Types].xml': strToU8(contentTypes),
+		'_rels/.rels': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+				<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+			</Relationships>`),
+		'xl/workbook.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+				<sheets>
+					<sheet name="${includeSheet ? 'PlusBText' : 'WrongSheet'}" sheetId="1" r:id="rId1"/>
+					<sheet name="HiddenData" sheetId="2" state="veryHidden" r:id="rId2"/>
+				</sheets>
+			</workbook>`),
+		'xl/_rels/workbook.xml.rels':
+			strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+				<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+				<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+				<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+				<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+				${macroEnabled ? '<Relationship Id="rId5" Type="http://schemas.microsoft.com/office/2006/relationships/vbaProject" Target="vbaProject.bin"/>' : ''}
+			</Relationships>`),
+		'xl/worksheets/sheet1.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+				<dimension ref="A1:T${Math.max(rows.length + 1, 2)}"/>
+				<sheetData><row r="1">${header}</row>${dataRows.join('')}</sheetData>
+			</worksheet>`),
+		'xl/worksheets/sheet2.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+				<dimension ref="A1:A1"/><sheetData><row r="1">${sharedCell('A1', 2)}</row></sheetData>
+			</worksheet>`),
+		'xl/sharedStrings.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="3" uniqueCount="3">
+				<si><t>Old group</t></si>
+				<si><t>visible-person@example.invalid</t></si>
+				<si><t>hidden-person@example.invalid</t></si>
+			</sst>`),
+		'xl/styles.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+			<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+				<fonts count="1"><font/></fonts><fills count="1"><fill/></fills><borders count="1"><border/></borders>
+				<cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="1"><xf xfId="0"/></cellXfs>
+			</styleSheet>`),
+	};
+	if (macroEnabled) files['xl/vbaProject.bin'] = strToU8('AUTO_OPEN_SYNTHETIC_MARKER');
+	return Buffer.from(zipSync(files));
+}
+
+export function createSyntheticAccessRow(
+	overrides: Partial<AccessSourceRow> = {}
+): AccessSourceRow {
+	return {
+		ID: 101,
+		Value1: '1. 3477',
+		Value2: 'Muster, Maria',
+		Value4: 'Kind Eins',
+		Value5: '2016-04-03',
+		Value6: 'Synthetic Street 7',
+		Value7: '555-0100',
+		Value8: '555-0101',
+		Value9: 'parent@example.invalid',
+		Value15: 'Old Group',
+		Value16: null,
+		Value17: null,
+		Value18: '46,00',
+		Value19: 'Synthetic note',
+		Value20: 'J',
+		Value42: 'Target Group',
+		Value43: null,
+		Value44: null,
+		Value45: null,
+		Value46: null,
+		Value48: '101',
+		...overrides,
+	};
 }
 
 const fullDayNames: Record<SyntheticScheduleBlock['day'], string> = {

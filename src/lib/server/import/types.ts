@@ -1,4 +1,4 @@
-export type ImportSourceKind = 'price' | 'schedule';
+export type ImportSourceKind = 'access' | 'plusbtext' | 'price' | 'schedule';
 export type ImportIssueSeverity = 'info' | 'warning' | 'error' | 'fatal';
 
 export interface ImportIssueDraft {
@@ -98,6 +98,138 @@ export interface ScheduleImportSnapshot {
 		blocksCompared: number;
 		blocksMatched: number;
 	};
+}
+
+export interface PlusBTextOldGroupDraft {
+	storageKey: string;
+	sourceRowNumber: number;
+	oldGroupId: number | null;
+	groupNameRaw: string | null;
+	groupNameNormalized: string | null;
+	recordHashSha256: string;
+	isValid: boolean;
+}
+
+export interface PlusBTextTargetDraft {
+	storageKey: string;
+	sourceRowNumber: number;
+	oldGroupIds: number[];
+	groupNameRaw: string;
+	groupNameNormalized: string;
+	teacherName: string | null;
+	dayRaw: string | null;
+	durationMinutes: number | null;
+	durationStatus: 'verified' | 'missing' | 'invalid';
+	recordHashSha256: string;
+	isValid: boolean;
+}
+
+export interface PlusBTextImportSnapshot {
+	sourceContractId: 'admin-xlsm-plusbtext';
+	sourceContractVersion: 1;
+	fingerprintAlgorithmVersion: 1;
+	structuralFingerprintSha256: string;
+	logicalShapeFingerprintSha256: string;
+	styleFingerprintSha256: string;
+	versionHashSha256: string;
+	oldGroups: PlusBTextOldGroupDraft[];
+	targets: PlusBTextTargetDraft[];
+	issues: ImportIssueDraft[];
+	rowsTotal: number;
+	rowsStaged: number;
+	rowsSkipped: number;
+}
+
+export interface LegacyFamilyDraft {
+	stableFamilyKey: string;
+	legacyFamilyId: string;
+	sourceFamilyId: string;
+	familyNumberId: string | null;
+	legacySequenceNumber: number | null;
+	numberingStatus: 'valid' | 'collision' | 'missing' | 'unapproved';
+	parentNameRaw: string | null;
+	parentFirstNameNormalized: string | null;
+	parentLastNameNormalized: string | null;
+	parentNameMatchStatus: 'eligible' | 'ambiguous' | 'unavailable';
+	parentNameNormalizerVersion: 1;
+	continuityNeedsReview: boolean;
+	addressRaw: string | null;
+	phoneRaw: string | null;
+	mobileRaw: string | null;
+	recordHashSha256: string;
+}
+
+export interface LegacyEmailDraft {
+	id: string;
+	stableFamilyKey: string;
+	emailRaw: string;
+	emailNormalized: string | null;
+	sourceAccessId: number;
+	recordHashSha256: string;
+}
+
+export interface LegacyChildDraft {
+	stableFamilyKey: string;
+	legacyChildId: string;
+	sourceChildKey: string;
+	sourceFullName: string;
+	sourceFullNameNormalized: string;
+	sourceBirthDate: string;
+	continuityNeedsReview: boolean;
+	recordHashSha256: string;
+}
+
+export interface LegacySourceRowDraft {
+	id: string;
+	sourceNamespace: 'legacy_1';
+	sourceAccessId: number;
+	sourceRecordKey: string;
+	stableFamilyKey: string | null;
+	sourceChildKey: string | null;
+	value48Mirror: string | null;
+	sourceHashSha256: string;
+	sourceValues: Record<string, string | null>;
+}
+
+export interface LegacyEnrollmentDraft {
+	id: string;
+	sourceAccessId: number;
+	stableFamilyKey: string;
+	sourceChildKey: string;
+	sourceSlot: 'main_next' | 'package_1' | 'package_2' | 'package_3' | 'package_4' | 'package_5';
+	sourceRecordKey: string;
+	groupNameRaw: string;
+	groupNameNormalized: string;
+	teacherName: string | null;
+	dayRaw: string | null;
+	durationMinutes: number | null;
+	statusCodeRaw: string | null;
+	lessonKind: LessonKind | null;
+	contractKind: 'yearly' | 'monthly' | 'nachhilfe' | 'individual' | null;
+	priceSource: 'yearly' | 'monthly' | null;
+	priceMode: 'rule_derived' | null;
+	plannedPriceCents: number | null;
+	notesRaw: string | null;
+	needsAdminReview: boolean;
+	recordHashSha256: string;
+}
+
+export interface LegacyImportSnapshot {
+	sourceContractId: 'access-tblkartei';
+	sourceContractVersion: 1;
+	structuralFingerprintSha256: string;
+	versionHashSha256: string;
+	plusBTextVersionId: string;
+	plusBTextVersionHashSha256: string;
+	families: LegacyFamilyDraft[];
+	emails: LegacyEmailDraft[];
+	children: LegacyChildDraft[];
+	sourceRows: LegacySourceRowDraft[];
+	enrollments: LegacyEnrollmentDraft[];
+	issues: ImportIssueDraft[];
+	rowsTotal: number;
+	rowsStaged: number;
+	rowsSkipped: number;
 }
 
 export interface AcademicPeriodRow {

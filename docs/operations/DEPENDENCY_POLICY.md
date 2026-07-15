@@ -25,7 +25,7 @@
 
 ## Текущий audit snapshot
 
-Повторно проверено 2026-07-15 после этапа 02:
+Повторно проверено 2026-07-15 после этапа 03:
 
 - `npm run check` проходил;
 - `npm test` проходил;
@@ -45,16 +45,35 @@
 - encrypted/unsupported container и несовпадение sheet/header contract
   завершаются fail-closed.
 
-`fflate` используется только тестом для создания synthetic XLSX/XLSM container,
-а `tsx` — только как Node runner локальных TypeScript CLI. Оба также остаются в
-`devDependencies`. XLSM allowlist для реального `PlusBText` и его structural
-fingerprint проверяется отдельно на этапе 03; успешный synthetic container не
-подменяет этот source-specific gate.
+`fflate` используется PlusBText boundary для выборочного чтения только
+container metadata, target worksheet, styles и referenced shared-string entries, а
+также тестами для создания synthetic XLSX/XLSM. Перед передачей в
+`read-excel-file` создаётся in-memory archive только с visible `PlusBText`
+и cells `E/F/K/L/M/N/T`; unreferenced shared strings заменяются пустыми.
+Hidden/veryHidden worksheets, extra columns и VBA parts не распаковываются
+этим reader-слоем.
+`tsx` используется только как Node runner локальных TypeScript CLI. Оба
+остаются в `devDependencies`. Для `PlusBText` добавлен версионный
+value-free structural fingerprint с fail-closed drift и отдельными
+logical/style review issues. Синтетический golden fixture не подменяет
+source-specific dry-run реального файла, который требует отдельного прямого
+поручения.
+
+Для локального Access extract выбран `mdb-reader@3.2.0`:
+
+- MIT license, pure Node/JavaScript reader без Office/COM/LibreOffice и ODBC;
+- находится только в `devDependencies` и не импортируется Worker runtime;
+- читает только `tblKartei` и точный allowlist `ID`, `Value1`, `Value2`,
+  `Value4`–`Value9`, `Value15`–`Value20`, `Value42`–`Value46`, `Value48`;
+- encrypted/password-protected/unreadable database и schema/profile mismatch
+  завершаются fail-closed;
+- тесты используют synthetic extract adapter и не читают клиентскую базу.
 
 Этот snapshot не является вечной гарантией. Перед release audit запускается
 повторно, результат и принятое исключение обновляются.
 
-Этап 02 выбирает поддерживаемый parser после отдельного spike. Допустимые
+Локальный import boundary выбирает поддерживаемый parser после отдельного spike.
+Допустимые
 варианты:
 
 - перейти на поддерживаемый parser;

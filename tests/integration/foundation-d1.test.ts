@@ -25,6 +25,7 @@ describe('foundation D1 migration and repositories', () => {
 		expect(context.migrationIds).toEqual([
 			'0001_foundation.sql',
 			'0002_price_schedule_imports.sql',
+			'0003_access_plusbtext_imports.sql',
 		]);
 
 		const result = await context.db

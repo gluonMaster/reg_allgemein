@@ -47,7 +47,8 @@ Chromium устанавливается один раз в локальный ca
 репозиторий. Unit/integration tests используют только synthetic data и
 изолированную in-memory D1.
 
-Локальный импорт прайса и расписания требует заранее зарегистрированный
+Локальный импорт прайса, расписания и legacy-данных требует заранее
+зарегистрированный
 учебный период. Следующий пример создаёт только локальную запись с явно
 переданными датами; importer никогда не определяет период по имени файла или
 текущей дате:
@@ -69,14 +70,22 @@ npm run import:price:local -- --academic-period 2026-2027 --action dry-run
 npm run import:schedule:local -- --academic-period 2026-2027 --action dry-run
 npm run import:price:local -- --academic-period 2026-2027 --action promote
 npm run import:schedule:local -- --academic-period 2026-2027 --action promote
+npm run import:plusbtext:local -- --academic-period 2026-2027 --action dry-run --source <read-only-admin.xlsm>
+npm run import:plusbtext:local -- --academic-period 2026-2027 --action promote --source <read-only-admin.xlsm>
+npm run import:access:local -- --academic-period 2026-2027 --action dry-run --source <read-only-front.accdb>
+npm run import:access:local -- --academic-period 2026-2027 --action promote --source <read-only-front.accdb>
 npm run import:status:local -- --limit 10
 ```
 
-По умолчанию команды читают только ignored read-only
+По умолчанию price/schedule команды читают только ignored read-only
 `references/pricing/Price.xlsx`, primary schedule JSON и контрольный HTML.
-Пути можно передать через `--source` и для расписания `--html`, но они никогда
-не сохраняются в D1/report. Просмотр одного запуска и rollback предыдущей
-опубликованной версии:
+Для Access и PlusBText нет default path: нужен `--source` или переменная
+`LOCAL_ACCESS_SOURCE`/`LOCAL_ADMIN_WORKBOOK_SOURCE`. Снача публикуется
+PlusBText; Access использует текущую опубликованную PlusBText-версию или
+явно указанную `--plusbtext-version`. Все source paths остаются вне D1/report.
+Реальные клиентские файлы можно читать только read-only и после отдельного
+прямого поручения. Просмотр одного запуска и rollback предыдущей опубликованной
+версии:
 
 ```bash
 npm run import:status:local -- --run-id <opaque-run-id>
@@ -95,8 +104,8 @@ Rollback и promotion в этих командах работают только
 в `wrangler.example.toml`, примеры локальных secret placeholders — в
 `.dev.vars.example`. Реальные secrets задаются вне Git.
 
-Сейчас реализованы foundation-инфраструктура и локальный versioned importer
-прайса/расписания. Auth, public catalog UI, pricing quote и остальные business
+Сейчас реализованы foundation-инфраструктура и локальные versioned importers
+прайса, расписания, Access и PlusBText. Auth, public catalog UI, pricing quote и остальные business
 workflows добавляются последующими этапами roadmap; cron placeholder намеренно
 отсутствует.
 

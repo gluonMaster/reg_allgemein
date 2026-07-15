@@ -22,6 +22,8 @@
 		"db:period:local": "tsx scripts/ensure-academic-period.ts",
 		"import:price:local": "tsx scripts/import-references.ts price",
 		"import:schedule:local": "tsx scripts/import-references.ts schedule",
+		"import:plusbtext:local": "tsx scripts/import-references.ts plusbtext",
+		"import:access:local": "tsx scripts/import-references.ts access",
 		"import:status:local": "tsx scripts/import-references.ts status",
 		"import:rollback:local": "tsx scripts/import-references.ts rollback",
 		"deploy": "npm run build && wrangler deploy"
@@ -39,6 +41,7 @@
 		"@vitest/ui": "^3.2.4",
 		"autoprefixer": "^10.4.21",
 		"fflate": "^0.8.3",
+		"mdb-reader": "^3.2.0",
 		"miniflare": "^4.20251011.0",
 		"node-html-parser": "^6.1.13",
 		"postcss": "^8.5.6",
