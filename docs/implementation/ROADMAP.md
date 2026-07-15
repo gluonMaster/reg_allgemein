@@ -46,7 +46,7 @@ npm run build
 | 01 | done | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations | — |
 | 02 | done | Versioned import schema, price и schedule staging/validation/promotion | 01 |
 | 03 | done | Access/PlusBText import, family/child aggregation, issues и reconciliation | 02 |
-| 04 | pending | Course mappings, occupancy и безопасный pricing/quote engine | 02–03 |
+| 04 | done | Course mappings, occupancy и безопасный pricing/quote engine | 02–03 |
 | 05 | pending | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC | 01 |
 | 06 | pending | Portal children, atomic legacy claim и parent cabinet | 03–05 |
 | 06A | pending | Admin shell, import/review/legacy/users/catalog core surfaces | 02–06 |

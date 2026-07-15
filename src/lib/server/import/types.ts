@@ -203,6 +203,7 @@ export interface LegacyEnrollmentDraft {
 	teacherName: string | null;
 	dayRaw: string | null;
 	durationMinutes: number | null;
+	durationStatus: 'verified' | 'missing' | 'invalid' | 'ambiguous' | 'unresolved';
 	statusCodeRaw: string | null;
 	lessonKind: LessonKind | null;
 	contractKind: 'yearly' | 'monthly' | 'nachhilfe' | 'individual' | null;

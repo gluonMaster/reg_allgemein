@@ -97,4 +97,52 @@ describe('runtime configuration', () => {
 		);
 		expect(() => buildPortalUrl(config, '//kolibri-dresden.de/')).toThrow(RuntimeConfigError);
 	});
+
+	it('loads pricing defaults and validates configured integer cents without float rounding', () => {
+		const defaults = loadRuntimeConfig({
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+		});
+		expect(defaults.pricing).toEqual({
+			individualPriceCentsPer45Min: 3000,
+			groupDurationFallbackMinutes: 90,
+			missingDurationYearlyCentsPer45Min: 2300,
+			missingDurationMonthlyCentsPer45Min: 3000,
+			quoteTtlSeconds: 86_400,
+		});
+
+		const configured = loadRuntimeConfig({
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+			INDIVIDUAL_PRICE_CENTS_PER_45_MIN: '3150',
+			GROUP_DURATION_FALLBACK_MINUTES: '135',
+			MISSING_DURATION_YEARLY_CENTS_PER_45_MIN: '2400',
+			MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN: '3100',
+			PRICE_QUOTE_TTL_SECONDS: '7200',
+		});
+		expect(configured.pricing).toMatchObject({
+			individualPriceCentsPer45Min: 3150,
+			groupDurationFallbackMinutes: 135,
+			quoteTtlSeconds: 7200,
+		});
+	});
+
+	it.each([
+		{ GROUP_DURATION_FALLBACK_MINUTES: '60' },
+		{ GROUP_DURATION_FALLBACK_MINUTES: '90.0' },
+		{ MISSING_DURATION_YEARLY_CENTS_PER_45_MIN: '-1' },
+		{ MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN: '30.50' },
+		{ PRICE_QUOTE_TTL_SECONDS: '0' },
+	])('fails closed for invalid pricing config: %#', (pricingEnv) => {
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'development',
+				PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb,
+				...pricingEnv,
+			})
+		).toThrow(RuntimeConfigError);
+	});
 });

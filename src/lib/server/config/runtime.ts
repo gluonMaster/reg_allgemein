@@ -6,6 +6,11 @@ const rawConfigSchema = z.object({
 	JWT_SECRET: z.string().min(32).optional(),
 	TURNSTILE_SITE_KEY: z.string().min(1).optional(),
 	TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
+	INDIVIDUAL_PRICE_CENTS_PER_45_MIN: z.string().optional(),
+	GROUP_DURATION_FALLBACK_MINUTES: z.string().optional(),
+	MISSING_DURATION_YEARLY_CENTS_PER_45_MIN: z.string().optional(),
+	MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN: z.string().optional(),
+	PRICE_QUOTE_TTL_SECONDS: z.string().optional(),
 });
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
@@ -20,6 +25,15 @@ export interface RuntimeConfig {
 	jwtSecret?: string;
 	turnstileSiteKey?: string;
 	turnstileSecretKey?: string;
+	pricing: PricingRuntimeConfig;
+}
+
+export interface PricingRuntimeConfig {
+	individualPriceCentsPer45Min: number;
+	groupDurationFallbackMinutes: number;
+	missingDurationYearlyCentsPer45Min: number;
+	missingDurationMonthlyCentsPer45Min: number;
+	quoteTtlSeconds: number;
 }
 
 export class RuntimeConfigError extends Error {
@@ -67,6 +81,31 @@ function isBrowserRun(value: unknown): value is BrowserRun {
 
 function isPlaceholder(value: string | undefined): boolean {
 	return value !== undefined && /^(change-me|changeme|example|replace)/i.test(value.trim());
+}
+
+function parseIntegerConfig(input: {
+	name: string;
+	value: string | undefined;
+	defaultValue: number;
+	minimum: number;
+	multipleOf?: number;
+	issues: string[];
+}): number {
+	const raw = input.value ?? String(input.defaultValue);
+	if (!/^\d+$/.test(raw)) {
+		input.issues.push(`${input.name}:positive_integer_required`);
+		return input.defaultValue;
+	}
+	const parsed = Number(raw);
+	if (!Number.isSafeInteger(parsed) || parsed < input.minimum) {
+		input.issues.push(`${input.name}:out_of_range`);
+		return input.defaultValue;
+	}
+	if (input.multipleOf && parsed % input.multipleOf !== 0) {
+		input.issues.push(`${input.name}:must_be_multiple_of_${input.multipleOf}`);
+		return input.defaultValue;
+	}
+	return parsed;
 }
 
 function validatePortalOrigin(value: string, appEnvironment: PortalEnvironment): string {
@@ -145,6 +184,45 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('TURNSTILE_SECRET_KEY:placeholder');
 	}
 
+	const pricing: PricingRuntimeConfig = {
+		individualPriceCentsPer45Min: parseIntegerConfig({
+			name: 'INDIVIDUAL_PRICE_CENTS_PER_45_MIN',
+			value: parsed.data.INDIVIDUAL_PRICE_CENTS_PER_45_MIN,
+			defaultValue: 3000,
+			minimum: 0,
+			issues,
+		}),
+		groupDurationFallbackMinutes: parseIntegerConfig({
+			name: 'GROUP_DURATION_FALLBACK_MINUTES',
+			value: parsed.data.GROUP_DURATION_FALLBACK_MINUTES,
+			defaultValue: 90,
+			minimum: 45,
+			multipleOf: 45,
+			issues,
+		}),
+		missingDurationYearlyCentsPer45Min: parseIntegerConfig({
+			name: 'MISSING_DURATION_YEARLY_CENTS_PER_45_MIN',
+			value: parsed.data.MISSING_DURATION_YEARLY_CENTS_PER_45_MIN,
+			defaultValue: 2300,
+			minimum: 0,
+			issues,
+		}),
+		missingDurationMonthlyCentsPer45Min: parseIntegerConfig({
+			name: 'MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN',
+			value: parsed.data.MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN,
+			defaultValue: 3000,
+			minimum: 0,
+			issues,
+		}),
+		quoteTtlSeconds: parseIntegerConfig({
+			name: 'PRICE_QUOTE_TTL_SECONDS',
+			value: parsed.data.PRICE_QUOTE_TTL_SECONDS,
+			defaultValue: 86_400,
+			minimum: 1,
+			issues,
+		}),
+	};
+
 	if (issues.length > 0) throw new RuntimeConfigError(issues);
 
 	return {
@@ -160,6 +238,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		jwtSecret: parsed.data.JWT_SECRET,
 		turnstileSiteKey: parsed.data.TURNSTILE_SITE_KEY,
 		turnstileSecretKey: parsed.data.TURNSTILE_SECRET_KEY,
+		pricing,
 	};
 }
 

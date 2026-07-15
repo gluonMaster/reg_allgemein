@@ -47,6 +47,7 @@ export interface PlusBTextResolution {
 	teacherName: string | null;
 	dayRaw: string | null;
 	durationMinutes: number | null;
+	durationStatus: 'verified' | 'missing' | 'invalid' | 'ambiguous' | 'unresolved';
 	issues: ImportIssueDraft[];
 }
 
@@ -725,6 +726,7 @@ function resolveCandidates(
 			teacherName: null,
 			dayRaw: null,
 			durationMinutes: null,
+			durationStatus: 'unresolved',
 			issues: [],
 		};
 	}
@@ -735,6 +737,7 @@ function resolveCandidates(
 			teacherName: first.teacherName,
 			dayRaw: first.dayRaw,
 			durationMinutes: first.durationMinutes,
+			durationStatus: first.durationStatus,
 			issues:
 				candidates.length > 1
 					? [
@@ -754,6 +757,7 @@ function resolveCandidates(
 		teacherName: null,
 		dayRaw: null,
 		durationMinutes: null,
+		durationStatus: 'ambiguous',
 		issues: [
 			{
 				severity: 'warning',
@@ -793,6 +797,7 @@ export function resolvePlusBTextGroup(input: {
 			teacherName: null,
 			dayRaw: null,
 			durationMinutes: null,
+			durationStatus: 'ambiguous',
 			issues: [
 				{
 					severity: 'warning',
@@ -810,6 +815,7 @@ export function resolvePlusBTextGroup(input: {
 			teacherName: null,
 			dayRaw: null,
 			durationMinutes: null,
+			durationStatus: 'unresolved',
 			issues: [
 				{
 					severity: 'warning',

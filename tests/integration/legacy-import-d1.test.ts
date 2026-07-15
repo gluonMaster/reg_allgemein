@@ -179,7 +179,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			.first<{ source_rows: number; children: number; enrollments: number }>();
 		const marker = await context.db
 			.prepare(
-				`SELECT contract_kind, price_source, price_mode, duration_minutes,
+				`SELECT contract_kind, price_source, price_mode, duration_minutes, duration_status,
 					is_active_for_occupancy FROM legacy_enrollments
 				WHERE status_code_raw = 'O/V' LIMIT 1`
 			)
@@ -188,6 +188,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 				price_source: string;
 				price_mode: string;
 				duration_minutes: number;
+				duration_status: string;
 				is_active_for_occupancy: number;
 			}>();
 		const status = JSON.stringify(await repository.safeStatus({ runId: access.runId }));
@@ -203,6 +204,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			price_source: 'monthly',
 			price_mode: 'rule_derived',
 			duration_minutes: 90,
+			duration_status: 'verified',
 			is_active_for_occupancy: 0,
 		});
 		for (const pii of [

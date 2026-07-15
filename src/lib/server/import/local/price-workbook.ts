@@ -1,6 +1,7 @@
 import { readSheet } from 'read-excel-file/node';
 import { hashCanonical, normalizeImportText, normalizeLookupText } from '../canonical';
 import { ImportContractError } from '../errors';
+import { normalizePricingSubject } from '$lib/server/pricing/normalization';
 import type {
 	ImportIssueDraft,
 	PriceImportSnapshot,
@@ -111,7 +112,7 @@ function parseVector(
 	}
 
 	const vector = durations.map((duration, index) => ({
-		subject: subjects.length ? normalizeLookupText(subjects[index]) : null,
+		subject: subjects.length ? normalizePricingSubject(subjects[index]) : null,
 		durationMinutes: duration.value!,
 	}));
 	return {

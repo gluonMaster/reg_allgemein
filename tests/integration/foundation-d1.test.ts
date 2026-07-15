@@ -26,6 +26,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0001_foundation.sql',
 			'0002_price_schedule_imports.sql',
 			'0003_access_plusbtext_imports.sql',
+			'0004_courses_occupancy_pricing.sql',
 		]);
 
 		const result = await context.db

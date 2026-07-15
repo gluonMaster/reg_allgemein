@@ -104,10 +104,11 @@ Rollback и promotion в этих командах работают только
 в `wrangler.example.toml`, примеры локальных secret placeholders — в
 `.dev.vars.example`. Реальные secrets задаются вне Git.
 
-Сейчас реализованы foundation-инфраструктура и локальные versioned importers
-прайса, расписания, Access и PlusBText. Auth, public catalog UI, pricing quote и остальные business
-workflows добавляются последующими этапами roadmap; cron placeholder намеренно
-отсутствует.
+Сейчас реализованы foundation-инфраструктура, локальные versioned importers
+прайса, расписания, Access и PlusBText, а также server-side course mapping,
+occupancy и pricing/quote engine этапа 04. Auth, public catalog UI/routes и
+остальные business workflows добавляются последующими этапами roadmap; cron
+placeholder намеренно отсутствует.
 
 Персональные базы данных, клиентские Excel-файлы, секреты и import artifacts в
 git не хранятся.

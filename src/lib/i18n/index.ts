@@ -6,6 +6,9 @@ export const germanCatalog = {
 		'Das Registrierungsportal wird vorbereitet. Verfügbare Funktionen werden hier veröffentlicht.',
 	'errors.unexpected':
 		'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
+	'pricing.estimatedMissingDuration':
+		'Geschätzter Monatspreis: {amount}. Dauer und Preis müssen von der Verwaltung bestätigt werden.',
+	'pricing.needsAdminReview': 'Preis wird von der Verwaltung geprüft.',
 } as const;
 
 export type MessageKey = keyof typeof germanCatalog;

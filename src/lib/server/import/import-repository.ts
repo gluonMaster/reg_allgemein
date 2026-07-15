@@ -1143,10 +1143,10 @@ export class ImportRepository {
 				sql: `INSERT INTO legacy_snapshot_enrollments
 					(id, legacy_version_id, legacy_enrollment_id, source_access_id, stable_family_key, source_child_key,
 					 source_slot, source_record_key, group_name_raw, group_name_normalized,
-					 teacher_name, day_raw, duration_minutes, status_code_raw, lesson_kind,
+					 teacher_name, day_raw, duration_minutes, duration_status, status_code_raw, lesson_kind,
 					 contract_kind, price_source, price_mode, planned_price_cents, notes_raw,
 					 needs_admin_review, record_hash_sha256, created_at)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				params: [
 					crypto.randomUUID(),
 					versionId,
@@ -1161,6 +1161,7 @@ export class ImportRepository {
 					enrollment.teacherName,
 					enrollment.dayRaw,
 					enrollment.durationMinutes,
+					enrollment.durationStatus,
 					enrollment.statusCodeRaw,
 					enrollment.lessonKind,
 					enrollment.contractKind,
@@ -1559,7 +1560,7 @@ export class ImportRepository {
 				sql: `INSERT OR IGNORE INTO legacy_enrollments
 					(id, legacy_source_row_id, legacy_family_id, child_id, academic_period_id,
 					 source_slot, source_record_key, group_name_raw, group_name_normalized,
-					 course_group_id, teacher_name, day_raw, duration_minutes, status_code_raw,
+					 course_group_id, teacher_name, day_raw, duration_minutes, duration_status, status_code_raw,
 					 lesson_kind, contract_kind, price_source, price_mode, planned_price_cents,
 					 notes_raw, needs_admin_review, is_active_for_occupancy,
 					 represented_by_enrollment_id, last_seen_run_id, is_current, retired_at,
@@ -1568,6 +1569,7 @@ export class ImportRepository {
 						enrollment.source_slot, enrollment.source_record_key,
 						enrollment.group_name_raw, enrollment.group_name_normalized, NULL,
 						enrollment.teacher_name, enrollment.day_raw, enrollment.duration_minutes,
+						enrollment.duration_status,
 						enrollment.status_code_raw, enrollment.lesson_kind,
 						enrollment.contract_kind, enrollment.price_source, enrollment.price_mode,
 						enrollment.planned_price_cents, enrollment.notes_raw,
@@ -1606,6 +1608,8 @@ export class ImportRepository {
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
 					duration_minutes = (SELECT snapshot.duration_minutes FROM legacy_snapshot_enrollments AS snapshot
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
+					duration_status = (SELECT snapshot.duration_status FROM legacy_snapshot_enrollments AS snapshot
+						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
 					status_code_raw = (SELECT snapshot.status_code_raw FROM legacy_snapshot_enrollments AS snapshot
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
 					lesson_kind = (SELECT snapshot.lesson_kind FROM legacy_snapshot_enrollments AS snapshot
@@ -1629,6 +1633,7 @@ export class ImportRepository {
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id
 					)`,
 				params: [
+					input.versionId,
 					input.versionId,
 					input.versionId,
 					input.versionId,
