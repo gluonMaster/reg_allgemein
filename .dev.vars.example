@@ -1,0 +1,4 @@
+# Copy to .dev.vars only when a local feature needs these secrets.
+# Never place real preview or production values in this repository.
+JWT_SECRET=replace-with-a-long-random-local-value
+TURNSTILE_SECRET_KEY=replace-with-a-turnstile-test-secret

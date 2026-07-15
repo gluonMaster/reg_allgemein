@@ -8,8 +8,13 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Используем Cloudflare Workers adapter для деплоя
-		adapter: adapter(),
+		adapter: adapter({
+			platformProxy: {
+				configPath: 'wrangler.local.toml',
+				persist: { path: '.wrangler/state' },
+				remoteBindings: false,
+			},
+		}),
 	},
 };
 

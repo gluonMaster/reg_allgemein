@@ -15,7 +15,9 @@ binding = "ASSETS"
 binding = "BROWSER"
 
 [vars]
-APP_ENV = "development"
+# Requests fail closed until every replace/example value is configured.
+APP_ENV = "production"
+PORTAL_PUBLIC_ORIGIN = "https://portal.example.invalid"
 EMAIL_PROVIDER = "resend"
 EMAIL_FROM = "Example Anmeldung <noreply@example.invalid>"
 EMAIL_REPLY_TO = "Example Anmeldung <reply@example.invalid>"
@@ -42,13 +44,9 @@ binding = "R2_BUCKET"
 bucket_name = "reg-allgemein-documents"
 preview_bucket_name = "reg-allgemein-documents-preview"
 
-[triggers]
-crons = ["*/15 * * * *"]
-
 # Secrets:
 # JWT_SECRET
 # RESEND_API_KEY
 # TURNSTILE_SECRET_KEY
 # TELEGRAM_BOT_TOKEN
 # TELEGRAM_CHAT_ID
-# CRON_SECRET

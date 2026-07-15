@@ -1,17 +1,17 @@
 <script lang="ts">
 	import '../app.css';
+	import { translate } from '$lib/i18n';
+
+	const title = translate('de', 'home.title');
 </script>
 
 <svelte:head>
-	<title>Kolibri Anmeldung</title>
+	<title>{title}</title>
 </svelte:head>
 
 <main class="shell">
-	<h1>Kolibri Anmeldung</h1>
-	<p>
-		Dieses Repository ist als neuer Arbeitsstand fuer das Registrierungsportal angelegt. Die
-		fachliche Spezifikation liegt in <code>docs/</code>.
-	</p>
+	<h1>{title}</h1>
+	<p>{translate('de', 'home.foundationNotice')}</p>
 </main>
 
 <style>

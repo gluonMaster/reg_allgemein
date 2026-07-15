@@ -1,14 +1,14 @@
 import { defineConfig } from 'vitest/config';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
 import path from 'path';
 
 export default defineConfig({
-	plugins: [svelte({ hot: !process.env.VITEST })],
 	test: {
-		include: ['tests/**/*.{test,spec}.{js,ts}'],
+		include: ['tests/{unit,integration}/**/*.{test,spec}.{js,ts}'],
 		globals: true,
 		environment: 'node',
-		setupFiles: ['./tests/setup.ts'], // Загружаем моки перед тестами
+		setupFiles: ['./tests/setup.ts'],
+		testTimeout: 15_000,
+		hookTimeout: 15_000,
 	},
 	resolve: {
 		alias: {

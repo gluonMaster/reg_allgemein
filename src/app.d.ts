@@ -3,13 +3,20 @@
 
 declare global {
 	namespace App {
+		interface Error {
+			code: string;
+			message: string;
+			requestId: string;
+		}
+
 		interface Platform {
 			env: {
-				DB: D1Database;
-				R2_BUCKET: R2Bucket;
-				ASSETS: Fetcher;
-				BROWSER: BrowserRun;
+				DB?: D1Database;
+				R2_BUCKET?: R2Bucket;
+				ASSETS?: Fetcher;
+				BROWSER?: BrowserRun;
 				APP_ENV?: string;
+				PORTAL_PUBLIC_ORIGIN?: string;
 				EMAIL_PROVIDER?: string;
 				EMAIL_FROM?: string;
 				EMAIL_REPLY_TO?: string;
@@ -30,12 +37,13 @@ declare global {
 				TELEGRAM_CHAT_ID?: string;
 				TELEGRAM_BUSINESS_TIMEZONE?: string;
 				TELEGRAM_BUSINESS_HOURS?: string;
-				CRON_SECRET?: string;
 			};
 			context: ExecutionContext;
+			ctx: ExecutionContext;
 			caches: CacheStorage;
 		}
 		interface Locals {
+			requestId: string;
 			user?: {
 				id: string;
 				email: string;

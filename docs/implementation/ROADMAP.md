@@ -43,7 +43,7 @@ npm run build
 
 | № | Статус | Результат | Зависит от |
 | ---: | --- | --- | --- |
-| 01 | pending | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations | — |
+| 01 | done | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations | — |
 | 02 | pending | Versioned import schema, price и schedule staging/validation/promotion | 01 |
 | 03 | pending | Access/PlusBText import, family/child aggregation, issues и reconciliation | 02 |
 | 04 | pending | Course mappings, occupancy и безопасный pricing/quote engine | 02–03 |

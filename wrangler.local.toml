@@ -1,0 +1,21 @@
+# Local-only Cloudflare shape. This file contains no production identifiers or secrets.
+# Local D1 state is stored below .wrangler/ and is ignored by Git.
+
+#:schema node_modules/wrangler/config-schema.json
+name = "reg-allgemein-local"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_ENV = "development"
+PORTAL_PUBLIC_ORIGIN = "http://127.0.0.1:5173"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "reg-allgemein-local"
+database_id = "local-reg-allgemein"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "reg-allgemein-local-documents"

@@ -1,0 +1,225 @@
+import { AuditRepository } from '$lib/server/audit/audit-repository';
+import { DatabaseBoundary } from '$lib/server/db/database';
+import {
+	FoundationRepository,
+	hashIdempotencyKey,
+	hashRequestFingerprint,
+} from '$lib/server/db/foundation-repository';
+import { scopedHash } from '$lib/server/security/digest';
+import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
+
+describe('foundation D1 migration and repositories', () => {
+	let context: TestD1Context;
+	let database: DatabaseBoundary;
+
+	beforeEach(async () => {
+		context = await createMigratedTestD1();
+		database = new DatabaseBoundary(context.db);
+	});
+
+	afterEach(async () => {
+		if (context) await context.dispose();
+	});
+
+	it('applies the immutable migration sequence to an empty D1', async () => {
+		expect(context.migrationIds).toEqual(['0001_foundation.sql']);
+
+		const result = await context.db
+			.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+			.all<{ name: string }>();
+		const tables = result.results.map((row) => row.name);
+
+		expect(tables).toEqual(
+			expect.arrayContaining([
+				'academic_periods',
+				'admin_review_tasks',
+				'audit_events',
+				'idempotency_records',
+				'operation_locks',
+				'rate_limit_buckets',
+			])
+		);
+	});
+
+	it('allows only one current academic period', async () => {
+		const statement = `INSERT INTO academic_periods
+			(id, code, display_name, starts_on, ends_on, is_current, created_at)
+			VALUES (?, ?, ?, ?, ?, 1, ?)`;
+
+		await context.db
+			.prepare(statement)
+			.bind(
+				'period-1',
+				'2026-2027',
+				'2026/2027',
+				'2026-08-01',
+				'2027-07-31',
+				'2026-07-15T10:00:00.000Z'
+			)
+			.run();
+
+		await expect(
+			context.db
+				.prepare(statement)
+				.bind(
+					'period-2',
+					'2027-2028',
+					'2027/2028',
+					'2027-08-01',
+					'2028-07-31',
+					'2026-07-15T10:00:00.000Z'
+				)
+				.run()
+		).rejects.toThrow();
+	});
+
+	it('stores redacted append-only audit events', async () => {
+		const audit = new AuditRepository(database);
+		const id = await audit.append({
+			actorKind: 'system',
+			action: 'foundation.check',
+			targetKind: 'runtime',
+			targetId: 'foundation',
+			requestId: 'request_12345678',
+			safeDiff: {
+				status: 'checked',
+				email: 'synthetic@example.invalid',
+				token: 'must-not-be-stored',
+			},
+			createdAt: '2026-07-15T10:00:00.000Z',
+		});
+
+		const row = await context.db
+			.prepare('SELECT safe_diff_json FROM audit_events WHERE id = ?')
+			.bind(id)
+			.first<{ safe_diff_json: string }>();
+
+		expect(row?.safe_diff_json).toContain('checked');
+		expect(row?.safe_diff_json).not.toContain('synthetic@example.invalid');
+		expect(row?.safe_diff_json).not.toContain('must-not-be-stored');
+		await expect(
+			context.db
+				.prepare('UPDATE audit_events SET action = ? WHERE id = ?')
+				.bind('changed', id)
+				.run()
+		).rejects.toThrow(/append-only/);
+		await expect(
+			context.db.prepare('DELETE FROM audit_events WHERE id = ?').bind(id).run()
+		).rejects.toThrow(/append-only/);
+	});
+
+	it('increments rate-limit buckets atomically and denies after the limit', async () => {
+		const repository = new FoundationRepository(database);
+		const subjectHash = await scopedHash('rate-limit:registration', 'synthetic-subject');
+		const results = await Promise.all(
+			Array.from({ length: 5 }, () =>
+				repository.consumeRateLimit({
+					scope: 'registration',
+					subjectHash,
+					windowStart: '2026-07-15T10:00:00.000Z',
+					expiresAt: '2026-07-15T10:01:00.000Z',
+					now: '2026-07-15T10:00:05.000Z',
+					limit: 3,
+				})
+			)
+		);
+
+		expect(results.map((result) => result.count).sort((a, b) => a - b)).toEqual([
+			1, 2, 3, 4, 5,
+		]);
+		expect(results.filter((result) => result.allowed)).toHaveLength(3);
+	});
+
+	it('replays one completed idempotent result and rejects payload reuse', async () => {
+		const repository = new FoundationRepository(database);
+		const scope = 'foundation-test';
+		const keyHash = await hashIdempotencyKey(scope, 'client-operation-key');
+		const requestHash = await hashRequestFingerprint(scope, '{"operation":"one"}');
+		const differentRequestHash = await hashRequestFingerprint(scope, '{"operation":"two"}');
+		const reservation = {
+			scope,
+			keyHash,
+			requestHash,
+			now: '2026-07-15T10:00:00.000Z',
+			expiresAt: '2026-07-15T11:00:00.000Z',
+		};
+
+		expect(await repository.reserveIdempotency(reservation)).toEqual({ outcome: 'acquired' });
+		expect(await repository.reserveIdempotency(reservation)).toEqual({
+			outcome: 'in_progress',
+		});
+		expect(
+			await repository.completeIdempotency({
+				scope,
+				keyHash,
+				requestHash,
+				resultRef: 'result:foundation:1',
+				now: '2026-07-15T10:00:01.000Z',
+			})
+		).toBe(true);
+		expect(await repository.reserveIdempotency(reservation)).toEqual({
+			outcome: 'replay',
+			resultRef: 'result:foundation:1',
+		});
+		expect(
+			await repository.reserveIdempotency({
+				...reservation,
+				requestHash: differentRequestHash,
+			})
+		).toEqual({ outcome: 'conflict' });
+	});
+
+	it('uses lease expiry and increasing fencing tokens', async () => {
+		const repository = new FoundationRepository(database);
+		const first = await repository.tryAcquireLease({
+			scope: 'promotion',
+			resourceKey: 'period:2026-2027',
+			owner: 'worker-a',
+			now: '2026-07-15T10:00:00.000Z',
+			leaseUntil: '2026-07-15T10:01:00.000Z',
+		});
+
+		expect(first).toEqual({
+			acquired: true,
+			fencingToken: 1,
+			leaseUntil: '2026-07-15T10:01:00.000Z',
+		});
+		expect(
+			await repository.tryAcquireLease({
+				scope: 'promotion',
+				resourceKey: 'period:2026-2027',
+				owner: 'worker-b',
+				now: '2026-07-15T10:00:30.000Z',
+				leaseUntil: '2026-07-15T10:02:00.000Z',
+			})
+		).toEqual({ acquired: false });
+
+		const second = await repository.tryAcquireLease({
+			scope: 'promotion',
+			resourceKey: 'period:2026-2027',
+			owner: 'worker-b',
+			now: '2026-07-15T10:01:00.000Z',
+			leaseUntil: '2026-07-15T10:03:00.000Z',
+		});
+
+		expect(second).toMatchObject({ acquired: true, fencingToken: 2 });
+		expect(
+			await repository.releaseLease({
+				scope: 'promotion',
+				resourceKey: 'period:2026-2027',
+				owner: 'worker-a',
+				fencingToken: 1,
+				now: '2026-07-15T10:02:00.000Z',
+			})
+		).toBe(false);
+		expect(
+			await repository.releaseLease({
+				scope: 'promotion',
+				resourceKey: 'period:2026-2027',
+				owner: 'worker-b',
+				fencingToken: 2,
+				now: '2026-07-15T10:02:00.000Z',
+			})
+		).toBe(true);
+	});
+});
