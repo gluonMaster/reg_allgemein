@@ -11,7 +11,9 @@ test('serves the German foundation page with a correlation ID', async ({ page })
 	await expect(page).toHaveTitle(germanCatalog['home.title']);
 });
 
-test('renders the mobile German registration form and protects account routes', async ({ page }) => {
+test('renders the mobile German registration form and protects account routes', async ({
+	page,
+}) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	const response = await page.goto('/auth/register');
 
@@ -21,8 +23,26 @@ test('renders the mobile German registration form and protects account routes', 
 	await expect(page.getByLabel(germanCatalog['auth.lastNameLabel'])).toBeVisible();
 	await expect(page.getByLabel(germanCatalog['auth.emailLabel'])).toBeVisible();
 	await expect(page.getByLabel(germanCatalog['auth.passwordLabel'])).toBeVisible();
-	await expect(page.getByRole('button', { name: germanCatalog['auth.register.submit'] })).toBeDisabled();
+	await expect(
+		page.getByRole('button', { name: germanCatalog['auth.register.submit'] })
+	).toBeDisabled();
 
 	const protectedResponse = await page.goto('/account/security');
 	expect(protectedResponse?.status()).toBe(401);
+});
+
+test('rejects unauthenticated admin pages and direct mutation actions', async ({
+	page,
+	request,
+}) => {
+	const shellResponse = await page.goto('/admin');
+	expect(shellResponse?.status()).toBe(401);
+
+	const mutationResponse = await request.post('/admin/users/unknown-user?/block', {
+		form: {
+			reason: 'playwright-admin-denial',
+			idempotencyKey: 'playwright-admin-denial-0001',
+		},
+	});
+	expect(mutationResponse.status()).toBe(401);
 });

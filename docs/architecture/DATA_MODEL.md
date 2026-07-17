@@ -185,6 +185,17 @@ archive/approved evidence default MVP status всегда `disabled_by_policy`;
 конкурентность превысит возможности D1, переход на Durable Object/managed rate
 limiting требует нового ADR, но не меняет доменные ключи.
 
+### `admin_action_assertions`
+
+- `id`, `scope`, `idempotency_record_id` unique;
+- `actor_user_id`, `target_kind`, `target_id`;
+- `assertion_passed=1`, `created_at`.
+
+Append-only assertion связывает завершённую admin-команду с её idempotency
+record, повторной server-side проверкой active admin actor, итоговым состоянием
+target и audit event. Если хотя бы одна проверка не выполнена, D1 batch
+откатывается целиком и idempotency record не остаётся завершённым.
+
 ## Учебные периоды и импорты
 
 ### `academic_periods`
@@ -338,6 +349,37 @@ parent API.
 затем атомарно меняет user/children/claims, supersede-ит nonterminal offers и
 записывает безопасный audit. Destination другого active account либо cycle
 завершается `conflict`, не создавая shared family.
+
+### `admin_family_correction_previews`
+
+- `id`, `actor_user_id`, `user_id`, `from_family_number_id`,
+  `to_family_number_id`, `destination_kind`;
+- current `legacy_version_id`/`legacy_import_run_id` для legacy destination;
+- `family_version_before`, `owned_child_count`, `destination_child_count`,
+  `children_snapshot_hash`;
+- immutable `consequence_snapshot_json`/`consequence_snapshot_hash`;
+- `status` (`ready|applied|stale|cancelled`), `applied_reassignment_id`,
+  `expires_at`, timestamps.
+
+Preview живёт ограниченное время, принадлежит создавшему admin actor и
+не разрешает передать FamilyID строкой при apply. Portal destination сначала
+резервируется server-side как pending namespace-2 allocation. Legacy
+destination обязан входить в current promoted snapshot, быть valid/unowned и
+не иметь пропущенных, owned или continuity-ambiguous current children.
+Consequence contributor добавляет snapshot offer/contract effects; после
+появления contract tables он обязан сохранять immutable old-contract evidence
+и supersede-ить только nonterminal old-family offers в том же apply batch.
+
+### `admin_family_correction_preview_children`
+
+- composite key `preview_id, child_id`, `effect_kind`
+  (`owned_switch|destination_claim`);
+- `expected_owner_user_id`, `expected_family_number_id`, `created_at`.
+
+Строки append-only и фиксируют точный набор детей preview. Apply повторно
+проверяет owner/family/current state, отсутствие новых owned children и итоговую
+cardinality; race или частичный switch нарушает assertion и откатывает весь
+batch.
 
 ### `children`
 
