@@ -28,6 +28,8 @@ describe('auth security boundaries', () => {
 			}).success
 		).toBe(false);
 		expect(routeAccessPolicy('/')).toBe('public');
+		expect(routeAccessPolicy('/catalog')).toBe('public');
+		expect(routeAccessPolicy('/catalog/course-1/trial')).toBe('authenticated');
 		expect(routeAccessPolicy('/auth/login')).toBe('public');
 		expect(routeAccessPolicy('/account/security')).toBe('authenticated');
 		expect(routeAccessPolicy('/future-domain-route')).toBe('authenticated');

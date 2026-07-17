@@ -646,4 +646,229 @@ export class AdminMutationRepository {
 				: [input.courseGroupId, capacity],
 		});
 	}
+
+	async transitionTrial(input: {
+		actor: AdminActor;
+		trialId: string;
+		action: 'confirm' | 'reject' | 'cancel' | 'attended' | 'no_show' | 'convert';
+		sessionId?: string;
+		confirmedDate?: string;
+		reason: string;
+		idempotencyKey: string;
+		requestId: string;
+		currentDate: string;
+		now: string;
+	}) {
+		const targetStatus =
+			input.action === 'confirm'
+				? 'confirmed'
+				: input.action === 'reject'
+					? 'rejected'
+					: input.action === 'cancel'
+						? 'cancelled'
+						: input.action === 'convert'
+							? 'converted'
+							: input.action;
+		if (
+			input.action === 'confirm' &&
+			(!input.sessionId || !input.confirmedDate || input.confirmedDate <= input.currentDate)
+		) {
+			throw new AdminConsoleError('TRIAL_CONFIRMATION_DATE_INVALID');
+		}
+		const current = await this.db.first<{ status: string }>({
+			sql: `SELECT status FROM trial_bookings WHERE id = ?`,
+			params: [input.trialId],
+		});
+		if (!current) throw new AdminConsoleError('TRIAL_NOT_FOUND');
+		const expectedFrom =
+			input.action === 'confirm' || input.action === 'reject'
+				? 'requested'
+				: input.action === 'attended' || input.action === 'no_show'
+					? 'confirmed'
+					: input.action === 'convert'
+						? 'attended'
+						: current.status;
+		let fromStatus = expectedFrom;
+		if (current.status === targetStatus) {
+			const commit = await this.db.first<{ from_status: string }>({
+				sql: `SELECT from_status FROM trial_transition_commits
+					WHERE trial_booking_id = ? AND to_status = ?
+					ORDER BY created_at DESC, id DESC LIMIT 1`,
+				params: [input.trialId, targetStatus],
+			});
+			fromStatus = commit?.from_status ?? expectedFrom;
+		} else if (
+			current.status !== expectedFrom ||
+			(input.action === 'cancel' && !['requested', 'confirmed'].includes(current.status))
+		) {
+			throw new AdminConsoleError('TRIAL_TRANSITION_REJECTED');
+		}
+		const transitionCommitId = crypto.randomUUID();
+
+		const transitionStatement: StatementSpec =
+			input.action === 'confirm'
+				? {
+						sql: `UPDATE trial_bookings AS trial SET status = 'confirmed',
+							session_id = ?, confirmed_date = ?, reviewed_by = ?, reviewed_at = ?,
+							decision_reason = ?, updated_at = ?
+						WHERE trial.id = ? AND trial.status = 'requested'
+							AND ${ACTIVE_ADMIN_SQL}
+							AND EXISTS (
+								SELECT 1 FROM users AS owner
+								JOIN children AS child ON child.id = trial.child_id
+									AND child.owner_user_id = owner.id
+									AND child.family_number_id = owner.family_number_id
+								JOIN course_groups AS course ON course.id = trial.course_group_id
+								JOIN academic_periods AS period ON period.id = course.academic_period_id
+									AND period.is_current = 1
+								JOIN schedule_versions AS schedule ON schedule.academic_period_id = period.id
+									AND schedule.is_published = 1
+								JOIN course_sessions AS session ON session.id = ?
+									AND session.course_group_id = course.id
+									AND session.schedule_version_id = schedule.id
+									AND session.is_current = 1
+								WHERE owner.id = trial.user_id AND owner.role = 'parent'
+									AND owner.account_status = 'active' AND owner.is_blocked = 0
+									AND course.catalog_status = 'published'
+									AND course.lesson_kind IN ('group', 'dance_group')
+									AND COALESCE(course.capacity_override, course.capacity_default) IS NOT NULL
+									AND (
+										SELECT COUNT(*) FROM (
+											SELECT enrollment.child_id FROM enrollments AS enrollment
+											WHERE enrollment.course_group_id = course.id
+												AND enrollment.status = 'active'
+												AND enrollment.active_from <= ?
+												AND (enrollment.active_until IS NULL OR ? < enrollment.active_until)
+											UNION
+											SELECT legacy.child_id FROM legacy_enrollments AS legacy
+											WHERE legacy.course_group_id = course.id AND legacy.is_current = 1
+												AND legacy.is_active_for_occupancy = 1
+												AND (legacy.represented_by_enrollment_id IS NULL OR NOT EXISTS (
+													SELECT 1 FROM enrollments AS represented
+													WHERE represented.id = legacy.represented_by_enrollment_id
+														AND represented.course_group_id = legacy.course_group_id
+														AND represented.status = 'active'
+														AND represented.active_from <= ?
+														AND (represented.active_until IS NULL OR ? < represented.active_until)
+												))
+										)
+									) < COALESCE(course.capacity_override, course.capacity_default)
+							)
+							AND NOT EXISTS (
+								SELECT 1 FROM enrollments AS active
+								WHERE active.child_id = trial.child_id
+									AND active.course_group_id = trial.course_group_id
+									AND active.status = 'active' AND active.active_from <= ?
+									AND (active.active_until IS NULL OR ? < active.active_until)
+							)`,
+						params: [
+							input.sessionId,
+							input.confirmedDate,
+							input.actor.id,
+							input.now,
+							input.reason.trim(),
+							input.now,
+							input.trialId,
+							input.actor.id,
+							input.sessionId,
+							input.confirmedDate,
+							input.confirmedDate,
+							input.confirmedDate,
+							input.confirmedDate,
+							input.confirmedDate,
+							input.confirmedDate,
+						],
+					}
+				: {
+						sql: `UPDATE trial_bookings SET status = ?, reviewed_by = ?, reviewed_at = ?,
+							decision_reason = ?, converted_at = CASE WHEN ? = 'converted' THEN ?
+								ELSE converted_at END, updated_at = ?
+						WHERE id = ? AND ${ACTIVE_ADMIN_SQL}
+							AND (
+								(? = 'rejected' AND status = 'requested')
+								OR (? = 'cancelled' AND status IN ('requested', 'confirmed'))
+								OR (? IN ('attended', 'no_show') AND status = 'confirmed'
+									AND confirmed_date <= ?)
+								OR (? = 'converted' AND status = 'attended')
+							)`,
+						params: [
+							targetStatus,
+							input.actor.id,
+							input.now,
+							input.reason.trim(),
+							targetStatus,
+							input.now,
+							input.now,
+							input.trialId,
+							input.actor.id,
+							targetStatus,
+							targetStatus,
+							targetStatus,
+							input.currentDate,
+							targetStatus,
+						],
+					};
+
+		return this.execute({
+			actor: input.actor,
+			scope: 'admin:trial-transition',
+			idempotencyKey: input.idempotencyKey,
+			payload: {
+				trialId: input.trialId,
+				action: input.action,
+				sessionId: input.sessionId ?? null,
+				confirmedDate: input.confirmedDate ?? null,
+				reason: input.reason.trim(),
+			},
+			resultRef: `trial:${input.trialId}:${targetStatus}`,
+			requestId: input.requestId,
+			targetKind: 'trial_booking',
+			targetId: input.trialId,
+			action: `trial.${targetStatus}`,
+			safeDiff: {
+				status: targetStatus,
+				...(input.action === 'confirm' ? { confirmedDate: input.confirmedDate } : {}),
+			},
+			now: input.now,
+			statements: (context) => [
+				{
+					sql: `INSERT INTO trial_transition_commits
+						(id, trial_booking_id, from_status, to_status, idempotency_record_id,
+						 actor_user_id, created_at)
+					SELECT ?, id, ?, ?, ?, ?, ? FROM trial_bookings
+					WHERE id = ? AND status = ? AND ${ACTIVE_ADMIN_SQL}`,
+					params: [
+						transitionCommitId,
+						fromStatus,
+						targetStatus,
+						context.recordId,
+						input.actor.id,
+						input.now,
+						input.trialId,
+						fromStatus,
+						input.actor.id,
+					],
+				},
+				transitionStatement,
+			],
+			assertionSql: `EXISTS (SELECT 1 FROM trial_bookings
+				WHERE id = ? AND status = ? AND reviewed_by = ?
+					AND (? <> 'confirmed' OR (session_id = ? AND confirmed_date = ?)))
+				AND EXISTS (SELECT 1 FROM trial_transition_commits
+					WHERE id = ? AND trial_booking_id = ?
+						AND from_status = ? AND to_status = ?)`,
+			assertionParams: [
+				input.trialId,
+				targetStatus,
+				input.actor.id,
+				targetStatus,
+				input.sessionId ?? '',
+				input.confirmedDate ?? '',
+				transitionCommitId,
+				input.trialId,
+				fromStatus,
+				targetStatus,
+			],
+		});
+	}
 }

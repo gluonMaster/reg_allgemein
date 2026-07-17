@@ -13,6 +13,15 @@
 		individual: 'cabinet.activities.kind.individual',
 		needs_review: 'cabinet.activities.kind.needsReview',
 	} as const;
+	const trialStatusKeys = {
+		requested: 'admin.code.requested',
+		confirmed: 'admin.code.confirmed',
+		rejected: 'admin.code.rejected',
+		cancelled: 'admin.code.cancelled',
+		attended: 'admin.code.attended',
+		no_show: 'admin.code.no_show',
+		converted: 'admin.code.converted',
+	} as const;
 </script>
 
 <svelte:head><title>{translate('de', 'cabinet.title')}</title></svelte:head>
@@ -202,5 +211,27 @@
 				)}
 			</p>
 		{/each}
+	</section>
+
+	<section class="cabinet-card" id="trials">
+		<h2>{translate('de', 'cabinet.trials.title')}</h2>
+		{#if data.cabinet.extensions.trials.length === 0}<p>{translate('de', 'cabinet.trials.empty')}</p>{/if}
+		<div class="activity-list">
+			{#each data.cabinet.extensions.trials as trial, index}
+				<article class="activity-item">
+					<p class="item-kicker">{translate('de', trialStatusKeys[trial.status as keyof typeof trialStatusKeys])}</p>
+					<h3>{trial.label}</h3>
+					{#if trial.detail}<p>{trial.detail}</p>{/if}
+					{#if trial.cancellable}
+						<form method="POST" action="?/cancelTrial">
+							<input type="hidden" name="_csrf" value={data.csrfToken} />
+							<input type="hidden" name="trialId" value={trial.id} />
+							<input type="hidden" name="idempotencyKey" value={`cancel:${trial.id}:${index}`} />
+							<button type="submit">{translate('de', 'cabinet.trials.cancel')}</button>
+						</form>
+					{/if}
+				</article>
+			{/each}
+		</div>
 	</section>
 </main>

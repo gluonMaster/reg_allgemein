@@ -5,8 +5,13 @@ import {
 	childCorrectionDecisionSchema,
 	familyCorrectionApplySchema,
 	familyCorrectionPreviewSchema,
+	trialTransitionSchema,
 } from '../../src/lib/server/admin/contracts';
-import { buildAdminNavigation, coreAdminNavigation } from '../../src/lib/server/admin/navigation';
+import {
+	buildAdminNavigation,
+	coreAdminNavigation,
+	trialAdminNavigation,
+} from '../../src/lib/server/admin/navigation';
 
 const confirmedCommand = {
 	reason: 'Geprüfte Verwaltungsentscheidung',
@@ -81,6 +86,32 @@ describe('stage 06A admin contracts', () => {
 			}).success
 		).toBe(false);
 	});
+
+	it('requires an explicit future-date payload shape for trial confirmation', () => {
+		expect(
+			trialTransitionSchema.safeParse({
+				...confirmedCommand,
+				trialId: 'trial-1',
+				action: 'confirm',
+				sessionId: 'session-1',
+				confirmedDate: '2026-07-20',
+			}).success
+		).toBe(true);
+		expect(
+			trialTransitionSchema.safeParse({
+				...confirmedCommand,
+				trialId: 'trial-1',
+				action: 'confirm',
+			}).success
+		).toBe(false);
+		expect(
+			trialTransitionSchema.safeParse({
+				...confirmedCommand,
+				trialId: 'trial-1',
+				action: 'generic_status',
+			}).success
+		).toBe(false);
+	});
 });
 
 describe('stage 06A admin navigation', () => {
@@ -99,5 +130,13 @@ describe('stage 06A admin navigation', () => {
 		expect(navigation.map((item) => item.order)).toEqual(
 			[...navigation].map((item) => item.order).sort((left, right) => left - right)
 		);
+	});
+
+	it('adds stage 07 trials through the shared navigation extension point', () => {
+		const navigation = buildAdminNavigation(trialAdminNavigation);
+		expect(navigation).toHaveLength(coreAdminNavigation.length + 1);
+		expect(navigation.find((item) => item.id === 'trials')).toMatchObject({
+			href: '/admin/trials',
+		});
 	});
 });

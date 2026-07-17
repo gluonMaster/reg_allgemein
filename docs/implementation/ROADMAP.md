@@ -50,7 +50,7 @@ npm run build
 | 05 | done | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC | 01 |
 | 06 | done | Portal children, atomic legacy claim и parent cabinet | 03–05 |
 | 06A | done | Admin shell, import/review/legacy/users/catalog core surfaces | 02–06 |
-| 07 | pending | Published catalog, availability и полный trial workflow | 04, 06, 06A |
+| 07 | done | Published catalog, availability и полный trial workflow | 04, 06, 06A |
 | 08 | pending | Nachhilfe/individual requests, private R2 documents и review | 05, 06, 06A |
 | 09 | pending | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
 | 10 | pending | Price review batches/items, notifications и effective-date apply | 04, 09 |

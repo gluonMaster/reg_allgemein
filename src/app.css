@@ -47,13 +47,76 @@ a {
 	background: white;
 }
 
-.auth-shell input {
+.auth-shell input,
+.auth-shell select {
 	box-sizing: border-box;
 	width: 100%;
 	padding: 0.7rem 0.8rem;
 	border: 1px solid #8993a8;
 	border-radius: 0.4rem;
 	font: inherit;
+}
+
+.catalog-shell {
+	width: min(100% - 2rem, 78rem);
+	margin: 0 auto;
+	padding: 1.5rem 0 4rem;
+}
+
+.catalog-header {
+	max-width: 52rem;
+	margin-bottom: 1.5rem;
+}
+
+.catalog-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+	gap: 1rem;
+}
+
+.catalog-card,
+.catalog-empty {
+	padding: 1.25rem;
+	border: 1px solid #d9deea;
+	border-radius: 0.75rem;
+	background: white;
+}
+
+.catalog-card h2 {
+	margin: 0.3rem 0;
+}
+
+.session-list {
+	padding-left: 1.25rem;
+}
+
+.session-list li + li {
+	margin-top: 0.75rem;
+}
+
+.availability-warning {
+	padding: 0.65rem 0.8rem;
+	border-left: 4px solid #a86313;
+	background: #fff7e8;
+}
+
+.catalog-price {
+	font-weight: 700;
+}
+
+.catalog-cta {
+	display: inline-block;
+	padding: 0.7rem 1rem;
+	border-radius: 0.4rem;
+	background: #3157a4;
+	color: white;
+	font-weight: 650;
+	text-decoration: none;
+}
+
+.catalog-cta:focus-visible {
+	outline: 3px solid #f2b84b;
+	outline-offset: 2px;
 }
 
 .auth-shell .checkbox {
@@ -389,6 +452,9 @@ a.metric-card {
 }
 
 @media (max-width: 40rem) {
+	.catalog-shell {
+		width: min(100% - 1rem, 78rem);
+	}
 	.cabinet-shell {
 		width: min(100% - 1rem, 68rem);
 	}

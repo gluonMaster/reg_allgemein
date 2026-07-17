@@ -94,4 +94,24 @@ export const familyCorrectionApplySchema = z.object({
 	idempotencyKey,
 });
 
+export const trialTransitionSchema = z
+	.object({
+		trialId: opaqueId,
+		action: z.enum(['confirm', 'reject', 'cancel', 'attended', 'no_show', 'convert']),
+		sessionId: opaqueId.optional(),
+		confirmedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u).optional(),
+		reason,
+		confirmation: z.literal('confirmed'),
+		idempotencyKey,
+	})
+	.superRefine((value, context) => {
+		if (value.action === 'confirm' && (!value.sessionId || !value.confirmedDate)) {
+			context.addIssue({
+				code: 'custom',
+				path: ['confirmedDate'],
+				message: 'Confirmation requires a current session and future date.',
+			});
+		}
+	});
+
 export type AdminListQuery = z.infer<typeof adminListQuerySchema>;

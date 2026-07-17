@@ -8,6 +8,8 @@ export interface CabinetExtensionItem {
 	id: string;
 	label: string;
 	status: string;
+	detail?: string;
+	cancellable?: boolean;
 }
 
 export interface CabinetExtensionSlots {

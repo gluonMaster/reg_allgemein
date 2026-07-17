@@ -3,6 +3,7 @@
 </script>
 
 <nav class="auth-nav" aria-label={translate('de', 'auth.navigationLabel')}>
+	<a href="/catalog">{translate('de', 'home.catalogLink')}</a>
 	<a href="/auth/register">{translate('de', 'auth.link.register')}</a>
 	<a href="/auth/login">{translate('de', 'auth.link.login')}</a>
 	<a href="/auth/forgot">{translate('de', 'auth.link.forgot')}</a>

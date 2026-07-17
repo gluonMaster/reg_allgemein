@@ -21,6 +21,10 @@ export const coreAdminNavigation: readonly AdminNavigationItem[] = [
 	{ id: 'pricing', href: '/admin/pricing', labelKey: 'admin.nav.pricing', order: 70 },
 ];
 
+export const trialAdminNavigation: readonly AdminNavigationItem[] = [
+	{ id: 'trials', href: '/admin/trials', labelKey: 'admin.nav.trials', order: 65 },
+];
+
 export function buildAdminNavigation(
 	extensions: readonly AdminNavigationItem[] = []
 ): readonly AdminNavigationItem[] {

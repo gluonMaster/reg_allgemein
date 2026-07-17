@@ -8,6 +8,9 @@ test('serves the German foundation page with a correlation ID', async ({ page })
 	expect(response?.headers()['x-request-id']).toMatch(/^[A-Za-z0-9_-]{8,64}$/);
 	await expect(page.locator('html')).toHaveAttribute('lang', 'de');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText(germanCatalog['home.title']);
+	await expect(
+		page.getByRole('link', { name: germanCatalog['home.catalogLink'] }).first()
+	).toHaveAttribute('href', '/catalog');
 	await expect(page).toHaveTitle(germanCatalog['home.title']);
 });
 
@@ -29,6 +32,8 @@ test('renders the mobile German registration form and protects account routes', 
 
 	const protectedResponse = await page.goto('/account/security');
 	expect(protectedResponse?.status()).toBe(401);
+	const protectedTrialResponse = await page.goto('/catalog/course-1/trial');
+	expect(protectedTrialResponse?.status()).toBe(401);
 });
 
 test('rejects unauthenticated admin pages and direct mutation actions', async ({

@@ -571,11 +571,21 @@ legacy pause создаёт admin review. Любая транзакция, за�
 - `id`, `user_id`, `child_id`, `course_group_id`, `session_id`;
 - `status` (`requested|confirmed|rejected|cancelled|attended|no_show|converted`);
 - `requested_date`, `confirmed_date`, `reviewed_by`, `reviewed_at`;
-- `decision_reason`, `idempotency_key`, `created_at`, `updated_at`.
+- immutable `availability_at_request`, `requires_admin_review_at_request`,
+  `request_hash_sha256`, `idempotency_key`;
+- `decision_reason`, `converted_at`, `created_at`, `updated_at`.
 
 Один open trial на child/course.
 `rejected|cancelled|no_show|converted` terminal; `attended` допускает только
 переход в `converted`.
+
+`trial_parent_actions` хранит append-only idempotent parent cancellation, а
+`trial_transition_commits` ставит unique fence на `trial_booking_id+from_status`,
+чтобы две concurrent административные команды не создавали два решения.
+`trial_action_assertions` связывает parent action с безопасным audit event;
+административные переходы дополнительно используют общий
+`admin_action_assertions`. Эти таблицы не создают enrollment и не участвуют в
+occupancy.
 
 ### `individual_requests`
 

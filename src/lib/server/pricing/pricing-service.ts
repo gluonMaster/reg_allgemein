@@ -4,6 +4,7 @@ import { OccupancyRepository } from './occupancy-repository';
 import {
 	buildRepricingProposals,
 	calculateGroupPrice,
+	calculateNonGroupPrice,
 	occupancyRepricingDecision,
 	quoteLookupChildrenCount,
 	repricingLookupChildrenCount,
@@ -77,23 +78,26 @@ export class PricingService {
 		if (context.catalogStatus !== 'published') {
 			throw new PricingServiceError('COURSE_NOT_PUBLIC');
 		}
-		const decision = calculateGroupPrice(
-			{
-				lessonKind: context.lessonKind,
-				mappingStatus: context.mappingStatus,
-				contractKind: context.contractKind,
-				priceVersionId: context.priceVersionId,
-				normalizedPriceKey: context.normalizedPriceKey,
-				durationSource: context.durationSource,
-				durationStatus: context.durationStatus,
-				durationMinutes: context.durationMinutes,
-				subjectDurationVector: context.subjectDurationVector,
-				lookupChildrenCount,
-				rules: context.rules,
-			},
-			this.config,
-			{ allowMissingDurationFallback: true }
-		);
+		const decision =
+			context.lessonKind === 'group' || context.lessonKind === 'dance_group'
+				? calculateGroupPrice(
+						{
+							lessonKind: context.lessonKind,
+							mappingStatus: context.mappingStatus,
+							contractKind: context.contractKind,
+							priceVersionId: context.priceVersionId,
+							normalizedPriceKey: context.normalizedPriceKey,
+							durationSource: context.durationSource,
+							durationStatus: context.durationStatus,
+							durationMinutes: context.durationMinutes,
+							subjectDurationVector: context.subjectDurationVector,
+							lookupChildrenCount,
+							rules: context.rules,
+						},
+						this.config,
+						{ allowMissingDurationFallback: true }
+					)
+				: calculateNonGroupPrice(context.lessonKind, this.config);
 		const quote: StoredPriceQuote = {
 			id: crypto.randomUUID(),
 			courseGroupId: request.courseGroupId,

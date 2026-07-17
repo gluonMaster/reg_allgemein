@@ -7,6 +7,7 @@ import { requireCsrf } from '$lib/server/security/csrf';
 import { requestSubject } from '$lib/server/auth/http';
 import { requestCabinetRuntime } from '$lib/server/cabinet/runtime';
 import { requestFamilyRuntime } from '$lib/server/family/runtime';
+import { requestTrialRuntime } from '$lib/server/trials/runtime';
 
 export const load: PageServerLoad = async (event) => ({
 	csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
@@ -127,6 +128,25 @@ export const actions = {
 			return fail(400, {
 				success: false,
 				message: translate('de', 'cabinet.claim.unavailable'),
+			});
+		}
+	},
+	cancelTrial: async (event) => {
+		try {
+			const { form, actor } = await verifiedForm(event);
+			await requestTrialRuntime(event).service.cancel({
+				actor,
+				payload: {
+					trialId: form.get('trialId'),
+					idempotencyKey: form.get('idempotencyKey'),
+				},
+				requestId: event.locals.requestId,
+			});
+			return { success: true, message: translate('de', 'cabinet.trials.cancelled') };
+		} catch {
+			return fail(409, {
+				success: false,
+				message: translate('de', 'cabinet.trials.cancelFailed'),
 			});
 		}
 	},
