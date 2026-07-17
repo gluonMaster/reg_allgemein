@@ -24,6 +24,13 @@ const rawConfigSchema = z.object({
 	MISSING_DURATION_YEARLY_CENTS_PER_45_MIN: z.string().optional(),
 	MISSING_DURATION_MONTHLY_CENTS_PER_45_MIN: z.string().optional(),
 	PRICE_QUOTE_TTL_SECONDS: z.string().optional(),
+	DOCUMENT_UPLOAD_ENABLED: z.enum(['true', 'false']).optional(),
+	DOCUMENT_MAX_FILE_BYTES: z.string().optional(),
+	DOCUMENT_MAX_FILES_PER_AUTHORIZATION: z.string().optional(),
+	DOCUMENT_MAX_AUTHORIZATION_BYTES: z.string().optional(),
+	DOCUMENT_UPLOAD_RATE_LIMIT_WINDOW_SECONDS: z.string().optional(),
+	DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS: z.string().optional(),
+	DOCUMENT_AV_ATTESTATION_TEXT_VERSION: z.string().min(1).optional(),
 });
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
@@ -40,6 +47,7 @@ export interface RuntimeConfig {
 	turnstileSecretKey?: string;
 	auth: AuthRuntimeConfig;
 	pricing: PricingRuntimeConfig;
+	documents: DocumentRuntimeConfig;
 }
 
 export interface AuthRuntimeConfig {
@@ -66,6 +74,16 @@ export interface PricingRuntimeConfig {
 	quoteTtlSeconds: number;
 }
 
+export interface DocumentRuntimeConfig {
+	uploadEnabled: boolean;
+	maxFileBytes: number;
+	maxFilesPerAuthorization: number;
+	maxAuthorizationBytes: number;
+	uploadRateLimitWindowSeconds: number;
+	uploadRateLimitMaxAttempts: number;
+	avAttestationTextVersion: string;
+}
+
 export class RuntimeConfigError extends Error {
 	readonly issues: readonly string[];
 
@@ -89,7 +107,8 @@ function isR2Bucket(value: unknown): value is R2Bucket {
 		typeof value === 'object' &&
 		value !== null &&
 		typeof Reflect.get(value, 'get') === 'function' &&
-		typeof Reflect.get(value, 'put') === 'function'
+		typeof Reflect.get(value, 'put') === 'function' &&
+		typeof Reflect.get(value, 'delete') === 'function'
 	);
 }
 
@@ -215,6 +234,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 
 	const authPublicEnabled = parsed.data.AUTH_PUBLIC_ENABLED === 'true';
+	const documentUploadEnabled = parsed.data.DOCUMENT_UPLOAD_ENABLED === 'true';
 	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
 	if (authPublicEnabled && !parsed.data.PRIVACY_NOTICE_VERSION) {
 		issues.push('PRIVACY_NOTICE_VERSION:required_when_auth_enabled');
@@ -242,6 +262,24 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	if (parsed.data.APP_ENV === 'production' && authPublicEnabled) {
 		issues.push('AUTH_PUBLIC_ENABLED:production_email_provider_not_implemented');
+	}
+	if (documentUploadEnabled && !isR2Bucket(env?.R2_BUCKET)) {
+		issues.push('R2_BUCKET:required_when_document_upload_enabled');
+	}
+	if (documentUploadEnabled && !parsed.data.JWT_SECRET) {
+		issues.push('JWT_SECRET:required_when_document_upload_enabled');
+	}
+	if (documentUploadEnabled && isPlaceholder(parsed.data.JWT_SECRET)) {
+		issues.push('JWT_SECRET:placeholder');
+	}
+	if (
+		documentUploadEnabled &&
+		isPlaceholder(parsed.data.DOCUMENT_AV_ATTESTATION_TEXT_VERSION)
+	) {
+		issues.push('DOCUMENT_AV_ATTESTATION_TEXT_VERSION:placeholder');
+	}
+	if (parsed.data.APP_ENV === 'production' && documentUploadEnabled) {
+		issues.push('DOCUMENT_UPLOAD_ENABLED:production_operational_gate_not_released');
 	}
 
 	const auth: AuthRuntimeConfig = {
@@ -362,6 +400,56 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		}),
 	};
 
+	const documents: DocumentRuntimeConfig = {
+		uploadEnabled: documentUploadEnabled,
+		maxFileBytes: parseIntegerConfig({
+			name: 'DOCUMENT_MAX_FILE_BYTES',
+			value: parsed.data.DOCUMENT_MAX_FILE_BYTES,
+			defaultValue: 10 * 1024 * 1024,
+			minimum: 1,
+			issues,
+		}),
+		maxFilesPerAuthorization: parseIntegerConfig({
+			name: 'DOCUMENT_MAX_FILES_PER_AUTHORIZATION',
+			value: parsed.data.DOCUMENT_MAX_FILES_PER_AUTHORIZATION,
+			defaultValue: 5,
+			minimum: 1,
+			issues,
+		}),
+		maxAuthorizationBytes: parseIntegerConfig({
+			name: 'DOCUMENT_MAX_AUTHORIZATION_BYTES',
+			value: parsed.data.DOCUMENT_MAX_AUTHORIZATION_BYTES,
+			defaultValue: 25 * 1024 * 1024,
+			minimum: 1,
+			issues,
+		}),
+		uploadRateLimitWindowSeconds: parseIntegerConfig({
+			name: 'DOCUMENT_UPLOAD_RATE_LIMIT_WINDOW_SECONDS',
+			value: parsed.data.DOCUMENT_UPLOAD_RATE_LIMIT_WINDOW_SECONDS,
+			defaultValue: 60,
+			minimum: 1,
+			issues,
+		}),
+		uploadRateLimitMaxAttempts: parseIntegerConfig({
+			name: 'DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS',
+			value: parsed.data.DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS,
+			defaultValue: 5,
+			minimum: 1,
+			issues,
+		}),
+		avAttestationTextVersion:
+			parsed.data.DOCUMENT_AV_ATTESTATION_TEXT_VERSION ?? 'manual-local-av-v1',
+	};
+	if (documents.maxFileBytes > 10 * 1024 * 1024) {
+		issues.push('DOCUMENT_MAX_FILE_BYTES:risk_ceiling_exceeded');
+	}
+	if (documents.maxFilesPerAuthorization > 5) {
+		issues.push('DOCUMENT_MAX_FILES_PER_AUTHORIZATION:risk_ceiling_exceeded');
+	}
+	if (documents.maxAuthorizationBytes > 25 * 1024 * 1024) {
+		issues.push('DOCUMENT_MAX_AUTHORIZATION_BYTES:risk_ceiling_exceeded');
+	}
+
 	if (issues.length > 0) throw new RuntimeConfigError(issues);
 
 	return {
@@ -379,6 +467,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		turnstileSecretKey: parsed.data.TURNSTILE_SECRET_KEY,
 		auth,
 		pricing,
+		documents,
 	};
 }
 

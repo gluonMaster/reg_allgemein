@@ -2,7 +2,16 @@ const textEncoder = new TextEncoder();
 
 export async function sha256Hex(value: string): Promise<string> {
 	const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(value));
-	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(
+	return bytesToHex(digest);
+}
+
+export async function sha256Bytes(value: BufferSource): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', value);
+	return bytesToHex(digest);
+}
+
+function bytesToHex(value: ArrayBuffer): string {
+	return Array.from(new Uint8Array(value), (byte) => byte.toString(16).padStart(2, '0')).join(
 		''
 	);
 }

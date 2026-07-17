@@ -1,0 +1,702 @@
+import { hashCanonical } from '$lib/server/import/canonical';
+import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
+import type { ValidatedUpload } from './validation';
+
+export class DocumentRepositoryError extends Error {
+	constructor(readonly code: string) {
+		super(code);
+		this.name = 'DocumentRepositoryError';
+	}
+}
+
+export interface DocumentMutationGuard {
+	assertion(input: { documentId: string; operation: 'replace' | 'delete' }): {
+		sql: string;
+		params: readonly unknown[];
+	};
+}
+
+export const stage08DocumentMutationGuard: DocumentMutationGuard = {
+	assertion: () => ({ sql: '1 = 1', params: [] }),
+};
+
+export interface UploadTarget {
+	requestId: string;
+	requestStatus: string;
+	userId: string;
+	childId: string;
+	sourceAuthorizationId: string;
+	targetAuthorizationId: string;
+	authorizationKind: 'jobcenter' | 'socialamt';
+	createAuthorizationVersion: number | null;
+	replaceDocument:
+		| {
+				id: string;
+				status: string;
+				quarantineKey: string;
+				authorizationId: string;
+				sizeBytes: number;
+			}
+		| null;
+	currentCount: number;
+	currentBytes: number;
+}
+
+interface InternalDocumentRow {
+	id: string;
+	authorization_id: string;
+	request_id: string;
+	user_id: string;
+	child_id: string;
+	quarantine_r2_key: string;
+	archive_r2_key: string | null;
+	sha256: string;
+	size_bytes: number;
+	review_status: string;
+	quarantine_delete_state: 'present' | 'delete_pending' | 'deleted';
+}
+
+export class AuthorizationDocumentRepository {
+	constructor(
+		private readonly db: DatabaseBoundary,
+		private readonly mutationGuard: DocumentMutationGuard = stage08DocumentMutationGuard
+	) {}
+
+	async findUploadReplay(userId: string, idempotencyKey: string) {
+		return this.db.first<{
+			id: string;
+			upload_request_hash_sha256: string;
+			quarantine_r2_key: string;
+		}>({
+			sql: `SELECT id, upload_request_hash_sha256, quarantine_r2_key
+				FROM authorization_documents WHERE user_id = ? AND upload_idempotency_key = ?`,
+			params: [userId, idempotencyKey],
+		});
+	}
+
+	async loadUploadTarget(input: {
+		userId: string;
+		requestId: string;
+		authorizationId: string;
+		replaceDocumentId?: string;
+	}): Promise<UploadTarget> {
+		const authorization = await this.db.first<{
+			id: string;
+			request_id: string;
+			user_id: string;
+			child_id: string;
+			version: number;
+			kind: 'jobcenter' | 'socialamt';
+			status: 'pending_review' | 'approved';
+			request_status: string;
+		}>({
+			sql: `SELECT authorization.id, authorization.request_id, authorization.user_id,
+				authorization.child_id, authorization.version, authorization.kind,
+				authorization.status, request.status AS request_status
+			FROM funding_authorizations AS authorization
+			JOIN individual_requests AS request ON request.id = authorization.request_id
+			JOIN users AS owner ON owner.id = authorization.user_id
+			JOIN children AS child ON child.id = authorization.child_id
+				AND child.owner_user_id = owner.id
+				AND child.family_number_id = owner.family_number_id
+			WHERE authorization.id = ? AND authorization.request_id = ?
+				AND authorization.user_id = ? AND authorization.status IN ('pending_review', 'approved')
+				AND request.status IN ('draft', 'needs_documents', 'needs_info',
+					'pending_admin_review', 'approved')
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
+			params: [input.authorizationId, input.requestId, input.userId],
+		});
+		if (!authorization) throw new DocumentRepositoryError('DOCUMENT_UPLOAD_SCOPE_REJECTED');
+
+		let replaceDocument: UploadTarget['replaceDocument'] = null;
+		if (input.replaceDocumentId) {
+			const document = await this.db.first<{
+				id: string;
+				review_status: string;
+				quarantine_r2_key: string;
+				authorization_id: string;
+				size_bytes: number;
+			}>({
+				sql: `SELECT document.id, document.review_status, document.quarantine_r2_key,
+					document.authorization_id, document.size_bytes
+				FROM authorization_documents AS document
+				JOIN funding_authorizations AS existing
+					ON existing.id = document.authorization_id
+				WHERE document.id = ? AND document.user_id = ?
+					AND existing.request_id = ? AND document.deleted_at IS NULL
+					AND document.replaced_by_document_id IS NULL`,
+				params: [input.replaceDocumentId, input.userId, input.requestId],
+			});
+			if (!document || document.authorization_id !== authorization.id) {
+				throw new DocumentRepositoryError('DOCUMENT_REPLACEMENT_REJECTED');
+			}
+			replaceDocument = {
+				id: document.id,
+				status: document.review_status,
+				quarantineKey: document.quarantine_r2_key,
+				authorizationId: document.authorization_id,
+				sizeBytes: document.size_bytes,
+			};
+		}
+
+		let targetAuthorizationId = authorization.id;
+		let createAuthorizationVersion: number | null = null;
+		if (authorization.status === 'approved') {
+			if (!replaceDocument || replaceDocument.status !== 'approved') {
+				throw new DocumentRepositoryError('APPROVED_AUTHORIZATION_IMMUTABLE');
+			}
+			const pending = await this.db.first<{ id: string; version: number }>({
+				sql: `SELECT id, version FROM funding_authorizations
+					WHERE request_id = ? AND status = 'pending_review'
+						AND supersedes_authorization_id = ? LIMIT 1`,
+				params: [authorization.request_id, authorization.id],
+			});
+			if (pending) {
+				targetAuthorizationId = pending.id;
+			} else {
+				targetAuthorizationId = crypto.randomUUID();
+				createAuthorizationVersion = authorization.version + 1;
+			}
+		} else if (replaceDocument?.status === 'approved') {
+			throw new DocumentRepositoryError('DOCUMENT_REPLACEMENT_REJECTED');
+		}
+
+		const totals = await this.db.first<{ count: number; bytes: number }>({
+			sql: `SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS bytes
+				FROM authorization_documents WHERE authorization_id = ?
+					AND deleted_at IS NULL AND replaced_by_document_id IS NULL`,
+			params: [targetAuthorizationId],
+		});
+		return {
+			requestId: authorization.request_id,
+			requestStatus: authorization.request_status,
+			userId: authorization.user_id,
+			childId: authorization.child_id,
+			sourceAuthorizationId: authorization.id,
+			targetAuthorizationId,
+			authorizationKind: authorization.kind,
+			createAuthorizationVersion,
+			replaceDocument,
+			currentCount: totals?.count ?? 0,
+			currentBytes: totals?.bytes ?? 0,
+		};
+	}
+
+	async persistUpload(input: {
+		target: UploadTarget;
+		documentId: string;
+		quarantineKey: string;
+		validated: ValidatedUpload;
+		idempotencyKey: string;
+		requestHash: string;
+		requestIdHeader: string;
+		now: string;
+		quarantineExpiresAt: string;
+	}) {
+		const auditId = crypto.randomUUID();
+		const assertionId = crypto.randomUUID();
+		const replacementGuard = input.target.replaceDocument
+			? this.mutationGuard.assertion({
+					documentId: input.target.replaceDocument.id,
+					operation: 'replace',
+				})
+			: { sql: '1 = 1', params: [] as readonly unknown[] };
+		const statements: StatementSpec[] = [];
+		if (input.target.createAuthorizationVersion !== null) {
+			statements.push({
+				sql: `INSERT INTO funding_authorizations
+					(id, request_id, user_id, child_id, version, kind, status,
+					 valid_from, valid_until, supersedes_authorization_id,
+					 decision_notes, reviewed_by, reviewed_at, created_at, updated_at)
+				SELECT ?, request_id, user_id, child_id, ?, kind, 'pending_review',
+					NULL, NULL, id, NULL, NULL, NULL, ?, ?
+				FROM funding_authorizations WHERE id = ? AND status = 'approved'
+					AND (${replacementGuard.sql})`,
+				params: [
+					input.target.targetAuthorizationId,
+					input.target.createAuthorizationVersion,
+					input.now,
+					input.now,
+					input.target.sourceAuthorizationId,
+					...replacementGuard.params,
+				],
+			});
+		}
+		statements.push({
+			sql: `INSERT INTO authorization_documents
+				(id, authorization_id, user_id, child_id, quarantine_r2_key,
+				 archive_r2_key, original_extension, mime_type, detected_type,
+				 size_bytes, sha256, review_status, upload_idempotency_key,
+				 upload_request_hash_sha256, uploaded_at, quarantine_expires_at,
+				 quarantine_delete_state, created_at, updated_at)
+			SELECT ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 'quarantined', ?, ?, ?, ?,
+				'present', ?, ? WHERE (${replacementGuard.sql})`,
+			params: [
+				input.documentId,
+				input.target.targetAuthorizationId,
+				input.target.userId,
+				input.target.childId,
+				input.quarantineKey,
+				input.validated.extension,
+				input.validated.mimeType,
+				input.validated.detectedType,
+				input.validated.sizeBytes,
+				input.validated.sha256,
+				input.idempotencyKey,
+				input.requestHash,
+				input.now,
+				input.quarantineExpiresAt,
+				input.now,
+				input.now,
+				...replacementGuard.params,
+			],
+		});
+		if (input.target.replaceDocument && input.target.replaceDocument.status !== 'approved') {
+			statements.push({
+				sql: `UPDATE authorization_documents
+					SET replaced_by_document_id = ?, review_status = 'deleted',
+						deleted_at = ?, updated_at = ?
+				WHERE id = ? AND user_id = ? AND review_status IN
+					('quarantined', 'clean', 'infected', 'rejected')
+					AND replaced_by_document_id IS NULL AND deleted_at IS NULL
+					AND (${replacementGuard.sql})`,
+				params: [
+					input.documentId,
+					input.now,
+					input.now,
+					input.target.replaceDocument.id,
+					input.target.userId,
+					...replacementGuard.params,
+				],
+			});
+		}
+		statements.push(
+			{
+				sql: `INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, created_at)
+				SELECT ?, ?, 'user', 'authorization_document.uploaded',
+					'authorization_document', id, ?, ?, ?
+				FROM authorization_documents WHERE id = ? AND user_id = ?
+					AND review_status = 'quarantined'`,
+				params: [
+					auditId,
+					input.target.userId,
+					input.requestIdHeader,
+					JSON.stringify({
+						status: 'quarantined',
+						detectedType: input.validated.detectedType,
+						sizeBytes: input.validated.sizeBytes,
+						sha256Prefix: input.validated.sha256.slice(0, 12),
+					}),
+					input.now,
+					input.documentId,
+					input.target.userId,
+				],
+			},
+			{
+				sql: `INSERT INTO document_action_assertions
+					(id, document_id, action, actor_user_id, audit_event_id,
+					 assertion_passed, created_at)
+				VALUES (?, ?, 'uploaded', ?, ?, CASE WHEN
+					EXISTS (SELECT 1 FROM authorization_documents
+						WHERE id = ? AND user_id = ? AND review_status = 'quarantined')
+					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+				THEN 1 ELSE 0 END, ?)`,
+				params: [
+					assertionId,
+					input.documentId,
+					input.target.userId,
+					auditId,
+					input.documentId,
+					input.target.userId,
+					auditId,
+					input.now,
+				],
+			}
+		);
+		await this.db.batch(statements);
+	}
+
+	private internalDocument(documentId: string): Promise<InternalDocumentRow | null> {
+		return this.db.first<InternalDocumentRow>({
+			sql: `SELECT document.id, document.authorization_id, authorization.request_id,
+				document.user_id, document.child_id, document.quarantine_r2_key,
+				document.archive_r2_key, document.sha256, document.size_bytes,
+				document.review_status, document.quarantine_delete_state
+			FROM authorization_documents AS document
+			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
+			WHERE document.id = ?`,
+			params: [documentId],
+		});
+	}
+
+	async loadAdminQuarantineDownload(documentId: string) {
+		const document = await this.internalDocument(documentId);
+		if (
+			!document ||
+			document.review_status !== 'quarantined' ||
+			document.quarantine_delete_state !== 'present'
+		) {
+			throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
+		}
+		return document;
+	}
+
+	async auditAdminQuarantineDownload(input: {
+		documentId: string;
+		adminUserId: string;
+		requestId: string;
+		now: string;
+	}) {
+		const document = await this.internalDocument(input.documentId);
+		if (!document) throw new DocumentRepositoryError('DOCUMENT_NOT_FOUND');
+		const auditId = crypto.randomUUID();
+		const assertionId = crypto.randomUUID();
+		await this.db.batch([
+			{
+				sql: `INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, created_at)
+				SELECT ?, ?, 'user', 'authorization_document.quarantine_downloaded',
+					'authorization_document', id, ?, ?, ?
+				FROM authorization_documents WHERE id = ? AND review_status = 'quarantined'
+					AND quarantine_delete_state = 'present'
+					AND EXISTS (SELECT 1 FROM users AS admin WHERE admin.id = ?
+						AND admin.role = 'admin' AND admin.account_status = 'active'
+						AND admin.is_blocked = 0)`,
+				params: [
+					auditId,
+					input.adminUserId,
+					input.requestId,
+					JSON.stringify({
+						forcedAttachment: true,
+						sha256Prefix: document.sha256.slice(0, 12),
+					}),
+					input.now,
+					input.documentId,
+					input.adminUserId,
+				],
+			},
+			{
+				sql: `UPDATE authorization_documents
+					SET quarantine_downloaded_by_admin_user_id = ?,
+						quarantine_downloaded_sha256 = sha256,
+						quarantine_downloaded_at = ?, download_audit_event_id = ?, updated_at = ?
+					WHERE id = ? AND review_status = 'quarantined'
+						AND quarantine_delete_state = 'present'
+						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+				params: [
+					input.adminUserId,
+					input.now,
+					auditId,
+					input.now,
+					input.documentId,
+					auditId,
+				],
+			},
+			{
+				sql: `INSERT INTO document_action_assertions
+					(id, document_id, action, actor_user_id, audit_event_id,
+					 assertion_passed, created_at)
+				VALUES (?, ?, 'quarantine_downloaded', ?, ?, CASE WHEN
+					EXISTS (SELECT 1 FROM authorization_documents
+						WHERE id = ? AND download_audit_event_id = ?
+							AND quarantine_downloaded_sha256 = sha256)
+					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+				THEN 1 ELSE 0 END, ?)`,
+				params: [
+					assertionId,
+					input.documentId,
+					input.adminUserId,
+					auditId,
+					input.documentId,
+					auditId,
+					auditId,
+					input.now,
+				],
+			},
+		]);
+	}
+
+	async loadParentApprovedDownload(userId: string, documentId: string) {
+		const document = await this.db.first<InternalDocumentRow>({
+			sql: `SELECT document.id, document.authorization_id, authorization.request_id,
+				document.user_id, document.child_id, document.quarantine_r2_key,
+				document.archive_r2_key, document.sha256, document.size_bytes,
+				document.review_status, document.quarantine_delete_state
+			FROM authorization_documents AS document
+			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
+			JOIN individual_requests AS request ON request.id = authorization.request_id
+			JOIN users AS owner ON owner.id = request.user_id
+			WHERE document.id = ? AND document.user_id = ? AND request.user_id = ?
+				AND document.review_status = 'approved' AND document.archive_r2_key IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+			params: [documentId, userId, userId],
+		});
+		if (!document) throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
+		return document;
+	}
+
+	async auditParentApprovedDownload(input: {
+		documentId: string;
+		userId: string;
+		requestId: string;
+		now: string;
+	}) {
+		await this.db.run({
+			sql: `INSERT INTO audit_events
+				(id, actor_user_id, actor_kind, action, target_kind, target_id,
+				 request_id, safe_diff_json, created_at)
+			SELECT ?, ?, 'user', 'authorization_document.owner_downloaded',
+				'authorization_document', id, ?, '{"forcedAttachment":true}', ?
+			FROM authorization_documents WHERE id = ? AND user_id = ?
+				AND review_status = 'approved' AND archive_r2_key IS NOT NULL`,
+			params: [
+				crypto.randomUUID(),
+				input.userId,
+				input.requestId,
+				input.now,
+				input.documentId,
+				input.userId,
+			],
+		});
+	}
+
+	async deleteByParent(input: {
+		documentId: string;
+		userId: string;
+		idempotencyKey: string;
+		requestId: string;
+		now: string;
+	}) {
+		const requestHash = await hashCanonical({ documentId: input.documentId, action: 'delete' });
+		const prior = await this.db.first<{ request_hash_sha256: string }>({
+			sql: `SELECT request_hash_sha256 FROM request_parent_actions
+				WHERE user_id = ? AND idempotency_key = ?`,
+			params: [input.userId, input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.request_hash_sha256 !== requestHash) {
+				throw new DocumentRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { replayed: true, document: await this.internalDocument(input.documentId) };
+		}
+		const document = await this.internalDocument(input.documentId);
+		if (!document || document.user_id !== input.userId || document.review_status === 'approved') {
+			throw new DocumentRepositoryError('DOCUMENT_DELETE_REJECTED');
+		}
+		const guard = this.mutationGuard.assertion({ documentId: input.documentId, operation: 'delete' });
+		const auditId = crypto.randomUUID();
+		const actionId = crypto.randomUUID();
+		const assertionId = crypto.randomUUID();
+		try {
+			await this.db.batch([
+				{
+					sql: `UPDATE authorization_documents
+						SET review_status = 'deleted', deleted_at = ?, updated_at = ?
+					WHERE id = ? AND user_id = ? AND review_status IN
+						('quarantined', 'clean', 'infected', 'rejected')
+						AND deleted_at IS NULL AND (${guard.sql})`,
+					params: [
+						input.now,
+						input.now,
+						input.documentId,
+						input.userId,
+						...guard.params,
+					],
+				},
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'authorization_document.deleted_by_parent',
+						'authorization_document', id, ?, '{"status":"deleted"}', ?
+					FROM authorization_documents WHERE id = ? AND user_id = ?
+						AND review_status = 'deleted' AND (${guard.sql})`,
+					params: [
+						auditId,
+						input.userId,
+						input.requestId,
+						input.now,
+						input.documentId,
+						input.userId,
+						...guard.params,
+					],
+				},
+				{
+					sql: `INSERT INTO request_parent_actions
+						(id, request_id, user_id, action, from_status, to_status,
+						 idempotency_key, request_hash_sha256, audit_event_id, created_at)
+					SELECT ?, ?, ?, 'delete_document', request.status, request.status,
+						?, ?, ?, ? FROM individual_requests AS request
+					WHERE request.id = ? AND request.user_id = ?
+						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+					params: [
+						actionId,
+						document.request_id,
+						input.userId,
+						input.idempotencyKey,
+						requestHash,
+						auditId,
+						input.now,
+						document.request_id,
+						input.userId,
+						auditId,
+					],
+				},
+				{
+					sql: `INSERT INTO document_action_assertions
+						(id, document_id, action, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, ?, 'deleted_by_parent', ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM authorization_documents
+							WHERE id = ? AND user_id = ? AND review_status = 'deleted')
+						AND EXISTS (SELECT 1 FROM request_parent_actions WHERE id = ?)
+						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						assertionId,
+						input.documentId,
+						input.userId,
+						auditId,
+						input.documentId,
+						input.userId,
+						actionId,
+						auditId,
+						input.now,
+					],
+				},
+			]);
+			return { replayed: false, document };
+		} catch {
+			const replay = await this.db.first<{ request_hash_sha256: string }>({
+				sql: `SELECT request_hash_sha256 FROM request_parent_actions
+					WHERE user_id = ? AND idempotency_key = ?`,
+				params: [input.userId, input.idempotencyKey],
+			});
+			if (replay?.request_hash_sha256 === requestHash) return { replayed: true, document };
+			throw new DocumentRepositoryError('DOCUMENT_DELETE_REJECTED');
+		}
+	}
+
+	completeQuarantineDelete(documentId: string, now: string) {
+		return this.db.run({
+			sql: `UPDATE authorization_documents SET quarantine_delete_state = 'deleted',
+				quarantine_purged_at = COALESCE(quarantine_purged_at, ?), updated_at = ?
+			WHERE id = ? AND quarantine_delete_state = 'delete_pending'`,
+			params: [now, now, documentId],
+		});
+	}
+
+	async claimCleanup(now: string, limit = 100) {
+		const candidates = await this.db.all<{
+			id: string;
+			quarantine_r2_key: string;
+			review_status: string;
+			quarantine_delete_state: string;
+		}>({
+			sql: `SELECT id, quarantine_r2_key, review_status, quarantine_delete_state
+			FROM authorization_documents
+			WHERE quarantine_delete_state = 'delete_pending'
+				OR (quarantine_delete_state = 'present' AND (
+					(review_status <> 'approved' AND quarantine_expires_at <= ?)
+					OR (review_status = 'approved' AND archive_r2_key IS NOT NULL)
+				))
+			ORDER BY quarantine_expires_at, id LIMIT ?`,
+			params: [now, Math.min(Math.max(limit, 1), 100)],
+		});
+		const claimed: Array<{ id: string; quarantineKey: string }> = [];
+		for (const candidate of candidates.results) {
+			if (candidate.quarantine_delete_state === 'delete_pending') {
+				claimed.push({ id: candidate.id, quarantineKey: candidate.quarantine_r2_key });
+				continue;
+			}
+			const auditId = crypto.randomUUID();
+			const assertionId = crypto.randomUUID();
+			try {
+				await this.db.batch([
+					{
+						sql: `INSERT INTO audit_events
+							(id, actor_user_id, actor_kind, action, target_kind, target_id,
+							 request_id, safe_diff_json, created_at)
+						SELECT ?, NULL, 'system', 'authorization_document.quarantine_cleanup',
+							'authorization_document', id, ?, '{"bodyDelete":"claimed"}', ?
+						FROM authorization_documents WHERE id = ?
+							AND quarantine_delete_state = 'present'
+							AND ((review_status <> 'approved' AND quarantine_expires_at <= ?)
+								OR (review_status = 'approved' AND archive_r2_key IS NOT NULL))`,
+						params: [auditId, `document-cleanup:${candidate.id}`, now, candidate.id, now],
+					},
+					{
+						sql: `UPDATE authorization_documents
+							SET quarantine_delete_state = 'delete_pending',
+								quarantine_cleanup_audit_event_id = ?, updated_at = ?
+							WHERE id = ? AND quarantine_delete_state = 'present'
+								AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+						params: [auditId, now, candidate.id, auditId],
+					},
+					{
+						sql: `INSERT INTO document_action_assertions
+							(id, document_id, action, actor_user_id, audit_event_id,
+							 assertion_passed, created_at)
+						VALUES (?, ?, 'quarantine_cleanup_claimed', NULL, ?, CASE WHEN
+							EXISTS (SELECT 1 FROM authorization_documents
+								WHERE id = ? AND quarantine_delete_state = 'delete_pending'
+									AND quarantine_cleanup_audit_event_id = ?)
+							AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+						THEN 1 ELSE 0 END, ?)`,
+						params: [
+							assertionId,
+							candidate.id,
+							auditId,
+							candidate.id,
+							auditId,
+							auditId,
+							now,
+						],
+					},
+				]);
+				claimed.push({ id: candidate.id, quarantineKey: candidate.quarantine_r2_key });
+			} catch {
+				// Another cleanup worker won the conditional claim.
+			}
+		}
+		return claimed;
+	}
+
+	async listAdminDocuments(input: { q: string; status: string }) {
+		const q = input.q.toLocaleLowerCase('de-DE');
+		const rows = await this.db.all<{
+			id: string;
+			request_id: string;
+			authorization_id: string;
+			review_status: string;
+			detected_type: string;
+			size_bytes: number;
+			sha256: string;
+			uploaded_at: string;
+			quarantine_expires_at: string;
+			child_name: string;
+			request_kind: string;
+		}>({
+			sql: `SELECT document.id, authorization.request_id, document.authorization_id,
+				document.review_status, document.detected_type, document.size_bytes,
+				document.sha256, document.uploaded_at, document.quarantine_expires_at,
+				child.full_name AS child_name, request.request_kind
+			FROM authorization_documents AS document
+			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
+			JOIN individual_requests AS request ON request.id = authorization.request_id
+			JOIN children AS child ON child.id = document.child_id
+			WHERE (? = '' OR document.review_status = ?)
+				AND (? = '' OR lower(child.full_name) LIKE ? OR document.id = ?
+					OR authorization.request_id = ?)
+			ORDER BY CASE document.review_status
+				WHEN 'quarantined' THEN 1 WHEN 'clean' THEN 2 ELSE 3 END,
+				document.uploaded_at, document.id LIMIT 100`,
+			params: [input.status, input.status, q, `%${q}%`, input.q, input.q],
+		});
+		return rows.results;
+	}
+}

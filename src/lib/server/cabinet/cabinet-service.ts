@@ -9,6 +9,7 @@ export interface CabinetExtensionItem {
 	label: string;
 	status: string;
 	detail?: string;
+	href?: string;
 	cancellable?: boolean;
 }
 

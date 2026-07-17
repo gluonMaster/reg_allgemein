@@ -8,6 +8,8 @@ import { CatalogRepository } from '$lib/server/catalog/catalog-repository';
 import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import { TrialRepository } from '$lib/server/trials/trial-repository';
 import { TrialService } from '$lib/server/trials/trial-service';
+import { IndividualRequestRepository } from '$lib/server/requests/request-repository';
+import { IndividualRequestService } from '$lib/server/requests/request-service';
 
 export function createCabinetRuntime(config: RuntimeConfig) {
 	const database = new DatabaseBoundary(config.db);
@@ -18,9 +20,16 @@ export function createCabinetRuntime(config: RuntimeConfig) {
 		new CatalogRepository(database),
 		new OccupancyRepository(database)
 	);
+	const requestService = new IndividualRequestService(
+		new IndividualRequestRepository(database),
+		config.pricing
+	);
 	return {
 		repository,
-		service: new CabinetService(repository, new CabinetPricingService(config.pricing), [trialService]),
+		service: new CabinetService(repository, new CabinetPricingService(config.pricing), [
+			trialService,
+			requestService,
+		]),
 	};
 }
 

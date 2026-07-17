@@ -1,7 +1,7 @@
 import { buildPortalUrl, loadRuntimeConfig, RuntimeConfigError } from '$lib/server/config/runtime';
 
 const fakeDb = { prepare() {} } as unknown as D1Database;
-const fakeR2 = { get() {}, put() {} } as unknown as R2Bucket;
+const fakeR2 = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
 const fakeAssets = { fetch() {} } as unknown as Fetcher;
 const fakeBrowser = { quickAction() {} } as unknown as BrowserRun;
 
@@ -187,5 +187,49 @@ describe('runtime configuration', () => {
 				...pricingEnv,
 			})
 		).toThrow(RuntimeConfigError);
+	});
+
+	it('keeps document upload disabled by default and enforces hard risk ceilings', () => {
+		const config = loadRuntimeConfig({
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+		});
+		expect(config.documents).toMatchObject({
+			uploadEnabled: false,
+			maxFileBytes: 10 * 1024 * 1024,
+			maxFilesPerAuthorization: 5,
+			maxAuthorizationBytes: 25 * 1024 * 1024,
+			avAttestationTextVersion: 'manual-local-av-v1',
+		});
+		for (const documentEnv of [
+			{ DOCUMENT_MAX_FILE_BYTES: String(10 * 1024 * 1024 + 1) },
+			{ DOCUMENT_MAX_FILES_PER_AUTHORIZATION: '6' },
+			{ DOCUMENT_MAX_AUTHORIZATION_BYTES: String(25 * 1024 * 1024 + 1) },
+		]) {
+			expect(() => loadRuntimeConfig({
+				APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb, ...documentEnv,
+			})).toThrow(RuntimeConfigError);
+		}
+	});
+
+	it('requires private storage and a secret when enabled and never releases production upload', () => {
+		expect(() => loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb, DOCUMENT_UPLOAD_ENABLED: 'true',
+		})).toThrow(RuntimeConfigError);
+		const enabled = loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb, R2_BUCKET: fakeR2, JWT_SECRET: 'x'.repeat(32),
+			DOCUMENT_UPLOAD_ENABLED: 'true',
+		});
+		expect(enabled.documents.uploadEnabled).toBe(true);
+		expect(() => loadRuntimeConfig({
+			APP_ENV: 'production', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+			DB: fakeDb, R2_BUCKET: fakeR2, ASSETS: fakeAssets, BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32), TURNSTILE_SITE_KEY: 'site', TURNSTILE_SECRET_KEY: 'secret',
+			DOCUMENT_UPLOAD_ENABLED: 'true',
+		})).toThrow(RuntimeConfigError);
 	});
 });

@@ -471,3 +471,44 @@ a.metric-card {
 		padding: 1rem;
 	}
 }
+
+.request-shell {
+	width: min(100% - 2rem, 64rem);
+	margin: 0 auto;
+	padding: 1.5rem 0 4rem;
+}
+
+.request-form,
+.request-shell .inline-action {
+	display: grid;
+	gap: 0.65rem;
+	margin: 1rem 0;
+}
+
+.request-shell input,
+.request-shell select,
+.request-shell textarea {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid #8993a8;
+	border-radius: 0.4rem;
+	font: inherit;
+}
+
+.request-shell textarea { min-height: 6rem; resize: vertical; }
+.request-shell fieldset { display: flex; flex-wrap: wrap; gap: 0.8rem; border: 1px solid #d9deea; border-radius: 0.5rem; }
+.request-shell .checkbox { display: inline-flex; gap: 0.35rem; align-items: center; }
+.request-shell .checkbox input { width: auto; }
+.request-shell button {
+	justify-self: start; padding: 0.7rem 1rem; border: 0; border-radius: 0.4rem;
+	background: #3157a4; color: white; font: inherit; font-weight: 650; cursor: pointer;
+}
+.request-shell .secondary-button { background: #596273; }
+.document-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; }
+.document-card { padding: 1rem; border: 1px solid #d9deea; border-radius: 0.65rem; background: #f7f8fa; }
+.request-shell :focus-visible { outline: 3px solid #f2b84b; outline-offset: 2px; }
+
+@media (max-width: 40rem) {
+	.request-shell { width: min(100% - 1rem, 64rem); }
+}

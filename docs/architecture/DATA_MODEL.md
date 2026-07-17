@@ -592,9 +592,12 @@ occupancy.
 - `id`, `user_id`, `child_id`, `request_kind` (`nachhilfe|individual`);
 - `funding_kind` (`self_pay|jobcenter|socialamt|unknown`);
 - `subjects_raw`, `preferred_days_json`, `preferred_time_windows_json`;
-- `preferred_format`, `preferred_locations_json`;
+- `description`, `preferred_format`, `preferred_locations_json`;
+- immutable tariff snapshot `unit_rate_cents`, `parent_payable`;
 - `status` (`draft|submitted|needs_documents|needs_info|pending_admin_review|approved|rejected|cancelled`);
-- `admin_decision`, `admin_notes`, `created_at`, `updated_at`.
+- optimistic `version`, `create_idempotency_key`, `create_request_hash_sha256`;
+- `admin_decision`, `admin_notes`, `reviewed_by`, `reviewed_at`,
+  `created_at`, `updated_at`.
 
 Cross-field constraint: submitted `individual` требует
 `funding_kind=self_pay`; submitted `nachhilfe` требует
@@ -657,9 +660,14 @@ Amendment разрешён только для той же child/service, approv
 `funding_review -> active` на/после `effective_from` и пишет contract/audit
 event. Original contract/offer/PDF и initial authorization не мутируют.
 
+`request_parent_actions` хранит idempotent append-only parent save/submit/cancel и
+document-delete evidence, а `request_action_assertions` связывает успешную
+мутацию с owner assertion и безопасным audit event.
+
 ### `funding_authorizations`
 
-- `id`, `request_id`, `kind` (`jobcenter|socialamt`);
+- `id`, `request_id`, `user_id`, `child_id`, immutable `version`,
+  `kind` (`jobcenter|socialamt`);
 - `status` (`pending_review|approved|rejected|revoked|superseded`),
   `valid_from`, `valid_until`, `supersedes_authorization_id` nullable;
 - `decision_notes`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at`.
@@ -689,19 +697,23 @@ contract на новую authorization молча.
 ### `authorization_documents`
 
 - `id`, `authorization_id`, `user_id`, `child_id`;
-- `r2_key`, `original_extension`, `mime_type`, `detected_type`;
+- private random `quarantine_r2_key`, nullable private `archive_r2_key`,
+  `original_extension`, `mime_type`, `detected_type`;
 - `size_bytes`, `sha256`;
 - `review_status`
   (`quarantined|scan_pending|clean|infected|suspicious|scan_failed|approved|rejected|deleted`);
 - `quarantine_reason`, `scan_method` (`manual_local_av|automated_adapter`)
   nullable, `scanner_label`, `scanner_version`, `signature_version`;
-- `quarantine_downloaded_by_admin_user_id`, `quarantine_downloaded_at`,
-  `download_audit_event_id`;
+- `quarantine_downloaded_by_admin_user_id`, `quarantine_downloaded_sha256`,
+  `quarantine_downloaded_at`, `download_audit_event_id`;
 - `scan_attested_by_admin_user_id`, `scan_attestation_text_version`,
   `scanned_at`, `scan_attempts`;
 - `business_review_reason`, `released_by`, `released_at`,
   `retention_control_id`;
-- `uploaded_at`, `quarantine_expires_at`, `quarantine_purged_at`, `deleted_at`,
+- `upload_idempotency_key`, `upload_request_hash_sha256`, `uploaded_at`,
+  `quarantine_expires_at`;
+- `quarantine_delete_state` (`present|delete_pending|deleted`),
+  `quarantine_purged_at`, `quarantine_cleanup_audit_event_id`, `deleted_at`,
   `replaced_by_document_id`.
 
 R2 key уникален и случайный. Новый файл остаётся `quarantined`; inline preview/
@@ -721,6 +733,20 @@ request-reupload.
 cleanup после этого порога, но никогда раньше. Download/attestation не меняют
 expiry; duplicate cleanup идемпотентен. Approved artifact покидает quarantine
 lifecycle и получает business retention.
+
+Parent delete/replacement немедленно убирает доступ к non-approved metadata, но
+не ускоряет физическое удаление quarantine body: до исходного
+`quarantine_expires_at` сохраняется `quarantine_delete_state=present`.
+Approved artifact копируется под новым случайным `archive_r2_key`; после
+атомарной фиксации approval карантинная копия становится `delete_pending`.
+Cleanup удаляет только quarantine key и никогда не выбирает approved archive.
+Физический purge approved archive в MVP отключён.
+
+`document_scan_attestations`, `document_action_assertions` и
+`funding_action_assertions` — append-only evidence. `funding_lifecycle_events`
+дедуплицирует `revoked|superseded|expired`; для inclusive `valid_until` событие
+expiry имеет `effective_on = calendar_day_after(valid_until)`, при этом mutable
+status `expired` не добавляется.
 
 ## Договоры
 

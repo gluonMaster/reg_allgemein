@@ -22,6 +22,7 @@
 		no_show: 'admin.code.no_show',
 		converted: 'admin.code.converted',
 	} as const;
+	const requestStatus = (status: string) => translate('de', `request.status.${status}` as 'request.status.draft');
 </script>
 
 <svelte:head><title>{translate('de', 'cabinet.title')}</title></svelte:head>
@@ -230,6 +231,21 @@
 							<button type="submit">{translate('de', 'cabinet.trials.cancel')}</button>
 						</form>
 					{/if}
+				</article>
+			{/each}
+		</div>
+	</section>
+
+	<section class="cabinet-card" id="requests">
+		<h2>{translate('de', 'cabinet.requests.title')}</h2>
+		<p><a href="/requests/new?kind=nachhilfe">{translate('de', 'cabinet.requests.nachhilfe')}</a> · <a href="/requests/new?kind=individual">{translate('de', 'cabinet.requests.individual')}</a></p>
+		{#if data.cabinet.extensions.requests.length === 0}<p>{translate('de', 'cabinet.requests.empty')}</p>{/if}
+		<div class="activity-list">
+			{#each data.cabinet.extensions.requests as request}
+				<article class="activity-item">
+					<p class="item-kicker">{requestStatus(request.status)}</p>
+					<h3>{request.label}</h3>{#if request.detail}<p>{request.detail}</p>{/if}
+					{#if request.href}<a href={request.href}>{translate('de', 'cabinet.requests.open')}</a>{/if}
 				</article>
 			{/each}
 		</div>

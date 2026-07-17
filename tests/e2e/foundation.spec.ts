@@ -34,6 +34,8 @@ test('renders the mobile German registration form and protects account routes', 
 	expect(protectedResponse?.status()).toBe(401);
 	const protectedTrialResponse = await page.goto('/catalog/course-1/trial');
 	expect(protectedTrialResponse?.status()).toBe(401);
+	const protectedRequestResponse = await page.goto('/requests/new?kind=nachhilfe');
+	expect(protectedRequestResponse?.status()).toBe(401);
 });
 
 test('rejects unauthenticated admin pages and direct mutation actions', async ({
@@ -42,6 +44,8 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 }) => {
 	const shellResponse = await page.goto('/admin');
 	expect(shellResponse?.status()).toBe(401);
+	const requestReviewResponse = await page.goto('/admin/requests');
+	expect(requestReviewResponse?.status()).toBe(401);
 
 	const mutationResponse = await request.post('/admin/users/unknown-user?/block', {
 		form: {
