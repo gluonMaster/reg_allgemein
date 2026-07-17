@@ -59,6 +59,11 @@ function templateKeys(template: AuthOutboxRow['template_or_category']): {
 				subject: 'auth.email.passwordChanged.subject',
 				body: 'auth.email.passwordChanged.body',
 			};
+		case 'claim.legacy_email_proof':
+			return {
+				subject: 'claim.email.proof.subject',
+				body: 'claim.email.proof.body',
+			};
 	}
 }
 
@@ -83,7 +88,9 @@ export class AuthEmailDispatcher {
 		const path =
 			kind === 'password_reset'
 				? `/auth/reset?token=${encodeURIComponent(token)}`
-				: `/auth/verify?token=${encodeURIComponent(token)}`;
+				: kind === 'legacy_email_claim'
+					? `/cabinet/legacy-claim?token=${encodeURIComponent(token)}`
+					: `/auth/verify?token=${encodeURIComponent(token)}`;
 		return buildPortalUrl(this.config, path).toString();
 	}
 

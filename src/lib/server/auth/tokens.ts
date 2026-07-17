@@ -11,7 +11,7 @@ function base64Url(bytes: Uint8Array): string {
 export async function deriveOpaqueAuthToken(input: {
 	secret: string;
 	tokenId: string;
-	kind: 'email_verification' | 'password_reset';
+	kind: 'email_verification' | 'password_reset' | 'legacy_email_claim';
 }): Promise<string> {
 	const key = await crypto.subtle.importKey(
 		'raw',
@@ -47,7 +47,7 @@ export async function hmacSha256Hex(secret: string, scope: string, value: string
 }
 
 export function hashAuthToken(
-	kind: 'email_verification' | 'password_reset',
+	kind: 'email_verification' | 'password_reset' | 'legacy_email_claim',
 	rawToken: string
 ): Promise<string> {
 	return scopedHash(`auth-token:${kind}:v1`, rawToken);

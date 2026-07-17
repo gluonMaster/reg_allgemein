@@ -100,3 +100,119 @@ a {
 	border-left: 4px solid #3157a4;
 	background: #edf2ff;
 }
+
+.cabinet-shell {
+	width: min(100% - 2rem, 68rem);
+	margin: 0 auto;
+	padding: 1.5rem 0 4rem;
+}
+
+.cabinet-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.cabinet-nav a {
+	color: #3157a4;
+}
+
+.cabinet-card {
+	margin: 1rem 0;
+	padding: 1.25rem;
+	border: 1px solid #d9deea;
+	border-radius: 0.75rem;
+	background: white;
+}
+
+.notice-card {
+	border-left: 5px solid #3157a4;
+}
+
+.profile-grid,
+.child-list,
+.activity-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+	gap: 1rem;
+}
+
+.profile-grid div,
+.child-item,
+.activity-item {
+	padding: 1rem;
+	border-radius: 0.6rem;
+	background: #f7f8fa;
+}
+
+.profile-grid dt,
+.item-kicker {
+	font-size: 0.85rem;
+	font-weight: 700;
+	color: #4d5668;
+}
+
+.profile-grid dd {
+	margin: 0.25rem 0 0;
+}
+
+.cabinet-card form {
+	display: grid;
+	gap: 0.55rem;
+	margin-top: 1rem;
+}
+
+.cabinet-card input {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid #8993a8;
+	border-radius: 0.4rem;
+	font: inherit;
+}
+
+.cabinet-card .checkbox {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 0.6rem;
+	align-items: start;
+}
+
+.cabinet-card .checkbox input {
+	width: auto;
+}
+
+.cabinet-card button {
+	justify-self: start;
+	padding: 0.7rem 1rem;
+	border: 0;
+	border-radius: 0.4rem;
+	background: #3157a4;
+	color: white;
+	font: inherit;
+	font-weight: 650;
+}
+
+.cabinet-card button:disabled {
+	opacity: 0.55;
+}
+
+.price-total {
+	font-size: 1.8rem;
+	font-weight: 750;
+}
+
+.muted {
+	color: #4d5668;
+}
+
+@media (max-width: 40rem) {
+	.cabinet-shell {
+		width: min(100% - 1rem, 68rem);
+	}
+
+	.cabinet-card {
+		padding: 1rem;
+	}
+}

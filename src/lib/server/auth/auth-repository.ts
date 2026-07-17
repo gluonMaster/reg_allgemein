@@ -73,15 +73,16 @@ export interface AuthOutboxRow {
 		| 'auth.password_reset'
 		| 'auth.email_change_verification'
 		| 'auth.welcome'
-		| 'auth.password_changed';
-	recipient_address_kind: 'current' | 'pending';
+		| 'auth.password_changed'
+		| 'claim.legacy_email_proof';
+	recipient_address_kind: 'current' | 'pending' | 'legacy';
 	locale: string;
 	payload_json: string;
 	attempts: number;
 	max_attempts: number;
 	email: string;
 	token_id: string | null;
-	token_kind: 'email_verification' | 'password_reset' | null;
+	token_kind: 'email_verification' | 'password_reset' | 'legacy_email_claim' | null;
 	user_id: string;
 }
 
@@ -872,12 +873,15 @@ export class AuthRepository {
 				o.recipient_address_kind, o.locale, o.payload_json, o.attempts,
 				o.max_attempts, o.recipient_user_id AS user_id,
 				CASE o.recipient_address_kind
+					WHEN 'legacy' THEN legacy_email.email_raw
 					WHEN 'pending' THEN u.pending_email
 					ELSE u.email
 				END AS email,
 				t.id AS token_id, t.kind AS token_kind
 			FROM email_outbox o
 			JOIN users u ON u.id = o.recipient_user_id
+			LEFT JOIN legacy_family_emails AS legacy_email
+				ON legacy_email.id = o.recipient_legacy_email_id
 			LEFT JOIN auth_tokens t ON o.source_kind = 'auth_token' AND t.id = o.source_id
 			WHERE o.status IN ('pending', 'retry') AND o.not_before <= ?
 				AND (o.next_attempt_at IS NULL OR o.next_attempt_at <= ?)
@@ -893,6 +897,14 @@ export class AuthRepository {
 							(o.recipient_address_kind = 'pending'
 								AND t.target_email_normalized = u.pending_email_normalized
 								AND t.email_version = u.email_version)
+							OR
+							(o.recipient_address_kind = 'legacy'
+								AND t.kind = 'legacy_email_claim'
+								AND t.user_id = u.id
+								AND t.family_version = u.family_version
+								AND t.legacy_family_id = legacy_email.legacy_family_id
+								AND t.target_email_normalized = legacy_email.email_normalized
+								AND legacy_email.is_current = 1)
 						)
 					)
 				)

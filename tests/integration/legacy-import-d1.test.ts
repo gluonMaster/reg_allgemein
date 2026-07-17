@@ -276,6 +276,17 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			.bind(state!.allocation_id)
 			.run();
 		await context.db
+			.prepare(`INSERT INTO users
+				(id, email, email_normalized, password_hash, email_verified_at, role,
+				 first_name, last_name, first_name_normalized, last_name_normalized,
+				 family_number_id, family_assignment_status, family_version,
+				 privacy_notice_version, privacy_accepted_at, created_at, updated_at)
+			 VALUES ('user-existing', 'existing@example.test', 'existing@example.test',
+				 'not-used', ?, 'parent', 'Existing', 'Owner', 'existing', 'owner',
+				 ?, 'assigned', 1, 'synthetic-notice-v1', ?, ?, ?)`)
+			.bind(instant(5), state!.allocation_id, instant(5), instant(5), instant(5))
+			.run();
+		await context.db
 			.prepare(
 				`UPDATE children SET full_name_override = 'Approved Child',
 					full_name = 'Approved Child', full_name_normalized = 'approved child' WHERE id = ?`
@@ -420,6 +431,17 @@ describe('versioned Access and PlusBText imports in D1', () => {
 				`UPDATE family_number_allocations SET owner_user_id = 'stable-owner' WHERE id = ?`
 			)
 			.bind(identity!.family_number_id)
+			.run();
+		await context.db
+			.prepare(`INSERT INTO users
+				(id, email, email_normalized, password_hash, email_verified_at, role,
+				 first_name, last_name, first_name_normalized, last_name_normalized,
+				 family_number_id, family_assignment_status, family_version,
+				 privacy_notice_version, privacy_accepted_at, created_at, updated_at)
+			 VALUES ('stable-owner', 'stable@example.test', 'stable@example.test',
+				 'not-used', ?, 'parent', 'Stable', 'Owner', 'stable', 'owner',
+				 ?, 'assigned', 1, 'synthetic-notice-v1', ?, ?, ?)`)
+			.bind(instant(5), identity!.family_number_id, instant(5), instant(5), instant(5))
 			.run();
 		await context.db
 			.prepare(`UPDATE children SET owner_user_id = 'stable-owner' WHERE id = ?`)

@@ -15,6 +15,7 @@ import {
 } from './auth-repository';
 import { BcryptPasswordHasher, type PasswordHasher } from './password';
 import { SessionService } from './session';
+import { LegacyFamilyVerificationExtension } from '$lib/server/family/verification-extension';
 
 export interface AuthRuntime {
 	repository: AuthRepository;
@@ -66,7 +67,10 @@ export function createAuthRuntime(
 		config.jwtSecret,
 		config.auth,
 		overrides.clock,
-		overrides.verificationExtension ?? noPostVerificationExtension
+		overrides.verificationExtension ??
+			(config.auth.publicEnabled
+				? new LegacyFamilyVerificationExtension(database)
+				: noPostVerificationExtension)
 	);
 	return { repository, sessions, service };
 }

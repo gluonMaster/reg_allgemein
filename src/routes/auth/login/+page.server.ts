@@ -36,6 +36,6 @@ export const actions = {
 			session,
 			environment: runtime.config.appEnvironment,
 		});
-		throw redirect(303, '/account/security');
+		throw redirect(303, '/cabinet');
 	},
 } satisfies Actions;

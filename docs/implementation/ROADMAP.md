@@ -48,7 +48,7 @@ npm run build
 | 03 | done | Access/PlusBText import, family/child aggregation, issues и reconciliation | 02 |
 | 04 | done | Course mappings, occupancy и безопасный pricing/quote engine | 02–03 |
 | 05 | done | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC | 01 |
-| 06 | pending | Portal children, atomic legacy claim и parent cabinet | 03–05 |
+| 06 | done | Portal children, atomic legacy claim и parent cabinet | 03–05 |
 | 06A | pending | Admin shell, import/review/legacy/users/catalog core surfaces | 02–06 |
 | 07 | pending | Published catalog, availability и полный trial workflow | 04, 06, 06A |
 | 08 | pending | Nachhilfe/individual requests, private R2 documents и review | 05, 06, 06A |

@@ -185,21 +185,33 @@ async function seedOccupancy(input: {
 }): Promise<void> {
 	const familyNumberId = 'family-number-stage-04';
 	const legacyFamilyId = 'legacy-family-stage-04';
+	const ownerUserId = 'occupancy-owner-stage-04';
 	await input.db.batch([
 		{
 			sql: `INSERT INTO family_number_allocations
 				(id, namespace, sequence_number, display_family_id, legacy_family_id,
 				 owner_user_id, origin, status, assigned_at, merged_into_family_number_id,
 				 created_at, updated_at)
-				VALUES (?, 'legacy_1', 9001, '1. 9001', ?, NULL, 'legacy', 'assigned', ?, NULL, ?, ?)`,
-			params: [familyNumberId, legacyFamilyId, instant(7), instant(7), instant(7)],
+				VALUES (?, 'legacy_1', 9001, '1. 9001', ?, ?, 'legacy', 'assigned', ?, NULL, ?, ?)`,
+			params: [familyNumberId, legacyFamilyId, ownerUserId, instant(7), instant(7), instant(7)],
 		},
 		{
 			sql: `INSERT INTO legacy_families
 				(id, source_namespace, source_family_id, family_number_id, numbering_status,
 				 claimed_by_user_id, claimed_at, continuity_status, created_at, updated_at)
-				VALUES (?, 'legacy_1', '1. 9001', ?, 'valid', NULL, NULL, 'stable', ?, ?)`,
-			params: [legacyFamilyId, familyNumberId, instant(7), instant(7)],
+				VALUES (?, 'legacy_1', '1. 9001', ?, 'valid', ?, ?, 'stable', ?, ?)`,
+			params: [legacyFamilyId, familyNumberId, ownerUserId, instant(7), instant(7), instant(7)],
+		},
+		{
+			sql: `INSERT INTO users
+				(id, email, email_normalized, password_hash, email_verified_at, role,
+				 first_name, last_name, first_name_normalized, last_name_normalized,
+				 family_number_id, family_assignment_status, family_version,
+				 privacy_notice_version, privacy_accepted_at, created_at, updated_at)
+			 VALUES (?, 'occupancy@example.test', 'occupancy@example.test', 'not-used', ?, 'parent',
+				 'Occupancy', 'Owner', 'occupancy', 'owner', ?, 'assigned', 1,
+				 'synthetic-notice-v1', ?, ?, ?)`,
+			params: [ownerUserId, instant(7), familyNumberId, instant(7), instant(7), instant(7)],
 		},
 	]);
 	for (const suffix of ['a', 'b', 'c']) {
@@ -213,7 +225,7 @@ async function seedOccupancy(input: {
 				 ?, ?, '2015-01-01', ?, 1, ?, ?)`,
 			params: [
 				`child-${suffix}`,
-				`user-${suffix}`,
+				ownerUserId,
 				familyNumberId,
 				`child-key-${suffix}`,
 				`Child ${suffix}`,
