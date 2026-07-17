@@ -18,10 +18,22 @@ binding = "BROWSER"
 # Requests fail closed until every replace/example value is configured.
 APP_ENV = "production"
 PORTAL_PUBLIC_ORIGIN = "https://portal.example.invalid"
-EMAIL_PROVIDER = "resend"
+EMAIL_PROVIDER = "disabled"
 EMAIL_FROM = "Example Anmeldung <noreply@example.invalid>"
 EMAIL_REPLY_TO = "Example Anmeldung <reply@example.invalid>"
 TURNSTILE_SITE_KEY = "replace-me"
+AUTH_PUBLIC_ENABLED = "false"
+PRIVACY_NOTICE_VERSION = "replace-with-approved-notice-version"
+AUTH_VERIFICATION_TTL_SECONDS = "86400"
+AUTH_RESET_TTL_SECONDS = "3600"
+AUTH_EMAIL_CHANGE_TTL_SECONDS = "86400"
+AUTH_SESSION_TTL_SECONDS = "604800"
+AUTH_RESEND_COOLDOWN_SECONDS = "60"
+AUTH_RATE_LIMIT_WINDOW_SECONDS = "60"
+AUTH_RATE_LIMIT_MAX_ATTEMPTS = "5"
+AUTH_PASSWORD_MIN_LENGTH = "12"
+AUTH_PASSWORD_MAX_LENGTH = "128"
+EMAIL_MAX_ATTEMPTS = "5"
 DEFAULT_GROUP_CAPACITY = "12"
 DEFAULT_DANCE_CAPACITY = "15"
 INDIVIDUAL_PRICE_CENTS_PER_45_MIN = "3000"
@@ -47,7 +59,6 @@ preview_bucket_name = "reg-allgemein-documents-preview"
 
 # Secrets:
 # JWT_SECRET
-# RESEND_API_KEY
 # TURNSTILE_SECRET_KEY
 # TELEGRAM_BOT_TOKEN
 # TELEGRAM_CHAT_ID

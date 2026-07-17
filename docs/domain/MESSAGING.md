@@ -110,6 +110,14 @@ Domain transaction записывает template ID, recipient reference и ми
 snapshot параметров. Worker формирует письмо на утвержденном locale. Ошибка
 provider сохраняет error code/attempt, но ответ admin уже виден в кабинете.
 
+Для verification/password-reset stage-05 outbox хранит только server-side
+`auth_token` reference и template ID, но не raw token или готовую secret-bearing
+ссылку. Dispatch adapter восстанавливает одноразовый opaque token server-side из
+отдельного secret и случайного token ID, сверяет актуальные target/email version
+и строит absolute link только через `PORTAL_PUBLIC_ORIGIN`. Автоматические тесты
+используют in-memory fake provider; production provider подключается отдельным
+release-gated wiring и не имеет insecure fallback.
+
 Alternate legacy-email proof отправляется только после authenticated opt-in для
 одного unambiguous name-match candidate. Письмо содержит expiring one-time link,
 привязанный к requesting user/candidate/current family version, и объясняет, что

@@ -27,6 +27,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0002_price_schedule_imports.sql',
 			'0003_access_plusbtext_imports.sql',
 			'0004_courses_occupancy_pricing.sql',
+			'0005_auth_security.sql',
 		]);
 
 		const result = await context.db
@@ -42,6 +43,11 @@ describe('foundation D1 migration and repositories', () => {
 				'idempotency_records',
 				'operation_locks',
 				'rate_limit_buckets',
+				'users',
+				'auth_tokens',
+				'auth_sessions',
+				'privacy_acknowledgements',
+				'email_outbox',
 			])
 		);
 	});

@@ -15,6 +15,14 @@ describe('runtime configuration', () => {
 
 		expect(config.portalPublicOrigin).toBe('http://127.0.0.1:5173');
 		expect(config.db).toBe(fakeDb);
+		expect(config.auth).toMatchObject({
+			publicEnabled: false,
+			emailProvider: 'disabled',
+			verificationTtlSeconds: 86_400,
+			resetTtlSeconds: 3_600,
+			sessionTtlSeconds: 604_800,
+			resendCooldownSeconds: 60,
+		});
 	});
 
 	it('fails closed when required base configuration is missing', () => {
@@ -85,6 +93,41 @@ describe('runtime configuration', () => {
 				JWT_SECRET: 'replace-with-a-long-random-preview-value',
 				TURNSTILE_SITE_KEY: 'replace-me',
 				TURNSTILE_SECRET_KEY: 'replace-me',
+			})
+		).toThrow(RuntimeConfigError);
+	});
+
+	it('allows a fake auth provider only outside production and keeps production auth disabled', () => {
+		const preview = loadRuntimeConfig({
+			APP_ENV: 'preview',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
+			DB: fakeDb,
+			R2_BUCKET: fakeR2,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			TURNSTILE_SITE_KEY: 'test-site-key',
+			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			AUTH_PUBLIC_ENABLED: 'true',
+			EMAIL_PROVIDER: 'fake',
+			PRIVACY_NOTICE_VERSION: 'synthetic-preview-notice-v1',
+		});
+		expect(preview.auth).toMatchObject({ publicEnabled: true, emailProvider: 'fake' });
+
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'production',
+				PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+				DB: fakeDb,
+				R2_BUCKET: fakeR2,
+				ASSETS: fakeAssets,
+				BROWSER: fakeBrowser,
+				JWT_SECRET: 'x'.repeat(32),
+				TURNSTILE_SITE_KEY: 'test-site-key',
+				TURNSTILE_SECRET_KEY: 'test-secret-key',
+				AUTH_PUBLIC_ENABLED: 'true',
+				EMAIL_PROVIDER: 'fake',
+				PRIVACY_NOTICE_VERSION: 'production-notice-v1',
 			})
 		).toThrow(RuntimeConfigError);
 	});

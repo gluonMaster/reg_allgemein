@@ -1,0 +1,41 @@
+import { fail, redirect, type Actions } from '@sveltejs/kit';
+import { translate } from '$lib/i18n';
+import { loginInputSchema } from '$lib/server/auth/contracts';
+import {
+	requestAuthRuntime,
+	requestSubject,
+	translatedPublicAuthError,
+} from '$lib/server/auth/http';
+import { setSessionCookies } from '$lib/server/auth/session';
+
+export const actions = {
+	default: async (event) => {
+		const form = await event.request.formData();
+		const parsed = loginInputSchema.safeParse({
+			email: form.get('email'),
+			password: form.get('password'),
+		});
+		if (!parsed.success) {
+			return fail(400, { success: false, message: translate('de', 'auth.invalidCredentials') });
+		}
+
+		let runtime: ReturnType<typeof requestAuthRuntime>;
+		let session;
+		try {
+			runtime = requestAuthRuntime(event);
+			session = await runtime.service.login({
+				data: parsed.data,
+				requestSubject: requestSubject(event),
+			});
+		} catch (error) {
+			const result = translatedPublicAuthError(error);
+			return fail(result.status, { success: false, message: result.message });
+		}
+		setSessionCookies({
+			cookies: event.cookies,
+			session,
+			environment: runtime.config.appEnvironment,
+		});
+		throw redirect(303, '/account/security');
+	},
+} satisfies Actions;

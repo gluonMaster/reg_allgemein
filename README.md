@@ -104,11 +104,28 @@ Rollback и promotion в этих командах работают только
 в `wrangler.example.toml`, примеры локальных secret placeholders — в
 `.dev.vars.example`. Реальные secrets задаются вне Git.
 
+Auth этапа 05 использует migration `0005_auth_security.sql` и server routes
+`/auth/register`, `/auth/login`, `/auth/resend`, `/auth/forgot`, `/auth/verify`,
+`/auth/reset` и `/account/security`. Защищённые routes получают actor только из
+подписанной revocable session; cookie host-only, а изменяющие действия кабинета
+требуют session-bound CSRF token. Raw verification/reset tokens в D1 не
+хранятся: outbox содержит только server references, а одноразовая ссылка
+восстанавливается server-side из secret при dispatch.
+
+Tracked local/production-shaped примеры оставляют `AUTH_PUBLIC_ENABLED=false`.
+Для controlled preview нужны отдельные `JWT_SECRET`, Turnstile keys,
+`PRIVACY_NOTICE_VERSION`, auth TTL/rate-limit настройки и email adapter.
+Автоматические тесты используют только in-memory fake email/Turnstile; реальный
+production provider и initial admin bootstrap намеренно не подключены. Пока они
+не реализованы и не отрепетированы отдельной операторской процедурой, public
+production auth и bootstrap остаются fail-closed.
+
 Сейчас реализованы foundation-инфраструктура, локальные versioned importers
 прайса, расписания, Access и PlusBText, а также server-side course mapping,
-occupancy и pricing/quote engine этапа 04. Auth, public catalog UI/routes и
-остальные business workflows добавляются последующими этапами roadmap; cron
-placeholder намеренно отсутствует.
+occupancy и pricing/quote engine этапа 04, auth/session/security boundary и
+немецкие auth pages этапа 05. Legacy claim, public catalog и остальные business
+workflows добавляются последующими этапами roadmap; cron placeholder намеренно
+отсутствует.
 
 Персональные базы данных, клиентские Excel-файлы, секреты и import artifacts в
 git не хранятся.

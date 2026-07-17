@@ -63,6 +63,7 @@ login/email. Immutable acceptance/contract evidence при этом не мут�
 - `token_hash`, `target_email_normalized`, `email_version`;
 - `legacy_family_id` nullable, `family_version` nullable;
 - `expires_at`, `used_at`, `created_at`;
+- `used_by_request_id` для conditional consume/atomic extension commit;
 - `requested_ip_hash` или минимизированные anti-abuse metadata.
 
 `UNIQUE(token_hash)`. Использование выполняется conditional update при
@@ -73,10 +74,22 @@ email-change request инвалидирует старый version. `legacy_emai
 authenticated session того же user и при применении повторно проверяет family
 ownership. Любой token хранится только как hash.
 
+### `auth_verification_commits`
+
+- `request_id`, `token_id`, `user_id`, `target_email_normalized`, `created_at`;
+- `UNIQUE(token_id)` не допускает второго successful verification commit.
+
+Marker создаётся только conditional insert после успешного consume verification
+token и входит в тот же D1 batch, что `users.email_verified_at`. Этап legacy claim
+добавляет guarded family-finalization statements к этому batch и обязан завершить
+его assertion-ом: отсутствие current promoted snapshot, lookup error или race
+откатывают marker, verification и consume token целиком. Raw token marker не
+содержит.
+
 ### `auth_sessions`
 
-- `id`, `user_id`, `jti_hash`, `session_version`;
-- `expires_at`, `revoked_at`, `created_at`, `last_seen_at`.
+- `id`, `user_id`, `jti_hash`, `csrf_hash`, `session_version`;
+- `expires_at`, `revoked_at`, `revocation_reason`, `created_at`, `last_seen_at`.
 
 Позволяет logout/revocation при смене пароля, email, роли или блокировке.
 

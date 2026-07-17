@@ -19,3 +19,84 @@ body {
 a {
 	color: inherit;
 }
+
+.auth-shell {
+	width: min(100% - 2rem, 34rem);
+	margin: 0 auto;
+	padding: 2rem 0 4rem;
+}
+
+.auth-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1rem;
+	margin-bottom: 2rem;
+}
+
+.auth-nav a {
+	color: #3157a4;
+}
+
+.auth-shell form {
+	display: grid;
+	gap: 0.65rem;
+	margin: 1.25rem 0;
+	padding: 1.25rem;
+	border: 1px solid #d9deea;
+	border-radius: 0.75rem;
+	background: white;
+}
+
+.auth-shell input {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0.7rem 0.8rem;
+	border: 1px solid #8993a8;
+	border-radius: 0.4rem;
+	font: inherit;
+}
+
+.auth-shell .checkbox {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	align-items: start;
+	gap: 0.6rem;
+}
+
+.auth-shell .checkbox input {
+	width: auto;
+	margin-top: 0.25rem;
+}
+
+.auth-shell button {
+	padding: 0.75rem 1rem;
+	border: 0;
+	border-radius: 0.4rem;
+	background: #3157a4;
+	color: white;
+	font: inherit;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.auth-shell button.secondary {
+	background: #4d5668;
+}
+
+.auth-shell button:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.auth-shell input:focus-visible,
+.auth-shell button:focus-visible,
+.auth-nav a:focus-visible {
+	outline: 3px solid #f2b84b;
+	outline-offset: 2px;
+}
+
+.form-status {
+	padding: 0.8rem 1rem;
+	border-left: 4px solid #3157a4;
+	background: #edf2ff;
+}

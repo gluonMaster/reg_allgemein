@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import AuthNav from '$lib/components/AuthNav.svelte';
 	import { translate } from '$lib/i18n';
 
 	const title = translate('de', 'home.title');
@@ -10,6 +11,7 @@
 </svelte:head>
 
 <main class="shell">
+	<AuthNav />
 	<h1>{title}</h1>
 	<p>{translate('de', 'home.foundationNotice')}</p>
 </main>

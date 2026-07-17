@@ -6,6 +6,19 @@ const rawConfigSchema = z.object({
 	JWT_SECRET: z.string().min(32).optional(),
 	TURNSTILE_SITE_KEY: z.string().min(1).optional(),
 	TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
+	AUTH_PUBLIC_ENABLED: z.enum(['true', 'false']).optional(),
+	EMAIL_PROVIDER: z.enum(['disabled', 'fake']).optional(),
+	PRIVACY_NOTICE_VERSION: z.string().min(1).optional(),
+	AUTH_VERIFICATION_TTL_SECONDS: z.string().optional(),
+	AUTH_RESET_TTL_SECONDS: z.string().optional(),
+	AUTH_EMAIL_CHANGE_TTL_SECONDS: z.string().optional(),
+	AUTH_SESSION_TTL_SECONDS: z.string().optional(),
+	AUTH_RESEND_COOLDOWN_SECONDS: z.string().optional(),
+	AUTH_RATE_LIMIT_WINDOW_SECONDS: z.string().optional(),
+	AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.string().optional(),
+	AUTH_PASSWORD_MIN_LENGTH: z.string().optional(),
+	AUTH_PASSWORD_MAX_LENGTH: z.string().optional(),
+	EMAIL_MAX_ATTEMPTS: z.string().optional(),
 	INDIVIDUAL_PRICE_CENTS_PER_45_MIN: z.string().optional(),
 	GROUP_DURATION_FALLBACK_MINUTES: z.string().optional(),
 	MISSING_DURATION_YEARLY_CENTS_PER_45_MIN: z.string().optional(),
@@ -25,7 +38,24 @@ export interface RuntimeConfig {
 	jwtSecret?: string;
 	turnstileSiteKey?: string;
 	turnstileSecretKey?: string;
+	auth: AuthRuntimeConfig;
 	pricing: PricingRuntimeConfig;
+}
+
+export interface AuthRuntimeConfig {
+	publicEnabled: boolean;
+	emailProvider: 'disabled' | 'fake';
+	privacyNoticeVersion?: string;
+	verificationTtlSeconds: number;
+	resetTtlSeconds: number;
+	emailChangeTtlSeconds: number;
+	sessionTtlSeconds: number;
+	resendCooldownSeconds: number;
+	rateLimitWindowSeconds: number;
+	rateLimitMaxAttempts: number;
+	passwordMinLength: number;
+	passwordMaxLength: number;
+	emailMaxAttempts: number;
 }
 
 export interface PricingRuntimeConfig {
@@ -184,6 +214,115 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('TURNSTILE_SECRET_KEY:placeholder');
 	}
 
+	const authPublicEnabled = parsed.data.AUTH_PUBLIC_ENABLED === 'true';
+	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
+	if (authPublicEnabled && !parsed.data.PRIVACY_NOTICE_VERSION) {
+		issues.push('PRIVACY_NOTICE_VERSION:required_when_auth_enabled');
+	}
+	if (authPublicEnabled && isPlaceholder(parsed.data.PRIVACY_NOTICE_VERSION)) {
+		issues.push('PRIVACY_NOTICE_VERSION:placeholder');
+	}
+	if (authPublicEnabled && emailProvider === 'disabled') {
+		issues.push('EMAIL_PROVIDER:required_when_auth_enabled');
+	}
+	if (authPublicEnabled && !parsed.data.JWT_SECRET) {
+		issues.push('JWT_SECRET:required_when_auth_enabled');
+	}
+	if (authPublicEnabled && isPlaceholder(parsed.data.JWT_SECRET)) {
+		issues.push('JWT_SECRET:placeholder');
+	}
+	if (authPublicEnabled && parsed.data.APP_ENV !== 'test' && !parsed.data.TURNSTILE_SITE_KEY) {
+		issues.push('TURNSTILE_SITE_KEY:required_when_auth_enabled');
+	}
+	if (authPublicEnabled && parsed.data.APP_ENV !== 'test' && !parsed.data.TURNSTILE_SECRET_KEY) {
+		issues.push('TURNSTILE_SECRET_KEY:required_when_auth_enabled');
+	}
+	if (parsed.data.APP_ENV === 'production' && emailProvider === 'fake') {
+		issues.push('EMAIL_PROVIDER:fake_forbidden_in_production');
+	}
+	if (parsed.data.APP_ENV === 'production' && authPublicEnabled) {
+		issues.push('AUTH_PUBLIC_ENABLED:production_email_provider_not_implemented');
+	}
+
+	const auth: AuthRuntimeConfig = {
+		publicEnabled: authPublicEnabled,
+		emailProvider,
+		privacyNoticeVersion: parsed.data.PRIVACY_NOTICE_VERSION,
+		verificationTtlSeconds: parseIntegerConfig({
+			name: 'AUTH_VERIFICATION_TTL_SECONDS',
+			value: parsed.data.AUTH_VERIFICATION_TTL_SECONDS,
+			defaultValue: 86_400,
+			minimum: 60,
+			issues,
+		}),
+		resetTtlSeconds: parseIntegerConfig({
+			name: 'AUTH_RESET_TTL_SECONDS',
+			value: parsed.data.AUTH_RESET_TTL_SECONDS,
+			defaultValue: 3_600,
+			minimum: 60,
+			issues,
+		}),
+		emailChangeTtlSeconds: parseIntegerConfig({
+			name: 'AUTH_EMAIL_CHANGE_TTL_SECONDS',
+			value: parsed.data.AUTH_EMAIL_CHANGE_TTL_SECONDS,
+			defaultValue: 86_400,
+			minimum: 60,
+			issues,
+		}),
+		sessionTtlSeconds: parseIntegerConfig({
+			name: 'AUTH_SESSION_TTL_SECONDS',
+			value: parsed.data.AUTH_SESSION_TTL_SECONDS,
+			defaultValue: 604_800,
+			minimum: 300,
+			issues,
+		}),
+		resendCooldownSeconds: parseIntegerConfig({
+			name: 'AUTH_RESEND_COOLDOWN_SECONDS',
+			value: parsed.data.AUTH_RESEND_COOLDOWN_SECONDS,
+			defaultValue: 60,
+			minimum: 1,
+			issues,
+		}),
+		rateLimitWindowSeconds: parseIntegerConfig({
+			name: 'AUTH_RATE_LIMIT_WINDOW_SECONDS',
+			value: parsed.data.AUTH_RATE_LIMIT_WINDOW_SECONDS,
+			defaultValue: 60,
+			minimum: 1,
+			issues,
+		}),
+		rateLimitMaxAttempts: parseIntegerConfig({
+			name: 'AUTH_RATE_LIMIT_MAX_ATTEMPTS',
+			value: parsed.data.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+			defaultValue: 5,
+			minimum: 1,
+			issues,
+		}),
+		passwordMinLength: parseIntegerConfig({
+			name: 'AUTH_PASSWORD_MIN_LENGTH',
+			value: parsed.data.AUTH_PASSWORD_MIN_LENGTH,
+			defaultValue: 12,
+			minimum: 8,
+			issues,
+		}),
+		passwordMaxLength: parseIntegerConfig({
+			name: 'AUTH_PASSWORD_MAX_LENGTH',
+			value: parsed.data.AUTH_PASSWORD_MAX_LENGTH,
+			defaultValue: 128,
+			minimum: 32,
+			issues,
+		}),
+		emailMaxAttempts: parseIntegerConfig({
+			name: 'EMAIL_MAX_ATTEMPTS',
+			value: parsed.data.EMAIL_MAX_ATTEMPTS,
+			defaultValue: 5,
+			minimum: 1,
+			issues,
+		}),
+	};
+	if (auth.passwordMinLength > auth.passwordMaxLength) {
+		issues.push('AUTH_PASSWORD_LENGTH:min_exceeds_max');
+	}
+
 	const pricing: PricingRuntimeConfig = {
 		individualPriceCentsPer45Min: parseIntegerConfig({
 			name: 'INDIVIDUAL_PRICE_CENTS_PER_45_MIN',
@@ -238,6 +377,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		jwtSecret: parsed.data.JWT_SECRET,
 		turnstileSiteKey: parsed.data.TURNSTILE_SITE_KEY,
 		turnstileSecretKey: parsed.data.TURNSTILE_SECRET_KEY,
+		auth,
 		pricing,
 	};
 }

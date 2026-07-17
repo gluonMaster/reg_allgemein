@@ -9,6 +9,9 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 APP_ENV = "development"
 PORTAL_PUBLIC_ORIGIN = "http://127.0.0.1:5173"
+AUTH_PUBLIC_ENABLED = "false"
+EMAIL_PROVIDER = "fake"
+PRIVACY_NOTICE_VERSION = "local-synthetic-notice-v1"
 
 [[d1_databases]]
 binding = "DB"
