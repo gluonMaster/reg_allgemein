@@ -42,6 +42,11 @@ export const priceReviewAdminNavigation: readonly AdminNavigationItem[] = [
 	},
 ];
 
+export const messagingAdminNavigation: readonly AdminNavigationItem[] = [
+	{ id: 'messages', href: '/admin/messages', labelKey: 'admin.nav.messages', order: 69 },
+	{ id: 'outbox', href: '/admin/outbox', labelKey: 'admin.nav.outbox', order: 69.5 },
+];
+
 export function buildAdminNavigation(
 	extensions: readonly AdminNavigationItem[] = []
 ): readonly AdminNavigationItem[] {

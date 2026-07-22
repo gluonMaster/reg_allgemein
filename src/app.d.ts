@@ -36,6 +36,11 @@ declare global {
 				AUTH_PASSWORD_MIN_LENGTH?: string;
 				AUTH_PASSWORD_MAX_LENGTH?: string;
 				EMAIL_MAX_ATTEMPTS?: string;
+				OUTBOX_LEASE_SECONDS?: string;
+				OUTBOX_RETRY_BASE_SECONDS?: string;
+				OUTBOX_RETRY_MAX_SECONDS?: string;
+				TELEGRAM_PROVIDER?: string;
+				TELEGRAM_MAX_ATTEMPTS?: string;
 				DEFAULT_GROUP_CAPACITY?: string;
 				DEFAULT_DANCE_CAPACITY?: string;
 				INDIVIDUAL_PRICE_CENTS_PER_45_MIN?: string;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseBusinessHours, type BusinessHoursSchedule } from '$lib/server/outbox/business-hours';
 
 const rawConfigSchema = z.object({
 	APP_ENV: z.enum(['development', 'test', 'preview', 'production']),
@@ -8,6 +9,8 @@ const rawConfigSchema = z.object({
 	TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
 	AUTH_PUBLIC_ENABLED: z.enum(['true', 'false']).optional(),
 	EMAIL_PROVIDER: z.enum(['disabled', 'fake']).optional(),
+	EMAIL_FROM: z.string().min(1).optional(),
+	EMAIL_REPLY_TO: z.string().min(1).optional(),
 	PRIVACY_NOTICE_VERSION: z.string().min(1).optional(),
 	AUTH_VERIFICATION_TTL_SECONDS: z.string().optional(),
 	AUTH_RESET_TTL_SECONDS: z.string().optional(),
@@ -19,6 +22,15 @@ const rawConfigSchema = z.object({
 	AUTH_PASSWORD_MIN_LENGTH: z.string().optional(),
 	AUTH_PASSWORD_MAX_LENGTH: z.string().optional(),
 	EMAIL_MAX_ATTEMPTS: z.string().optional(),
+	OUTBOX_LEASE_SECONDS: z.string().optional(),
+	OUTBOX_RETRY_BASE_SECONDS: z.string().optional(),
+	OUTBOX_RETRY_MAX_SECONDS: z.string().optional(),
+	TELEGRAM_PROVIDER: z.enum(['disabled', 'fake']).optional(),
+	TELEGRAM_MAX_ATTEMPTS: z.string().optional(),
+	TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+	TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+	TELEGRAM_BUSINESS_TIMEZONE: z.string().min(1).optional(),
+	TELEGRAM_BUSINESS_HOURS: z.string().min(1).optional(),
 	INDIVIDUAL_PRICE_CENTS_PER_45_MIN: z.string().optional(),
 	GROUP_DURATION_FALLBACK_MINUTES: z.string().optional(),
 	MISSING_DURATION_YEARLY_CENTS_PER_45_MIN: z.string().optional(),
@@ -57,6 +69,7 @@ export interface RuntimeConfig {
 	pricing: PricingRuntimeConfig;
 	documents: DocumentRuntimeConfig;
 	contracts: ContractRuntimeConfig;
+	messaging: MessagingRuntimeConfig;
 }
 
 export interface AuthRuntimeConfig {
@@ -102,6 +115,18 @@ export interface ContractRuntimeConfig {
 	browserDailyBudgetMs: number;
 	mediaOnlineGrantEnabled: boolean;
 	publicFunctionsEnabled: boolean;
+}
+
+export interface MessagingRuntimeConfig {
+	emailProvider: 'disabled' | 'fake';
+	telegramProvider: 'disabled' | 'fake';
+	telegramChatId?: string;
+	emailMaxAttempts: number;
+	telegramMaxAttempts: number;
+	leaseSeconds: number;
+	retryBaseSeconds: number;
+	retryMaxSeconds: number;
+	telegramSchedule: BusinessHoursSchedule;
 }
 
 export class RuntimeConfigError extends Error {
@@ -261,6 +286,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	const publicContractFunctionsEnabled =
 		parsed.data.PUBLIC_CONTRACT_FUNCTIONS_ENABLED === 'true';
 	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
+	const telegramProvider = parsed.data.TELEGRAM_PROVIDER ?? 'disabled';
 	if (authPublicEnabled && !parsed.data.PRIVACY_NOTICE_VERSION) {
 		issues.push('PRIVACY_NOTICE_VERSION:required_when_auth_enabled');
 	}
@@ -287,6 +313,15 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	if (parsed.data.APP_ENV === 'production' && authPublicEnabled) {
 		issues.push('AUTH_PUBLIC_ENABLED:production_email_provider_not_implemented');
+	}
+	if (parsed.data.APP_ENV === 'production' && emailProvider !== 'disabled') {
+		issues.push('EMAIL_PROVIDER:production_provider_not_implemented');
+	}
+	if (parsed.data.APP_ENV === 'production' && telegramProvider !== 'disabled') {
+		issues.push('TELEGRAM_PROVIDER:production_provider_not_implemented');
+	}
+	if (telegramProvider !== 'disabled' && !parsed.data.TELEGRAM_CHAT_ID) {
+		issues.push('TELEGRAM_CHAT_ID:required_when_provider_enabled');
 	}
 	if (documentUploadEnabled && !isR2Bucket(env?.R2_BUCKET)) {
 		issues.push('R2_BUCKET:required_when_document_upload_enabled');
@@ -405,6 +440,55 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	};
 	if (auth.passwordMinLength > auth.passwordMaxLength) {
 		issues.push('AUTH_PASSWORD_LENGTH:min_exceeds_max');
+	}
+
+	let telegramSchedule: BusinessHoursSchedule;
+	try {
+		telegramSchedule = parseBusinessHours(
+			parsed.data.TELEGRAM_BUSINESS_TIMEZONE ?? 'Europe/Berlin',
+			parsed.data.TELEGRAM_BUSINESS_HOURS ?? 'Mo-Fr 09:00-17:00'
+		);
+	} catch {
+		issues.push('TELEGRAM_BUSINESS_HOURS:invalid');
+		telegramSchedule = parseBusinessHours('Europe/Berlin', 'Mo-Fr 09:00-17:00');
+	}
+	const messaging: MessagingRuntimeConfig = {
+		emailProvider,
+		telegramProvider,
+		telegramChatId: parsed.data.TELEGRAM_CHAT_ID,
+		emailMaxAttempts: auth.emailMaxAttempts,
+		telegramMaxAttempts: parseIntegerConfig({
+			name: 'TELEGRAM_MAX_ATTEMPTS',
+			value: parsed.data.TELEGRAM_MAX_ATTEMPTS,
+			defaultValue: 5,
+			minimum: 1,
+			issues,
+		}),
+		leaseSeconds: parseIntegerConfig({
+			name: 'OUTBOX_LEASE_SECONDS',
+			value: parsed.data.OUTBOX_LEASE_SECONDS,
+			defaultValue: 60,
+			minimum: 5,
+			issues,
+		}),
+		retryBaseSeconds: parseIntegerConfig({
+			name: 'OUTBOX_RETRY_BASE_SECONDS',
+			value: parsed.data.OUTBOX_RETRY_BASE_SECONDS,
+			defaultValue: 60,
+			minimum: 1,
+			issues,
+		}),
+		retryMaxSeconds: parseIntegerConfig({
+			name: 'OUTBOX_RETRY_MAX_SECONDS',
+			value: parsed.data.OUTBOX_RETRY_MAX_SECONDS,
+			defaultValue: 3600,
+			minimum: 1,
+			issues,
+		}),
+		telegramSchedule,
+	};
+	if (messaging.retryBaseSeconds > messaging.retryMaxSeconds) {
+		issues.push('OUTBOX_RETRY:base_exceeds_max');
 	}
 
 	const pricing: PricingRuntimeConfig = {
@@ -559,6 +643,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		pricing,
 		documents,
 		contracts,
+		messaging,
 	};
 }
 

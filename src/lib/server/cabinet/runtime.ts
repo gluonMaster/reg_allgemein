@@ -12,6 +12,8 @@ import { IndividualRequestRepository } from '$lib/server/requests/request-reposi
 import { IndividualRequestService } from '$lib/server/requests/request-service';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import type { CabinetReadModelContributor } from './cabinet-service';
+import { MessageRepository } from '$lib/server/messages/message-repository';
+import { MessageService } from '$lib/server/messages/message-service';
 
 class ContractCabinetContributor implements CabinetReadModelContributor {
 	constructor(private readonly contracts: ContractRepository) {}
@@ -55,12 +57,14 @@ export function createCabinetRuntime(config: RuntimeConfig) {
 		config.pricing
 	);
 	const contractContributor = new ContractCabinetContributor(new ContractRepository(database));
+	const messageContributor = new MessageService(new MessageRepository(database), config.messaging);
 	return {
 		repository,
 		service: new CabinetService(repository, new CabinetPricingService(config.pricing), [
 			trialService,
 			requestService,
 			contractContributor,
+			messageContributor,
 		]),
 	};
 }

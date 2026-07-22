@@ -34,6 +34,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0009_requests_documents.sql',
 			'0010_contracts.sql',
 			'0011_price_reviews.sql',
+			'0012_messaging_outboxes.sql',
 		]);
 
 		const result = await context.db
@@ -61,6 +62,11 @@ describe('foundation D1 migration and repositories', () => {
 				'price_change_acceptances',
 				'price_change_apply_events',
 				'legacy_service_price_assignments',
+				'support_threads',
+				'support_messages',
+				'absence_reports',
+				'telegram_outbox',
+				'outbox_admin_actions',
 			])
 		);
 	});

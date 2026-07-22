@@ -23,6 +23,36 @@ describe('runtime configuration', () => {
 			sessionTtlSeconds: 604_800,
 			resendCooldownSeconds: 60,
 		});
+		expect(config.messaging).toMatchObject({
+			emailProvider: 'disabled',
+			telegramProvider: 'disabled',
+			emailMaxAttempts: 5,
+			telegramMaxAttempts: 5,
+			leaseSeconds: 60,
+			retryBaseSeconds: 60,
+			retryMaxSeconds: 3600,
+		});
+		expect(config.messaging.telegramSchedule.canonical).toBe('Mo-Fr 09:00-17:00');
+	});
+
+	it('validates Telegram destination, retry bounds, and the production provider gate', () => {
+		expect(() => loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
+			TELEGRAM_PROVIDER: 'fake',
+		})).toThrow(RuntimeConfigError);
+		const configured = loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
+			TELEGRAM_PROVIDER: 'fake', TELEGRAM_CHAT_ID: 'bureau-test',
+			OUTBOX_RETRY_BASE_SECONDS: '30', OUTBOX_RETRY_MAX_SECONDS: '600',
+		});
+		expect(configured.messaging).toMatchObject({
+			telegramProvider: 'fake', telegramChatId: 'bureau-test',
+			retryBaseSeconds: 30, retryMaxSeconds: 600,
+		});
+		expect(() => loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
+			OUTBOX_RETRY_BASE_SECONDS: '601', OUTBOX_RETRY_MAX_SECONDS: '600',
+		})).toThrow(RuntimeConfigError);
 	});
 
 	it('fails closed when required base configuration is missing', () => {

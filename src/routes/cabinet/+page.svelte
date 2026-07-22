@@ -31,6 +31,7 @@
 	<nav class="cabinet-nav" aria-label={translate('de', 'cabinet.navigationLabel')}>
 		<a href="/">{translate('de', 'cabinet.link.home')}</a>
 		<a href="/account/security">{translate('de', 'cabinet.link.security')}</a>
+		<a href="/messages">{translate('de', 'cabinet.link.messages')}</a>
 	</nav>
 	<h1>{translate('de', 'cabinet.title')}</h1>
 	{#if form?.message}<p class="form-status" aria-live="polite">{form.message}</p>{/if}
@@ -202,6 +203,22 @@
 					<a href={`/price-reviews/${priceReview.publicReference}`}>
 						{translate('de', 'cabinet.priceReviews.open')}
 					</a>
+				</article>
+			{/each}
+		</div>
+	</section>
+
+	<section class="cabinet-card" id="messages">
+		<h2>{translate('de', 'cabinet.messages.title')}</h2>
+		<p><a href="/messages">{translate('de', 'cabinet.messages.new')}</a></p>
+		{#if data.cabinet.extensions.threads.length === 0}<p>{translate('de', 'cabinet.messages.empty')}</p>{/if}
+		<div class="activity-list">
+			{#each data.cabinet.extensions.threads as thread}
+				<article class="activity-item">
+					<p class="item-kicker">{translate('de', `messages.status.${thread.status}` as 'messages.status.open')}</p>
+					<h3>{thread.label}</h3>
+					{#if thread.detail}<p>{thread.detail}</p>{/if}
+					{#if thread.href}<a href={thread.href}>{translate('de', 'cabinet.messages.open')}</a>{/if}
 				</article>
 			{/each}
 		</div>

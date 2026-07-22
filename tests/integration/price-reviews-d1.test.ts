@@ -9,6 +9,9 @@ import { PricingRepository } from '$lib/server/pricing/pricing-repository';
 import { PricingService } from '$lib/server/pricing/pricing-service';
 import { PriceReviewRepository } from '$lib/server/price-reviews/price-review-repository';
 import { PriceReviewService } from '$lib/server/price-reviews/price-review-service';
+import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
+import { EmailOutboxWorker } from '$lib/server/outbox/outbox-worker';
+import { FakeEmailProvider } from '$lib/server/outbox/providers';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
@@ -404,6 +407,10 @@ describe('stage 10 controlled price reviews in D1', () => {
 		expect(await db.first<{ count: number }>({
 			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
 		})).toEqual({ count: 0 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE template_or_category = 'price_review.item_available'`,
+		})).toEqual({ count: 0 });
 		await expect(service.dispatchBatch({
 			admin,
 			payload: { batchId, confirmation: 'confirmed',
@@ -422,6 +429,10 @@ describe('stage 10 controlled price reviews in D1', () => {
 		expect(await db.first<{ count: number }>({
 			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
 		})).toEqual({ count: 0 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE template_or_category = 'price_review.item_available'`,
+		})).toEqual({ count: 0 });
 
 		const dispatch = await service.dispatchBatch({
 			admin,
@@ -436,6 +447,26 @@ describe('stage 10 controlled price reviews in D1', () => {
 			requestId: 'request-dispatch-review-replay',
 			now: now(3),
 		})).toEqual({ replayed: true, sent: 5 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE template_or_category = 'price_review.item_available'`,
+		})).toEqual({ count: 5 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events
+			WHERE event_type = 'item_available' AND status = 'consumed'`,
+		})).toEqual({ count: 5 });
+		const emailProvider = new FakeEmailProvider();
+		const emailWorker = new EmailOutboxWorker(
+			new OutboxRepository(db), emailProvider, undefined,
+			{ portalPublicOrigin: 'https://portal.example.test' },
+			{ leaseSeconds: 30, retryBaseSeconds: 60, retryMaxSeconds: 300 },
+			'price-review-email-worker'
+		);
+		for (let index = 0; index < 5; index += 1) {
+			expect(await emailWorker.dispatchNext(now(3))).toBe('sent');
+		}
+		expect(await emailWorker.dispatchNext(now(3))).toBe('empty');
+		expect(emailProvider.messages).toHaveLength(5);
 		const delivery = await db.first<{ cabinet_url: string }>({
 			sql: `SELECT cabinet_url FROM price_review_deliveries ORDER BY created_at LIMIT 1`,
 		});

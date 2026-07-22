@@ -83,6 +83,7 @@ export class FamilyService {
 				claimId: crypto.randomUUID(),
 				auditId: crypto.randomUUID(),
 				assertionId: crypto.randomUUID(),
+				emailMaxAttempts: this.config.emailMaxAttempts,
 				now,
 			});
 		} catch {

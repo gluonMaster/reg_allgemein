@@ -217,6 +217,7 @@ export class FamilyRepository {
 		claimId: string;
 		auditId: string;
 		assertionId: string;
+		emailMaxAttempts: number;
 		now: string;
 	}): Promise<boolean> {
 		const tokenIdempotencyKey = `token:${input.context.token_id}`;
@@ -449,6 +450,20 @@ export class FamilyRepository {
 				],
 			},
 			{
+				sql: `INSERT OR IGNORE INTO email_outbox
+					(id, source_kind, source_id, template_or_category, recipient_user_id,
+					 recipient_address_kind, locale, payload_json, dedupe_key, not_before,
+					 status, attempts, max_attempts, created_at, updated_at)
+				SELECT ?, 'family_claim', claim.id, 'claim.result', claim.user_id,
+					'current', 'de', '{"portalPath":"/cabinet"}', ?, ?,
+					'pending', 0, ?, ?, ? FROM family_claims claim
+				WHERE claim.id = ? AND claim.status = 'claimed'
+					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+				params: [`email:claim-result:${input.claimId}`,
+					`claim-result:${input.claimId}:email:v1`, input.now,
+					input.emailMaxAttempts, input.now, input.now, input.claimId, input.auditId],
+			},
+			{
 				sql: `INSERT INTO family_transaction_assertions
 					(id, operation_kind, operation_id, user_id, assertion_passed, created_at)
 					VALUES (?, 'legacy_email_claim', ?, ?, CASE WHEN
@@ -468,6 +483,8 @@ export class FamilyRepository {
 								AND proof_kind = 'legacy_email_token')
 						AND EXISTS (SELECT 1 FROM family_link_attempts
 							WHERE id = ? AND status = 'confirmed')
+						AND EXISTS (SELECT 1 FROM email_outbox
+							WHERE id = ? AND template_or_category = 'claim.result')
 						AND NOT EXISTS (SELECT 1 FROM children WHERE owner_user_id = ?
 							AND family_number_id <> ?)
 						AND NOT EXISTS (
@@ -509,6 +526,7 @@ export class FamilyRepository {
 					input.context.legacy_family_id,
 					input.userId,
 					input.context.attempt_id,
+					`email:claim-result:${input.claimId}`,
 					input.userId,
 					input.context.to_family_number_id,
 					input.context.legacy_version_id,

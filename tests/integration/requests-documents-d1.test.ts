@@ -164,6 +164,9 @@ describe('stage 08 request and private document workflow in D1', () => {
 		expect(first).toMatchObject({ status: 'needs_documents', replayed: false });
 		const replay = await requests.submit({ actor: parent, payload: { requestId: request.id, expectedVersion: request.version, idempotencyKey: 'submit-needs-document' }, requestId: 'submit-2' });
 		expect(replay).toMatchObject({ status: 'needs_documents', replayed: true });
+		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category = 'request.needs_info'`, params: [request.id] }))
+			.toEqual({ count: 1 });
 	});
 
 	it('performs download-bound AV attestation, separate approval, inclusive funding, and owner download', async () => {
@@ -182,6 +185,9 @@ describe('stage 08 request and private document workflow in D1', () => {
 		expect([...store.values.keys()].some((key) => key.startsWith('archive/funding/'))).toBe(true);
 		await adminService.reviewAuthorization({ actor: admin, payload: { authorizationId, action: 'approve', kind: 'jobcenter', validFrom: '2026-08-01', validUntil: '2026-08-31', reason: 'Bescheid geprüft', confirmation: 'confirmed', idempotencyKey: 'approve-authorization' }, requestId: 'approve-authorization' });
 		await adminService.transitionRequest({ actor: admin, payload: { requestId: request.id, action: 'approve', reason: 'Förderung vollständig', confirmation: 'confirmed', idempotencyKey: 'approve-request' }, requestId: 'approve-request' });
+		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category IN ('request.received', 'request.decision')`,
+			params: [request.id] })).toEqual({ count: 2 });
 		await expect(adminRepository.assertEligibleForOffer({ requestId: request.id, plannedFrom: '2026-08-01', plannedUntilInclusive: '2026-08-31' })).resolves.toBeUndefined();
 		await expect(adminRepository.assertEligibleForOffer({ requestId: request.id, plannedFrom: '2026-08-31', plannedUntilInclusive: '2026-09-01' })).rejects.toMatchObject({ code: 'FUNDING_NOT_ELIGIBLE' });
 		await expect(documents.parentApprovedDownload({ actor: foreignParent, documentId: uploaded.documentId, requestId: 'foreign-download' })).rejects.toBeDefined();

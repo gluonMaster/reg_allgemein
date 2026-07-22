@@ -295,6 +295,9 @@ describe('stage 07 catalog and trial workflow in D1', () => {
 		const before = await new OccupancyRepository(db).activeChildrenCount('course-full', '2026-07-20');
 		const full = await trialService.submit({ actor: parentActor, payload: { courseGroupId: 'course-full', childId: 'child-trial', sessionId: 'session-course-full', requestedDate: '2026-07-20', idempotencyKey: 'full-request-key' }, requestId: 'full' });
 		expect((await trials.listOwnerTrials(parentActor.id)).find((trial) => trial.id === full.id)?.status).toBe('requested');
+		expect(await context.db.prepare(`SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category = 'trial.received'`)
+			.bind(full.id).first()).toEqual({ count: 1 });
 		expect(await new OccupancyRepository(db).activeChildrenCount('course-full', '2026-07-20')).toBe(before);
 		await expect(adminMutations.transitionTrial({ actor: adminActor, trialId: full.id, action: 'confirm', sessionId: 'session-course-full', confirmedDate: '2026-07-22', reason: 'Capacity checked', idempotencyKey: 'confirm-full-key', requestId: 'confirm-full', currentDate: '2026-07-17', now })).rejects.toThrow();
 		await expect(trialService.submit({ actor: parentActor, payload: { courseGroupId: 'course-full', childId: 'child-trial', sessionId: 'session-course-full', requestedDate: '2026-07-21', idempotencyKey: 'full-duplicate-key' }, requestId: 'duplicate' })).rejects.toMatchObject({ code: 'DUPLICATE_OPEN_TRIAL' });
@@ -305,6 +308,9 @@ describe('stage 07 catalog and trial workflow in D1', () => {
 		expect(await context.db.prepare(`SELECT availability_at_request FROM trial_bookings WHERE id = ?`).bind(unknown.id).first()).toEqual({ availability_at_request: 'unknown' });
 		await adminMutations.transitionTrial({ actor: adminActor, trialId: unknown.id, action: 'reject', reason: 'No reliable capacity is available', idempotencyKey: 'reject-unknown-key', requestId: 'reject-unknown', currentDate: '2026-07-17', now });
 		expect(await context.db.prepare(`SELECT status, decision_reason FROM trial_bookings WHERE id = ?`).bind(unknown.id).first()).toEqual({ status: 'rejected', decision_reason: 'No reliable capacity is available' });
+		expect(await context.db.prepare(`SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category = 'trial.rejected'`)
+			.bind(unknown.id).first()).toEqual({ count: 1 });
 	});
 
 	it('serializes submit/confirm, enforces terminal transitions and leaves enrollment/occupancy untouched', async () => {

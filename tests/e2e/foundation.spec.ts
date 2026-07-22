@@ -42,6 +42,12 @@ test('renders the mobile German registration form and protects account routes', 
 		'/price-reviews/00000000-0000-4000-8000-000000000001'
 	);
 	expect(protectedPriceReviewResponse?.status()).toBe(401);
+	const protectedMessagesResponse = await page.goto('/messages');
+	expect(protectedMessagesResponse?.status()).toBe(401);
+	const protectedMessageResponse = await page.goto(
+		'/messages/00000000-0000-4000-8000-000000000001'
+	);
+	expect(protectedMessageResponse?.status()).toBe(401);
 });
 
 test('rejects unauthenticated admin pages and direct mutation actions', async ({
@@ -56,6 +62,10 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 	expect(contractsResponse?.status()).toBe(401);
 	const priceReviewsResponse = await page.goto('/admin/price-reviews');
 	expect(priceReviewsResponse?.status()).toBe(401);
+	const messagesResponse = await page.goto('/admin/messages');
+	expect(messagesResponse?.status()).toBe(401);
+	const outboxResponse = await page.goto('/admin/outbox');
+	expect(outboxResponse?.status()).toBe(401);
 
 	const mutationResponse = await request.post('/admin/users/unknown-user?/block', {
 		form: {
@@ -76,4 +86,18 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 		},
 	});
 	expect(priceReviewMutationResponse.status()).toBe(401);
+	const messageMutationResponse = await request.post('/messages?/create', {
+		form: {
+			category: 'technical', subject: 'Denied', message: 'Denied',
+			idempotencyKey: 'e2e-message-denial',
+		},
+	});
+	expect(messageMutationResponse.status()).toBe(401);
+	const outboxMutationResponse = await request.post('/admin/outbox?/change', {
+		form: {
+			channel: 'telegram', outboxId: 'unknown', outboxAction: 'retry',
+			confirmation: 'confirmed', idempotencyKey: 'e2e-outbox-denial',
+		},
+	});
+	expect(outboxMutationResponse.status()).toBe(401);
 });

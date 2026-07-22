@@ -242,6 +242,16 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		expect(await service.parentDecision({ actor: parent, payload: decisionPayload,
 			userAgent: 'vitest', requestSubject: '127.0.0.1', requestId: 'accept-replay' }))
 			.toMatchObject({ replayed: true });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category = 'contract.accepted'`,
+			params: [created.offerId],
+		})).toEqual({ count: 1 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM telegram_outbox
+			WHERE source_id = ? AND template_or_category = 'bureau.contract_signal'`,
+			params: [created.offerId],
+		})).toEqual({ count: 1 });
 		const formed = await service.formAndActivate({ admin, requestId: 'formation-full-flow', payload: {
 			offerId: created.offerId, reason: 'Preis, Kapazität und Vertragsstand erneut geprüft',
 			confirmation: 'confirmed', idempotencyKey: 'form-contract-full-flow',
@@ -251,6 +261,11 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			offerId: created.offerId, reason: 'Preis, Kapazität und Vertragsstand erneut geprüft',
 			confirmation: 'confirmed', idempotencyKey: 'form-contract-full-flow',
 		} })).toMatchObject({ contractId: formed.contractId, replayed: true, certificateReady: true });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category = 'contract.formed'`,
+			params: [formed.contractId],
+		})).toEqual({ count: 1 });
 
 		const enrollment = await db.first<{ status: string; active_from: string }>({
 			sql: `SELECT status, active_from FROM enrollments WHERE id = ?`,
@@ -281,6 +296,11 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		expect(await service.submitEndRequest({ actor: parent, payload: endPayload,
 			requestId: 'end-full-flow-replay' })).toMatchObject({ requestId: endRequest.requestId,
 			replayed: true });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM email_outbox
+			WHERE source_id = ? AND template_or_category = 'contract.termination.received'`,
+			params: [endRequest.requestId],
+		})).toEqual({ count: 1 });
 		await expect(service.submitEndRequest({ actor: foreignParent, payload: endPayload,
 			requestId: 'end-cross-owner' })).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
 		expect(await db.first<{ auto_renewal_blocked_at: string | null }>({

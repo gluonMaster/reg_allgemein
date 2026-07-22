@@ -1,5 +1,13 @@
 import type { StatementSpec } from '$lib/server/db/database';
 import { DatabaseBoundary } from '$lib/server/db/database';
+import type {
+	EmailOutboxRow,
+	OutboxClaimInput,
+	OutboxFailureInput,
+	OutboxStore,
+	TelegramOutboxRow,
+} from '$lib/server/outbox/contracts';
+import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
 
 export interface LoginUserRow {
 	id: string;
@@ -86,8 +94,12 @@ export interface AuthOutboxRow {
 	user_id: string;
 }
 
-export class AuthRepository {
-	constructor(private readonly db: DatabaseBoundary) {}
+export class AuthRepository implements OutboxStore {
+	private readonly commonOutbox: OutboxRepository;
+
+	constructor(private readonly db: DatabaseBoundary) {
+		this.commonOutbox = new OutboxRepository(db);
+	}
 
 	async register(input: {
 		userId: string;
@@ -945,5 +957,52 @@ export class AuthRepository {
 				WHERE id = ? AND status = 'processing'`,
 			params: [input.errorCode, input.nextAttemptAt, input.id],
 		});
+	}
+
+	cancelInvalidEmailRows(now: string): Promise<number> {
+		return this.commonOutbox.cancelInvalidEmailRows(now);
+	}
+
+	claimEmail(input: OutboxClaimInput): Promise<EmailOutboxRow | null> {
+		return this.commonOutbox.claimEmail(input);
+	}
+
+	markEmailSent(input: {
+		id: string;
+		leaseOwner: string;
+		providerRequestId: string;
+		now: string;
+	}): Promise<boolean> {
+		return this.commonOutbox.markEmailSent(input);
+	}
+
+	markEmailFailed(input: OutboxFailureInput): Promise<'retry' | 'dead' | 'lost_lease'> {
+		return this.commonOutbox.markEmailFailed(input);
+	}
+
+	claimTelegram(input: OutboxClaimInput): Promise<TelegramOutboxRow | null> {
+		return this.commonOutbox.claimTelegram(input);
+	}
+
+	deferTelegram(input: {
+		id: string;
+		leaseOwner: string;
+		notBefore: string;
+		now: string;
+	}): Promise<boolean> {
+		return this.commonOutbox.deferTelegram(input);
+	}
+
+	markTelegramSent(input: {
+		id: string;
+		leaseOwner: string;
+		providerRequestId: string;
+		now: string;
+	}): Promise<boolean> {
+		return this.commonOutbox.markTelegramSent(input);
+	}
+
+	markTelegramFailed(input: OutboxFailureInput): Promise<'retry' | 'dead' | 'lost_lease'> {
+		return this.commonOutbox.markTelegramFailed(input);
 	}
 }
