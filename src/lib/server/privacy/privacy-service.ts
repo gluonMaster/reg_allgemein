@@ -5,6 +5,7 @@ import type { AdminActor } from '$lib/server/security/authorization';
 import { sha256Bytes } from '$lib/server/security/digest';
 import { PrivacyRepository, PrivacyRepositoryError } from './privacy-repository';
 import type { PrivacyArtifactStore } from './storage';
+import type { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 
 export class PrivacyServiceError extends Error {
 	constructor(readonly code: string, options?: { cause?: unknown }) {
@@ -18,7 +19,9 @@ export class PrivacyService {
 		private readonly repository: PrivacyRepository,
 		private readonly store: PrivacyArtifactStore,
 		private readonly config: PrivacyRuntimeConfig,
-		private readonly now: () => string = () => new Date().toISOString()
+		private readonly now: () => string = () => new Date().toISOString(),
+		private readonly quarantineStore: PrivacyArtifactStore = store,
+		private readonly storageIntents?: StorageIntentRepository
 	) {}
 
 	async dryRunDeletion(actor: AuthenticatedUser) {
@@ -61,6 +64,11 @@ export class PrivacyService {
 		const expiresAt = new Date(
 			Date.parse(now) + this.config.exportTtlSeconds * 1000
 		).toISOString();
+		const storageIntentId = await this.storageIntents?.stage({
+			storageClass: 'archive', objectKey: privateR2Key,
+			objectKind: 'privacy_export', sourceRef: request.requestId,
+			sha256, sizeBytes: bytes.byteLength, now,
+		});
 		try {
 			await this.store.put(privateR2Key, bytes, sha256);
 			const completed = await this.repository.completeExport({
@@ -71,9 +79,15 @@ export class PrivacyService {
 				sizeBytes: bytes.byteLength,
 				expiresAt,
 				now,
+				storageIntentId,
 			});
 			if (completed.storedR2Key !== privateR2Key) {
 				await this.store.delete(privateR2Key).catch(() => undefined);
+				if (storageIntentId) {
+					await this.storageIntents?.markDeletePending(storageIntentId, this.now()).catch(() => undefined);
+				}
+			} else if (storageIntentId) {
+				await this.storageIntents?.markLinked(storageIntentId, this.now()).catch(() => undefined);
 			}
 			return {
 				requestId: request.requestId,
@@ -82,7 +96,10 @@ export class PrivacyService {
 				ready: true,
 			};
 		} catch (error) {
-			await this.store.delete(privateR2Key).catch(() => undefined);
+			// A failed D1 response is ambiguous: the atomic completion batch may
+			// already have linked this key. A staged intent is reconciled before
+			// orphan cleanup and is therefore safer than eager deletion here.
+			if (!storageIntentId) await this.store.delete(privateR2Key).catch(() => undefined);
 			await this.repository.markExportFailed(request.requestId, now).catch(() => undefined);
 			throw new PrivacyServiceError('PRIVACY_EXPORT_FAILED', { cause: error });
 		}
@@ -141,21 +158,40 @@ export class PrivacyService {
 
 	async runCleanup(input: { privacyRequestId: string | null; limit: number }) {
 		const now = this.now();
-		const jobs = await this.repository.claimCleanupJobs(input.privacyRequestId, now, input.limit);
+		const leaseOwner = crypto.randomUUID();
+		const jobs = await this.repository.claimCleanupJobs(
+			input.privacyRequestId,
+			now,
+			input.limit,
+			leaseOwner,
+			300
+		);
 		let completed = 0;
 		let failed = 0;
 		for (const job of jobs) {
 			try {
-				await this.store.delete(job.private_r2_key);
-				await this.repository.completeCleanupJob({
+				const selectedStore = job.object_kind === 'document_quarantine'
+					? this.quarantineStore
+					: this.store;
+				await selectedStore.delete(job.private_r2_key);
+				const completedByThisLease = await this.repository.completeCleanupJob({
 					jobId: job.id,
+					leaseOwner,
 					objectKind: job.object_kind,
 					sourceRecordId: job.source_record_id,
 					now: this.now(),
 				});
+				if (!completedByThisLease) {
+					throw new PrivacyServiceError('PRIVACY_CLEANUP_LEASE_LOST');
+				}
 				completed += 1;
-			} catch {
-				await this.repository.failCleanupJob(job.id, this.now()).catch(() => undefined);
+			} catch (error) {
+				const errorCode = error instanceof PrivacyServiceError
+					&& error.code === 'PRIVACY_CLEANUP_LEASE_LOST'
+					? 'D1_FINALIZE_FAILED'
+					: 'R2_DELETE_FAILED';
+				await this.repository.failCleanupJob(job.id, leaseOwner, this.now(), errorCode)
+					.catch(() => undefined);
 				failed += 1;
 			}
 		}

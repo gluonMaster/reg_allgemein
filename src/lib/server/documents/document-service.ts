@@ -10,6 +10,8 @@ import { AuthorizationDocumentRepository, DocumentRepositoryError } from './docu
 import type { PrivateDocumentStore } from './storage';
 import { validateUpload, type UploadFileLike } from './validation';
 import { sha256Bytes } from '$lib/server/security/digest';
+import type { StorageIntentRepository } from '$lib/server/operations/storage-intents';
+import { quarantineDownloadPurposeSchema } from '$lib/server/security/download-purpose';
 
 export interface DocumentUploadRateLimiter {
 	consume(scope: string, rawSubject: string, now: string): Promise<void>;
@@ -39,7 +41,8 @@ export class AuthorizationDocumentService {
 		private readonly store: PrivateDocumentStore,
 		private readonly config: DocumentRuntimeConfig,
 		private readonly rateLimiter: DocumentUploadRateLimiter,
-		private readonly now: () => string = () => new Date().toISOString()
+		private readonly now: () => string = () => new Date().toISOString(),
+		private readonly storageIntents?: StorageIntentRepository
 	) {}
 
 	private requireParent(actor: AuthenticatedUser) {
@@ -80,7 +83,7 @@ export class AuthorizationDocumentService {
 		const effectiveCount = target.currentCount - (replacesInSameAuthorization ? 1 : 0);
 		const effectiveBytes =
 			target.currentBytes -
-			(replacesInSameAuthorization ? target.replaceDocument?.sizeBytes ?? 0 : 0);
+			(replacesInSameAuthorization ? (target.replaceDocument?.sizeBytes ?? 0) : 0);
 		if (
 			effectiveCount + 1 > this.config.maxFilesPerAuthorization ||
 			effectiveBytes + validated.sizeBytes > this.config.maxAuthorizationBytes
@@ -112,6 +115,15 @@ export class AuthorizationDocumentService {
 		const quarantineExpiresAt = new Date(
 			Date.parse(now) + 14 * 24 * 60 * 60 * 1000
 		).toISOString();
+		const storageIntentId = await this.storageIntents?.stage({
+			storageClass: 'quarantine',
+			objectKey: quarantineKey,
+			objectKind: 'authorization_document_upload',
+			sourceRef: documentId,
+			sha256: validated.sha256,
+			sizeBytes: validated.sizeBytes,
+			now,
+		});
 		await this.store.put(quarantineKey, validated.body, validated.sha256);
 		try {
 			await this.repository.persistUpload({
@@ -124,9 +136,9 @@ export class AuthorizationDocumentService {
 				requestIdHeader: input.requestId,
 				now,
 				quarantineExpiresAt,
+				storageIntentId,
 			});
 		} catch (error) {
-			await this.store.delete(quarantineKey).catch(() => undefined);
 			const replay = await this.repository.findUploadReplay(
 				input.actor.id,
 				parsed.data.idempotencyKey
@@ -134,17 +146,19 @@ export class AuthorizationDocumentService {
 			if (replay?.upload_request_hash_sha256 === requestHash) {
 				return { documentId: replay.id, replayed: true };
 			}
+			await this.store.delete(quarantineKey).catch(() => undefined);
+			if (storageIntentId) {
+				await this.storageIntents
+					?.markDeletePending(storageIntentId, this.now())
+					.catch(() => undefined);
+			}
 			throw error;
 		}
 
 		return { documentId, replayed: false };
 	}
 
-	async deleteByParent(input: {
-		actor: AuthenticatedUser;
-		payload: unknown;
-		requestId: string;
-	}) {
+	async deleteByParent(input: { actor: AuthenticatedUser; payload: unknown; requestId: string }) {
 		this.requireParent(input.actor);
 		const parsed = documentDeleteCommandSchema.safeParse(input.payload);
 		if (!parsed.success) throw new DocumentServiceError('INVALID_DOCUMENT_DELETE');
@@ -164,9 +178,15 @@ export class AuthorizationDocumentService {
 	async adminQuarantineDownload(input: {
 		actor: AdminActor;
 		documentId: string;
+		purpose: unknown;
 		requestId: string;
 	}) {
-		const document = await this.repository.loadAdminQuarantineDownload(input.documentId);
+		const purpose = quarantineDownloadPurposeSchema.safeParse(input.purpose);
+		if (!purpose.success) throw new DocumentServiceError('INVALID_DOWNLOAD_PURPOSE');
+		const document = await this.repository.loadAdminQuarantineDownload({
+			documentId: input.documentId,
+			adminUserId: input.actor.id,
+		});
 		const object = await this.store.get(document.quarantine_r2_key);
 		if (!object || object.size !== document.size_bytes) {
 			throw new DocumentServiceError('DOCUMENT_BODY_UNAVAILABLE');
@@ -177,6 +197,9 @@ export class AuthorizationDocumentService {
 		await this.repository.auditAdminQuarantineDownload({
 			documentId: input.documentId,
 			adminUserId: input.actor.id,
+			purposeCode: purpose.data,
+			expectedSha256: document.sha256,
+			expectedStorageKey: document.quarantine_r2_key,
 			requestId: input.requestId,
 			now: this.now(),
 		});
@@ -207,6 +230,8 @@ export class AuthorizationDocumentService {
 		await this.repository.auditParentApprovedDownload({
 			documentId: input.documentId,
 			userId: input.actor.id,
+			expectedSha256: document.sha256,
+			expectedStorageKey: document.archive_r2_key,
 			requestId: input.requestId,
 			now: this.now(),
 		});

@@ -36,6 +36,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0011_price_reviews.sql',
 			'0012_messaging_outboxes.sql',
 			'0013_privacy_closure.sql',
+			'0014_production_operations.sql',
 		]);
 
 		const result = await context.db
@@ -68,6 +69,11 @@ describe('foundation D1 migration and repositories', () => {
 				'absence_reports',
 				'telegram_outbox',
 				'outbox_admin_actions',
+				'scheduled_job_runs',
+				'storage_object_intents',
+				'admin_bootstrap_control',
+				'admin_bootstrap_actions',
+				'admin_bootstrap_assertions',
 			])
 		);
 	});

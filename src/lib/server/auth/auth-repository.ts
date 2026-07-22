@@ -855,14 +855,16 @@ export class AuthRepository implements OutboxStore {
 		return results[0]?.meta.changes === 1;
 	}
 
-	async cleanupExpiredEmailReservations(now: string): Promise<number> {
+	async cleanupExpiredEmailReservations(now: string, limit = 100): Promise<number> {
 		const result = await this.db.run({
 			sql: `UPDATE users
 				SET pending_email = NULL, pending_email_normalized = NULL,
 					pending_email_expires_at = NULL, email_version = email_version + 1,
 					updated_at = ?
-				WHERE pending_email_expires_at IS NOT NULL AND pending_email_expires_at <= ?`,
-			params: [now, now],
+				WHERE id IN (SELECT id FROM users
+					WHERE pending_email_expires_at IS NOT NULL AND pending_email_expires_at <= ?
+					ORDER BY pending_email_expires_at, id LIMIT ?)`,
+			params: [now, now, limit],
 		});
 		return result.meta.changes ?? 0;
 	}

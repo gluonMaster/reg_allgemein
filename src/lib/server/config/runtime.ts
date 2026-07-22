@@ -4,6 +4,10 @@ import { parseBusinessHours, type BusinessHoursSchedule } from '$lib/server/outb
 const rawConfigSchema = z.object({
 	APP_ENV: z.enum(['development', 'test', 'preview', 'production']),
 	PORTAL_PUBLIC_ORIGIN: z.string().min(1),
+	OFFICIAL_PRIVACY_URL: z.string().min(1).optional(),
+	OFFICIAL_IMPRINT_URL: z.string().min(1).optional(),
+	OFFICIAL_CONTACT_URL: z.string().min(1).optional(),
+	OFFICIAL_LINKS_VERSION: z.string().min(1).optional(),
 	JWT_SECRET: z.string().min(32).optional(),
 	TURNSTILE_SITE_KEY: z.string().min(1).optional(),
 	TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
@@ -52,6 +56,10 @@ const rawConfigSchema = z.object({
 	MEDIA_ONLINE_GRANT_ENABLED: z.enum(['true', 'false']).optional(),
 	PUBLIC_CONTRACT_FUNCTIONS_ENABLED: z.enum(['true', 'false']).optional(),
 	PRIVACY_EXPORT_TTL_SECONDS: z.string().optional(),
+	SCHEDULED_JOBS_ENABLED: z.enum(['true', 'false']).optional(),
+	SCHEDULED_OUTBOX_BATCH_LIMIT: z.string().optional(),
+	SCHEDULED_MAINTENANCE_BATCH_LIMIT: z.string().optional(),
+	SCHEDULED_LEASE_SECONDS: z.string().optional(),
 });
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
@@ -60,7 +68,8 @@ export interface RuntimeConfig {
 	appEnvironment: PortalEnvironment;
 	portalPublicOrigin: string;
 	db: D1Database;
-	r2Bucket?: R2Bucket;
+	r2ArchiveBucket?: R2Bucket;
+	r2QuarantineBucket?: R2Bucket;
 	assets?: Fetcher;
 	browser?: BrowserRun;
 	jwtSecret?: string;
@@ -72,6 +81,8 @@ export interface RuntimeConfig {
 	contracts: ContractRuntimeConfig;
 	messaging: MessagingRuntimeConfig;
 	privacy: PrivacyRuntimeConfig;
+	operations: OperationsRuntimeConfig;
+	officialLinks?: OfficialLinksRuntimeConfig;
 }
 
 export interface AuthRuntimeConfig {
@@ -133,6 +144,20 @@ export interface MessagingRuntimeConfig {
 
 export interface PrivacyRuntimeConfig {
 	exportTtlSeconds: number;
+}
+
+export interface OperationsRuntimeConfig {
+	scheduledJobsEnabled: boolean;
+	outboxBatchLimit: number;
+	maintenanceBatchLimit: number;
+	leaseSeconds: number;
+}
+
+export interface OfficialLinksRuntimeConfig {
+	privacyUrl: string;
+	imprintUrl: string;
+	contactUrl: string;
+	version: string;
 }
 
 export class RuntimeConfigError extends Error {
@@ -248,6 +273,29 @@ function validatePortalOrigin(value: string, appEnvironment: PortalEnvironment):
 	return url.origin;
 }
 
+function validateOfficialUrl(name: string, value: string | undefined, issues: string[]): string | null {
+	if (!value) return null;
+	try {
+		const url = new URL(value);
+		const hostname = url.hostname.toLowerCase();
+		if (
+			url.protocol !== 'https:' ||
+			url.username ||
+			url.password ||
+			url.hash ||
+			!(hostname === 'kolibri-dresden.de' || hostname.endsWith('.kolibri-dresden.de')) ||
+			/(?:^|\/)(?:replace|example|change-me)/i.test(url.pathname)
+		) {
+			issues.push(`${name}:official_https_url_required`);
+			return null;
+		}
+		return url.toString();
+	} catch {
+		issues.push(`${name}:invalid_url`);
+		return null;
+	}
+}
+
 export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined): RuntimeConfig {
 	const parsed = rawConfigSchema.safeParse(env ?? {});
 
@@ -264,8 +312,17 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		parsed.data.APP_ENV === 'preview' || parsed.data.APP_ENV === 'production';
 
 	if (!isD1Database(env?.DB)) issues.push('DB:missing_or_invalid_binding');
-	if (productionLike && !isR2Bucket(env?.R2_BUCKET))
-		issues.push('R2_BUCKET:missing_or_invalid_binding');
+	if (productionLike && !isR2Bucket(env?.R2_ARCHIVE))
+		issues.push('R2_ARCHIVE:missing_or_invalid_binding');
+	if (productionLike && !isR2Bucket(env?.R2_QUARANTINE))
+		issues.push('R2_QUARANTINE:missing_or_invalid_binding');
+	if (
+		isR2Bucket(env?.R2_ARCHIVE) &&
+		isR2Bucket(env?.R2_QUARANTINE) &&
+		env.R2_ARCHIVE === env.R2_QUARANTINE
+	) {
+		issues.push('R2_BINDINGS:must_be_distinct');
+	}
 	if (productionLike && !isFetcher(env?.ASSETS)) issues.push('ASSETS:missing_or_invalid_binding');
 	if (productionLike && !isBrowserRun(env?.BROWSER))
 		issues.push('BROWSER:missing_or_invalid_binding');
@@ -293,6 +350,28 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		parsed.data.PUBLIC_CONTRACT_FUNCTIONS_ENABLED === 'true';
 	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
 	const telegramProvider = parsed.data.TELEGRAM_PROVIDER ?? 'disabled';
+	const officialPrivacyUrl = validateOfficialUrl(
+		'OFFICIAL_PRIVACY_URL', parsed.data.OFFICIAL_PRIVACY_URL, issues
+	);
+	const officialImprintUrl = validateOfficialUrl(
+		'OFFICIAL_IMPRINT_URL', parsed.data.OFFICIAL_IMPRINT_URL, issues
+	);
+	const officialContactUrl = validateOfficialUrl(
+		'OFFICIAL_CONTACT_URL', parsed.data.OFFICIAL_CONTACT_URL, issues
+	);
+	const officialLinksComplete = Boolean(
+		officialPrivacyUrl && officialImprintUrl && officialContactUrl && parsed.data.OFFICIAL_LINKS_VERSION
+	);
+	const officialLinksPartiallyConfigured = Boolean(
+		parsed.data.OFFICIAL_PRIVACY_URL || parsed.data.OFFICIAL_IMPRINT_URL ||
+		parsed.data.OFFICIAL_CONTACT_URL || parsed.data.OFFICIAL_LINKS_VERSION
+	);
+	if ((productionLike || officialLinksPartiallyConfigured) && !officialLinksComplete) {
+		issues.push('OFFICIAL_LINKS:complete_approved_snapshot_required');
+	}
+	if (officialLinksComplete && isPlaceholder(parsed.data.OFFICIAL_LINKS_VERSION)) {
+		issues.push('OFFICIAL_LINKS_VERSION:placeholder');
+	}
 	if (authPublicEnabled && !parsed.data.PRIVACY_NOTICE_VERSION) {
 		issues.push('PRIVACY_NOTICE_VERSION:required_when_auth_enabled');
 	}
@@ -329,8 +408,11 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (telegramProvider !== 'disabled' && !parsed.data.TELEGRAM_CHAT_ID) {
 		issues.push('TELEGRAM_CHAT_ID:required_when_provider_enabled');
 	}
-	if (documentUploadEnabled && !isR2Bucket(env?.R2_BUCKET)) {
-		issues.push('R2_BUCKET:required_when_document_upload_enabled');
+	if (documentUploadEnabled && !isR2Bucket(env?.R2_QUARANTINE)) {
+		issues.push('R2_QUARANTINE:required_when_document_upload_enabled');
+	}
+	if (documentUploadEnabled && !isR2Bucket(env?.R2_ARCHIVE)) {
+		issues.push('R2_ARCHIVE:required_when_document_upload_enabled');
 	}
 	if (documentUploadEnabled && !parsed.data.JWT_SECRET) {
 		issues.push('JWT_SECRET:required_when_document_upload_enabled');
@@ -353,8 +435,8 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (contractRenderer === 'synthetic_test' && parsed.data.APP_ENV !== 'test') {
 		issues.push('CONTRACT_RENDERER:synthetic_test_only');
 	}
-	if (contractSendEnabled && !isR2Bucket(env?.R2_BUCKET)) {
-		issues.push('R2_BUCKET:required_when_contract_send_enabled');
+	if (contractSendEnabled && !isR2Bucket(env?.R2_ARCHIVE)) {
+		issues.push('R2_ARCHIVE:required_when_contract_send_enabled');
 	}
 	if (contractSendEnabled && contractRenderer === 'browser_run' && !isBrowserRun(env?.BROWSER)) {
 		issues.push('BROWSER:required_when_contract_send_enabled');
@@ -643,6 +725,28 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('PRIVACY_EXPORT_TTL_SECONDS:risk_ceiling_exceeded');
 	}
 
+	const operations: OperationsRuntimeConfig = {
+		scheduledJobsEnabled: parsed.data.SCHEDULED_JOBS_ENABLED === 'true',
+		outboxBatchLimit: parseIntegerConfig({
+			name: 'SCHEDULED_OUTBOX_BATCH_LIMIT', value: parsed.data.SCHEDULED_OUTBOX_BATCH_LIMIT,
+			defaultValue: 25, minimum: 1, issues,
+		}),
+		maintenanceBatchLimit: parseIntegerConfig({
+			name: 'SCHEDULED_MAINTENANCE_BATCH_LIMIT', value: parsed.data.SCHEDULED_MAINTENANCE_BATCH_LIMIT,
+			defaultValue: 50, minimum: 1, issues,
+		}),
+		leaseSeconds: parseIntegerConfig({
+			name: 'SCHEDULED_LEASE_SECONDS', value: parsed.data.SCHEDULED_LEASE_SECONDS,
+			defaultValue: 300, minimum: 30, issues,
+		}),
+	};
+	if (operations.outboxBatchLimit > 100) issues.push('SCHEDULED_OUTBOX_BATCH_LIMIT:risk_ceiling_exceeded');
+	if (operations.maintenanceBatchLimit > 100) issues.push('SCHEDULED_MAINTENANCE_BATCH_LIMIT:risk_ceiling_exceeded');
+	if (operations.leaseSeconds > 3_600) issues.push('SCHEDULED_LEASE_SECONDS:risk_ceiling_exceeded');
+	if (productionLike && operations.scheduledJobsEnabled === false) {
+		issues.push('SCHEDULED_JOBS_ENABLED:required');
+	}
+
 	if (issues.length > 0) throw new RuntimeConfigError(issues);
 
 	return {
@@ -652,7 +756,8 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 			parsed.data.APP_ENV
 		),
 		db: env?.DB as D1Database,
-		r2Bucket: isR2Bucket(env?.R2_BUCKET) ? env.R2_BUCKET : undefined,
+		r2ArchiveBucket: isR2Bucket(env?.R2_ARCHIVE) ? env.R2_ARCHIVE : undefined,
+		r2QuarantineBucket: isR2Bucket(env?.R2_QUARANTINE) ? env.R2_QUARANTINE : undefined,
 		assets: isFetcher(env?.ASSETS) ? env.ASSETS : undefined,
 		browser: isBrowserRun(env?.BROWSER) ? env.BROWSER : undefined,
 		jwtSecret: parsed.data.JWT_SECRET,
@@ -664,6 +769,13 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		contracts,
 		messaging,
 		privacy,
+		operations,
+		officialLinks: officialLinksComplete ? {
+			privacyUrl: officialPrivacyUrl!,
+			imprintUrl: officialImprintUrl!,
+			contactUrl: officialContactUrl!,
+			version: parsed.data.OFFICIAL_LINKS_VERSION!,
+		} : undefined,
 	};
 }
 

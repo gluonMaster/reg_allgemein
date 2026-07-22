@@ -1,0 +1,11 @@
+# Build-only adapter shape. Deployment uses an ignored, reviewed config copied
+# from wrangler.example.toml and the source Worker wrapper in src/worker.ts.
+#:schema node_modules/wrangler/config-schema.json
+name = "reg-allgemein-build"
+main = ".svelte-kit/cloudflare/svelte-worker.js"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".svelte-kit/cloudflare/assets"
+binding = "ASSETS"

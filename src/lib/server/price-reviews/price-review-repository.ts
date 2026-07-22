@@ -488,7 +488,14 @@ export class PriceReviewRepository {
 
 	async listBatchItems(batchId: string): Promise<StoredPriceReviewItem[]> {
 		const rows = await this.db.all<ItemRow>({
-			sql: `${ITEM_SELECT} WHERE item.batch_id = ? ORDER BY item.created_at, item.id`,
+			sql: `${ITEM_SELECT}
+			LEFT JOIN users AS owner ON owner.id = item.user_id
+			WHERE item.batch_id = ?
+				AND (item.user_id IS NULL OR owner.account_status <> 'closed')
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+					WHERE archive.target_kind = 'price_review_item'
+						AND archive.target_id = item.id)
+			ORDER BY item.created_at, item.id`,
 			params: [batchId],
 		});
 		return rows.results.map(itemFromRow);
@@ -533,7 +540,15 @@ export class PriceReviewRepository {
 					AS manual_count
 			FROM price_review_batches AS batch
 			JOIN course_groups AS course ON course.id = batch.course_group_id
-			LEFT JOIN price_review_items AS item ON item.batch_id = batch.id
+			JOIN price_review_items AS item ON item.batch_id = batch.id
+			LEFT JOIN users AS owner ON owner.id = item.user_id
+			WHERE (item.user_id IS NULL OR owner.account_status <> 'closed')
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+					WHERE archive.target_kind = 'price_review_item'
+						AND archive.target_id = item.id)
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+					WHERE archive.target_kind = 'price_review_batch'
+						AND archive.target_id = batch.id)
 			GROUP BY batch.id ORDER BY batch.created_at DESC LIMIT 200`,
 		});
 		return rows.results.map((row) => ({ id: row.id, courseGroupId: row.course_group_id,
@@ -589,7 +604,7 @@ export class PriceReviewRepository {
 				auditStatement({ id: auditId, actorUserId: input.admin.id,
 					action: 'price_review.notifications.approved', targetKind: 'price_review_batch',
 					targetId: input.batchId, requestId: input.requestId,
-					safeDiff: { reason: input.reason }, now: input.now }),
+					safeDiff: { status: 'notifications_approved', hasReason: true }, now: input.now }),
 				{
 					sql: `INSERT INTO price_review_admin_actions
 						(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -638,7 +653,9 @@ export class PriceReviewRepository {
 				auditStatement({ id: auditId, actorUserId: input.admin.id,
 					action: 'price_review.admin_comparison.requested',
 					targetKind: 'price_review_trigger', targetId: input.triggerId,
-					requestId: input.requestId, safeDiff: { reason: input.reason }, now: input.now }),
+					requestId: input.requestId,
+					safeDiff: { status: 'requested', reasonCode: 'admin_price_comparison', hasReason: true },
+					now: input.now }),
 				{
 					sql: `INSERT INTO price_review_admin_actions
 						(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -976,7 +993,8 @@ export class PriceReviewRepository {
 				auditStatement({ id: auditId, actorUserId: input.admin.id,
 					action: 'price_review.item.finally_confirmed', targetKind: 'price_review_item',
 					targetId: input.item.id, requestId: input.requestId,
-					safeDiff: { scheduledFor: input.scheduledFor, reason: input.reason }, now: input.now }),
+					safeDiff: { status: 'scheduled', scheduledFor: input.scheduledFor, hasReason: true },
+					now: input.now }),
 				{
 					sql: `INSERT INTO price_review_admin_actions
 						(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -1054,11 +1072,11 @@ export class PriceReviewRepository {
 		}
 	}
 
-	async listDueResponses(today: string): Promise<StoredPriceReviewItem[]> {
+	async listDueResponses(today: string, limit = 100): Promise<StoredPriceReviewItem[]> {
 		const rows = await this.db.all<ItemRow>({
 			sql: `${ITEM_SELECT} WHERE item.status = 'sent'
-				AND item.response_deadline < ? ORDER BY item.response_deadline, item.id`,
-			params: [today],
+				AND item.response_deadline < ? ORDER BY item.response_deadline, item.id LIMIT ?`,
+			params: [today, limit],
 		});
 		return rows.results.map(itemFromRow);
 	}
@@ -1118,11 +1136,11 @@ export class PriceReviewRepository {
 		}
 	}
 
-	async listDueScheduled(today: string): Promise<StoredPriceReviewItem[]> {
+	async listDueScheduled(today: string, limit = 100): Promise<StoredPriceReviewItem[]> {
 		const rows = await this.db.all<ItemRow>({
 			sql: `${ITEM_SELECT} WHERE item.status = 'scheduled'
-				AND item.scheduled_for <= ? ORDER BY item.scheduled_for, item.id`,
-			params: [today],
+				AND item.scheduled_for <= ? ORDER BY item.scheduled_for, item.id LIMIT ?`,
+			params: [today, limit],
 		});
 		return rows.results.map(itemFromRow);
 	}
@@ -1367,7 +1385,8 @@ export class PriceReviewRepository {
 
 	async listUnreconciledBoundaries(
 		lastScannedAt: string,
-		today: string
+		today: string,
+		limit = 100
 	): Promise<Array<{
 		enrollmentId: string;
 		courseGroupId: string;
@@ -1380,7 +1399,7 @@ export class PriceReviewRepository {
 			boundary_kind: 'activation' | 'expiry';
 			effective_on: string;
 		}>({
-			sql: `SELECT enrollment.id AS enrollment_id,
+			sql: `SELECT * FROM (SELECT enrollment.id AS enrollment_id,
 				enrollment.course_group_id, 'activation' AS boundary_kind,
 				enrollment.active_from AS effective_on
 			FROM enrollments enrollment
@@ -1396,9 +1415,9 @@ export class PriceReviewRepository {
 				AND (enrollment.updated_at >= ? OR enrollment.active_until >= ?)
 				AND NOT EXISTS (SELECT 1 FROM price_review_triggers trigger
 					WHERE trigger.dedupe_key = 'enrollment:' || enrollment.id
-						|| ':active_until:' || enrollment.active_until || ':v1')
-			ORDER BY effective_on, enrollment_id`,
-			params: [lastScannedAt, today, lastScannedAt, today],
+						|| ':active_until:' || enrollment.active_until || ':v1'))
+			ORDER BY effective_on, enrollment_id LIMIT ?`,
+			params: [lastScannedAt, today, lastScannedAt, today, limit],
 		});
 		return rows.results.map((row) => ({ enrollmentId: row.enrollment_id,
 			courseGroupId: row.course_group_id, boundaryKind: row.boundary_kind,

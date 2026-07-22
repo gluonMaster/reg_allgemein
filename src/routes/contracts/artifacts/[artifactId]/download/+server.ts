@@ -14,6 +14,7 @@ export const GET: RequestHandler = async (event) => {
 			'content-disposition': `attachment; filename="${artifact.filename}"`,
 			'cache-control': 'private, no-store',
 			'x-content-type-options': 'nosniff',
+			'content-security-policy': "default-src 'none'; sandbox",
 		},
 	});
 };

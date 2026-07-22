@@ -9,6 +9,8 @@ import { RequestAdminRepository } from '$lib/server/requests/admin-repository';
 import { RequestAdminService } from '$lib/server/requests/admin-service';
 import { IndividualRequestRepository } from '$lib/server/requests/request-repository';
 import { IndividualRequestService } from '$lib/server/requests/request-service';
+import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
+import { PrivacyService } from '$lib/server/privacy/privacy-service';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
 const initialNow = '2026-07-17T10:00:00.000Z';
@@ -36,11 +38,13 @@ const admin = requireAdmin({ id: 'admin-request', role: 'admin', emailVerified: 
 class MemoryStore implements PrivateDocumentStore {
 	readonly values = new Map<string, Uint8Array>();
 	readonly deletes: string[] = [];
+	beforeGet?: (key: string) => Promise<void>;
 	async put(key: string, body: Uint8Array) { this.values.set(key, Uint8Array.from(body)); }
 	async get(key: string) {
 		const value = this.values.get(key);
 		if (!value) return null;
 		const copy = Uint8Array.from(value);
+		await this.beforeGet?.(key);
 		return { body: copy.buffer, size: copy.byteLength };
 	}
 	async delete(key: string) { this.deletes.push(key); this.values.delete(key); }
@@ -117,6 +121,8 @@ describe('stage 08 request and private document workflow in D1', () => {
 	let documents: AuthorizationDocumentService;
 	let adminRepository: RequestAdminRepository;
 	let adminService: RequestAdminService;
+	let privacyRepository: PrivacyRepository;
+	let privacyService: PrivacyService;
 	let store: MemoryStore;
 
 	beforeEach(async () => {
@@ -128,6 +134,14 @@ describe('stage 08 request and private document workflow in D1', () => {
 		documents = new AuthorizationDocumentService(documentRepository, store, documentConfig, { consume: async () => undefined }, () => clock);
 		adminRepository = new RequestAdminRepository(db, documentConfig);
 		adminService = new RequestAdminService(adminRepository, documentRepository, store, () => clock);
+		privacyRepository = new PrivacyRepository(db);
+		privacyService = new PrivacyService(
+			privacyRepository,
+			store,
+			{ exportTtlSeconds: 3600 },
+			() => clock,
+			store
+		);
 	});
 	afterEach(async () => context.dispose());
 
@@ -136,6 +150,69 @@ describe('stage 08 request and private document workflow in D1', () => {
 			childId: 'child-request', requestKind: 'nachhilfe', fundingKind: 'jobcenter', subjects: 'Mathematik', description: '', preferredDays: ['MO'], preferredTimeWindows: [], preferredFormat: 'onsite', preferredLocations: [], idempotencyKey: `create-${key}`,
 		} });
 		return requests.loadOwnerRequest(parent, created.requestId);
+	}
+
+	async function prepareDownloadedDocument(key: string) {
+		const request = await createNachhilfe(key);
+		const authorizationId = request.authorizations[0].id;
+		const uploaded = await documents.upload({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				authorizationId,
+				idempotencyKey: `upload-${key}`,
+			},
+			file: pdfFile(key),
+			requestSubject: `subject-${key}`,
+			requestId: `upload-${key}`,
+		});
+		await requests.submit({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				expectedVersion: request.version,
+				idempotencyKey: `submit-${key}`,
+			},
+			requestId: `submit-${key}`,
+		});
+		await documents.adminQuarantineDownload({
+			actor: admin,
+			documentId: uploaded.documentId,
+			purpose: 'local_av_scan',
+			requestId: `download-${key}`,
+		});
+		const internal = await db.first<{ sha256: string; quarantine_r2_key: string }>({
+			sql: `SELECT sha256, quarantine_r2_key
+				FROM authorization_documents WHERE id = ?`,
+			params: [uploaded.documentId],
+		});
+		return {
+			requestId: request.id,
+			authorizationId,
+			documentId: uploaded.documentId,
+			sha256: internal!.sha256,
+			quarantineKey: internal!.quarantine_r2_key,
+		};
+	}
+
+	async function attestClean(
+		item: Awaited<ReturnType<typeof prepareDownloadedDocument>>,
+		key: string
+	) {
+		await adminService.attestDocument({
+			actor: admin,
+			payload: {
+				documentId: item.documentId,
+				documentSha256: item.sha256,
+				outcome: 'clean',
+				scannerLabel: 'Test AV',
+				scannerVersion: '1',
+				attestationTextVersion: 'manual-local-av-v1',
+				confirmation: 'confirmed',
+				idempotencyKey: `attest-${key}`,
+			},
+			requestId: `attest-${key}`,
+		});
 	}
 
 	it('enforces individual self-pay and the fixed 3000-cent tariff snapshot', async () => {
@@ -169,6 +246,55 @@ describe('stage 08 request and private document workflow in D1', () => {
 			.toEqual({ count: 1 });
 	});
 
+	it('removes a closed owner document from the ordinary admin queue', async () => {
+		const request = await createNachhilfe('closed-admin-queue');
+		const uploaded = await documents.upload({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				authorizationId: request.authorizations[0].id,
+				idempotencyKey: 'upload-closed-admin-queue',
+			},
+			file: pdfFile('closed-admin-queue'),
+			requestSubject: 'closed-admin-queue-subject',
+			requestId: 'upload-closed-admin-queue',
+		});
+		expect(
+			await documentRepository.listAdminDocuments({ q: uploaded.documentId, status: '' })
+		).toHaveLength(1);
+		await db.run({
+			sql: `UPDATE users SET account_status = 'deletion_requested', updated_at = ?
+				WHERE id = ?`,
+			params: [clock, parent.id],
+		});
+		expect(
+			await documentRepository.listAdminDocuments({ q: uploaded.documentId, status: '' })
+		).toHaveLength(1);
+		await db.run({
+			sql: `UPDATE users SET account_status = 'active', updated_at = ? WHERE id = ?`,
+			params: [clock, parent.id],
+		});
+
+		const deletion = await privacyService.requestDeletion({
+			actor: parent,
+			idempotencyKey: 'delete-closed-admin-queue',
+			requestId: 'delete-closed-admin-queue',
+		});
+		expect(deletion.status).toBe('requested');
+		expect(
+			await privacyService.processDeletion({
+				admin,
+				privacyRequestId: deletion.requestId,
+				reason: 'Synthetic closed-owner admin queue check.',
+				idempotencyKey: 'process-closed-admin-queue',
+				requestId: 'process-closed-admin-queue',
+			})
+		).toMatchObject({ status: 'completed_with_retained_evidence' });
+		expect(
+			await documentRepository.listAdminDocuments({ q: uploaded.documentId, status: '' })
+		).toEqual([]);
+	});
+
 	it('performs download-bound AV attestation, separate approval, inclusive funding, and owner download', async () => {
 		let request = await createNachhilfe('full-flow');
 		const authorizationId = request.authorizations[0].id;
@@ -178,7 +304,31 @@ describe('stage 08 request and private document workflow in D1', () => {
 		await requests.submit({ actor: parent, payload: { requestId: request.id, expectedVersion: request.version, idempotencyKey: 'submit-full-flow' }, requestId: 'submit-full-flow' });
 		request = await requests.loadOwnerRequest(parent, request.id);
 		await expect(adminService.attestDocument({ actor: admin, payload: { documentId: uploaded.documentId, documentSha256: hash('0'), outcome: 'clean', scannerLabel: 'Test AV', scannerVersion: '1', attestationTextVersion: 'manual-local-av-v1', confirmation: 'confirmed', idempotencyKey: 'attest-before-download' }, requestId: 'attest-before' })).rejects.toBeDefined();
-		await documents.adminQuarantineDownload({ actor: admin, documentId: uploaded.documentId, requestId: 'admin-download' });
+		await expect(documents.adminQuarantineDownload({ actor: admin, documentId: uploaded.documentId,
+			purpose: 'unstructured-free-text', requestId: 'admin-download-invalid-purpose' }))
+			.rejects.toMatchObject({ code: 'INVALID_DOWNLOAD_PURPOSE' });
+		store.beforeGet = async () => {
+			store.beforeGet = undefined;
+			await db.run({ sql: `UPDATE users SET is_blocked = 1 WHERE id = ?`, params: [parent.id] });
+		};
+		await expect(documents.adminQuarantineDownload({ actor: admin, documentId: uploaded.documentId,
+			purpose: 'local_av_scan', requestId: 'admin-download-owner-race' }))
+			.rejects.toMatchObject({ code: 'DOCUMENT_DOWNLOAD_REJECTED' });
+		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM audit_events
+			WHERE request_id = 'admin-download-owner-race'` })).toEqual({ count: 0 });
+		expect(await db.first<{ quarantine_downloaded_at: string | null }>({
+			sql: `SELECT quarantine_downloaded_at FROM authorization_documents WHERE id = ?`,
+			params: [uploaded.documentId],
+		})).toEqual({ quarantine_downloaded_at: null });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0 WHERE id = ?`, params: [parent.id] });
+		await documents.adminQuarantineDownload({ actor: admin, documentId: uploaded.documentId,
+			purpose: 'local_av_scan', requestId: 'admin-download' });
+		const downloadAudit = await db.first<{ safe_diff_json: string }>({
+			sql: `SELECT safe_diff_json FROM audit_events WHERE request_id = 'admin-download'`,
+		});
+		expect(JSON.parse(downloadAudit!.safe_diff_json)).toMatchObject({
+			forcedAttachment: true, purposeCode: 'local_av_scan',
+		});
 		const internal = await db.first<{ sha256: string }>({ sql: `SELECT sha256 FROM authorization_documents WHERE id = ?`, params: [uploaded.documentId] });
 		await adminService.attestDocument({ actor: admin, payload: { documentId: uploaded.documentId, documentSha256: internal!.sha256, outcome: 'clean', scannerLabel: 'Test AV', scannerVersion: '1', attestationTextVersion: 'manual-local-av-v1', confirmation: 'confirmed', idempotencyKey: 'attest-after-download' }, requestId: 'attest-after' });
 		await adminService.reviewDocument({ actor: admin, payload: { documentId: uploaded.documentId, decision: 'approve', reason: 'Lesbar und zutreffend', confirmation: 'confirmed', idempotencyKey: 'approve-document' }, requestId: 'approve-document' });
@@ -192,6 +342,16 @@ describe('stage 08 request and private document workflow in D1', () => {
 		await expect(adminRepository.assertEligibleForOffer({ requestId: request.id, plannedFrom: '2026-08-31', plannedUntilInclusive: '2026-09-01' })).rejects.toMatchObject({ code: 'FUNDING_NOT_ELIGIBLE' });
 		await expect(documents.parentApprovedDownload({ actor: foreignParent, documentId: uploaded.documentId, requestId: 'foreign-download' })).rejects.toBeDefined();
 		await expect(documents.parentApprovedDownload({ actor: parent, documentId: uploaded.documentId, requestId: 'owner-download' })).resolves.toMatchObject({ filename: expect.stringMatching(/^document-/u) });
+		store.beforeGet = async () => {
+			store.beforeGet = undefined;
+			await db.run({ sql: `UPDATE users SET is_blocked = 1 WHERE id = ?`, params: [parent.id] });
+		};
+		await expect(documents.parentApprovedDownload({ actor: parent,
+			documentId: uploaded.documentId, requestId: 'owner-download-race' }))
+			.rejects.toMatchObject({ code: 'DOCUMENT_DOWNLOAD_REJECTED' });
+		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM audit_events
+			WHERE request_id = 'owner-download-race'` })).toEqual({ count: 0 });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0 WHERE id = ?`, params: [parent.id] });
 		const archiveKey = [...store.values.keys()].find((key) => key.startsWith('archive/funding/'))!;
 		await documents.cleanupExpired('2027-01-01T00:00:00.000Z');
 		expect(store.values.has(archiveKey)).toBe(true);
@@ -217,6 +377,195 @@ describe('stage 08 request and private document workflow in D1', () => {
 		expect(await adminService.processExpiredAuthorizations(clock)).toMatchObject({ processed: 0 });
 		const expiry = await db.all<{ effective_on: string }>({ sql: `SELECT effective_on FROM funding_lifecycle_events WHERE authorization_id = ? AND event_kind = 'expired'`, params: [authorizationId] });
 		expect(expiry.results).toEqual([{ effective_on: '2026-09-01' }]);
+	});
+
+	it('keeps closure inventory and retained funding evidence consistent when review wins first', async () => {
+		const item = await prepareDownloadedDocument('review-before-closure');
+		await attestClean(item, 'review-before-closure');
+		let privacyRequestId = '';
+		store.beforeGet = async (key) => {
+			if (key !== item.quarantineKey) return;
+			store.beforeGet = undefined;
+			const requested = await privacyService.requestDeletion({
+				actor: parent,
+				idempotencyKey: 'delete-review-before-closure',
+				requestId: 'delete-review-before-closure',
+			});
+			privacyRequestId = requested.requestId;
+		};
+
+		await adminService.reviewDocument({
+			actor: admin,
+			payload: {
+				documentId: item.documentId,
+				decision: 'approve',
+				reason: 'Lesbar und zutreffend',
+				confirmation: 'confirmed',
+				idempotencyKey: 'review-before-closure',
+			},
+			requestId: 'review-before-closure',
+		});
+		expect(privacyRequestId).not.toBe('');
+		await adminService.reviewAuthorization({
+			actor: admin,
+			payload: {
+				authorizationId: item.authorizationId,
+				action: 'approve',
+				kind: 'jobcenter',
+				validFrom: '2026-08-01',
+				validUntil: '2026-08-31',
+				reason: 'Bescheid geprüft',
+				confirmation: 'confirmed',
+				idempotencyKey: 'authorization-before-closure',
+			},
+			requestId: 'authorization-before-closure',
+		});
+		const approved = await db.first<{ archive_r2_key: string; review_status: string }>({
+			sql: `SELECT archive_r2_key, review_status
+				FROM authorization_documents WHERE id = ?`,
+			params: [item.documentId],
+		});
+		expect(approved?.review_status).toBe('approved');
+		expect(store.values.has(approved!.archive_r2_key)).toBe(true);
+
+		const closure = await privacyService.processDeletion({
+			admin,
+			privacyRequestId,
+			reason: 'Verified deletion request and retained funding evidence.',
+			idempotencyKey: 'close-after-review',
+			requestId: 'close-after-review',
+		});
+		expect(closure.status).toBe('completed_with_retained_evidence');
+		const retained = await db.all<{
+			target_kind: string;
+			target_id: string;
+			private_r2_key: string | null;
+			purge_status: string;
+		}>({
+			sql: `SELECT archive.target_kind, archive.target_id, archive.private_r2_key,
+				control.purge_status
+			FROM legal_archive_records AS archive
+			JOIN retention_controls AS control ON control.id = archive.retention_control_id
+			WHERE archive.privacy_request_id = ?
+			ORDER BY archive.target_kind, archive.target_id`,
+			params: [privacyRequestId],
+		});
+		expect(retained.results).toEqual([
+			{
+				target_kind: 'authorization_document',
+				target_id: item.documentId,
+				private_r2_key: approved!.archive_r2_key,
+				purge_status: 'disabled_by_policy',
+			},
+			{
+				target_kind: 'funding_authorization',
+				target_id: item.authorizationId,
+				private_r2_key: null,
+				purge_status: 'disabled_by_policy',
+			},
+		]);
+		expect(await db.first<{ retained_record_count: number; actual_count: number }>({
+			sql: `SELECT result.retained_record_count,
+				(SELECT COUNT(*) FROM legal_archive_records AS archive
+					WHERE archive.privacy_request_id = result.privacy_request_id) AS actual_count
+			FROM privacy_closure_results AS result WHERE result.privacy_request_id = ?`,
+			params: [privacyRequestId],
+		})).toEqual({ retained_record_count: 2, actual_count: 2 });
+		expect(store.values.has(approved!.archive_r2_key)).toBe(true);
+	});
+
+	it('lets closure win during R2 review and rejects all late funding review evidence', async () => {
+		const clean = await prepareDownloadedDocument('closure-before-review');
+		await attestClean(clean, 'closure-before-review');
+		const quarantined = await prepareDownloadedDocument('closure-before-attestation');
+		const requested = await privacyService.requestDeletion({
+			actor: parent,
+			idempotencyKey: 'delete-before-review',
+			requestId: 'delete-before-review',
+		});
+		let closureStatus = '';
+		store.beforeGet = async (key) => {
+			if (key !== clean.quarantineKey) return;
+			store.beforeGet = undefined;
+			const closure = await privacyService.processDeletion({
+				admin,
+				privacyRequestId: requested.requestId,
+				reason: 'Verified deletion request before pending admin review.',
+				idempotencyKey: 'close-before-review',
+				requestId: 'close-before-review',
+			});
+			closureStatus = closure.status;
+		};
+
+		await expect(adminService.reviewDocument({
+			actor: admin,
+			payload: {
+				documentId: clean.documentId,
+				decision: 'approve',
+				reason: 'Late approval must lose to closure',
+				confirmation: 'confirmed',
+				idempotencyKey: 'late-document-review',
+			},
+			requestId: 'late-document-review',
+		})).rejects.toBeDefined();
+		expect(closureStatus).toBe('completed_with_retained_evidence');
+		await expect(adminService.attestDocument({
+			actor: admin,
+			payload: {
+				documentId: quarantined.documentId,
+				documentSha256: quarantined.sha256,
+				outcome: 'clean',
+				scannerLabel: 'Test AV',
+				scannerVersion: '1',
+				attestationTextVersion: 'manual-local-av-v1',
+				confirmation: 'confirmed',
+				idempotencyKey: 'late-document-attestation',
+			},
+			requestId: 'late-document-attestation',
+		})).rejects.toBeDefined();
+		await expect(adminService.reviewAuthorization({
+			actor: admin,
+			payload: {
+				authorizationId: clean.authorizationId,
+				action: 'approve',
+				kind: 'jobcenter',
+				validFrom: '2026-08-01',
+				validUntil: '2026-08-31',
+				reason: 'Late authorization review must lose to closure',
+				confirmation: 'confirmed',
+				idempotencyKey: 'late-authorization-review',
+			},
+			requestId: 'late-authorization-review',
+		})).rejects.toMatchObject({ code: 'AUTHORIZATION_TRANSITION_REJECTED' });
+
+		expect(await db.first<{ archive_r2_key: string | null; review_status: string }>({
+			sql: `SELECT archive_r2_key, review_status
+				FROM authorization_documents WHERE id = ?`,
+			params: [clean.documentId],
+		})).toEqual({ archive_r2_key: null, review_status: 'clean' });
+		expect([...store.values.keys()].filter((key) => key.startsWith('archive/funding/')))
+			.toEqual([]);
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM document_scan_attestations
+				WHERE document_id = ?`,
+			params: [quarantined.documentId],
+		})).toEqual({ count: 0 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM audit_events
+				WHERE request_id IN ('late-document-review', 'late-document-attestation',
+					'late-authorization-review')`,
+		})).toEqual({ count: 0 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM legal_archive_records
+				WHERE target_id IN (?, ?, ?, ?)`,
+			params: [clean.documentId, clean.authorizationId,
+				quarantined.documentId, quarantined.authorizationId],
+		})).toEqual({ count: 0 });
+		expect(await db.first<{ retained_record_count: number }>({
+			sql: `SELECT retained_record_count FROM privacy_closure_results
+				WHERE privacy_request_id = ?`,
+			params: [requested.requestId],
+		})).toEqual({ retained_record_count: 0 });
 	});
 
 	it('does not purge before exactly 14 days and retries cleanup idempotently', async () => {

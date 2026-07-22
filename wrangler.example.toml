@@ -3,7 +3,7 @@
 
 #:schema node_modules/wrangler/config-schema.json
 name = "reg-allgemein"
-main = ".svelte-kit/cloudflare/_worker.js"
+main = "src/worker.ts"
 compatibility_date = "2026-03-24"
 compatibility_flags = ["nodejs_compat"]
 
@@ -14,10 +14,21 @@ binding = "ASSETS"
 [browser]
 binding = "BROWSER"
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[triggers]
+crons = ["* * * * *", "*/15 * * * *"]
+
 [vars]
 # Requests fail closed until every replace/example value is configured.
 APP_ENV = "production"
 PORTAL_PUBLIC_ORIGIN = "https://portal.example.invalid"
+OFFICIAL_PRIVACY_URL = "https://www.kolibri-dresden.de/replace-with-approved-datenschutz-url"
+OFFICIAL_IMPRINT_URL = "https://www.kolibri-dresden.de/replace-with-approved-impressum-url"
+OFFICIAL_CONTACT_URL = "https://www.kolibri-dresden.de/replace-with-approved-kontakt-url"
+OFFICIAL_LINKS_VERSION = "replace-with-approved-links-version"
 EMAIL_PROVIDER = "disabled"
 EMAIL_FROM = "Example Anmeldung <noreply@example.invalid>"
 EMAIL_REPLY_TO = "Example Anmeldung <reply@example.invalid>"
@@ -62,6 +73,10 @@ BROWSER_RUN_DAILY_BUDGET_MS = "540000"
 MEDIA_ONLINE_GRANT_ENABLED = "false"
 PUBLIC_CONTRACT_FUNCTIONS_ENABLED = "false"
 PRIVACY_EXPORT_TTL_SECONDS = "3600"
+SCHEDULED_JOBS_ENABLED = "true"
+SCHEDULED_OUTBOX_BATCH_LIMIT = "25"
+SCHEDULED_MAINTENANCE_BATCH_LIMIT = "50"
+SCHEDULED_LEASE_SECONDS = "300"
 TELEGRAM_BUSINESS_TIMEZONE = "Europe/Berlin"
 TELEGRAM_BUSINESS_HOURS = "Mo-Fr 09:00-17:00"
 
@@ -71,9 +86,16 @@ database_name = "reg-allgemein-db"
 database_id = "replace-me"
 
 [[r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "reg-allgemein-documents"
-preview_bucket_name = "reg-allgemein-documents-preview"
+binding = "R2_ARCHIVE"
+bucket_name = "replace-with-private-eu-archive-bucket"
+preview_bucket_name = "replace-with-private-eu-preview-archive-bucket"
+jurisdiction = "eu"
+
+[[r2_buckets]]
+binding = "R2_QUARANTINE"
+bucket_name = "replace-with-private-eu-quarantine-bucket"
+preview_bucket_name = "replace-with-private-eu-preview-quarantine-bucket"
+jurisdiction = "eu"
 
 # Secrets:
 # JWT_SECRET

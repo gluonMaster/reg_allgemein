@@ -83,7 +83,9 @@ export class MessageRepository {
 		const q = (input.q ?? '').trim().toLowerCase();
 		const rows = await this.db.all<ThreadRow>({
 			sql: `${this.threadSelect()}
-			WHERE (? = '' OR thread.status = ?) AND (? = '' OR thread.category = ?)
+			WHERE EXISTS (SELECT 1 FROM users owner WHERE owner.id = thread.user_id
+					AND owner.account_status = 'active')
+				AND (? = '' OR thread.status = ?) AND (? = '' OR thread.category = ?)
 				AND (? = '' OR lower(thread.public_reference) LIKE ?
 					OR lower(thread.subject) LIKE ?)
 			ORDER BY CASE thread.status WHEN 'waiting_for_admin' THEN 1
@@ -124,7 +126,9 @@ export class MessageRepository {
 
 	async getAdminThread(publicReference: string): Promise<SupportThreadDetail | null> {
 		const row = await this.db.first<ThreadRow>({
-			sql: `${this.threadSelect()} WHERE thread.public_reference = ?`,
+			sql: `${this.threadSelect()} WHERE thread.public_reference = ?
+				AND EXISTS (SELECT 1 FROM users owner WHERE owner.id = thread.user_id
+					AND owner.account_status = 'active')`,
 			params: [publicReference],
 		});
 		return row ? { ...mapThread(row), userId: row.user_id, messages: await this.messages(row.id) } : null;

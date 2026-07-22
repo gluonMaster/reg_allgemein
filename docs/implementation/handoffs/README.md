@@ -43,6 +43,23 @@ fail-closed, его выключение проверено и оставший�
 [production-readiness contract](../../operations/PRODUCTION_READINESS.md) и
 ссылается на tracked operator runbooks и результаты rehearsal.
 
+## Stage 13
+
+Текущий persistent packet:
+
+- [stage-13.md](stage-13.md) — реализованный local hardening, evidence, gates и
+  следующие release actions;
+- [traceability matrix](../STAGE_13_TRACEABILITY.md);
+- [deployment runbook](../../operations/PRODUCTION_DEPLOYMENT.md);
+- [operations runbook](../../operations/OPERATIONS_RUNBOOK.md);
+- [disaster-recovery runbook](../../operations/DISASTER_RECOVERY.md);
+- [production readiness checklist](../../operations/PRODUCTION_READINESS_CHECKLIST.md).
+
+`R2_ARCHIVE`, `R2_QUARANTINE`, migration `0014`, scheduled Worker/Cron,
+manual operations page, `admin:bootstrap`, `docs:check`, `release:scan` и
+`release:verify` реализованы и локально проверены. Это не переводит remote,
+restore, legal/provider или production-approval gates из `blocked`.
+
 Ветки не навязываются документацией: существующая стратегия пользователя имеет
 приоритет. Нельзя включать в stage commit чужие/предшествующие изменения только
 ради чистого status.

@@ -13,6 +13,74 @@ const ACTIVE_ADMIN_SQL = `EXISTS (
 		AND admin.account_status = 'active' AND admin.is_blocked = 0
 )`;
 
+const ACTIVE_DOCUMENT_REVIEW_CONTEXT_SQL = `EXISTS (
+	SELECT 1
+	FROM funding_authorizations AS authorization
+	JOIN individual_requests AS request
+		ON request.id = authorization.request_id
+		AND request.user_id = authorization.user_id
+		AND request.child_id = authorization.child_id
+	JOIN users AS owner ON owner.id = authorization.user_id AND owner.role = 'parent'
+	JOIN children AS child
+		ON child.id = authorization.child_id AND child.owner_user_id = owner.id
+	WHERE authorization.id = authorization_documents.authorization_id
+		AND authorization.user_id = authorization_documents.user_id
+		AND authorization.child_id = authorization_documents.child_id
+		AND authorization.status IN ('pending_review', 'approved')
+		AND request.status NOT IN ('rejected', 'cancelled')
+		AND owner.account_status = 'active'
+		AND authorization_documents.deleted_at IS NULL
+		AND authorization_documents.replaced_by_document_id IS NULL
+		AND NOT EXISTS (
+			SELECT 1 FROM privacy_requests AS closure
+			WHERE closure.subject_user_id = owner.id AND closure.kind = 'delete'
+				AND closure.status IN ('processing', 'completed',
+					'completed_with_retained_evidence')
+		)
+		AND NOT EXISTS (
+			SELECT 1 FROM legal_archive_records AS archive
+			WHERE (archive.target_kind = 'authorization_document'
+					AND archive.target_id = authorization_documents.id)
+				OR (archive.target_kind = 'funding_authorization'
+					AND archive.target_id = authorization.id)
+		)
+)`;
+
+const PENDING_DOCUMENT_AUTHORIZATION_SQL = `EXISTS (
+	SELECT 1 FROM funding_authorizations AS authorization
+	WHERE authorization.id = authorization_documents.authorization_id
+		AND authorization.status = 'pending_review'
+)`;
+
+const ACTIVE_AUTHORIZATION_REVIEW_CONTEXT_SQL = `EXISTS (
+	SELECT 1
+	FROM individual_requests AS request
+	JOIN users AS owner ON owner.id = request.user_id AND owner.role = 'parent'
+	JOIN children AS child
+		ON child.id = request.child_id AND child.owner_user_id = owner.id
+	WHERE request.id = funding_authorizations.request_id
+		AND request.user_id = funding_authorizations.user_id
+		AND request.child_id = funding_authorizations.child_id
+		AND request.status NOT IN ('rejected', 'cancelled')
+		AND owner.account_status = 'active'
+		AND NOT EXISTS (
+			SELECT 1 FROM privacy_requests AS closure
+			WHERE closure.subject_user_id = owner.id AND closure.kind = 'delete'
+				AND closure.status IN ('processing', 'completed',
+					'completed_with_retained_evidence')
+		)
+		AND NOT EXISTS (
+			SELECT 1 FROM legal_archive_records AS archive
+			WHERE (archive.target_kind = 'funding_authorization'
+					AND archive.target_id = funding_authorizations.id)
+				OR (archive.target_kind = 'authorization_document'
+					AND archive.target_id IN (
+						SELECT document.id FROM authorization_documents AS document
+						WHERE document.authorization_id = funding_authorizations.id
+					))
+		)
+)`;
+
 export class RequestAdminError extends Error {
 	constructor(readonly code: string) {
 		super(code);
@@ -296,7 +364,10 @@ export class RequestAdminRepository {
 						AND sha256 = ? AND quarantine_downloaded_sha256 = sha256
 						AND quarantine_downloaded_by_admin_user_id = ?
 						AND download_audit_event_id IS NOT NULL
-						AND quarantine_delete_state = 'present' AND ${ACTIVE_ADMIN_SQL}`,
+						AND quarantine_delete_state = 'present'
+						AND ${ACTIVE_DOCUMENT_REVIEW_CONTEXT_SQL}
+						AND ${PENDING_DOCUMENT_AUTHORIZATION_SQL}
+						AND ${ACTIVE_ADMIN_SQL}`,
 					params: [
 						targetStatus,
 						input.scannerLabel.trim(),
@@ -339,7 +410,9 @@ export class RequestAdminRepository {
 			],
 			assertionSql: `EXISTS (SELECT 1 FROM authorization_documents
 				WHERE id = ? AND sha256 = ? AND review_status = ?
-					AND scan_attested_by_admin_user_id = ?)`,
+					AND scan_attested_by_admin_user_id = ?
+					AND ${ACTIVE_DOCUMENT_REVIEW_CONTEXT_SQL}
+					AND ${PENDING_DOCUMENT_AUTHORIZATION_SQL})`,
 			assertionParams: [
 				input.documentId,
 				input.documentSha256,
@@ -355,6 +428,7 @@ export class RequestAdminRepository {
 		decision: 'approve' | 'reject';
 		reason: string;
 		archiveKey?: string;
+		storageIntentId?: string;
 		idempotencyKey: string;
 		requestId: string;
 		now: string;
@@ -386,7 +460,14 @@ export class RequestAdminRepository {
 						quarantine_delete_state = CASE WHEN ? = 'approved'
 							THEN 'delete_pending' ELSE quarantine_delete_state END,
 						business_review_reason = ?, released_by = ?, released_at = ?, updated_at = ?
-					WHERE id = ? AND review_status = 'clean' AND ${ACTIVE_ADMIN_SQL}`,
+					WHERE id = ? AND review_status = 'clean'
+						AND ${ACTIVE_DOCUMENT_REVIEW_CONTEXT_SQL}
+						AND ${PENDING_DOCUMENT_AUTHORIZATION_SQL}
+						AND ${ACTIVE_ADMIN_SQL}
+						AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents intent
+							WHERE intent.id = ? AND intent.status = 'staged'
+								AND intent.storage_class = 'archive'
+								AND intent.object_key = ?))`,
 					params: [
 						targetStatus,
 						targetStatus,
@@ -398,8 +479,35 @@ export class RequestAdminRepository {
 						input.now,
 						input.documentId,
 						input.actor.id,
+						input.storageIntentId ?? null,
+						input.storageIntentId ?? null,
+						input.archiveKey ?? null,
 					],
 				},
+				...(input.decision === 'approve' && input.storageIntentId ? [
+					{
+						sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
+							updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+						WHERE id = ? AND status = 'staged' AND object_key = ?
+							AND EXISTS (SELECT 1 FROM authorization_documents
+								WHERE id = ? AND archive_r2_key = ? AND review_status = 'approved')`,
+						params: [input.now, input.now, input.storageIntentId, input.archiveKey!,
+							input.documentId, input.archiveKey!],
+					},
+					{
+						sql: `INSERT INTO storage_intent_link_assertions
+							(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+						VALUES (?, ?, 'authorization_document_archive', ?, CASE WHEN
+							EXISTS (SELECT 1 FROM storage_object_intents
+								WHERE id = ? AND status = 'linked' AND object_key = ?)
+							AND EXISTS (SELECT 1 FROM authorization_documents
+								WHERE id = ? AND archive_r2_key = ? AND review_status = 'approved')
+						THEN 1 ELSE 0 END, ?)`,
+						params: [crypto.randomUUID(), input.storageIntentId, input.documentId,
+							input.storageIntentId, input.archiveKey!, input.documentId,
+							input.archiveKey!, input.now],
+					},
+				] : []),
 				...(input.decision === 'reject'
 					? [
 							{
@@ -426,8 +534,13 @@ export class RequestAdminRepository {
 					: []),
 			],
 			assertionSql: `EXISTS (SELECT 1 FROM authorization_documents
-				WHERE id = ? AND review_status = ? AND released_by = ?)`,
-			assertionParams: [input.documentId, targetStatus, input.actor.id],
+				WHERE id = ? AND review_status = ? AND released_by = ?
+					AND ${ACTIVE_DOCUMENT_REVIEW_CONTEXT_SQL}
+					AND ${PENDING_DOCUMENT_AUTHORIZATION_SQL})
+				AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents
+					WHERE id = ? AND status = 'linked' AND object_key = ?))`,
+			assertionParams: [input.documentId, targetStatus, input.actor.id,
+				input.storageIntentId ?? null, input.storageIntentId ?? null, input.archiveKey ?? null],
 		});
 	}
 
@@ -442,12 +555,26 @@ export class RequestAdminRepository {
 		}>({
 			sql: `SELECT id, quarantine_r2_key, archive_r2_key, sha256, size_bytes, review_status
 				FROM authorization_documents WHERE id = ?
-					AND (review_status = 'approved' OR
-						(review_status = 'clean' AND quarantine_delete_state = 'present'))`,
+					AND ${ACTIVE_DOCUMENT_REVIEW_CONTEXT_SQL}
+					AND ((review_status = 'approved' AND archive_r2_key IS NOT NULL)
+						OR (review_status = 'clean' AND quarantine_delete_state = 'present'
+							AND ${PENDING_DOCUMENT_AUTHORIZATION_SQL}))`,
 			params: [documentId],
 		});
 		if (!document) throw new RequestAdminError('DOCUMENT_NOT_CLEAN');
 		return document;
+	}
+
+	loadDocumentArchiveState(documentId: string) {
+		return this.db.first<{
+			id: string;
+			archive_r2_key: string | null;
+			review_status: string;
+		}>({
+			sql: `SELECT id, archive_r2_key, review_status
+				FROM authorization_documents WHERE id = ?`,
+			params: [documentId],
+		});
 	}
 
 	async reviewAuthorization(input: {
@@ -468,12 +595,18 @@ export class RequestAdminRepository {
 			request_id: string;
 			status: string;
 			supersedes_authorization_id: string | null;
+			review_context_allowed: number;
 		}>({
-			sql: `SELECT id, request_id, status, supersedes_authorization_id
+			sql: `SELECT id, request_id, status, supersedes_authorization_id,
+				CASE WHEN ${ACTIVE_AUTHORIZATION_REVIEW_CONTEXT_SQL}
+					THEN 1 ELSE 0 END AS review_context_allowed
 				FROM funding_authorizations WHERE id = ?`,
 			params: [input.authorizationId],
 		});
 		if (!authorization) throw new RequestAdminError('AUTHORIZATION_NOT_FOUND');
+		if (authorization.review_context_allowed !== 1) {
+			throw new RequestAdminError('AUTHORIZATION_TRANSITION_REJECTED');
+		}
 		const targetStatus = input.action === 'approve' ? 'approved' : input.action === 'reject' ? 'rejected' : 'revoked';
 		const expectedStatus = input.action === 'revoke' ? 'approved' : 'pending_review';
 		if (authorization.status !== targetStatus && authorization.status !== expectedStatus) {
@@ -543,7 +676,9 @@ export class RequestAdminRepository {
 						valid_from = CASE WHEN ? = 'approved' THEN ? ELSE valid_from END,
 						valid_until = CASE WHEN ? = 'approved' THEN ? ELSE valid_until END,
 						decision_notes = ?, reviewed_by = ?, reviewed_at = ?, updated_at = ?
-					WHERE id = ? AND status = ? AND ${ACTIVE_ADMIN_SQL}`,
+					WHERE id = ? AND status = ?
+						AND ${ACTIVE_AUTHORIZATION_REVIEW_CONTEXT_SQL}
+						AND ${ACTIVE_ADMIN_SQL}`,
 					params: [
 						targetStatus,
 						targetStatus,
@@ -587,7 +722,8 @@ export class RequestAdminRepository {
 					]
 				: undefined,
 			assertionSql: `EXISTS (SELECT 1 FROM funding_authorizations
-				WHERE id = ? AND status = ? AND reviewed_by = ?)
+				WHERE id = ? AND status = ? AND reviewed_by = ?
+					AND ${ACTIVE_AUTHORIZATION_REVIEW_CONTEXT_SQL})
 				AND (${consequence?.assertionSql ?? '1 = 1'})`,
 			assertionParams: [
 				input.authorizationId,
@@ -719,14 +855,22 @@ export class RequestAdminRepository {
 				authorization.valid_from, authorization.valid_until
 			FROM individual_requests AS request
 			JOIN children AS child ON child.id = request.child_id
+			JOIN users AS owner ON owner.id = request.user_id
 			LEFT JOIN funding_authorizations AS authorization
 				ON authorization.request_id = request.id
 				AND authorization.status IN ('pending_review', 'approved')
-			WHERE NOT EXISTS (SELECT 1 FROM authorization_documents document
-				JOIN legal_archive_records archive
-					ON archive.target_kind = 'authorization_document'
-					AND archive.target_id = document.id
-				WHERE document.authorization_id = authorization.id)
+			WHERE owner.account_status = 'active'
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE (archive.target_kind = 'funding_authorization'
+						AND EXISTS (SELECT 1 FROM funding_authorizations archived_authorization
+							WHERE archived_authorization.request_id = request.id
+								AND archived_authorization.id = archive.target_id))
+						OR (archive.target_kind = 'authorization_document'
+							AND EXISTS (SELECT 1 FROM authorization_documents archived_document
+								JOIN funding_authorizations archived_authorization
+									ON archived_authorization.id = archived_document.authorization_id
+								WHERE archived_authorization.request_id = request.id
+									AND archived_document.id = archive.target_id)))
 				AND (? = '' OR request.status = ?)
 				AND (? = '' OR request.request_kind = ?)
 				AND (? = '' OR lower(child.full_name) LIKE ?

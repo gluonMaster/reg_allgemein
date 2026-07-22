@@ -30,9 +30,21 @@
 			<label>Price-version-ID<input name="priceVersionId" /></label>
 			<label>Price-rule-ID<input name="priceRuleId" /></label>
 			<label>Gültig bis (ISO 8601 mit Zeitzone)<input name="expiresAt" required /></label>
-			<label>Versionierter Render-Input (JSON)<textarea name="renderInput" rows="16" required></textarea></label>
-			<label>Begründung einer manuellen Preisabweichung<textarea name="manualOverrideReason" minlength="10"></textarea></label>
-			<label class="checkbox"><input type="checkbox" name="responsibilityConfirmed" value="confirmed" /><span>{translate('de', 'admin.contracts.overrideConfirm')}</span></label>
+			<label
+				>Versionierter Render-Input (JSON)<textarea name="renderInput" rows="16" required
+				></textarea></label
+			>
+			<label
+				>Begründung einer manuellen Preisabweichung<textarea
+					name="manualOverrideReason"
+					minlength="10"
+				></textarea></label
+			>
+			<label class="checkbox"
+				><input type="checkbox" name="responsibilityConfirmed" value="confirmed" /><span
+					>{translate('de', 'admin.contracts.overrideConfirm')}</span
+				></label
+			>
 			<button type="submit">{translate('de', 'admin.contracts.create')}</button>
 		</form>
 	</details>
@@ -44,18 +56,49 @@
 			<input type="hidden" name="idempotencyKey" value={data.mediaIdempotencyKey} />
 			<label>Owner-ID<input name="ownerUserId" required /></label>
 			<label>Child-ID<input name="childId" required /></label>
-			<fieldset><legend>Aufnahmearten</legend>
-				<label class="checkbox"><input type="checkbox" name="captureScopes" value="photo" /> Foto</label>
-				<label class="checkbox"><input type="checkbox" name="captureScopes" value="video" /> Video</label>
+			<fieldset>
+				<legend>Aufnahmearten</legend>
+				<label class="checkbox"
+					><input type="checkbox" name="captureScopes" value="photo" /> Foto</label
+				>
+				<label class="checkbox"
+					><input type="checkbox" name="captureScopes" value="video" /> Video</label
+				>
 			</fieldset>
-			<fieldset><legend>Veröffentlichungswege</legend>
-				<label class="checkbox"><input type="checkbox" name="publicationChannels" value="website" /> Website</label>
-				<label class="checkbox"><input type="checkbox" name="publicationChannels" value="social_media" /> Social Media</label>
-				<label class="checkbox"><input type="checkbox" name="publicationChannels" value="print" /> Print</label>
+			<fieldset>
+				<legend>Veröffentlichungswege</legend>
+				<label class="checkbox"
+					><input type="checkbox" name="publicationChannels" value="website" /> Website</label
+				>
+				<label class="checkbox"
+					><input type="checkbox" name="publicationChannels" value="social_media" /> Social
+					Media</label
+				>
+				<label class="checkbox"
+					><input type="checkbox" name="publicationChannels" value="print" /> Print</label
+				>
 			</fieldset>
-			<label>Kanal<select name="channel"><option value="office">Büro</option><option value="email">E-Mail</option><option value="phone">Telefon</option></select></label>
-			<label>Eingang (ISO 8601 mit Zeitzone)<input name="receivedAt" placeholder="2026-07-22T10:00:00+02:00" required /></label>
-			<label>{translate('de', 'admin.contracts.mediaEvidence')}<textarea name="evidenceSummary" minlength="5" maxlength="500" required></textarea></label>
+			<label
+				>Kanal<select name="channel"
+					><option value="office">Büro</option><option value="email">E-Mail</option
+					><option value="phone">Telefon</option></select
+				></label
+			>
+			<label
+				>Eingang (ISO 8601 mit Zeitzone)<input
+					name="receivedAt"
+					placeholder="2026-07-22T10:00:00+02:00"
+					required
+				/></label
+			>
+			<label
+				>{translate('de', 'admin.contracts.mediaEvidence')}<textarea
+					name="evidenceSummary"
+					minlength="5"
+					maxlength="500"
+					required
+				></textarea></label
+			>
 			<button type="submit">{translate('de', 'admin.contracts.mediaWithdrawalSave')}</button>
 		</form>
 	</details>
@@ -71,27 +114,56 @@
 					<form class="admin-action-form" method="POST" action="?/terminationReview">
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="endRequestId" value={request.id} />
-						<input type="hidden" name="idempotencyKey" value={`termination-review:${request.id}`} />
-						<label>Entscheidung<select name="decision">
-							{#if request.kind === 'mutual_termination_request'}
-								<option value="approved">Einvernehmliche Beendigung zustimmen</option>
-								<option value="declined">Einvernehmliche Beendigung ablehnen</option>
-							{:else}
-								<option value="effective_date_confirmed">Wirksamkeitsdatum bestätigen</option>
-								<option value="disputed">Wirksamkeitsdatum klären</option>
-							{/if}
-						</select></label>
-						<label>Wirksam am<input type="date" name="effectiveOn" value={request.calculated_effective_on ?? request.requested_effective_on ?? ''} /></label>
-						<label>Externe Forderungsprüfung<select name="externalDebtCheckResult">
-							<option value="not_checked">Nicht geprüft</option>
-							{#if request.kind === 'mutual_termination_request'}
-								<option value="no_debt_reported">Keine Forderung gemeldet</option>
-								<option value="debt_reported">Forderung gemeldet</option>
-								<option value="unknown">Unbekannt</option>
-							{/if}
-						</select></label>
-						<label>Begründung<textarea name="reason" minlength="5" required></textarea></label>
-						<button type="submit">{translate('de', 'admin.contracts.terminationReview')}</button>
+						<input
+							type="hidden"
+							name="idempotencyKey"
+							value={`termination-review:${request.id}`}
+						/>
+						<label
+							>Entscheidung<select name="decision">
+								{#if request.kind === 'mutual_termination_request'}
+									<option value="approved"
+										>Einvernehmliche Beendigung zustimmen</option
+									>
+									<option value="declined"
+										>Einvernehmliche Beendigung ablehnen</option
+									>
+								{:else}
+									<option value="effective_date_confirmed"
+										>Wirksamkeitsdatum bestätigen</option
+									>
+									<option value="disputed">Wirksamkeitsdatum klären</option>
+								{/if}
+							</select></label
+						>
+						<label
+							>Wirksam am<input
+								type="date"
+								name="effectiveOn"
+								value={request.calculated_effective_on ??
+									request.requested_effective_on ??
+									''}
+							/></label
+						>
+						<label
+							>Externe Forderungsprüfung<select name="externalDebtCheckResult">
+								<option value="not_checked">Nicht geprüft</option>
+								{#if request.kind === 'mutual_termination_request'}
+									<option value="no_debt_reported"
+										>Keine Forderung gemeldet</option
+									>
+									<option value="debt_reported">Forderung gemeldet</option>
+									<option value="unknown">Unbekannt</option>
+								{/if}
+							</select></label
+						>
+						<label
+							>Begründung<textarea name="reason" minlength="5" required
+							></textarea></label
+						>
+						<button type="submit"
+							>{translate('de', 'admin.contracts.terminationReview')}</button
+						>
 					</form>
 				{/if}
 			</article>
@@ -109,24 +181,63 @@
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="offerId" value={offer.id} />
 						<input type="hidden" name="idempotencyKey" value={`render:${offer.id}`} />
-						<button type="submit">{translate('de', 'admin.contracts.renderSend')}</button>
+						<button type="submit"
+							>{translate('de', 'admin.contracts.renderSend')}</button
+						>
 					</form>
 				{/if}
 				{#if offer.status === 'accepted_by_parent'}
 					<form class="admin-action-form" method="POST" action="?/formActivate">
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="offerId" value={offer.id} />
-						<label>{translate('de', 'admin.contracts.reason')}<textarea name="reason" required minlength="5"></textarea></label>
-						<label class="checkbox"><input type="checkbox" name="confirmation" value="confirmed" required /><span>{translate('de', 'admin.contracts.confirm')}</span></label>
+						<label
+							>{translate('de', 'admin.contracts.reason')}<textarea
+								name="reason"
+								required
+								minlength="5"
+							></textarea></label
+						>
+						<label class="checkbox"
+							><input
+								type="checkbox"
+								name="confirmation"
+								value="confirmed"
+								required
+							/><span>{translate('de', 'admin.contracts.confirm')}</span></label
+						>
 						<input type="hidden" name="idempotencyKey" value={`form:${offer.id}`} />
-						<button type="submit">{translate('de', 'admin.contracts.formActivate')}</button>
+						<button type="submit"
+							>{translate('de', 'admin.contracts.formActivate')}</button
+						>
 					</form>
 				{/if}
-				{#if offer.contract_id}<p>{translate('de', 'admin.contracts.certificate')}: {offer.certificate_status ?? 'pending'}</p>{/if}
+				{#if offer.contract_id}<p>
+						{translate('de', 'admin.contracts.certificate')}: {offer.certificate_status ??
+							'pending'}
+					</p>{/if}
 				{#if offer.artifacts.length}
 					<ul>
 						{#each offer.artifacts as artifact}
-							<li><a href={`/admin/contracts/artifacts/${artifact.id}/download`}>{artifact.kind}</a></li>
+							<li>
+								<form
+									method="POST"
+									action={`/admin/contracts/artifacts/${encodeURIComponent(artifact.id)}/download`}
+									class="admin-action-form"
+								>
+									<input type="hidden" name="_csrf" value={data.csrfToken} />
+									<label
+										>Zweck<select name="purpose" required>
+											<option value="contract_administration"
+												>Vertragsbearbeitung</option
+											>
+											<option value="legal_evidence_review"
+												>Prüfung des Vertragsnachweises</option
+											>
+										</select></label
+									>
+									<button type="submit">{artifact.kind}</button>
+								</form>
+							</li>
 						{/each}
 					</ul>
 				{/if}

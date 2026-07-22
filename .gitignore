@@ -16,6 +16,8 @@ test-results/
 !.dev.vars.example
 *.local
 /wrangler.toml
+/wrangler.preview.toml
+/wrangler.production.toml
 
 # Local source data with personal data must not be committed.
 *.accdb

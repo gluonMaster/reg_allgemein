@@ -541,6 +541,12 @@ provider и operational release gates сохраняются. Актуально
   может выиграть только одна conditional transaction. В той же successful
   closure transaction все действующие media grants получают append-only revoke
   events с `source=account_deletion` и `effective_from=account_deleted_at`.
+  Любая claimed current legacy service, кроме явно завершённой `KN`, считается
+  blocker fail-closed, даже если её нельзя использовать для occupancy. Closure
+  и email dispatch сериализуются: уже claimed `processing` email не допускает
+  closure, а установленный closure lock не допускает новый claim. Неудерживаемые
+  operational subject/body/preferences и draft snapshots минимизируются; обычные
+  admin списки не становятся обходом закрытого legal archive.
 - **REL-01.** Все import publish, claim, acceptance, activation и смены статуса
   идемпотентны и не оставляют частично примененное состояние.
 - **REL-02.** Для D1 и R2 до production описаны backup/restore и проверка

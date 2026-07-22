@@ -30,7 +30,7 @@ const ACTIVE_CONTRACTS_SQL = `
 		SELECT 'legacy_active_service', legacy.id FROM legacy_enrollments legacy
 		JOIN children child ON child.id = legacy.child_id
 		WHERE child.owner_user_id = ? AND legacy.is_current = 1
-			AND legacy.is_active_for_occupancy = 1
+			AND upper(trim(coalesce(legacy.status_code_raw, ''))) <> 'KN'
 			AND legacy.represented_by_enrollment_id IS NULL
 	) blockers GROUP BY category ORDER BY category`;
 
@@ -401,6 +401,7 @@ export class PrivacyRepository {
 		sizeBytes: number;
 		expiresAt: string;
 		now: string;
+		storageIntentId?: string;
 	}) {
 		const prior = await this.db.first<{ id: string; private_r2_key: string }>({
 			sql: `SELECT id, private_r2_key FROM privacy_export_artifacts WHERE privacy_request_id = ?`,
@@ -419,11 +420,40 @@ export class PrivacyRepository {
 					SELECT ?, request.id, request.subject_user_id, ?, 'application/json; charset=utf-8',
 						?, ?, 'ready', 1, ?, ?, NULL, ?, ? FROM privacy_requests request
 					WHERE request.id = ? AND request.kind = 'export' AND request.status = 'processing'
-						AND request.subject_user_id = ?`,
+						AND request.subject_user_id = ?
+						AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents intent
+							WHERE intent.id = ? AND intent.status = 'staged'
+								AND intent.storage_class = 'archive'
+								AND intent.object_key = ?))`,
 					params: [artifactId, input.privateR2Key, input.sizeBytes, input.sha256,
 						input.now, input.expiresAt, input.now, input.now,
-						input.privacyRequestId, input.subjectUserId],
+						input.privacyRequestId, input.subjectUserId,
+						input.storageIntentId ?? null, input.storageIntentId ?? null, input.privateR2Key],
 				},
+				...(input.storageIntentId ? [
+					{
+						sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
+							updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+						WHERE id = ? AND status = 'staged' AND object_key = ?
+							AND EXISTS (SELECT 1 FROM privacy_export_artifacts
+								WHERE id = ? AND private_r2_key = ?)`,
+						params: [input.now, input.now, input.storageIntentId, input.privateR2Key,
+							artifactId, input.privateR2Key],
+					},
+					{
+						sql: `INSERT INTO storage_intent_link_assertions
+							(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+						VALUES (?, ?, 'privacy_export', ?, CASE WHEN
+							EXISTS (SELECT 1 FROM storage_object_intents
+								WHERE id = ? AND status = 'linked' AND object_key = ?)
+							AND EXISTS (SELECT 1 FROM privacy_export_artifacts
+								WHERE id = ? AND private_r2_key = ?)
+						THEN 1 ELSE 0 END, ?)`,
+						params: [crypto.randomUUID(), input.storageIntentId, artifactId,
+							input.storageIntentId, input.privateR2Key, artifactId,
+							input.privateR2Key, input.now],
+					},
+				] : []),
 				{
 					sql: `UPDATE privacy_requests SET status = 'completed', artifact_r2_key = ?,
 						artifact_expires_at = ?, safe_summary_json = ?, completed_at = ?, updated_at = ?
@@ -531,10 +561,16 @@ export class PrivacyRepository {
 				input.actor.id, input.artifactId, input.now],
 		});
 		if ((result.meta.changes ?? 0) !== 1 && !await this.db.first({
-			sql: `SELECT id FROM audit_events WHERE id = ? AND actor_user_id = ?
-				AND action = 'privacy.export.downloaded'
-				AND target_kind = 'privacy_export_artifact' AND target_id = ?`,
-			params: [auditId, input.actor.id, input.artifactId],
+			sql: `SELECT audit.id FROM audit_events audit
+			JOIN privacy_export_artifacts artifact ON artifact.id = audit.target_id
+			JOIN users actor ON actor.id = ?
+			WHERE audit.id = ? AND audit.actor_user_id = actor.id
+				AND audit.action = 'privacy.export.downloaded'
+				AND audit.target_kind = 'privacy_export_artifact' AND artifact.id = ?
+				AND artifact.status = 'ready' AND artifact.expires_at > ?
+				AND actor.account_status = 'active' AND actor.is_blocked = 0
+				AND (actor.id = artifact.subject_user_id OR actor.role = 'admin')`,
+			params: [input.actor.id, auditId, input.artifactId, input.now],
 		})) {
 			throw new PrivacyRepositoryError('PRIVACY_EXPORT_NOT_FOUND');
 		}
@@ -836,6 +872,7 @@ export class PrivacyRepository {
 		const auditId = crypto.randomUUID();
 		const actionId = crypto.randomUUID();
 		const tombstone = `closed-${crypto.randomUUID()}@tombstone.invalid`;
+		const minimizedObjectHash = await hashCanonical({});
 		const closureEvidenceHash = await hashCanonical({
 			privacyRequestId: input.privacyRequestId,
 			subjectUserId: input.subjectUserId,
@@ -862,7 +899,9 @@ export class PrivacyRepository {
 				sql: `UPDATE users SET account_status = 'deletion_requested', updated_at = ?
 				WHERE id = ? AND account_status = 'active' AND EXISTS (
 					SELECT 1 FROM privacy_requests request WHERE request.id = ?
-						AND request.subject_user_id = users.id AND request.status = 'processing')`,
+						AND request.subject_user_id = users.id AND request.status = 'processing')
+					AND NOT EXISTS (SELECT 1 FROM email_outbox outbox
+						WHERE outbox.recipient_user_id = users.id AND outbox.status = 'processing')`,
 				params: [input.now, input.subjectUserId, input.privacyRequestId],
 			},
 			{
@@ -888,8 +927,25 @@ export class PrivacyRepository {
 			},
 			{
 				sql: `UPDATE contract_offers SET status = 'cancelled', cancelled_at = ?,
+					status_reason = 'account_deletion', provider_snapshot_json = '{}',
+					party_snapshot_json = '{}', service_snapshot_json = '{}',
+					schedule_snapshot_json = '[]', billing_snapshot_json = '{}',
+					line_items_json = '[]', term_snapshot_json = '{}',
+					termination_snapshot_json = '{}', withdrawal_snapshot_json = '{}',
+					distance_legal_profile_snapshot_json = '{}', distance_legal_basis_hash = NULL,
+					early_performance_request_version = NULL, early_performance_requested_at = NULL,
+					wertersatz_notice_version = NULL, clauses_manifest_json = '{}',
+					attachments_manifest_json = '[]', media_decision_snapshot_json = NULL,
+					render_input_json = '{}', render_input_hash = ?, source_manifest_json = '{}',
+					source_manifest_hash = ?, updated_at = ?
+				WHERE user_id = ? AND status = 'draft' AND ${lock}`,
+				params: [input.now, minimizedObjectHash, minimizedObjectHash, input.now,
+					input.subjectUserId, input.privacyRequestId],
+			},
+			{
+				sql: `UPDATE contract_offers SET status = 'cancelled', cancelled_at = ?,
 					status_reason = 'account_deletion', updated_at = ?
-				WHERE user_id = ? AND status IN ('draft','sent','accepted_by_parent') AND ${lock}`,
+				WHERE user_id = ? AND status IN ('sent','accepted_by_parent') AND ${lock}`,
 				params: [input.now, input.now, input.subjectUserId, input.privacyRequestId],
 			},
 			{
@@ -905,11 +961,24 @@ export class PrivacyRepository {
 				params: [input.now, input.subjectUserId, input.privacyRequestId],
 			},
 			{
+				sql: `UPDATE trial_bookings SET decision_reason = 'account_deletion', updated_at = ?
+				WHERE user_id = ? AND coalesce(decision_reason, '') <> 'account_deletion' AND ${lock}`,
+				params: [input.now, input.subjectUserId, input.privacyRequestId],
+			},
+			{
 				sql: `UPDATE individual_requests SET status = 'cancelled',
 					admin_decision = 'cancelled', reviewed_by = ?, reviewed_at = ?, updated_at = ?
 				WHERE user_id = ? AND status NOT IN ('rejected','cancelled') AND ${lock}`,
 				params: [input.admin.id, input.now, input.now, input.subjectUserId,
 					input.privacyRequestId],
+			},
+			{
+				sql: `UPDATE individual_requests SET subjects_raw = '[account-closed]',
+					description = '', preferred_days_json = '[]',
+					preferred_time_windows_json = '[]', preferred_format = 'onsite',
+					preferred_locations_json = '[]', admin_notes = NULL, updated_at = ?
+				WHERE user_id = ? AND ${lock}`,
+				params: [input.now, input.subjectUserId, input.privacyRequestId],
 			},
 			{
 				sql: `UPDATE enrollments SET status = 'cancelled', updated_at = ?
@@ -922,9 +991,22 @@ export class PrivacyRepository {
 				params: [input.now, input.subjectUserId, input.privacyRequestId],
 			},
 			{
-				sql: `UPDATE support_threads SET status = 'closed', closed_at = ?, updated_at = ?
-				WHERE user_id = ? AND status <> 'closed' AND ${lock}`,
+				sql: `UPDATE support_threads SET status = 'closed',
+					subject = '[account-closed]', closed_at = coalesce(closed_at, ?), updated_at = ?
+				WHERE user_id = ? AND ${lock}`,
 				params: [input.now, input.now, input.subjectUserId, input.privacyRequestId],
+			},
+			{
+				sql: `UPDATE support_messages SET body = '[account-closed]'
+				WHERE body <> '[account-closed]' AND EXISTS (
+					SELECT 1 FROM support_threads thread WHERE thread.id = support_messages.thread_id
+						AND thread.user_id = ? AND ${lock})`,
+				params: [input.subjectUserId, input.privacyRequestId],
+			},
+			{
+				sql: `UPDATE absence_reports SET reason_text = '[account-closed]'
+				WHERE user_id = ? AND reason_text <> '[account-closed]' AND ${lock}`,
+				params: [input.subjectUserId, input.privacyRequestId],
 			},
 			{
 				sql: `UPDATE privacy_requests SET status = 'cancelled',
@@ -1109,6 +1191,30 @@ export class PrivacyRepository {
 						AND closed_at = ? AND family_number_id IS NULL)
 					AND EXISTS (SELECT 1 FROM privacy_closure_results WHERE privacy_request_id = ?
 						AND result_status = 'completed_with_retained_evidence')
+					AND NOT EXISTS (SELECT 1 FROM email_outbox outbox
+						WHERE outbox.recipient_user_id = ? AND outbox.status = 'processing')
+					AND NOT EXISTS (SELECT 1 FROM individual_requests request
+						WHERE request.user_id = ? AND (request.subjects_raw <> '[account-closed]'
+							OR request.description <> '' OR request.preferred_days_json <> '[]'
+							OR request.preferred_time_windows_json <> '[]'
+							OR request.preferred_locations_json <> '[]' OR request.admin_notes IS NOT NULL))
+					AND NOT EXISTS (SELECT 1 FROM support_threads thread
+						WHERE thread.user_id = ? AND (thread.subject <> '[account-closed]'
+							OR EXISTS (SELECT 1 FROM support_messages message
+								WHERE message.thread_id = thread.id AND message.body <> '[account-closed]')))
+					AND NOT EXISTS (SELECT 1 FROM trial_bookings trial
+						WHERE trial.user_id = ?
+							AND coalesce(trial.decision_reason, '') <> 'account_deletion')
+					AND NOT EXISTS (SELECT 1 FROM contract_offers offer
+						WHERE offer.user_id = ?
+							AND NOT EXISTS (SELECT 1 FROM contract_artifacts artifact
+								WHERE artifact.contract_offer_id = offer.id)
+							AND NOT EXISTS (SELECT 1 FROM contract_parent_actions action
+								WHERE action.contract_offer_id = offer.id)
+							AND NOT EXISTS (SELECT 1 FROM contracts contract
+								WHERE contract.contract_offer_id = offer.id)
+							AND (offer.party_snapshot_json <> '{}'
+								OR offer.render_input_json <> '{}' OR offer.source_manifest_json <> '{}'))
 					AND NOT EXISTS (${ACTIVE_CONTRACTS_SQL})
 					AND NOT EXISTS (SELECT 1 FROM media_consents grant
 						WHERE grant.user_id = ? AND grant.decision = 'granted'
@@ -1122,7 +1228,8 @@ export class PrivacyRepository {
 							AND control.purge_status <> 'disabled_by_policy')
 				THEN 1 ELSE 0 END, ?)`,
 				params: [crypto.randomUUID(), input.privacyRequestId, actionId, actionId,
-					input.subjectUserId, input.now, input.privacyRequestId,
+					input.subjectUserId, input.now, input.privacyRequestId, input.subjectUserId,
+					input.subjectUserId, input.subjectUserId, input.subjectUserId, input.subjectUserId,
 					input.subjectUserId, input.subjectUserId, input.subjectUserId, input.subjectUserId,
 					input.subjectUserId, input.privacyRequestId, input.privacyRequestId, input.now],
 			},
@@ -1171,14 +1278,22 @@ export class PrivacyRepository {
 		return candidates.results.length;
 	}
 
-	async claimCleanupJobs(privacyRequestId: string | null, now: string, limit: number) {
+	async claimCleanupJobs(
+		privacyRequestId: string | null,
+		now: string,
+		limit: number,
+		leaseOwner: string,
+		leaseSeconds: number
+	) {
+		const leaseUntil = new Date(Date.parse(now) + leaseSeconds * 1000).toISOString();
 		const candidates = await this.db.all<{
 			id: string; object_kind: 'privacy_export' | 'document_quarantine';
 			private_r2_key: string; source_record_id: string;
 		}>({
 			sql: `SELECT job.id, job.object_kind, job.private_r2_key, job.source_record_id
 			FROM privacy_r2_cleanup_jobs job
-			WHERE job.status IN ('pending','failed')
+			WHERE (job.status IN ('pending','failed')
+				OR (job.status = 'processing' AND job.lease_until <= ?))
 				AND (? IS NULL OR job.privacy_request_id = ?)
 				AND (job.object_kind = 'privacy_export' OR EXISTS (
 					SELECT 1 FROM authorization_documents document
@@ -1186,15 +1301,16 @@ export class PrivacyRepository {
 						AND document.quarantine_delete_state = 'present'
 						AND document.quarantine_expires_at <= ?))
 			ORDER BY job.created_at, job.id LIMIT ?`,
-			params: [privacyRequestId, privacyRequestId, now, limit],
+			params: [now, privacyRequestId, privacyRequestId, now, limit],
 		});
 		const claimed: typeof candidates.results = [];
 		for (const candidate of candidates.results) {
 			const result = await this.db.run({
 				sql: `UPDATE privacy_r2_cleanup_jobs SET status = 'processing', attempts = attempts + 1,
-					last_error_code = NULL, updated_at = ?
-				WHERE id = ? AND status IN ('pending','failed')`,
-				params: [now, candidate.id],
+					last_error_code = NULL, lease_owner = ?, lease_until = ?, updated_at = ?
+				WHERE id = ? AND (status IN ('pending','failed')
+					OR (status = 'processing' AND lease_until <= ?))`,
+				params: [leaseOwner, leaseUntil, now, candidate.id, now],
 			});
 			if ((result.meta.changes ?? 0) === 1) claimed.push(candidate);
 		}
@@ -1203,17 +1319,19 @@ export class PrivacyRepository {
 
 	async completeCleanupJob(input: {
 		jobId: string;
+		leaseOwner: string;
 		objectKind: 'privacy_export' | 'document_quarantine';
 		sourceRecordId: string;
 		now: string;
 	}) {
-		const auditId = crypto.randomUUID();
+		const auditId = `privacy-cleanup-audit:${input.jobId}`;
 		const recordUpdate: StatementSpec = input.objectKind === 'privacy_export'
 			? {
 					sql: `UPDATE privacy_export_artifacts SET status = 'deleted', deleted_at = ?, updated_at = ?
 					WHERE id = ? AND status = 'delete_pending' AND EXISTS (
-						SELECT 1 FROM privacy_r2_cleanup_jobs WHERE id = ? AND status = 'processing')`,
-					params: [input.now, input.now, input.sourceRecordId, input.jobId],
+						SELECT 1 FROM privacy_r2_cleanup_jobs WHERE id = ? AND status = 'processing'
+							AND lease_owner = ?)`,
+					params: [input.now, input.now, input.sourceRecordId, input.jobId, input.leaseOwner],
 				}
 			: {
 					sql: `UPDATE authorization_documents SET
@@ -1221,18 +1339,29 @@ export class PrivacyRepository {
 							('quarantined','clean','infected','rejected') THEN 'deleted' ELSE review_status END,
 						quarantine_delete_state = 'deleted', quarantine_purged_at = ?, updated_at = ?
 					WHERE id = ? AND quarantine_delete_state = 'present' AND EXISTS (
-						SELECT 1 FROM privacy_r2_cleanup_jobs WHERE id = ? AND status = 'processing')`,
-					params: [input.now, input.now, input.sourceRecordId, input.jobId],
+						SELECT 1 FROM privacy_r2_cleanup_jobs WHERE id = ? AND status = 'processing'
+							AND lease_owner = ?)`,
+					params: [input.now, input.now, input.sourceRecordId, input.jobId, input.leaseOwner],
 				};
-		await this.db.batch([
+		const results = await this.db.batch([
 			recordUpdate,
 			{
 				sql: `UPDATE privacy_r2_cleanup_jobs SET status = 'completed', completed_at = ?,
-					updated_at = ? WHERE id = ? AND status = 'processing'`,
-				params: [input.now, input.now, input.jobId],
+					updated_at = ?, last_error_code = NULL, lease_owner = NULL, lease_until = NULL
+					WHERE id = ? AND status = 'processing' AND lease_owner = ? AND (
+						(? = 'privacy_export' AND EXISTS (
+							SELECT 1 FROM privacy_export_artifacts artifact
+							WHERE artifact.id = ? AND artifact.status = 'deleted'))
+						OR (? = 'document_quarantine' AND EXISTS (
+							SELECT 1 FROM authorization_documents document
+							WHERE document.id = ?
+								AND document.quarantine_delete_state = 'deleted'))
+					)`,
+				params: [input.now, input.now, input.jobId, input.leaseOwner,
+					input.objectKind, input.sourceRecordId, input.objectKind, input.sourceRecordId],
 			},
 			{
-				sql: `INSERT INTO audit_events
+				sql: `INSERT OR IGNORE INTO audit_events
 					(id, actor_user_id, actor_kind, action, target_kind, target_id,
 					 request_id, safe_diff_json, created_at)
 				SELECT ?, NULL, 'system', 'privacy.r2_cleanup.completed',
@@ -1242,14 +1371,21 @@ export class PrivacyRepository {
 					input.now, input.jobId],
 			},
 		]);
+		return (results[1]?.meta.changes ?? 0) === 1;
 	}
 
-	async failCleanupJob(jobId: string, now: string): Promise<void> {
+	async failCleanupJob(
+		jobId: string,
+		leaseOwner: string,
+		now: string,
+		errorCode: 'R2_DELETE_FAILED' | 'D1_FINALIZE_FAILED' = 'R2_DELETE_FAILED'
+	): Promise<void> {
 		await this.db.run({
 			sql: `UPDATE privacy_r2_cleanup_jobs SET status = 'failed',
-				last_error_code = 'R2_DELETE_FAILED', updated_at = ?
-			WHERE id = ? AND status = 'processing'`,
-			params: [now, jobId],
+				last_error_code = ?, updated_at = ?,
+				lease_owner = NULL, lease_until = NULL
+			WHERE id = ? AND status = 'processing' AND lease_owner = ?`,
+			params: [errorCode, now, jobId, leaseOwner],
 		});
 	}
 

@@ -10,13 +10,15 @@ import {
 } from './contracts';
 import { RequestAdminError, RequestAdminRepository } from './admin-repository';
 import { sha256Bytes } from '$lib/server/security/digest';
+import type { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 
 export class RequestAdminService {
 	constructor(
 		private readonly repository: RequestAdminRepository,
 		private readonly documentRepository: AuthorizationDocumentRepository,
 		private readonly store: PrivateDocumentStore,
-		private readonly now: () => string = () => new Date().toISOString()
+		private readonly now: () => string = () => new Date().toISOString(),
+		private readonly storageIntents?: StorageIntentRepository
 	) {}
 
 	async list(input: { q: string; status: string; kind: string; documentStatus: string }) {
@@ -95,6 +97,11 @@ export class RequestAdminService {
 			throw new RequestAdminError('DOCUMENT_CHECKSUM_MISMATCH');
 		}
 		const archiveKey = `archive/funding/${crypto.randomUUID()}`;
+		const storageIntentId = await this.storageIntents?.stage({
+			storageClass: 'archive', objectKey: archiveKey,
+			objectKind: 'approved_funding_document', sourceRef: document.id,
+			sha256: document.sha256, sizeBytes: document.size_bytes, now,
+		});
 		await this.store.put(archiveKey, new Uint8Array(object.body), document.sha256);
 		let result: Awaited<ReturnType<RequestAdminRepository['reviewDocument']>>;
 		try {
@@ -102,14 +109,59 @@ export class RequestAdminService {
 				actor: input.actor,
 				...parsed.data,
 				archiveKey,
+				storageIntentId,
 				requestId: input.requestId,
 				now,
 			});
 		} catch (error) {
-			await this.store.delete(archiveKey).catch(() => undefined);
-			throw error;
+			let authoritative: Awaited<ReturnType<
+				typeof this.repository.loadDocumentArchiveState
+			>> | null = null;
+			let authoritativeReadSucceeded = false;
+			try {
+				authoritative = await this.repository
+					.loadDocumentArchiveState(parsed.data.documentId);
+				authoritativeReadSucceeded = true;
+			} catch {
+				// Keep the staged object until the intent reconciler can prove that
+				// no D1 record references it.
+			}
+			if (authoritative?.review_status === 'approved'
+				&& authoritative.archive_r2_key === archiveKey) {
+				result = {
+					resultRef: `authorization-document:${parsed.data.documentId}:approved`,
+					replayed: true,
+				};
+			} else {
+				if (authoritativeReadSucceeded) {
+					await this.store.delete(archiveKey).catch(() => undefined);
+					if (storageIntentId) {
+						await this.storageIntents?.markDeletePending(storageIntentId, this.now())
+							.catch(() => undefined);
+					}
+				}
+				throw error;
+			}
 		}
-		if (result.replayed) await this.store.delete(archiveKey).catch(() => undefined);
+		if (result.replayed) {
+			let authoritative: Awaited<ReturnType<
+				typeof this.repository.loadDocumentArchiveState
+			>> | null = null;
+			try {
+				authoritative = await this.repository
+					.loadDocumentArchiveState(parsed.data.documentId);
+			} catch {
+				// An unavailable verification read must never authorize deletion.
+			}
+			if (authoritative && authoritative.archive_r2_key !== archiveKey) {
+				await this.store.delete(archiveKey).catch(() => undefined);
+				if (storageIntentId) {
+					await this.storageIntents?.markDeletePending(storageIntentId, this.now()).catch(() => undefined);
+				}
+			}
+		} else if (storageIntentId) {
+			await this.storageIntents?.markLinked(storageIntentId, this.now()).catch(() => undefined);
+		}
 		try {
 			await this.store.delete(document.quarantine_r2_key);
 			await this.documentRepository.completeQuarantineDelete(document.id, now);
@@ -136,10 +188,11 @@ export class RequestAdminService {
 		});
 	}
 
-	processExpiredAuthorizations(now = this.now()) {
+	processExpiredAuthorizations(now = this.now(), limit = 100) {
 		return this.repository.processExpiredAuthorizations({
 			currentDate: berlinCalendarDate(now),
 			now,
+			limit,
 		});
 	}
 }

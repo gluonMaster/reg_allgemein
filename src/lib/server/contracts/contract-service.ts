@@ -30,6 +30,8 @@ import {
 } from './pdf';
 import type { ContractArtifactStore } from './storage';
 import { contractTemplateRegistry, renderContractSource } from './templates';
+import type { StorageIntentRepository } from '$lib/server/operations/storage-intents';
+import { contractArtifactDownloadPurposeSchema } from '$lib/server/security/download-purpose';
 
 type DraftRenderInput = Omit<ContractRenderInput, 'offerNumber' | 'contractNumber'>;
 
@@ -90,7 +92,8 @@ export class ContractService {
 		private readonly store: ContractArtifactStore,
 		private readonly config: RuntimeConfig,
 		adapter?: ContractPdfAdapter,
-		private readonly now: () => string = () => new Date().toISOString()
+		private readonly now: () => string = () => new Date().toISOString(),
+		private readonly storageIntents?: StorageIntentRepository
 	) {
 		this.adapter = adapter ?? this.buildAdapter();
 	}
@@ -107,7 +110,10 @@ export class ContractService {
 	}
 
 	async installSyntheticTestFixtures(admin: AdminActor) {
-		if (this.config.appEnvironment !== 'test' || this.config.contracts.renderer !== 'synthetic_test') {
+		if (
+			this.config.appEnvironment !== 'test' ||
+			this.config.contracts.renderer !== 'synthetic_test'
+		) {
 			throw new ContractServiceError('SYNTHETIC_FIXTURES_TEST_ONLY');
 		}
 		const provider = {
@@ -125,29 +131,40 @@ export class ContractService {
 			kontaktUrl: 'https://example.test/kontakt',
 		};
 		const templates = await Promise.all(
-			(Object.keys(contractTemplateRegistry) as ContractTemplateId[]).map(async (templateId) => {
-				const definition = contractTemplateRegistry[templateId];
-				const bundle = new TextEncoder().encode(
-					canonicalJson({ templateId, version: definition.templateVersion,
-						css: definition.css, renderer: 'synthetic-test-pdf-v1' })
-				);
-				const bundleHash = await sha256Bytes(bundle);
-				const key = `contract-templates/synthetic/${templateId}/synthetic-core-v1.json`;
-				await this.store.put(key, bundle, bundleHash);
-				return {
-					id: `contract-template:synthetic:${templateId}:v1`,
-					templateId,
-					bundleKey: key,
-					bundleHash,
-					htmlSourceHash: await hashCanonical({ templateId, renderer: definition.render.toString() }),
-					cssSourceHash: await hashCanonical({ css: definition.css }),
-				};
-			})
+			(Object.keys(contractTemplateRegistry) as ContractTemplateId[]).map(
+				async (templateId) => {
+					const definition = contractTemplateRegistry[templateId];
+					const bundle = new TextEncoder().encode(
+						canonicalJson({
+							templateId,
+							version: definition.templateVersion,
+							css: definition.css,
+							renderer: 'synthetic-test-pdf-v1',
+						})
+					);
+					const bundleHash = await sha256Bytes(bundle);
+					const key = `contract-templates/synthetic/${templateId}/synthetic-core-v1.json`;
+					await this.store.put(key, bundle, bundleHash);
+					return {
+						id: `contract-template:synthetic:${templateId}:v1`,
+						templateId,
+						bundleKey: key,
+						bundleHash,
+						htmlSourceHash: await hashCanonical({
+							templateId,
+							renderer: definition.render.toString(),
+						}),
+						cssSourceHash: await hashCanonical({ css: definition.css }),
+					};
+				}
+			)
 		);
 		return this.repository.installSyntheticTemplateFixtures({
 			admin,
 			providerSnapshotJson: JSON.stringify(provider),
-			providerPaymentTermsHash: await hashCanonical({ version: provider.paymentTermsVersion }),
+			providerPaymentTermsHash: await hashCanonical({
+				version: provider.paymentTermsVersion,
+			}),
 			mediaContactSnapshotJson: canonicalJson(mediaContact),
 			mediaContactSnapshotHash: await hashCanonical(mediaContact),
 			templates,
@@ -188,7 +205,8 @@ export class ContractService {
 			request.request_kind === 'individual' &&
 			(request.funding_kind !== 'self_pay' ||
 				request.unit_rate_cents !== input.render.billing.finalPriceCents)
-		) throw new ContractServiceError('INDIVIDUAL_TARIFF_CHANGED');
+		)
+			throw new ContractServiceError('INDIVIDUAL_TARIFF_CHANGED');
 		if (request.request_kind === 'nachhilfe') {
 			await this.repository.assertFundingEligible({
 				requestId: request.id,
@@ -228,13 +246,19 @@ export class ContractService {
 			childId: input.childId,
 			courseGroupId: input.render.service.courseGroupId!,
 		});
-		if (!quote || !['quoted', 'confirmed'].includes(quote.status) || quote.expires_at <= input.now ||
-			quote.price_version_current !== 1 || quote.contract_kind !== input.render.templateId ||
+		if (
+			!quote ||
+			!['quoted', 'confirmed'].includes(quote.status) ||
+			quote.expires_at <= input.now ||
+			quote.price_version_current !== 1 ||
+			quote.contract_kind !== input.render.templateId ||
 			quote.price_source !== input.render.billing.priceSource ||
 			quote.price_mode !== input.render.billing.priceMode ||
 			quote.base_price_cents !== input.render.billing.basePriceCents ||
 			quote.final_price_cents !== input.render.billing.finalPriceCents ||
-			quote.price_version_id !== input.priceVersionId || quote.price_rule_id !== input.priceRuleId) {
+			quote.price_version_id !== input.priceVersionId ||
+			quote.price_rule_id !== input.priceRuleId
+		) {
 			throw new ContractServiceError('GROUP_PRICE_REVALIDATION_FAILED');
 		}
 	}
@@ -246,12 +270,16 @@ export class ContractService {
 	}) {
 		ensureTimestamp(input.payload.expiresAt, 'CONTRACT_EXPIRY_INVALID');
 		const now = this.now();
-		if (input.payload.expiresAt <= now) throw new ContractServiceError('CONTRACT_EXPIRY_INVALID');
+		if (input.payload.expiresAt <= now)
+			throw new ContractServiceError('CONTRACT_EXPIRY_INVALID');
 		const template = await this.repository.loadTemplate(input.payload.templateVersionId);
 		if (!template || template.approval_status !== 'approved') {
 			throw new ContractServiceError('CONTRACT_TEMPLATE_NOT_APPROVED');
 		}
-		const number = await this.repository.prepareNumber(input.payload.userId, input.payload.childId);
+		const number = await this.repository.prepareNumber(
+			input.payload.userId,
+			input.payload.childId
+		);
 		const id = crypto.randomUUID();
 		const offerNumber = `OFFER-${id}`;
 		const contractNumber = `${number.family_display_id}-${number.next_contract_sequence}`;
@@ -268,11 +296,17 @@ export class ContractService {
 			render.legal.clauseSetVersion !== template.clause_set_version ||
 			render.legal.distanceLegalProfile !== template.distance_legal_profile ||
 			render.legal.distanceLegalBasisHash !== template.distance_legal_basis_hash
-		) throw new ContractServiceError('CONTRACT_TEMPLATE_SNAPSHOT_MISMATCH');
+		)
+			throw new ContractServiceError('CONTRACT_TEMPLATE_SNAPSHOT_MISMATCH');
 		if (
-			(render.billing.priceMode === 'manual_override') !== Boolean(input.payload.manualOverride)
-		) throw new ContractServiceError('MANUAL_OVERRIDE_EVIDENCE_REQUIRED');
-		if (input.payload.manualOverride && input.payload.manualOverride.reason.trim().length < 10) {
+			(render.billing.priceMode === 'manual_override') !==
+			Boolean(input.payload.manualOverride)
+		)
+			throw new ContractServiceError('MANUAL_OVERRIDE_EVIDENCE_REQUIRED');
+		if (
+			input.payload.manualOverride &&
+			input.payload.manualOverride.reason.trim().length < 10
+		) {
 			throw new ContractServiceError('MANUAL_OVERRIDE_REASON_REQUIRED');
 		}
 		const service = await this.serviceContext({
@@ -351,14 +385,21 @@ export class ContractService {
 		if (
 			template.approval_basis !== 'authorized_verein_approval' &&
 			template.approval_basis !== 'legal_review'
-		) throw new ContractServiceError('PRODUCTION_TEMPLATE_APPROVAL_REQUIRED');
+		)
+			throw new ContractServiceError('PRODUCTION_TEMPLATE_APPROVAL_REQUIRED');
 		if (template.provider_approval_status !== 'approved') {
 			throw new ContractServiceError('PRODUCTION_PROVIDER_SNAPSHOT_NOT_APPROVED');
 		}
-		if (!template.media_contact_version_id || template.media_contact_approval_status !== 'approved') {
+		if (
+			!template.media_contact_version_id ||
+			template.media_contact_approval_status !== 'approved'
+		) {
 			throw new ContractServiceError('PRODUCTION_MEDIA_CONTACT_NOT_APPROVED');
 		}
-		if (template.distance_legal_profile === 'offline_only' || !template.distance_legal_basis_hash) {
+		if (
+			template.distance_legal_profile === 'offline_only' ||
+			!template.distance_legal_basis_hash
+		) {
 			throw new ContractServiceError('ONLINE_LEGAL_PROFILE_REQUIRED');
 		}
 		if (
@@ -384,7 +425,11 @@ export class ContractService {
 			return { offerId: prior.result_ref, replayed: true };
 		}
 		const offer = await this.repository.loadOffer(input.offerId);
-		if (!offer || offer.status !== 'draft' || !['not_started', 'failed'].includes(offer.render_status)) {
+		if (
+			!offer ||
+			offer.status !== 'draft' ||
+			!['not_started', 'failed'].includes(offer.render_status)
+		) {
 			throw new ContractServiceError('CONTRACT_RENDER_STATE_REJECTED');
 		}
 		const template = await this.repository.loadTemplate(offer.template_version_id);
@@ -393,16 +438,20 @@ export class ContractService {
 		if (
 			source.renderInputHash !== offer.render_input_hash ||
 			source.sourceManifestHash !== offer.source_manifest_hash
-		) throw new ContractServiceError('CONTRACT_SOURCE_HASH_MISMATCH');
+		)
+			throw new ContractServiceError('CONTRACT_SOURCE_HASH_MISMATCH');
 		const attemptNo = await this.repository.nextAttemptNumber(offer.id);
 		if (attemptNo > this.config.contracts.maxRenderAttempts) {
 			throw new ContractServiceError('CONTRACT_RENDER_ATTEMPTS_EXHAUSTED');
 		}
 		const startedAt = this.now();
 		const marked = await this.repository.markRendering(offer.id, input.admin.id, startedAt);
-		if ((marked.meta.changes ?? 0) !== 1) throw new ContractServiceError('CONTRACT_RENDER_RACE');
+		if ((marked.meta.changes ?? 0) !== 1)
+			throw new ContractServiceError('CONTRACT_RENDER_RACE');
 		try {
-			const browserBudgetUsedMs = await this.repository.browserBudgetUsed(berlinCalendarDate(startedAt));
+			const browserBudgetUsedMs = await this.repository.browserBudgetUsed(
+				berlinCalendarDate(startedAt)
+			);
 			const result = await this.adapter!.render({
 				html: source.html,
 				sourceManifestHash: source.sourceManifestHash,
@@ -418,11 +467,35 @@ export class ContractService {
 			});
 			const htmlKey = `contract-artifacts/offers/${crypto.randomUUID()}.html`;
 			const pdfKey = `contract-artifacts/offers/${crypto.randomUUID()}.pdf`;
+			const htmlIntentId = await this.storageIntents?.stage({
+				storageClass: 'archive',
+				objectKey: htmlKey,
+				objectKind: 'contract_offer_html',
+				sourceRef: offer.id,
+				sha256: htmlSha256,
+				sizeBytes: htmlBytes.byteLength,
+				now: startedAt,
+			});
+			const pdfIntentId = await this.storageIntents?.stage({
+				storageClass: 'archive',
+				objectKey: pdfKey,
+				objectKind: 'contract_offer_pdf',
+				sourceRef: offer.id,
+				sha256: result.sha256,
+				sizeBytes: result.bytes.byteLength,
+				now: startedAt,
+			});
 			await this.store.put(htmlKey, htmlBytes, htmlSha256);
 			try {
 				await this.store.put(pdfKey, result.bytes, result.sha256);
 			} catch (error) {
 				await this.store.delete(htmlKey).catch(() => undefined);
+				for (const intentId of [htmlIntentId, pdfIntentId]) {
+					if (intentId)
+						await this.storageIntents
+							?.markDeletePending(intentId, this.now())
+							.catch(() => undefined);
+				}
 				throw error;
 			}
 			try {
@@ -444,25 +517,60 @@ export class ContractService {
 					idempotencyKey: input.idempotencyKey,
 					requestHash,
 					requestId: input.requestId,
+					htmlStorageIntentId: htmlIntentId,
+					pdfStorageIntentId: pdfIntentId,
 				});
 			} catch (error) {
-				await Promise.allSettled([this.store.delete(htmlKey), this.store.delete(pdfKey)]);
+				let replay: Awaited<ReturnType<typeof this.repository.loadAdminAction>> = null;
+				let authoritativeReadSucceeded = false;
+				try {
+					replay = await this.repository.loadAdminAction(input.admin.id, input.idempotencyKey);
+					authoritativeReadSucceeded = true;
+				} catch {
+					// Keep staged objects until reconciliation can prove they are unreferenced.
+				}
+				if (
+					replay?.action === 'render_send' &&
+					replay.request_hash_sha256 === requestHash &&
+					replay.result_ref === offer.id
+				) {
+					return { offerId: offer.id, contractHash, replayed: true };
+				}
+				if (authoritativeReadSucceeded) {
+					if (!htmlIntentId && !pdfIntentId) {
+						await Promise.allSettled([this.store.delete(htmlKey), this.store.delete(pdfKey)]);
+					}
+					for (const intentId of [htmlIntentId, pdfIntentId]) {
+						if (intentId)
+							await this.storageIntents
+								?.markDeletePending(intentId, this.now())
+								.catch(() => undefined);
+					}
+				}
 				throw error;
+			}
+			for (const intentId of [htmlIntentId, pdfIntentId]) {
+				if (intentId)
+					await this.storageIntents
+						?.markLinked(intentId, this.now())
+						.catch(() => undefined);
 			}
 			return { offerId: offer.id, contractHash, replayed: false };
 		} catch (error) {
 			const pdfError = error instanceof ContractPdfError ? error : null;
-			await this.repository.recordRenderFailure({
-				offerId: offer.id,
-				attemptNo,
-				template: template!,
-				sourceManifestHash: source.sourceManifestHash,
-				startedAt,
-				finishedAt: this.now(),
-				status: pdfError?.retryable ? 'retryable_failed' : 'failed',
-				errorCode: pdfError?.code ?? 'ARTIFACT_PERSISTENCE_FAILED',
-				retryAfterSeconds: pdfError?.retryAfterSeconds ?? null,
-			}).catch(() => undefined);
+			await this.repository
+				.recordRenderFailure({
+					offerId: offer.id,
+					attemptNo,
+					template: template!,
+					sourceManifestHash: source.sourceManifestHash,
+					startedAt,
+					finishedAt: this.now(),
+					status: pdfError?.retryable ? 'retryable_failed' : 'failed',
+					errorCode: pdfError?.code ?? 'ARTIFACT_PERSISTENCE_FAILED',
+					retryAfterSeconds: pdfError?.retryAfterSeconds ?? null,
+				})
+				.catch(() => undefined);
 			throw new ContractServiceError(pdfError?.code ?? 'CONTRACT_RENDER_FAILED');
 		}
 	}
@@ -476,7 +584,8 @@ export class ContractService {
 	}) {
 		const parsed = contractParentDecisionSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('CONTRACT_DECISION_INVALID');
-		if (!this.config.contracts.sendEnabled) throw new ContractServiceError('CONTRACT_SEND_DISABLED');
+		if (!this.config.contracts.sendEnabled)
+			throw new ContractServiceError('CONTRACT_SEND_DISABLED');
 		const now = this.now();
 		return this.repository.parentDecision({
 			actor: input.actor,
@@ -497,12 +606,18 @@ export class ContractService {
 	private async revalidateOffer(offer: StoredContractOffer) {
 		const render = contractRenderInputSchema.parse(JSON.parse(offer.render_input_json));
 		const source = await renderContractSource(render);
-		if (source.renderInputHash !== offer.render_input_hash ||
-			source.sourceManifestHash !== offer.source_manifest_hash) {
+		if (
+			source.renderInputHash !== offer.render_input_hash ||
+			source.sourceManifestHash !== offer.source_manifest_hash
+		) {
 			throw new ContractServiceError('CONTRACT_SOURCE_HASH_MISMATCH');
 		}
-		await this.serviceContext({ userId: offer.user_id, childId: offer.child_id,
-			academicPeriodId: offer.academic_period_id, render });
+		await this.serviceContext({
+			userId: offer.user_id,
+			childId: offer.child_id,
+			academicPeriodId: offer.academic_period_id,
+			render,
+		});
 		const template = await this.repository.loadTemplate(offer.template_version_id);
 		await this.assertGroupPricing({
 			userId: offer.user_id,
@@ -517,11 +632,7 @@ export class ContractService {
 		return render;
 	}
 
-	async formAndActivate(input: {
-		admin: AdminActor;
-		payload: unknown;
-		requestId: string;
-	}) {
+	async formAndActivate(input: { admin: AdminActor; payload: unknown; requestId: string }) {
 		const parsed = contractFormationSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('CONTRACT_FORMATION_INVALID');
 		if (!this.config.contracts.sendEnabled || !this.adapter) {
@@ -531,8 +642,14 @@ export class ContractService {
 			offerId: parsed.data.offerId,
 			reason: parsed.data.reason,
 		});
-		const prior = await this.repository.loadAdminAction(input.admin.id, parsed.data.idempotencyKey);
-		if (prior && (prior.action !== 'form_activate' || prior.request_hash_sha256 !== requestHash)) {
+		const prior = await this.repository.loadAdminAction(
+			input.admin.id,
+			parsed.data.idempotencyKey
+		);
+		if (
+			prior &&
+			(prior.action !== 'form_activate' || prior.request_hash_sha256 !== requestHash)
+		) {
 			throw new ContractServiceError('IDEMPOTENCY_KEY_REUSED');
 		}
 		const offer = await this.repository.loadOffer(parsed.data.offerId);
@@ -583,9 +700,20 @@ export class ContractService {
 			const result = await this.adapter.render({
 				html,
 				sourceManifestHash: certificate.source_hash,
-				browserBudgetUsedMs: await this.repository.browserBudgetUsed(berlinCalendarDate(this.now())),
+				browserBudgetUsedMs: await this.repository.browserBudgetUsed(
+					berlinCalendarDate(this.now())
+				),
 			});
 			const key = `contract-artifacts/certificates/${crypto.randomUUID()}.pdf`;
+			const storageIntentId = await this.storageIntents?.stage({
+				storageClass: 'archive',
+				objectKey: key,
+				objectKind: 'formation_certificate_pdf',
+				sourceRef: certificate.id,
+				sha256: result.sha256,
+				sizeBytes: result.bytes.byteLength,
+				now: this.now(),
+			});
 			await this.store.put(key, result.bytes, result.sha256);
 			try {
 				await this.repository.completeCertificate({
@@ -598,18 +726,46 @@ export class ContractService {
 					sha256: result.sha256,
 					sourceHash: certificate.source_hash,
 					now: this.now(),
+					storageIntentId,
 				});
 			} catch (error) {
-				await this.store.delete(key).catch(() => undefined);
+				let replay: Awaited<ReturnType<
+					typeof this.repository.loadCertificateByContract
+				>> = null;
+				let authoritativeReadSucceeded = false;
+				try {
+					replay = await this.repository.loadCertificateByContract(formation.contractId);
+					authoritativeReadSucceeded = true;
+				} catch {
+					// Keep the staged certificate until intent reconciliation.
+				}
+				if (replay?.render_status === 'ready' && replay.certificate_pdf_r2_key === key) {
+					return { ...formation, certificateReady: true };
+				}
+				if (authoritativeReadSucceeded && !storageIntentId) {
+					await this.store.delete(key).catch(() => undefined);
+				}
+				if (authoritativeReadSucceeded && storageIntentId) {
+					await this.storageIntents
+						?.markDeletePending(storageIntentId, this.now())
+						.catch(() => undefined);
+				}
 				throw error;
+			}
+			if (storageIntentId) {
+				await this.storageIntents
+					?.markLinked(storageIntentId, this.now())
+					.catch(() => undefined);
 			}
 			return { ...formation, certificateReady: true };
 		} catch (error) {
-			await this.repository.markCertificateFailed(
-				certificate.id,
-				error instanceof ContractPdfError ? error.code : 'CERTIFICATE_RENDER_FAILED',
-				this.now()
-			).catch(() => undefined);
+			await this.repository
+				.markCertificateFailed(
+					certificate.id,
+					error instanceof ContractPdfError ? error.code : 'CERTIFICATE_RENDER_FAILED',
+					this.now()
+				)
+				.catch(() => undefined);
 			throw new ContractServiceError('FORMATION_CERTIFICATE_RENDER_FAILED');
 		}
 	}
@@ -621,20 +777,29 @@ export class ContractService {
 	}) {
 		const parsed = contractEndRequestSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('CONTRACT_END_REQUEST_INVALID');
-		const contract = await this.repository.loadOwnedContract(input.actor.id, parsed.data.contractId);
+		const contract = await this.repository.loadOwnedContract(
+			input.actor.id,
+			parsed.data.contractId
+		);
 		if (!contract) throw new ContractServiceError('CONTRACT_NOT_FOUND');
-		if (parsed.data.kind === 'withdrawal' && contract.distance_legal_profile !== 'widerruf_applicable') {
+		if (
+			parsed.data.kind === 'withdrawal' &&
+			contract.distance_legal_profile !== 'widerruf_applicable'
+		) {
 			throw new ContractServiceError('CONTRACT_WITHDRAWAL_NOT_APPLICABLE');
 		}
 		const now = this.now();
 		const receivedOn = berlinCalendarDate(now);
-		const calculatedEffectiveOn = parsed.data.kind === 'ordinary_termination'
-			? contract.contract_kind === 'group_monthly'
-				? calendarMonthEnd(receivedOn)
-				: contract.contract_kind === 'group_yearly'
-					? contract.effective_to
-					: parsed.data.requestedEffectiveOn
-			: parsed.data.kind === 'withdrawal' ? receivedOn : parsed.data.requestedEffectiveOn;
+		const calculatedEffectiveOn =
+			parsed.data.kind === 'ordinary_termination'
+				? contract.contract_kind === 'group_monthly'
+					? calendarMonthEnd(receivedOn)
+					: contract.contract_kind === 'group_yearly'
+						? contract.effective_to
+						: parsed.data.requestedEffectiveOn
+				: parsed.data.kind === 'withdrawal'
+					? receivedOn
+					: parsed.data.requestedEffectiveOn;
 		const requestHash = await hashCanonical({
 			contractId: parsed.data.contractId,
 			kind: parsed.data.kind,
@@ -669,9 +834,15 @@ export class ContractService {
 	}) {
 		const parsed = attendanceNoticeSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('ATTENDANCE_NOTICE_INVALID');
-		const contract = await this.repository.loadOwnedContract(input.actor.id, parsed.data.contractId);
-		if (!contract || !contract.service_engagement_id ||
-			!['individual_hourly', 'nachhilfe_hourly'].includes(contract.contract_kind)) {
+		const contract = await this.repository.loadOwnedContract(
+			input.actor.id,
+			parsed.data.contractId
+		);
+		if (
+			!contract ||
+			!contract.service_engagement_id ||
+			!['individual_hourly', 'nachhilfe_hourly'].includes(contract.contract_kind)
+		) {
 			throw new ContractServiceError('ATTENDANCE_NOTICE_NOT_APPLICABLE');
 		}
 		const noticeHash = await hashCanonical({
@@ -689,11 +860,7 @@ export class ContractService {
 		});
 	}
 
-	async reviewEndRequest(input: {
-		admin: AdminActor;
-		payload: unknown;
-		requestId: string;
-	}) {
+	async reviewEndRequest(input: { admin: AdminActor; payload: unknown; requestId: string }) {
 		const parsed = terminationReviewSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('TERMINATION_REVIEW_INVALID');
 		const requestHash = await hashCanonical({
@@ -703,8 +870,14 @@ export class ContractService {
 			reason: parsed.data.reason,
 			externalDebtCheckResult: parsed.data.externalDebtCheckResult,
 		});
-		const prior = await this.repository.loadAdminAction(input.admin.id, parsed.data.idempotencyKey);
-		if (prior && (prior.action !== 'termination_review' || prior.request_hash_sha256 !== requestHash)) {
+		const prior = await this.repository.loadAdminAction(
+			input.admin.id,
+			parsed.data.idempotencyKey
+		);
+		if (
+			prior &&
+			(prior.action !== 'termination_review' || prior.request_hash_sha256 !== requestHash)
+		) {
 			throw new ContractServiceError('IDEMPOTENCY_KEY_REUSED');
 		}
 		const request = await this.repository.loadEndRequestForAdmin(parsed.data.endRequestId);
@@ -712,11 +885,14 @@ export class ContractService {
 			throw new ContractServiceError('TERMINATION_REVIEW_STATE_REJECTED');
 		}
 		const mutual = request.kind === 'mutual_termination_request';
-		if ((mutual && !['approved', 'declined'].includes(parsed.data.decision)) ||
+		if (
+			(mutual && !['approved', 'declined'].includes(parsed.data.decision)) ||
 			(!mutual && !['effective_date_confirmed', 'disputed'].includes(parsed.data.decision)) ||
 			(!mutual && parsed.data.externalDebtCheckResult !== 'not_checked') ||
 			(parsed.data.decision === 'effective_date_confirmed' &&
-				!parsed.data.effectiveOn && !request.calculated_effective_on)) {
+				!parsed.data.effectiveOn &&
+				!request.calculated_effective_on)
+		) {
 			throw new ContractServiceError('TERMINATION_REVIEW_DECISION_REJECTED');
 		}
 		return this.repository.reviewEndRequest({
@@ -742,8 +918,10 @@ export class ContractService {
 		if (!parsed.success) throw new ContractServiceError('MEDIA_DECISION_INVALID');
 		const captureScopes = [...new Set(parsed.data.captureScopes)].sort();
 		const publicationChannels = [...new Set(parsed.data.publicationChannels)].sort();
-		if (captureScopes.length !== parsed.data.captureScopes.length ||
-			publicationChannels.length !== parsed.data.publicationChannels.length) {
+		if (
+			captureScopes.length !== parsed.data.captureScopes.length ||
+			publicationChannels.length !== parsed.data.publicationChannels.length
+		) {
 			throw new ContractServiceError('MEDIA_DECISION_INVALID');
 		}
 		const context = await this.repository.loadMediaDecisionContext(
@@ -754,9 +932,11 @@ export class ContractService {
 		if (!context || context.approval_status !== 'approved') {
 			throw new ContractServiceError('MEDIA_DECISION_CONTEXT_REJECTED');
 		}
-		if (parsed.data.decision === 'granted' &&
+		if (
+			parsed.data.decision === 'granted' &&
 			(!this.config.contracts.mediaOnlineGrantEnabled ||
-				context.compliance_assessment_status !== 'passed')) {
+				context.compliance_assessment_status !== 'passed')
+		) {
 			throw new ContractServiceError('MEDIA_ONLINE_GRANT_DISABLED');
 		}
 		const now = this.now();
@@ -786,17 +966,15 @@ export class ContractService {
 		});
 	}
 
-	async recordMediaWithdrawal(input: {
-		admin: AdminActor;
-		payload: unknown;
-		requestId: string;
-	}) {
+	async recordMediaWithdrawal(input: { admin: AdminActor; payload: unknown; requestId: string }) {
 		const parsed = mediaWithdrawalSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('MEDIA_WITHDRAWAL_INVALID');
 		const captureScopes = [...new Set(parsed.data.captureScopes)].sort();
 		const publicationChannels = [...new Set(parsed.data.publicationChannels)].sort();
-		if (captureScopes.length !== parsed.data.captureScopes.length ||
-			publicationChannels.length !== parsed.data.publicationChannels.length) {
+		if (
+			captureScopes.length !== parsed.data.captureScopes.length ||
+			publicationChannels.length !== parsed.data.publicationChannels.length
+		) {
 			throw new ContractServiceError('MEDIA_WITHDRAWAL_INVALID');
 		}
 		const evidenceHash = await hashCanonical({
@@ -855,52 +1033,76 @@ export class ContractService {
 		artifactId: string;
 		requestId: string;
 	}) {
-		const artifact = await this.repository.loadArtifactForOwner(input.actor.id, input.artifactId);
+		const artifact = await this.repository.loadArtifactForOwner(
+			input.actor.id,
+			input.artifactId
+		);
 		if (!artifact) throw new ContractServiceError('CONTRACT_ARTIFACT_NOT_FOUND');
 		const object = await this.store.get(artifact.private_r2_key);
-		if (!object || (await sha256Bytes(object.body)) !== artifact.sha256) {
+		if (
+			!object ||
+			object.size !== artifact.size_bytes ||
+			(await sha256Bytes(object.body)) !== artifact.sha256
+		) {
 			throw new ContractServiceError('CONTRACT_ARTIFACT_INTEGRITY_FAILED');
 		}
-		await this.repository.auditArtifactRead({
+		await this.repository.authorizeAndAuditOwnerArtifactRead({
 			artifactId: artifact.id,
-			actorUserId: input.actor.id,
-			actorKind: 'user',
+			ownerUserId: input.actor.id,
+			expectedStorageKey: artifact.private_r2_key,
+			expectedSha256: artifact.sha256,
+			expectedSizeBytes: artifact.size_bytes,
 			requestId: input.requestId,
 			now: this.now(),
 		});
 		return {
 			body: object.body,
 			contentType: artifact.content_type,
-			filename: artifact.content_type === 'application/pdf'
-				? `vertrag-${artifact.id.slice(0, 8)}.pdf`
-				: `vertrag-${artifact.id.slice(0, 8)}.html`,
+			filename:
+				artifact.content_type === 'application/pdf'
+					? `vertrag-${artifact.id.slice(0, 8)}.pdf`
+					: `vertrag-${artifact.id.slice(0, 8)}.html`,
 		};
 	}
 
 	async downloadAdminArtifact(input: {
 		admin: AdminActor;
 		artifactId: string;
+		purpose: unknown;
 		requestId: string;
 	}) {
-		const artifact = await this.repository.loadArtifactForAdmin(input.admin.id, input.artifactId);
+		const purpose = contractArtifactDownloadPurposeSchema.safeParse(input.purpose);
+		if (!purpose.success) throw new ContractServiceError('INVALID_DOWNLOAD_PURPOSE');
+		const artifact = await this.repository.loadArtifactForAdmin(
+			input.admin.id,
+			input.artifactId
+		);
 		if (!artifact) throw new ContractServiceError('CONTRACT_ARTIFACT_NOT_FOUND');
 		const object = await this.store.get(artifact.private_r2_key);
-		if (!object || (await sha256Bytes(object.body)) !== artifact.sha256) {
+		if (
+			!object ||
+			object.size !== artifact.size_bytes ||
+			(await sha256Bytes(object.body)) !== artifact.sha256
+		) {
 			throw new ContractServiceError('CONTRACT_ARTIFACT_INTEGRITY_FAILED');
 		}
-		await this.repository.auditArtifactRead({
+		await this.repository.authorizeAndAuditAdminArtifactRead({
 			artifactId: artifact.id,
-			actorUserId: input.admin.id,
-			actorKind: 'user',
+			adminUserId: input.admin.id,
+			purposeCode: purpose.data,
+			expectedStorageKey: artifact.private_r2_key,
+			expectedSha256: artifact.sha256,
+			expectedSizeBytes: artifact.size_bytes,
 			requestId: input.requestId,
 			now: this.now(),
 		});
 		return {
 			body: object.body,
 			contentType: artifact.content_type,
-			filename: artifact.content_type === 'application/pdf'
-				? `vertrag-admin-${artifact.id.slice(0, 8)}.pdf`
-				: `vertrag-admin-${artifact.id.slice(0, 8)}.html`,
+			filename:
+				artifact.content_type === 'application/pdf'
+					? `vertrag-admin-${artifact.id.slice(0, 8)}.pdf`
+					: `vertrag-admin-${artifact.id.slice(0, 8)}.html`,
 		};
 	}
 }

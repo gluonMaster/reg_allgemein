@@ -110,6 +110,13 @@ Domain transaction записывает template ID, recipient reference и ми
 snapshot параметров. Worker формирует письмо на утвержденном locale. Ошибка
 provider сохраняет error code/attempt, но ответ admin уже виден в кабинете.
 
+Claim email выполняет conditional recipient revalidation непосредственно в
+`UPDATE`: account должен оставаться active/unblocked, а token/email/family
+version — current. Account closure и dispatch используют один D1 serialization
+barrier. `processing` row не позволяет closure завершиться; closure, выигравший
+первым, отменяет `pending|retry` rows и делает последующий claim пустым. Worker
+не продолжает отправку по одному лишь результату предварительного `SELECT`.
+
 Для verification/password-reset stage-05 outbox хранит только server-side
 `auth_token` reference и template ID, но не raw token или готовую secret-bearing
 ссылку. Dispatch adapter восстанавливает одноразовый opaque token server-side из

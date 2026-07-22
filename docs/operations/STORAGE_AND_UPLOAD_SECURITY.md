@@ -7,19 +7,20 @@ local-AV flow; платный server scanner не требуется.
 
 ## Размещение и объём
 
-Используются private R2 Standard buckets без `r2.dev`/public URL. Bucket для
-клиентских документов и договоров создаётся сразу с `jurisdiction=eu`, потому
-что jurisdiction нельзя изменить после создания. Location Hint не заменяет
-jurisdictional restriction.
+Используются два физически разных private R2 Standard bucket без `r2.dev`/
+public URL: `R2_QUARANTINE` для недоверенных uploads и `R2_ARCHIVE` для approved/
+generated evidence. Оба создаются сразу с `jurisdiction=eu`, потому что
+jurisdiction нельзя изменить после создания. Один bucket под двумя bindings не
+считается изоляцией. Location Hint не заменяет jurisdictional restriction.
 
 Оценка для 5 000 PDF:
 
 | Средний размер PDF | Общий объём |
-| ---: | ---: |
-| 0,25 MiB | 1,31 GB |
-| 0,5 MiB | 2,62 GB |
-| 1 MiB | 5,24 GB |
-| 2 MiB | 10,49 GB |
+| -----------------: | ----------: |
+|           0,25 MiB |     1,31 GB |
+|            0,5 MiB |     2,62 GB |
+|              1 MiB |     5,24 GB |
+|              2 MiB |    10,49 GB |
 
 Это небольшой объём. R2 Standard включает 10 GB-month и большие бесплатные
 месячные квоты операций; при 2 MiB на PDF превышение составляет около 0,49 GB,
@@ -45,6 +46,18 @@ versions, quarantine и backups. Infrequent Access для такого MVP не 
   не body документа;
 - выдача всегда проходит server-side owner/RBAC check и audit для admin.
 
+Каждый application `put` использует D1 write-ahead intent: до записи body
+создаётся `storage_object_intents(status=staged)` с bucket class, opaque key,
+hash, size и source reference. Domain D1 batch одновременно фиксирует ссылку на
+object, переводит intent в `linked` и создаёт append-only
+`storage_intent_link_assertions`. Если ответ D1 после `put` неоднозначен,
+application не удаляет object наугад: reconciler сначала ищет authoritative D1
+reference. Referenced intent становится `linked`; только не referenced staged/
+`delete_pending` object после 15-минутного grace можно lease-нуть и удалить.
+Claim повторяет `NOT referenced` в conditional update, поэтому поздно
+зафиксированная ссылка выигрывает у cleanup. Duplicate/stale Worker delivery
+ограничивается lease owner и не завершает чужую попытку.
+
 ## Базовая изоляция
 
 Auth/ownership, idempotency, hard limits, allowlist extension/MIME, basic
@@ -55,7 +68,9 @@ Original filename не используется как object key или respons
 
 Для PDF допустим только bounded non-rendering header/trailer check, необходимый
 для type/encryption rejection; full document parse, embedded-content extraction
-и decompression в application Worker запрещены.
+и decompression в application Worker запрещены. Encryption-name check
+декодирует стандартные PDF escapes `#HH`, поэтому `/Encr#79pt` и аналогичные
+варианты не обходят fail-closed rejection.
 
 Эти проверки не являются антивирусом. R2 хранит объект как opaque bytes и не
 исполняет его; заражение server-side возникает только если приложение передаст
@@ -82,7 +97,7 @@ Controlled download:
 
 - разрешён только admin после повторной RBAC-проверки и purpose/audit;
 - использует short-lived single-object response, `Content-Disposition:
-  attachment`, `Content-Type: application/octet-stream` и opaque filename с
+attachment`, `Content-Type: application/octet-stream` и opaque filename с
   short SHA-256; карантинный файл нельзя открыть через inline viewer;
 - не использует public bucket/r2.dev. Presigned URL, если выбран, считается
   bearer token и получает минимальный TTL; предпочтителен authenticated Worker
@@ -146,7 +161,8 @@ processing, AVV/DPA, subprocessor/no-training/no-retention review.
 
 - clean PDF/JPEG/PNG, encrypted PDF и известный local-AV alert fixture;
 - clean, но нерелевантный/нечитабельный funding document и request-reupload;
-- MIME/extension spoof, polyglot и malformed file;
+- MIME/extension spoof, реальный PDF/ZIP dual-parser polyglot (ZIP EOCD до
+  финального PDF xref/EOF) и malformed file;
 - oversize, ZIP/Office/SVG/executable rejection;
 - ни parent, ни обычный inline/download path не получает quarantined object;
   admin получает только forced attachment после RBAC/audit;
@@ -159,4 +175,7 @@ processing, AVV/DPA, subprocessor/no-training/no-retention review.
 - до `quarantine_expires_at` cleanup не удаляет body; первый успешный cleanup при
   `now >= quarantine_expires_at` удаляет его, не затрагивает approved archive и
   безопасно переживает duplicate cron delivery;
+- ambiguous D1 result после R2 put не вызывает eager delete; reconciler связывает
+  referenced object, а orphan cleanup не claim-ит object при появившейся D1
+  ссылке и соблюдает 15-минутный grace/lease;
 - logs/outbox не содержат filename, document body и PII.

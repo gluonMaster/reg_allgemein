@@ -93,14 +93,22 @@ export class OutboxRepository implements OutboxStore {
 		});
 		if (!candidate) return null;
 		const claimed = await this.db.run({
-			sql: `UPDATE email_outbox SET status = 'processing', locked_at = ?,
+			sql: `UPDATE email_outbox AS o SET status = 'processing', locked_at = ?,
 				lease_owner = ?, lease_until = ?, updated_at = ?
-			WHERE id = ? AND ((status IN ('pending', 'retry')
-					AND not_before <= ?
-					AND (next_attempt_at IS NULL OR next_attempt_at <= ?))
-				OR (status = 'processing' AND lease_until <= ?))`,
+			WHERE o.id = ? AND ((o.status IN ('pending', 'retry')
+					AND o.not_before <= ?
+					AND (o.next_attempt_at IS NULL OR o.next_attempt_at <= ?))
+				OR (o.status = 'processing' AND o.lease_until <= ?))
+				AND EXISTS (
+					SELECT 1 FROM users u
+					LEFT JOIN legacy_family_emails legacy_email
+						ON legacy_email.id = o.recipient_legacy_email_id
+					LEFT JOIN auth_tokens t
+						ON o.source_kind = 'auth_token' AND t.id = o.source_id
+					WHERE u.id = o.recipient_user_id AND ${validEmailRecipient}
+				)`,
 			params: [input.now, input.leaseOwner, input.leaseUntil, input.now,
-				candidate.id, input.now, input.now, input.now],
+				candidate.id, input.now, input.now, input.now, input.now],
 		});
 		if (claimed.meta.changes !== 1) return null;
 		return this.db.first<EmailOutboxRow>({

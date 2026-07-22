@@ -6,6 +6,7 @@ import { logServerError } from '$lib/server/observability/redaction';
 import { createAuthRuntime } from '$lib/server/auth/runtime';
 import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
 import { routeAccessPolicy } from '$lib/server/security/route-policy';
+import { withSecurityHeaders } from '$lib/server/security/response-headers';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.requestId = getOrCreateRequestId(event.request.headers.get('x-request-id'));
@@ -34,9 +35,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	const response = await resolve(event);
-	response.headers.set('x-request-id', event.locals.requestId);
-	return response;
+	return withSecurityHeaders(await resolve(event), {
+		requestId: event.locals.requestId,
+		production: config.appEnvironment === 'production',
+		noStore: event.route.id === '/auth/reset' || event.route.id === '/auth/verify',
+	});
 };
 
 export const handleError: HandleServerError = ({ error, event, status }) => {

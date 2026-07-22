@@ -355,7 +355,10 @@ export class AuthService {
 		});
 	}
 
-	cleanupExpiredEmailReservations(): Promise<number> {
-		return this.repository.cleanupExpiredEmailReservations(this.clock.now());
+	cleanupExpiredEmailReservations(limit = 100): Promise<number> {
+		if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+			throw new TypeError('AUTH_MAINTENANCE_LIMIT_INVALID');
+		}
+		return this.repository.cleanupExpiredEmailReservations(this.clock.now(), limit);
 	}
 }

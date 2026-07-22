@@ -310,12 +310,16 @@ export class TrialRepository {
 				child.full_name AS child_name, session.day_code, session.start_time,
 				session.location_display
 			FROM trial_bookings AS trial
+			JOIN users AS owner ON owner.id = trial.user_id AND owner.account_status <> 'closed'
 			JOIN children AS child ON child.id = trial.child_id
 			JOIN course_groups AS course ON course.id = trial.course_group_id
 			JOIN course_sessions AS session ON session.id = trial.session_id
 			WHERE (? = '' OR trial.status = ?)
 				AND (? = '' OR lower(course.display_name) LIKE ?
 					OR lower(child.full_name) LIKE ? OR trial.id = ?)
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+					WHERE archive.target_kind = 'trial_booking'
+						AND archive.target_id = trial.id)
 			ORDER BY CASE trial.status WHEN 'requested' THEN 1 WHEN 'confirmed' THEN 2
 				WHEN 'attended' THEN 3 ELSE 4 END, trial.created_at, trial.id
 			LIMIT 100`,

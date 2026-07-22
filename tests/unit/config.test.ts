@@ -1,11 +1,30 @@
 import { buildPortalUrl, loadRuntimeConfig, RuntimeConfigError } from '$lib/server/config/runtime';
 
 const fakeDb = { prepare() {} } as unknown as D1Database;
-const fakeR2 = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
+const fakeArchive = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
+const fakeQuarantine = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
 const fakeAssets = { fetch() {} } as unknown as Fetcher;
 const fakeBrowser = { quickAction() {} } as unknown as BrowserRun;
+const officialLinks = {
+	OFFICIAL_PRIVACY_URL: 'https://www.kolibri-dresden.de/datenschutz',
+	OFFICIAL_IMPRINT_URL: 'https://www.kolibri-dresden.de/impressum',
+	OFFICIAL_CONTACT_URL: 'https://www.kolibri-dresden.de/kontakt',
+	OFFICIAL_LINKS_VERSION: 'approved-test-links-v1',
+} as const;
 
 describe('runtime configuration', () => {
+	it('rejects one R2 binding object reused for archive and quarantine', () => {
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'development',
+				PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb,
+				R2_ARCHIVE: fakeArchive,
+				R2_QUARANTINE: fakeArchive,
+			})
+		).toThrow(RuntimeConfigError);
+	});
+
 	it('loads an explicit local portal origin and D1 binding', () => {
 		const config = loadRuntimeConfig({
 			APP_ENV: 'development',
@@ -36,23 +55,38 @@ describe('runtime configuration', () => {
 	});
 
 	it('validates Telegram destination, retry bounds, and the production provider gate', () => {
-		expect(() => loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
-			TELEGRAM_PROVIDER: 'fake',
-		})).toThrow(RuntimeConfigError);
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'development',
+				PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb,
+				TELEGRAM_PROVIDER: 'fake',
+			})
+		).toThrow(RuntimeConfigError);
 		const configured = loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
-			TELEGRAM_PROVIDER: 'fake', TELEGRAM_CHAT_ID: 'bureau-test',
-			OUTBOX_RETRY_BASE_SECONDS: '30', OUTBOX_RETRY_MAX_SECONDS: '600',
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+			TELEGRAM_PROVIDER: 'fake',
+			TELEGRAM_CHAT_ID: 'bureau-test',
+			OUTBOX_RETRY_BASE_SECONDS: '30',
+			OUTBOX_RETRY_MAX_SECONDS: '600',
 		});
 		expect(configured.messaging).toMatchObject({
-			telegramProvider: 'fake', telegramChatId: 'bureau-test',
-			retryBaseSeconds: 30, retryMaxSeconds: 600,
+			telegramProvider: 'fake',
+			telegramChatId: 'bureau-test',
+			retryBaseSeconds: 30,
+			retryMaxSeconds: 600,
 		});
-		expect(() => loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
-			OUTBOX_RETRY_BASE_SECONDS: '601', OUTBOX_RETRY_MAX_SECONDS: '600',
-		})).toThrow(RuntimeConfigError);
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'development',
+				PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb,
+				OUTBOX_RETRY_BASE_SECONDS: '601',
+				OUTBOX_RETRY_MAX_SECONDS: '600',
+			})
+		).toThrow(RuntimeConfigError);
 	});
 
 	it('fails closed when required base configuration is missing', () => {
@@ -86,12 +120,15 @@ describe('runtime configuration', () => {
 			APP_ENV: 'preview',
 			PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
 			DB: fakeDb,
-			R2_BUCKET: fakeR2,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
 			ASSETS: fakeAssets,
 			BROWSER: fakeBrowser,
 			JWT_SECRET: 'x'.repeat(32),
 			TURNSTILE_SITE_KEY: 'test-site-key',
 			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			SCHEDULED_JOBS_ENABLED: 'true',
+			...officialLinks,
 		});
 
 		expect(config.appEnvironment).toBe('preview');
@@ -103,7 +140,8 @@ describe('runtime configuration', () => {
 				APP_ENV: 'preview',
 				PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.invalid',
 				DB: fakeDb,
-				R2_BUCKET: fakeR2,
+				R2_ARCHIVE: fakeArchive,
+				R2_QUARANTINE: fakeQuarantine,
 				ASSETS: fakeAssets,
 				BROWSER: fakeBrowser,
 				JWT_SECRET: 'x'.repeat(32),
@@ -117,7 +155,8 @@ describe('runtime configuration', () => {
 				APP_ENV: 'preview',
 				PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
 				DB: fakeDb,
-				R2_BUCKET: fakeR2,
+				R2_ARCHIVE: fakeArchive,
+				R2_QUARANTINE: fakeQuarantine,
 				ASSETS: fakeAssets,
 				BROWSER: fakeBrowser,
 				JWT_SECRET: 'replace-with-a-long-random-preview-value',
@@ -132,12 +171,15 @@ describe('runtime configuration', () => {
 			APP_ENV: 'preview',
 			PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
 			DB: fakeDb,
-			R2_BUCKET: fakeR2,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
 			ASSETS: fakeAssets,
 			BROWSER: fakeBrowser,
 			JWT_SECRET: 'x'.repeat(32),
 			TURNSTILE_SITE_KEY: 'test-site-key',
 			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			SCHEDULED_JOBS_ENABLED: 'true',
+			...officialLinks,
 			AUTH_PUBLIC_ENABLED: 'true',
 			EMAIL_PROVIDER: 'fake',
 			PRIVACY_NOTICE_VERSION: 'synthetic-preview-notice-v1',
@@ -149,7 +191,8 @@ describe('runtime configuration', () => {
 				APP_ENV: 'production',
 				PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
 				DB: fakeDb,
-				R2_BUCKET: fakeR2,
+				R2_ARCHIVE: fakeArchive,
+				R2_QUARANTINE: fakeQuarantine,
 				ASSETS: fakeAssets,
 				BROWSER: fakeBrowser,
 				JWT_SECRET: 'x'.repeat(32),
@@ -237,35 +280,58 @@ describe('runtime configuration', () => {
 			{ DOCUMENT_MAX_FILES_PER_AUTHORIZATION: '6' },
 			{ DOCUMENT_MAX_AUTHORIZATION_BYTES: String(25 * 1024 * 1024 + 1) },
 		]) {
-			expect(() => loadRuntimeConfig({
-				APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
-				DB: fakeDb, ...documentEnv,
-			})).toThrow(RuntimeConfigError);
+			expect(() =>
+				loadRuntimeConfig({
+					APP_ENV: 'development',
+					PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+					DB: fakeDb,
+					...documentEnv,
+				})
+			).toThrow(RuntimeConfigError);
 		}
 	});
 
 	it('requires private storage and a secret when enabled and never releases production upload', () => {
-		expect(() => loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
-			DB: fakeDb, DOCUMENT_UPLOAD_ENABLED: 'true',
-		})).toThrow(RuntimeConfigError);
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'development',
+				PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb,
+				DOCUMENT_UPLOAD_ENABLED: 'true',
+			})
+		).toThrow(RuntimeConfigError);
 		const enabled = loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
-			DB: fakeDb, R2_BUCKET: fakeR2, JWT_SECRET: 'x'.repeat(32),
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			JWT_SECRET: 'x'.repeat(32),
 			DOCUMENT_UPLOAD_ENABLED: 'true',
 		});
 		expect(enabled.documents.uploadEnabled).toBe(true);
-		expect(() => loadRuntimeConfig({
-			APP_ENV: 'production', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
-			DB: fakeDb, R2_BUCKET: fakeR2, ASSETS: fakeAssets, BROWSER: fakeBrowser,
-			JWT_SECRET: 'x'.repeat(32), TURNSTILE_SITE_KEY: 'site', TURNSTILE_SECRET_KEY: 'secret',
-			DOCUMENT_UPLOAD_ENABLED: 'true',
-		})).toThrow(RuntimeConfigError);
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'production',
+				PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+				DB: fakeDb,
+				R2_ARCHIVE: fakeArchive,
+				R2_QUARANTINE: fakeQuarantine,
+				ASSETS: fakeAssets,
+				BROWSER: fakeBrowser,
+				JWT_SECRET: 'x'.repeat(32),
+				TURNSTILE_SITE_KEY: 'site',
+				TURNSTILE_SECRET_KEY: 'secret',
+				DOCUMENT_UPLOAD_ENABLED: 'true',
+			})
+		).toThrow(RuntimeConfigError);
 	});
 
 	it('keeps contract send, public functions, and online media grant fail-closed', () => {
 		const defaults = loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
 		});
 		expect(defaults.contracts).toEqual({
 			sendEnabled: false,
@@ -277,26 +343,50 @@ describe('runtime configuration', () => {
 			mediaOnlineGrantEnabled: false,
 			publicFunctionsEnabled: false,
 		});
-		expect(() => loadRuntimeConfig({
-			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
-			CONTRACT_SEND_ENABLED: 'true', CONTRACT_RENDERER: 'disabled',
-		})).toThrow(RuntimeConfigError);
-		expect(() => loadRuntimeConfig({
-			APP_ENV: 'production', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org', DB: fakeDb,
-			R2_BUCKET: fakeR2, ASSETS: fakeAssets, BROWSER: fakeBrowser,
-			JWT_SECRET: 'x'.repeat(32), TURNSTILE_SITE_KEY: 'site', TURNSTILE_SECRET_KEY: 'secret',
-			CONTRACT_SEND_ENABLED: 'true', CONTRACT_RENDERER: 'browser_run',
-		})).toThrow(RuntimeConfigError);
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'development',
+				PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+				DB: fakeDb,
+				CONTRACT_SEND_ENABLED: 'true',
+				CONTRACT_RENDERER: 'disabled',
+			})
+		).toThrow(RuntimeConfigError);
+		expect(() =>
+			loadRuntimeConfig({
+				APP_ENV: 'production',
+				PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+				DB: fakeDb,
+				R2_ARCHIVE: fakeArchive,
+				R2_QUARANTINE: fakeQuarantine,
+				ASSETS: fakeAssets,
+				BROWSER: fakeBrowser,
+				JWT_SECRET: 'x'.repeat(32),
+				TURNSTILE_SITE_KEY: 'site',
+				TURNSTILE_SECRET_KEY: 'secret',
+				CONTRACT_SEND_ENABLED: 'true',
+				CONTRACT_RENDERER: 'browser_run',
+			})
+		).toThrow(RuntimeConfigError);
 		for (const forbidden of [
 			{ MEDIA_ONLINE_GRANT_ENABLED: 'true' },
 			{ PUBLIC_CONTRACT_FUNCTIONS_ENABLED: 'true' },
 		]) {
-			expect(() => loadRuntimeConfig({
-				APP_ENV: 'production', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org', DB: fakeDb,
-				R2_BUCKET: fakeR2, ASSETS: fakeAssets, BROWSER: fakeBrowser,
-				JWT_SECRET: 'x'.repeat(32), TURNSTILE_SITE_KEY: 'site', TURNSTILE_SECRET_KEY: 'secret',
-				...forbidden,
-			})).toThrow(RuntimeConfigError);
+			expect(() =>
+				loadRuntimeConfig({
+					APP_ENV: 'production',
+					PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+					DB: fakeDb,
+					R2_ARCHIVE: fakeArchive,
+					R2_QUARANTINE: fakeQuarantine,
+					ASSETS: fakeAssets,
+					BROWSER: fakeBrowser,
+					JWT_SECRET: 'x'.repeat(32),
+					TURNSTILE_SITE_KEY: 'site',
+					TURNSTILE_SECRET_KEY: 'secret',
+					...forbidden,
+				})
+			).toThrow(RuntimeConfigError);
 		}
 	});
 });

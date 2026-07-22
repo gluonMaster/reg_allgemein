@@ -72,6 +72,20 @@ source-specific dry-run реального файла, который требу
 Этот snapshot не является вечной гарантией. Перед release audit запускается
 повторно, результат и принятое исключение обновляются.
 
+### Stage 13 snapshot — 2026-07-22
+
+- `@sveltejs/adapter-cloudflare` классифицирован как `devDependency`: он
+  импортируется только build-time `svelte.config.js`, а Worker получает готовый
+  bundle. Release pipeline обязан выполнять полный `npm ci` перед build.
+- `fast-xml-parser` в lockfile обновлён до `5.10.1` в пределах разрешённого
+  диапазона `mdb-reader`; advisory повторного DOCTYPE закрыт.
+- `npm audit --omit=dev` показывает `0 vulnerabilities`.
+- Полный `npm audit` отдельно показывает три high advisory в dev-only цепочке
+  `wrangler → miniflare → sharp`. Текущие совместимые releases Wrangler/
+  Miniflare всё ещё фиксируют `sharp@0.34.5`; предлагаемый `--force` downgrade не
+  применяется. Эти инструменты не входят в Worker runtime, но advisory остаётся
+  документированным CI/local-tooling риском и проверяется при каждом update.
+
 Локальный import boundary выбирает поддерживаемый parser после отдельного spike.
 Допустимые
 варианты:

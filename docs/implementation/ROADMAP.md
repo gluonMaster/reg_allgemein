@@ -41,22 +41,22 @@ npm run build
 
 ## Этапы
 
-| № | Статус | Результат | Зависит от |
-| ---: | --- | --- | --- |
-| 01 | done | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations | — |
-| 02 | done | Versioned import schema, price и schedule staging/validation/promotion | 01 |
-| 03 | done | Access/PlusBText import, family/child aggregation, issues и reconciliation | 02 |
-| 04 | done | Course mappings, occupancy и безопасный pricing/quote engine | 02–03 |
-| 05 | done | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC | 01 |
-| 06 | done | Portal children, atomic legacy claim и parent cabinet | 03–05 |
-| 06A | done | Admin shell, import/review/legacy/users/catalog core surfaces | 02–06 |
-| 07 | done | Published catalog, availability и полный trial workflow | 04, 06, 06A |
-| 08 | done | Nachhilfe/individual requests, private R2 documents и review | 05, 06, 06A |
-| 09 | done | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
-| 10 | done | Price review batches/items, notifications и effective-date apply | 04, 09 |
-| 11 | done | Support/absence, email/Telegram outboxes и cron retry | 05–10 |
-| 12 | done | Privacy export/delete, account closure, retained-archive separation и closure races | 05–11, включая 06A |
-| 13 | pending | Независимый hardening, production readiness и проверенные русские operator runbooks | 01–12 |
+|   № | Статус | Результат                                                                                                                              | Зависит от              |
+| --: | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+|  01 | done   | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations                                              | —                       |
+|  02 | done   | Versioned import schema, price и schedule staging/validation/promotion                                                                 | 01                      |
+|  03 | done   | Access/PlusBText import, family/child aggregation, issues и reconciliation                                                             | 02                      |
+|  04 | done   | Course mappings, occupancy и безопасный pricing/quote engine                                                                           | 02–03                   |
+|  05 | done   | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC                                                                     | 01                      |
+|  06 | done   | Portal children, atomic legacy claim и parent cabinet                                                                                  | 03–05                   |
+| 06A | done   | Admin shell, import/review/legacy/users/catalog core surfaces                                                                          | 02–06                   |
+|  07 | done   | Published catalog, availability и полный trial workflow                                                                                | 04, 06, 06A             |
+|  08 | done   | Nachhilfe/individual requests, private R2 documents и review                                                                           | 05, 06, 06A             |
+|  09 | done   | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
+|  10 | done   | Price review batches/items, notifications и effective-date apply                                                                       | 04, 09                  |
+|  11 | done   | Support/absence, email/Telegram outboxes и cron retry                                                                                  | 05–10                   |
+|  12 | done   | Privacy export/delete, account closure, retained-archive separation и closure races                                                    | 05–11, включая 06A      |
+|  13 | done   | Независимый hardening, production readiness и проверенные русские operator runbooks                                                    | 01–12                   |
 
 ## 01. Foundation
 
@@ -339,6 +339,27 @@ Exit gate:
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
 выполняет production deploy, remote production migration, реальный PII import
 или внешнюю отправку без отдельного прямого поручения.
+
+Текущий статус: этап локально завершён и проверен, production readiness `blocked`.
+Traceability, hardening, migration `0014`, scheduler/operations, bootstrap,
+release helpers и operator packet синхронизированы с локальным automated
+evidence. Preview/restore rehearsal и внешние release inputs отсутствуют;
+`feature_disabled` не считается завершением полного MVP.
+
+Tracked packet этапа:
+
+- [traceability matrix](STAGE_13_TRACEABILITY.md);
+- [deployment runbook](../operations/PRODUCTION_DEPLOYMENT.md);
+- [operations runbook](../operations/OPERATIONS_RUNBOOK.md);
+- [disaster-recovery runbook](../operations/DISASTER_RECOVERY.md);
+- [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md);
+- [persistent handoff](handoffs/stage-13.md).
+
+Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, migration `0014`, scheduled
+Worker/Cron и manual operations page, `admin:bootstrap`, `docs:check`,
+`release:scan`, `release:verify` реализованы и покрыты локальными тестами.
+Environment-specific release gates остаются `blocked` до preview, alerts,
+restore, approvals и immutable release evidence.
 
 Exit gate:
 

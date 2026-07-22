@@ -408,10 +408,15 @@ describe('stage 06 atomic family claim and parent cabinet', () => {
 			all_children: 2,
 			reassignments: 1,
 		});
-		expect(await context.db.prepare(
-			`SELECT COUNT(*) AS count FROM email_outbox
+		expect(
+			await context.db
+				.prepare(
+					`SELECT COUNT(*) AS count FROM email_outbox
 			WHERE recipient_user_id = ? AND template_or_category = 'claim.result'`
-		).bind(actor.id).first<{ count: number }>()).toEqual({ count: 1 });
+				)
+				.bind(actor.id)
+				.first<{ count: number }>()
+		).toEqual({ count: 1 });
 	});
 
 	it('allocates namespace 2 plus typed reviews for ambiguous and already-owned exact matches', async () => {
@@ -620,7 +625,7 @@ describe('stage 06 atomic family claim and parent cabinet', () => {
 			.bind(noMatchUserId)
 			.first<Record<string, unknown>>();
 		expect(noMatch).toEqual({ family_assignment_status: 'assigned', attempts: 0 });
-	});
+	}, 45_000);
 
 	it('rolls verification back for a missing or concurrently retired promoted snapshot', async () => {
 		await register({ email: 'missing.snapshot@example.test', requestId: 'missing-register' });

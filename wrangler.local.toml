@@ -36,6 +36,10 @@ BROWSER_RUN_DAILY_BUDGET_MS = "60000"
 MEDIA_ONLINE_GRANT_ENABLED = "false"
 PUBLIC_CONTRACT_FUNCTIONS_ENABLED = "false"
 PRIVACY_EXPORT_TTL_SECONDS = "3600"
+SCHEDULED_JOBS_ENABLED = "true"
+SCHEDULED_OUTBOX_BATCH_LIMIT = "25"
+SCHEDULED_MAINTENANCE_BATCH_LIMIT = "50"
+SCHEDULED_LEASE_SECONDS = "300"
 
 [[d1_databases]]
 binding = "DB"
@@ -44,5 +48,9 @@ database_id = "local-reg-allgemein"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "reg-allgemein-local-documents"
+binding = "R2_ARCHIVE"
+bucket_name = "reg-allgemein-local-archive"
+
+[[r2_buckets]]
+binding = "R2_QUARANTINE"
+bucket_name = "reg-allgemein-local-quarantine"

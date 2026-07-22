@@ -12,11 +12,16 @@ declare global {
 		interface Platform {
 			env: {
 				DB?: D1Database;
-				R2_BUCKET?: R2Bucket;
+				R2_ARCHIVE?: R2Bucket;
+				R2_QUARANTINE?: R2Bucket;
 				ASSETS?: Fetcher;
 				BROWSER?: BrowserRun;
 				APP_ENV?: string;
 				PORTAL_PUBLIC_ORIGIN?: string;
+				OFFICIAL_PRIVACY_URL?: string;
+				OFFICIAL_IMPRINT_URL?: string;
+				OFFICIAL_CONTACT_URL?: string;
+				OFFICIAL_LINKS_VERSION?: string;
 				EMAIL_PROVIDER?: string;
 				EMAIL_FROM?: string;
 				EMAIL_REPLY_TO?: string;
@@ -64,6 +69,10 @@ declare global {
 				MEDIA_ONLINE_GRANT_ENABLED?: string;
 				PUBLIC_CONTRACT_FUNCTIONS_ENABLED?: string;
 				PRIVACY_EXPORT_TTL_SECONDS?: string;
+				SCHEDULED_JOBS_ENABLED?: string;
+				SCHEDULED_OUTBOX_BATCH_LIMIT?: string;
+				SCHEDULED_MAINTENANCE_BATCH_LIMIT?: string;
+				SCHEDULED_LEASE_SECONDS?: string;
 				TELEGRAM_BOT_TOKEN?: string;
 				TELEGRAM_CHAT_ID?: string;
 				TELEGRAM_BUSINESS_TIMEZONE?: string;

@@ -438,7 +438,7 @@ export class PriceReviewService {
 			: { current: false, reason: 'PRICE_STATE_CHANGED' };
 	}
 
-	async reconcileMissedTriggers(now = new Date().toISOString()): Promise<number> {
+	async reconcileMissedTriggers(now = new Date().toISOString(), limit = 100): Promise<number> {
 		assertInstant(now);
 		const today = berlinCalendarDate(now);
 		const lastScannedAt = await this.repository.reconcilerLastScannedAt();
@@ -446,7 +446,8 @@ export class PriceReviewService {
 		// first deployment; future boundaries are always eligible for repair.
 		const boundaries = await this.repository.listUnreconciledBoundaries(
 			lastScannedAt,
-			today
+			today,
+			limit
 		);
 		let created = 0;
 		for (const boundary of boundaries) {
@@ -479,11 +480,11 @@ export class PriceReviewService {
 			});
 			created += 1;
 		}
-		await this.repository.advanceReconcilerWatermark(now);
+		if (boundaries.length < limit) await this.repository.advanceReconcilerWatermark(now);
 		return created;
 	}
 
-	async runScheduledMaintenance(now = new Date().toISOString()): Promise<{
+	async runScheduledMaintenance(now = new Date().toISOString(), limit = 100): Promise<{
 		reconciled: number;
 		processedTriggers: number;
 		overdue: number;
@@ -491,20 +492,23 @@ export class PriceReviewService {
 		superseded: number;
 	}> {
 		assertInstant(now);
-		const reconciled = await this.reconcileMissedTriggers(now);
+		if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+			throw new PriceReviewServiceError('PRICE_REVIEW_BATCH_LIMIT_INVALID');
+		}
+		const reconciled = await this.reconcileMissedTriggers(now, limit);
 		let processedTriggers = 0;
-		for (const trigger of await this.repository.listPendingTriggers()) {
+		for (const trigger of await this.repository.listPendingTriggers(limit)) {
 			await this.processTrigger(trigger.id, now);
 			processedTriggers += 1;
 		}
 		const today = berlinCalendarDate(now);
 		let overdue = 0;
-		for (const item of await this.repository.listDueResponses(today)) {
+		for (const item of await this.repository.listDueResponses(today, limit)) {
 			if (await this.repository.markResponseOverdue(item, today, now)) overdue += 1;
 		}
 		let applied = 0;
 		let superseded = 0;
-		for (const item of await this.repository.listDueScheduled(today)) {
+		for (const item of await this.repository.listDueScheduled(today, limit)) {
 			const current = await this.revalidateItem(item, item.scheduledFor!);
 			if (!current.current) {
 				if (await this.repository.supersedeItem(item, current.reason, now)) superseded += 1;

@@ -50,6 +50,26 @@ Closure и concurrent accept/admin-approval выполняются conditional: 
 contract успел сформироваться первым, active contract блокирует closure; если
 closure lock установлен первым, offer/price activation отклоняется.
 
+Для claimed legacy rows удаление работает fail-closed: любая current service,
+кроме явно завершённой записи со status `KN`, считается active blocker. Поле
+`is_active_for_occupancy` недостаточно для решения об удалении, потому что
+неизвестный/unmapped service не должен исчезнуть из blocker inventory.
+
+Closure также сериализуется с email dispatch. Уже claimed row в состоянии
+`processing` откладывает closure до terminal/retry state; если closure lock
+установлен первым, новый Worker claim не получает recipient. Pending/retry email
+закрытого account отменяется в closure transaction. Так система не сообщает
+провайдеру profile/contact после их минимизации и не объявляет успешное закрытие
+при внешней отправке in flight.
+
+Минимизация operational данных заменяет subject/body отсутствия и support,
+свободный текст и preferences individual request, а также snapshot/source JSON
+неотправленного draft offer на фиксированные closure markers/пустые структуры.
+Immutable acceptance/delivery/contract/funding evidence этим правилом не
+переписывается. Обычные admin queues исключают closed subject и record, уже
+попавший в legal archive; отдельное purpose-bound чтение retained evidence
+каждый раз требует server-side RBAC/ownership revalidation и audit.
+
 «Удалённый профиль» и «уничтожены все документы» — разные состояния. Retained
 PDF может содержать имя стороны, поэтому интерфейс обязан честно сообщить, какие
 категории и до какой даты остаются по legal/contractual basis.
@@ -67,6 +87,14 @@ PDF может содержать имя стороны, поэтому инте
 parent/admin acceptance and delivery evidence, termination/withdrawal evidence,
 funding authorization/document, media consent, audit/security event и
 short-lived acceptance IP/anti-abuse metadata.
+
+Для acceptance/price-response IP application хранит только scoped
+pseudonymous hash, не raw address. Текущая реализация задаёт технический upper
+bound `30×24h` и scheduled cleanup однонаправленно заменяет hash на `NULL`, не
+переписывая timestamp, text или остальное evidence. Этот срок не объявляется
+утверждённым legal retention rule: до production уполномоченный privacy/legal
+owner должен письменно подтвердить category/basis/period либо потребовать более
+короткую/иную реализацию; соответствующий checklist gate остаётся `blocked`.
 
 Автоматическое удаление contract PDF/source bundle, formation/acceptance/
 termination evidence и approved funding documents не реализуется и не
@@ -130,6 +158,11 @@ retention policy; DST/calendar-day неоднозначности здесь н�
   повтор операции не создаёт дубликаты;
 - наличие архивного contract evidence не сохраняет действующий login;
 - обычный admin search не показывает archive без отдельной цели и audit;
+- повтор short-lived export download revalidates active actor, ownership/role,
+  artifact status/expiry даже при уже существующем dedupe audit event;
+- admin funding review/attestation повторно проверяет active owner, owned
+  request/child/authorization, nonterminal request/pending authorization и
+  отсутствие closure/legal-archive state в mutation и final assertion;
 - legal hold нельзя снять неаудируемым bulk action;
 - online media-consent `grant` остаётся disabled до закрытия legal gate;
 - `retain_until` не запускает automatic purge/anonymization legal archive;

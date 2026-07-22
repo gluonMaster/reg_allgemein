@@ -12,6 +12,7 @@ import { PriceReviewService } from '$lib/server/price-reviews/price-review-servi
 import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
 import { EmailOutboxWorker } from '$lib/server/outbox/outbox-worker';
 import { FakeEmailProvider } from '$lib/server/outbox/providers';
+import { OperationsRepository } from '$lib/server/operations/operations-repository';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
@@ -361,6 +362,252 @@ describe('stage 10 controlled price reviews in D1', () => {
 		if (context) await context.dispose();
 	});
 
+	it('keeps free-form admin reasons out of price-review audit JSON', async () => {
+		context = await createMigratedTestD1();
+		const db = new DatabaseBoundary(context.db);
+		await seedScenario(db);
+		const occupancy = new OccupancyRepository(db);
+		const repository = new PriceReviewRepository(db);
+		const pricing = new PricingService(new PricingRepository(db), occupancy, pricingConfig);
+		const service = new PriceReviewService(repository, pricing, occupancy, {
+			portalPublicOrigin: 'https://portal.example.test',
+		});
+		const reasonCanary =
+			'Audit canary audit.person@example.test +49 351 555 0101 Bearer canary-secret-token';
+
+		const comparison = await service.createAdminComparison({
+			admin,
+			payload: {
+				courseGroupId: 'course-price-review',
+				effectiveOn: '2026-08-01',
+				reason: reasonCanary,
+				confirmation: 'confirmed',
+				idempotencyKey: 'audit-canary-comparison-1',
+			},
+			requestId: 'request-audit-canary-comparison',
+			now: now(2),
+		});
+		const item = (await repository.listBatchItems(comparison.batchId)).find(
+			(candidate) => candidate.userId === 'price-parent-1'
+		);
+		expect(item).toBeDefined();
+		if (!item) throw new Error('Synthetic parent price-review item is missing.');
+		await service.approveBatch({
+			admin,
+			payload: {
+				batchId: comparison.batchId,
+				reason: reasonCanary,
+				confirmation: 'confirmed',
+				idempotencyKey: 'audit-canary-approval-1',
+			},
+			requestId: 'request-audit-canary-approval',
+			now: now(3),
+		});
+		await service.dispatchBatch({
+			admin,
+			payload: {
+				batchId: comparison.batchId,
+				confirmation: 'confirmed',
+				idempotencyKey: 'audit-canary-dispatch-1',
+			},
+			requestId: 'request-audit-canary-dispatch',
+			now: now(3),
+		});
+		await service.respond({
+			actor: parentActor(1),
+			payload: {
+				publicReference: item.publicReference,
+				itemHash: item.itemHash,
+				decision: 'accept',
+				idempotencyKey: 'audit-canary-parent-response-1',
+			},
+			requestId: 'request-audit-canary-parent-response',
+			requestSubject: '192.0.2.10',
+			userAgent: 'audit-canary-test',
+			now: now(4),
+		});
+		await service.finalConfirm({
+			admin,
+			payload: {
+				itemId: item.id,
+				reason: reasonCanary,
+				confirmation: 'confirmed',
+				idempotencyKey: 'audit-canary-final-confirmation-1',
+			},
+			requestId: 'request-audit-canary-final-confirmation',
+			now: now(5),
+		});
+
+		const auditRows = await db.all<{ action: string; safe_diff_json: string }>({
+			sql: `SELECT action, safe_diff_json FROM audit_events
+			WHERE action IN ('price_review.admin_comparison.requested',
+				'price_review.notifications.approved', 'price_review.item.finally_confirmed')
+			ORDER BY action`,
+		});
+		expect(
+			auditRows.results.map((row) => ({
+				action: row.action,
+				safeDiff: JSON.parse(row.safe_diff_json) as Record<string, unknown>,
+			}))
+		).toEqual([
+			{
+				action: 'price_review.admin_comparison.requested',
+				safeDiff: {
+					status: 'requested',
+					reasonCode: 'admin_price_comparison',
+					hasReason: true,
+				},
+			},
+			{
+				action: 'price_review.item.finally_confirmed',
+				safeDiff: {
+					status: 'scheduled',
+					scheduledFor: '2026-09-01',
+					hasReason: true,
+				},
+			},
+			{
+				action: 'price_review.notifications.approved',
+				safeDiff: {
+					status: 'notifications_approved',
+					hasReason: true,
+				},
+			},
+		]);
+		const allAuditJson = (
+			await db.all<{ safe_diff_json: string }>({
+				sql: `SELECT safe_diff_json FROM audit_events ORDER BY created_at, id`,
+			})
+		).results
+			.map((row) => row.safe_diff_json)
+			.join('\n');
+		expect(allAuditJson).not.toContain('audit.person@example.test');
+		expect(allAuditJson).not.toContain('+49 351 555 0101');
+		expect(allAuditJson).not.toContain('Bearer');
+		expect(allAuditJson).not.toContain('canary-secret-token');
+		expect(
+			await db.first<{ final_admin_confirmation_reason: string }>({
+				sql: `SELECT final_admin_confirmation_reason FROM price_review_items WHERE id = ?`,
+				params: [item.id],
+			})
+		).toEqual({ final_admin_confirmation_reason: reasonCanary });
+	}, 45_000);
+
+	it('retains pseudonymous response IP only until its technical expiry', async () => {
+		context = await createMigratedTestD1();
+		const db = new DatabaseBoundary(context.db);
+		await seedScenario(db);
+		const occupancy = new OccupancyRepository(db);
+		const repository = new PriceReviewRepository(db);
+		const service = new PriceReviewService(
+			repository,
+			new PricingService(new PricingRepository(db), occupancy, pricingConfig),
+			occupancy,
+			{ portalPublicOrigin: 'https://portal.example.test' }
+		);
+		const responseAt = '2026-05-02T12:00:00.000Z';
+		const expiresAt = '2026-06-01T12:00:00.000Z';
+		const requestSubject = '192.0.2.88';
+
+		const comparison = await service.createAdminComparison({
+			admin,
+			payload: {
+				courseGroupId: 'course-price-review',
+				effectiveOn: '2026-08-01',
+				reason: 'Synthetic short-lived metadata retention check',
+				confirmation: 'confirmed',
+				idempotencyKey: 'price-ip-retention-comparison',
+			},
+			requestId: 'price-ip-retention-comparison',
+			now: '2026-05-01T09:00:00.000Z',
+		});
+		await service.approveBatch({
+			admin,
+			payload: {
+				batchId: comparison.batchId,
+				reason: 'Synthetic retention comparison reviewed',
+				confirmation: 'confirmed',
+				idempotencyKey: 'price-ip-retention-approval',
+			},
+			requestId: 'price-ip-retention-approval',
+			now: '2026-05-01T10:00:00.000Z',
+		});
+		await service.dispatchBatch({
+			admin,
+			payload: {
+				batchId: comparison.batchId,
+				confirmation: 'confirmed',
+				idempotencyKey: 'price-ip-retention-dispatch',
+			},
+			requestId: 'price-ip-retention-dispatch',
+			now: '2026-05-01T11:00:00.000Z',
+		});
+		const item = (await repository.listParentItems('price-parent-1'))[0];
+		await service.respond({
+			actor: parentActor(1),
+			payload: {
+				publicReference: item.publicReference,
+				itemHash: item.itemHash,
+				decision: 'accept',
+				idempotencyKey: 'price-ip-retention-response',
+			},
+			requestId: 'price-ip-retention-response',
+			requestSubject,
+			userAgent: 'stage-13-retention-test',
+			now: responseAt,
+		});
+
+		type RetainedPriceMetadata = {
+			action_ip: string | null;
+			acceptance_ip: string | null;
+			action_expires_at: string;
+			acceptance_expires_at: string;
+			action_created_at: string;
+			accepted_at: string;
+			acceptance_text: string;
+		};
+		const loadMetadata = () =>
+			db.first<RetainedPriceMetadata>({
+				sql: `SELECT action.ip_retention_value AS action_ip,
+					acceptance.ip_retention_value AS acceptance_ip,
+					action.ip_expires_at AS action_expires_at,
+					acceptance.ip_expires_at AS acceptance_expires_at,
+					action.created_at AS action_created_at,
+					acceptance.accepted_at,
+					acceptance.acceptance_text
+				FROM price_review_parent_actions action
+				JOIN price_change_acceptances acceptance
+					ON acceptance.parent_action_id = action.id
+				WHERE action.idempotency_key = 'price-ip-retention-response'`,
+			});
+		const retained = await loadMetadata();
+		expect(retained).toMatchObject({
+			action_expires_at: expiresAt,
+			acceptance_expires_at: expiresAt,
+			action_created_at: responseAt,
+			accepted_at: responseAt,
+		});
+		expect(retained?.action_ip).toMatch(/^[a-f0-9]{64}$/u);
+		expect(retained?.acceptance_ip).toBe(retained?.action_ip);
+		expect(JSON.stringify(retained)).not.toContain(requestSubject);
+
+		const operations = new OperationsRepository(db);
+		expect(
+			await operations.cleanupSecurityMetadata('2026-06-01T11:59:59.000Z', 10)
+		).toMatchObject({ priceActions: 0, priceAcceptances: 0 });
+		expect(await loadMetadata()).toEqual(retained);
+
+		expect(await operations.cleanupSecurityMetadata(expiresAt, 10)).toMatchObject({
+			priceActions: 1,
+			priceAcceptances: 1,
+		});
+		expect(await loadMetadata()).toEqual({
+			...retained,
+			action_ip: null,
+			acceptance_ip: null,
+		});
+	}, 45_000);
+
 	it('deduplicates 5-to-6 review, separates approvals, revalidates and applies exactly once', async () => {
 		context = await createMigratedTestD1();
 		const db = new DatabaseBoundary(context.db);
@@ -634,6 +881,9 @@ describe('stage 10 controlled price reviews in D1', () => {
 		});
 		expect(items.filter((item) => item.status === 'manual_contact_required')).toHaveLength(3);
 		expect(items.map((item) => item.targetId)).not.toContain('legacy-review-represented');
+		expect(
+			(await repository.listAdminBatches()).find((batch) => batch.id === comparison.batchId)
+		).toMatchObject({ itemCount: 4, manualCount: 3 });
 
 		await service.approveBatch({
 			admin,

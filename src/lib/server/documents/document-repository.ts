@@ -29,15 +29,13 @@ export interface UploadTarget {
 	targetAuthorizationId: string;
 	authorizationKind: 'jobcenter' | 'socialamt';
 	createAuthorizationVersion: number | null;
-	replaceDocument:
-		| {
-				id: string;
-				status: string;
-				quarantineKey: string;
-				authorizationId: string;
-				sizeBytes: number;
-			}
-		| null;
+	replaceDocument: {
+		id: string;
+		status: string;
+		quarantineKey: string;
+		authorizationId: string;
+		sizeBytes: number;
+	} | null;
 	currentCount: number;
 	currentBytes: number;
 }
@@ -193,6 +191,7 @@ export class AuthorizationDocumentRepository {
 		requestIdHeader: string;
 		now: string;
 		quarantineExpiresAt: string;
+		storageIntentId?: string;
 	}) {
 		const auditId = crypto.randomUUID();
 		const assertionId = crypto.randomUUID();
@@ -231,7 +230,11 @@ export class AuthorizationDocumentRepository {
 				 upload_request_hash_sha256, uploaded_at, quarantine_expires_at,
 				 quarantine_delete_state, created_at, updated_at)
 			SELECT ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 'quarantined', ?, ?, ?, ?,
-				'present', ?, ? WHERE (${replacementGuard.sql})`,
+				'present', ?, ? WHERE (${replacementGuard.sql})
+					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents intent
+						WHERE intent.id = ? AND intent.status = 'staged'
+							AND intent.storage_class = 'quarantine'
+							AND intent.object_key = ?))`,
 			params: [
 				input.documentId,
 				input.target.targetAuthorizationId,
@@ -250,8 +253,50 @@ export class AuthorizationDocumentRepository {
 				input.now,
 				input.now,
 				...replacementGuard.params,
+				input.storageIntentId ?? null,
+				input.storageIntentId ?? null,
+				input.quarantineKey,
 			],
 		});
+		if (input.storageIntentId) {
+			statements.push(
+				{
+					sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
+						updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+					WHERE id = ? AND status = 'staged' AND object_key = ?
+						AND EXISTS (SELECT 1 FROM authorization_documents
+							WHERE id = ? AND quarantine_r2_key = ?)`,
+					params: [
+						input.now,
+						input.now,
+						input.storageIntentId,
+						input.quarantineKey,
+						input.documentId,
+						input.quarantineKey,
+					],
+				},
+				{
+					sql: `INSERT INTO storage_intent_link_assertions
+						(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+					VALUES (?, ?, 'authorization_document', ?, CASE WHEN
+						EXISTS (SELECT 1 FROM storage_object_intents
+							WHERE id = ? AND status = 'linked' AND object_key = ?)
+						AND EXISTS (SELECT 1 FROM authorization_documents
+							WHERE id = ? AND quarantine_r2_key = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						crypto.randomUUID(),
+						input.storageIntentId,
+						input.documentId,
+						input.storageIntentId,
+						input.quarantineKey,
+						input.documentId,
+						input.quarantineKey,
+						input.now,
+					],
+				}
+			);
+		}
 		if (input.target.replaceDocument && input.target.replaceDocument.status !== 'approved') {
 			statements.push({
 				sql: `UPDATE authorization_documents
@@ -326,78 +371,115 @@ export class AuthorizationDocumentRepository {
 				document.archive_r2_key, document.sha256, document.size_bytes,
 				document.review_status, document.quarantine_delete_state
 			FROM authorization_documents AS document
+			JOIN users AS owner ON owner.id = document.user_id
+				AND owner.account_status = 'active'
 			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
 			WHERE document.id = ?`,
 			params: [documentId],
 		});
 	}
 
-	async loadAdminQuarantineDownload(documentId: string) {
-		const document = await this.internalDocument(documentId);
-		if (
-			!document ||
-			document.review_status !== 'quarantined' ||
-			document.quarantine_delete_state !== 'present'
-		) {
-			throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
-		}
+	async loadAdminQuarantineDownload(input: { documentId: string; adminUserId: string }) {
+		const document = await this.db.first<InternalDocumentRow>({
+			sql: `SELECT document.id, document.authorization_id, authorization.request_id,
+				document.user_id, document.child_id, document.quarantine_r2_key,
+				document.archive_r2_key, document.sha256, document.size_bytes,
+				document.review_status, document.quarantine_delete_state
+			FROM authorization_documents AS document
+			JOIN funding_authorizations AS authorization
+				ON authorization.id = document.authorization_id
+				AND authorization.user_id = document.user_id
+			JOIN individual_requests AS request
+				ON request.id = authorization.request_id AND request.user_id = document.user_id
+			JOIN users AS owner ON owner.id = document.user_id
+			JOIN users AS admin ON admin.id = ?
+			WHERE document.id = ? AND document.review_status = 'quarantined'
+				AND document.quarantine_delete_state = 'present'
+				AND document.deleted_at IS NULL AND document.replaced_by_document_id IS NULL
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND admin.role = 'admin'
+				AND admin.account_status = 'active' AND admin.is_blocked = 0
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+					WHERE archive.target_kind = 'authorization_document'
+						AND archive.target_id = document.id)`,
+			params: [input.adminUserId, input.documentId],
+		});
+		if (!document) throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
 		return document;
 	}
 
 	async auditAdminQuarantineDownload(input: {
 		documentId: string;
 		adminUserId: string;
+		purposeCode: 'local_av_scan';
+		expectedSha256: string;
+		expectedStorageKey: string;
 		requestId: string;
 		now: string;
 	}) {
-		const document = await this.internalDocument(input.documentId);
-		if (!document) throw new DocumentRepositoryError('DOCUMENT_NOT_FOUND');
 		const auditId = crypto.randomUUID();
 		const assertionId = crypto.randomUUID();
-		await this.db.batch([
-			{
-				sql: `INSERT INTO audit_events
+		try {
+			const results = await this.db.batch([
+				{
+					sql: `INSERT INTO audit_events
 					(id, actor_user_id, actor_kind, action, target_kind, target_id,
 					 request_id, safe_diff_json, created_at)
-				SELECT ?, ?, 'user', 'authorization_document.quarantine_downloaded',
-					'authorization_document', id, ?, ?, ?
-				FROM authorization_documents WHERE id = ? AND review_status = 'quarantined'
-					AND quarantine_delete_state = 'present'
-					AND EXISTS (SELECT 1 FROM users AS admin WHERE admin.id = ?
-						AND admin.role = 'admin' AND admin.account_status = 'active'
-						AND admin.is_blocked = 0)`,
-				params: [
-					auditId,
-					input.adminUserId,
-					input.requestId,
-					JSON.stringify({
-						forcedAttachment: true,
-						sha256Prefix: document.sha256.slice(0, 12),
-					}),
-					input.now,
-					input.documentId,
-					input.adminUserId,
-				],
-			},
-			{
-				sql: `UPDATE authorization_documents
+					SELECT ?, ?, 'user', 'authorization_document.quarantine_downloaded',
+						'authorization_document', document.id, ?, ?, ?
+					FROM authorization_documents AS document
+					JOIN funding_authorizations AS authorization
+						ON authorization.id = document.authorization_id
+						AND authorization.user_id = document.user_id
+					JOIN individual_requests AS request
+						ON request.id = authorization.request_id AND request.user_id = document.user_id
+					JOIN users AS owner ON owner.id = document.user_id
+					JOIN users AS admin ON admin.id = ?
+					WHERE document.id = ? AND document.review_status = 'quarantined'
+						AND document.quarantine_delete_state = 'present'
+						AND document.deleted_at IS NULL AND document.replaced_by_document_id IS NULL
+						AND document.sha256 = ? AND document.quarantine_r2_key = ?
+						AND owner.role = 'parent' AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND admin.role = 'admin'
+						AND admin.account_status = 'active' AND admin.is_blocked = 0
+						AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+							WHERE archive.target_kind = 'authorization_document'
+								AND archive.target_id = document.id)`,
+					params: [
+						auditId,
+						input.adminUserId,
+						input.requestId,
+						JSON.stringify({
+							forcedAttachment: true,
+							purposeCode: input.purposeCode,
+							sha256Prefix: input.expectedSha256.slice(0, 12),
+						}),
+						input.now,
+						input.adminUserId,
+						input.documentId,
+						input.expectedSha256,
+						input.expectedStorageKey,
+					],
+				},
+				{
+					sql: `UPDATE authorization_documents
 					SET quarantine_downloaded_by_admin_user_id = ?,
 						quarantine_downloaded_sha256 = sha256,
 						quarantine_downloaded_at = ?, download_audit_event_id = ?, updated_at = ?
 					WHERE id = ? AND review_status = 'quarantined'
 						AND quarantine_delete_state = 'present'
 						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
-				params: [
-					input.adminUserId,
-					input.now,
-					auditId,
-					input.now,
-					input.documentId,
-					auditId,
-				],
-			},
-			{
-				sql: `INSERT INTO document_action_assertions
+					params: [
+						input.adminUserId,
+						input.now,
+						auditId,
+						input.now,
+						input.documentId,
+						auditId,
+					],
+				},
+				{
+					sql: `INSERT INTO document_action_assertions
 					(id, document_id, action, actor_user_id, audit_event_id,
 					 assertion_passed, created_at)
 				VALUES (?, ?, 'quarantine_downloaded', ?, ?, CASE WHEN
@@ -406,18 +488,25 @@ export class AuthorizationDocumentRepository {
 							AND quarantine_downloaded_sha256 = sha256)
 					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
 				THEN 1 ELSE 0 END, ?)`,
-				params: [
-					assertionId,
-					input.documentId,
-					input.adminUserId,
-					auditId,
-					input.documentId,
-					auditId,
-					auditId,
-					input.now,
-				],
-			},
-		]);
+					params: [
+						assertionId,
+						input.documentId,
+						input.adminUserId,
+						auditId,
+						input.documentId,
+						auditId,
+						auditId,
+						input.now,
+					],
+				},
+			]);
+			if ((results[0]?.meta.changes ?? 0) !== 1) {
+				throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
+			}
+		} catch (error) {
+			if (error instanceof DocumentRepositoryError) throw error;
+			throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
+		}
 	}
 
 	async loadParentApprovedDownload(userId: string, documentId: string) {
@@ -432,7 +521,11 @@ export class AuthorizationDocumentRepository {
 			JOIN users AS owner ON owner.id = request.user_id
 			WHERE document.id = ? AND document.user_id = ? AND request.user_id = ?
 				AND document.review_status = 'approved' AND document.archive_r2_key IS NOT NULL
-				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+				AND document.deleted_at IS NULL AND owner.account_status = 'active'
+				AND owner.is_blocked = 0
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+					WHERE archive.target_kind = 'authorization_document'
+						AND archive.target_id = document.id)`,
 			params: [documentId, userId, userId],
 		});
 		if (!document) throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
@@ -442,26 +535,71 @@ export class AuthorizationDocumentRepository {
 	async auditParentApprovedDownload(input: {
 		documentId: string;
 		userId: string;
+		expectedSha256: string;
+		expectedStorageKey: string;
 		requestId: string;
 		now: string;
 	}) {
-		await this.db.run({
-			sql: `INSERT INTO audit_events
-				(id, actor_user_id, actor_kind, action, target_kind, target_id,
-				 request_id, safe_diff_json, created_at)
-			SELECT ?, ?, 'user', 'authorization_document.owner_downloaded',
-				'authorization_document', id, ?, '{"forcedAttachment":true}', ?
-			FROM authorization_documents WHERE id = ? AND user_id = ?
-				AND review_status = 'approved' AND archive_r2_key IS NOT NULL`,
-			params: [
-				crypto.randomUUID(),
-				input.userId,
-				input.requestId,
-				input.now,
-				input.documentId,
-				input.userId,
-			],
-		});
+		const auditId = crypto.randomUUID();
+		const assertionId = crypto.randomUUID();
+		try {
+			const results = await this.db.batch([
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'authorization_document.owner_downloaded',
+						'authorization_document', document.id, ?, '{"forcedAttachment":true}', ?
+					FROM authorization_documents AS document
+					JOIN funding_authorizations AS authorization
+						ON authorization.id = document.authorization_id
+						AND authorization.user_id = document.user_id
+					JOIN individual_requests AS request
+						ON request.id = authorization.request_id AND request.user_id = document.user_id
+					JOIN users AS owner ON owner.id = document.user_id
+					WHERE document.id = ? AND document.user_id = ?
+						AND document.review_status = 'approved'
+						AND document.archive_r2_key = ? AND document.sha256 = ?
+						AND document.deleted_at IS NULL AND owner.account_status = 'active'
+						AND owner.is_blocked = 0
+						AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
+							WHERE archive.target_kind = 'authorization_document'
+								AND archive.target_id = document.id)`,
+					params: [
+						auditId,
+						input.userId,
+						input.requestId,
+						input.now,
+						input.documentId,
+						input.userId,
+						input.expectedStorageKey,
+						input.expectedSha256,
+					],
+				},
+				{
+					sql: `INSERT INTO document_action_assertions
+						(id, document_id, action, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, ?, 'owner_downloaded', ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						assertionId,
+						input.documentId,
+						input.userId,
+						auditId,
+						auditId,
+						input.now,
+					],
+				},
+			]);
+			if ((results[0]?.meta.changes ?? 0) !== 1) {
+				throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
+			}
+		} catch (error) {
+			if (error instanceof DocumentRepositoryError) throw error;
+			throw new DocumentRepositoryError('DOCUMENT_DOWNLOAD_REJECTED');
+		}
 	}
 
 	async deleteByParent(input: {
@@ -484,10 +622,17 @@ export class AuthorizationDocumentRepository {
 			return { replayed: true, document: await this.internalDocument(input.documentId) };
 		}
 		const document = await this.internalDocument(input.documentId);
-		if (!document || document.user_id !== input.userId || document.review_status === 'approved') {
+		if (
+			!document ||
+			document.user_id !== input.userId ||
+			document.review_status === 'approved'
+		) {
 			throw new DocumentRepositoryError('DOCUMENT_DELETE_REJECTED');
 		}
-		const guard = this.mutationGuard.assertion({ documentId: input.documentId, operation: 'delete' });
+		const guard = this.mutationGuard.assertion({
+			documentId: input.documentId,
+			operation: 'delete',
+		});
 		const auditId = crypto.randomUUID();
 		const actionId = crypto.randomUUID();
 		const assertionId = crypto.randomUUID();
@@ -499,13 +644,7 @@ export class AuthorizationDocumentRepository {
 					WHERE id = ? AND user_id = ? AND review_status IN
 						('quarantined', 'clean', 'infected', 'rejected')
 						AND deleted_at IS NULL AND (${guard.sql})`,
-					params: [
-						input.now,
-						input.now,
-						input.documentId,
-						input.userId,
-						...guard.params,
-					],
+					params: [input.now, input.now, input.documentId, input.userId, ...guard.params],
 				},
 				{
 					sql: `INSERT INTO audit_events
@@ -627,7 +766,13 @@ export class AuthorizationDocumentRepository {
 							AND quarantine_delete_state = 'present'
 							AND ((review_status <> 'approved' AND quarantine_expires_at <= ?)
 								OR (review_status = 'approved' AND archive_r2_key IS NOT NULL))`,
-						params: [auditId, `document-cleanup:${candidate.id}`, now, candidate.id, now],
+						params: [
+							auditId,
+							`document-cleanup:${candidate.id}`,
+							now,
+							candidate.id,
+							now,
+						],
 					},
 					{
 						sql: `UPDATE authorization_documents
@@ -686,6 +831,8 @@ export class AuthorizationDocumentRepository {
 				document.sha256, document.uploaded_at, document.quarantine_expires_at,
 				child.full_name AS child_name, request.request_kind
 			FROM authorization_documents AS document
+			JOIN users AS owner ON owner.id = document.user_id
+				AND owner.account_status <> 'closed'
 			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
 			JOIN individual_requests AS request ON request.id = authorization.request_id
 			JOIN children AS child ON child.id = document.child_id

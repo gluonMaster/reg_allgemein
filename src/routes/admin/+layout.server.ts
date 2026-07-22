@@ -9,6 +9,7 @@ import {
 	privacyAdminNavigation,
 	requestAdminNavigation,
 	trialAdminNavigation,
+	operationsAdminNavigation,
 } from '$lib/server/admin/navigation';
 
 export const load: LayoutServerLoad = (event) => {
@@ -23,6 +24,7 @@ export const load: LayoutServerLoad = (event) => {
 			...priceReviewAdminNavigation,
 			...messagingAdminNavigation,
 			...privacyAdminNavigation,
+			...operationsAdminNavigation,
 		]),
 		commandKey: crypto.randomUUID(),
 	};

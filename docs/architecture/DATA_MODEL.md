@@ -185,6 +185,49 @@ archive/approved evidence default MVP status всегда `disabled_by_policy`;
 конкурентность превысит возможности D1, переход на Durable Object/managed rate
 limiting требует нового ADR, но не меняет доменные ключи.
 
+### `scheduled_job_runs`
+
+- `id`, allowlisted `job_name`, `trigger_kind` (`scheduled|manual`),
+  `dedupe_key`; `UNIQUE(job_name, dedupe_key)`;
+- `status` (`running|succeeded|failed|feature_disabled|skipped_locked`),
+  `lease_owner`, `fencing_token`;
+- PII-free `safe_result_json`, typed `error_code`, start/finish timestamps.
+
+Каждый Cron/manual delivery сначала получает `operation_locks` lease, затем
+создаёт run. Setup/audit/execution failure конкретного job переводит созданный
+run в `failed` и не прекращает обработку остальных allowlisted jobs. Manual run
+до side effect требует active admin audit. Exact Cron expression выбирает только
+фиксированную группу jobs; неизвестный Cron отклоняется.
+
+### `storage_object_intents`, `storage_intent_link_assertions`
+
+- intent хранит `storage_class` (`archive|quarantine`), opaque `object_key`,
+  `object_kind`, optional `source_ref`, SHA-256, size, state
+  (`staged|linked|delete_pending|processing|deleted`), lease/attempt/error и
+  timestamps; `UNIQUE(storage_class, object_key)`;
+- link assertion append-only связывает один intent с authoritative target после
+  одной D1 transaction.
+
+R2 body записывается только после `staged`. Domain commit переводит intent в
+`linked` в том же batch, где появляется D1 reference. Reconciler при ambiguous
+result сначала восстанавливает `linked`; cleanup claim допускает только object,
+который всё ещё нигде не referenced, и повторяет это условие в conditional
+`UPDATE`. Для orphan `staged` применяется технический grace 15 минут, затем
+lease; это recovery delay, не business retention period.
+
+### `admin_bootstrap_control`, `admin_bootstrap_actions`, `admin_bootstrap_assertions`
+
+Единственная control row допускает только необратимый переход
+`available → consumed`. На чистой D1 out-of-band CLI может один раз повысить
+только active, unblocked, verified parent при полном отсутствии active admin;
+роль меняется вместе с session-version increment, отзывом sessions, system audit,
+action и final assertion. Replay/конкурентная попытка откатывается. При upgrade
+БД с уже существующим active admin migration `0014` сама аудируемо переводит
+control в `consumed`, чтобы не оставлять dormant privilege path.
+Remote CLI до batch pin-ит exact environment-specific D1 UUID из указанного
+config (`preview_database_id` либо `database_id`), включает UUID в typed
+confirmation и не использует implicit dev/proxy binding selection.
+
 ### `admin_action_assertions`
 
 - `id`, `scope`, `idempotency_record_id` unique;
@@ -1270,7 +1313,8 @@ Cabinet и следующий price review используют current effectiv
 ### `absence_reports`
 
 - `id`, `thread_id`, `user_id`, `child_id`, `enrollment_id`;
-- `absence_date`, `reason_code`, `message_id`, `created_at`.
+- `absence_date`, `reason_code`, optional operational `reason_text`, `message_id`,
+  `created_at`.
 
 Структурированная absence record и сообщение создаются одной операцией.
 
@@ -1287,6 +1331,28 @@ Cabinet и следующий price review используют current effectiv
 Email дополнительно хранит recipient/reference template; Telegram — bureau chat
 destination из конфигурации, но не secret token. `UNIQUE(dedupe_key)` исключает
 двойную отправку одного события.
+
+Email claim повторяет recipient/account/token predicates в conditional `UPDATE`,
+а не доверяет предварительному candidate `SELECT`. Privacy closure меняет
+account только при отсутствии его `processing` email; тот же closure batch
+отменяет `pending|retry`. Инвариант состояния: `users.account_status='closed'`
+и `email_outbox.status='processing'` для этого recipient не существуют
+одновременно.
+
+При privacy closure operational payload (`support_threads.subject`,
+`support_messages.body`, `absence_reports.reason_text`, свободные поля/
+preferences `individual_requests`, snapshots неотправленных draft offers) может
+быть только однонаправленно заменён фиксированным marker/пустой структурой.
+Обычные immutable triggers сохраняются для любых других updates. Retained
+contract/funding/acceptance evidence не входит в эту минимизацию и доступно
+только через отдельную purpose-bound authorization + audit boundary.
+
+`privacy_r2_cleanup_jobs` использует `lease_owner`/`lease_until`, чтобы Worker
+мог вернуть прерванный `processing` job в повторную обработку. При upgrade на
+`0014` существующие `processing` rows, созданные до появления lease columns,
+одноразово переводятся в retryable `failed` с typed code
+`MIGRATION_LEASE_RECOVERY_REQUIRED`: nullable lease не оставляет cleanup
+навсегда зависшим.
 
 ## Ключевые вычисляемые инварианты
 

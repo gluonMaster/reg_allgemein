@@ -5,6 +5,10 @@ export const germanCatalog = {
 	'home.foundationNotice':
 		'Das Registrierungsportal wird vorbereitet. Verfügbare Funktionen werden hier veröffentlicht.',
 	'home.catalogLink': 'Aktuelle Kurse ansehen',
+	'footer.navigationLabel': 'Rechtliche Informationen und Kontakt',
+	'footer.privacy': 'Datenschutz',
+	'footer.imprint': 'Impressum',
+	'footer.contact': 'Kontakt',
 	'errors.unexpected':
 		'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
 	'pricing.estimatedMissingDuration':
@@ -646,6 +650,18 @@ export const germanCatalog = {
 	'admin.requests.documentReviewed': 'Die fachliche Dokumentprüfung wurde gespeichert.',
 	'admin.requests.authorizationReviewed': 'Die Förderentscheidung wurde gespeichert.',
 	'admin.nav.pricing': 'Preise',
+	'admin.nav.operations': 'Betrieb',
+	'admin.operations.title': 'Betrieb und Hintergrundaufgaben',
+	'admin.operations.notice':
+		'Diese Ansicht enthält nur sichere Zähler und Fehlercodes. Starten Sie eine Aufgabe nur nach dem zugehörigen Betriebs-Runbook.',
+	'admin.operations.job': 'Hintergrundaufgabe',
+	'admin.operations.confirm': 'Ich bestätige den manuellen, begrenzten Lauf dieser Aufgabe.',
+	'admin.operations.run': 'Aufgabe einmal ausführen',
+	'admin.operations.history': 'Letzte Läufe',
+	'admin.operations.empty': 'Noch kein Lauf gespeichert.',
+	'admin.operations.error': 'Sicherer Fehlercode',
+	'admin.operations.completed': 'Der begrenzte Lauf wurde gespeichert.',
+	'admin.operations.failed': 'Der Lauf wurde nicht sicher abgeschlossen. Prüfen Sie den letzten Fehlercode.',
 	'admin.dashboard.openReviews': 'Offene Prüfaufgaben',
 	'admin.dashboard.openIssues': 'Offene Importhinweise',
 	'admin.dashboard.blockedUsers': 'Gesperrte Konten',

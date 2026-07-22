@@ -605,7 +605,36 @@ MVP готов, когда:
   и formation дают ровно один результат: active contract либо closed account,
   но не оба. Successful closure атомарно создаёт по всем active media grants
   append-only revoke с `source=account_deletion` и effective timestamp удаления;
-  повтор closure не дублирует события. (`PRIV-03`, `CONTRACT-15`)
+  повтор closure не дублирует события. Claimed current legacy service с любым
+  status, кроме явного `KN`, блокирует closure независимо от occupancy mapping.
+  Concurrent email claim и closure не оставляют одновременно `closed` account и
+  `processing` outbox row: claim-first откладывает closure, closure-first
+  отменяет/не claim-ит неотправленное письмо. Неудерживаемые request/support/
+  absence тексты, preferences и draft offer snapshots заменены безопасными
+  closure markers; retained legal evidence не переписывается. Обычные admin
+  списки исключают закрытого subject и legal archive, а purpose-bound download
+  на каждом replay повторно проверяет active actor/subject и создаёт audit.
+  (`PRIV-03`, `CONTRACT-15`, `REL-01`)
+- Каждый R2 `put` application artifact предварён D1 storage intent. Успешная
+  domain transaction атомарно связывает intent и создаёт assertion; ambiguous D1
+  result не разрешает eager delete. Reconciler сохраняет referenced object, а
+  orphan cleanup после 15-минутного grace удаляет только всё ещё unreferenced
+  object с действующим lease. (`REL-01`, `SEC-01`)
+- Scheduled/manual jobs имеют allowlist, exact Cron mapping, unique dedupe,
+  lease/fencing и PII-free run ledger. Ошибка setup/audit/execution одного job не
+  запускает side effect без audit, не оставляет его run `running` при доступной
+  D1 и не прерывает остальные jobs. Manual route требует admin, CSRF, typed job,
+  confirmation и idempotency. (`REL-01`, `ADMIN-02`, `OPS-01`)
+- First-admin capability не имеет HTTP route и потребляется ровно один раз:
+  verified active parent повышается только при нуле active admin, sessions
+  отзываются, audit/assertion сохраняются, replay/race отклоняется. Upgrade с
+  существующим active admin запечатывает capability в migration. (`AUTH-09`,
+  `ADMIN-02`, `OPS-01`)
+- Acceptance IP хранится только как scoped pseudonymous hash. Текущая
+  реализация использует временный технический upper bound 30×24h и после expiry
+  однонаправленно очищает значение, сохраняя timestamp/evidence. Это не legal
+  approval срока: production privacy/retention gate остаётся `blocked` до
+  письменного owner/legal input либо изменения реализации. (`PRIV-01`, `SEC-02`)
 
 - Основные формы работают на мобильном экране и только с клавиатуры; focus и
   ошибки связаны с соответствующими полями. (`UI-01`)
@@ -631,3 +660,7 @@ MVP готов, когда:
   readiness checklist. Отсутствие разрешённого preview/remote доступа оставляет
   соответствующий gate `blocked`, а не превращает проверку в optional.
   (`OPS-01`, `REL-02`)
+- Remote first-admin bootstrap до любой mutation сверяет `APP_ENV` и exact
+  environment-specific D1 UUID из указанного config, требует тот же UUID в
+  confirmation и не может молча выбрать preview binding для production intent.
+  (`OPS-01`, `REL-01`)

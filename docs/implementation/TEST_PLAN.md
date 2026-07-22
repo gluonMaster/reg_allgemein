@@ -22,18 +22,18 @@
 concurrency/idempotency проверки в названном suite. Точные cases уточняются в
 соответствующих разделах этого плана; диапазон не заменяет acceptance criterion.
 
-| Требования | Обязательный suite |
-| --- | --- |
-| `SYS-01`–`SYS-03` | System boundary и release smoke |
-| `AUTH-01`–`AUTH-09`, `SEC-01`–`SEC-02` | Auth и authorization |
-| `CLAIM-01`–`CLAIM-09`, `CHILD-01`–`CHILD-03`, `CAB-01`–`CAB-05` | Claim, children и cabinet |
-| `CAT-01`–`CAT-04`, `TRIAL-01`–`TRIAL-05` | Catalog, occupancy, trial |
-| `PRICE-01`–`PRICE-04` | Import contract, occupancy/price и price review |
-| `REQ-01`–`REQ-10` | Requests и documents |
-| `CONTRACT-01`–`CONTRACT-20` | Contracts и price review |
-| `MSG-01`–`MSG-04` | Messaging |
-| `ADMIN-01`–`ADMIN-03`, `PRIV-01`–`PRIV-03` | Admin и privacy |
-| `REL-01`–`REL-02`, `TIME-01`, `UI-01`, `OBS-01`, `OPS-01` | Cross-suite quality/release gates |
+| Требования                                                      | Обязательный suite                              |
+| --------------------------------------------------------------- | ----------------------------------------------- |
+| `SYS-01`–`SYS-03`                                               | System boundary и release smoke                 |
+| `AUTH-01`–`AUTH-09`, `SEC-01`–`SEC-02`                          | Auth и authorization                            |
+| `CLAIM-01`–`CLAIM-09`, `CHILD-01`–`CHILD-03`, `CAB-01`–`CAB-05` | Claim, children и cabinet                       |
+| `CAT-01`–`CAT-04`, `TRIAL-01`–`TRIAL-05`                        | Catalog, occupancy, trial                       |
+| `PRICE-01`–`PRICE-04`                                           | Import contract, occupancy/price и price review |
+| `REQ-01`–`REQ-10`                                               | Requests и documents                            |
+| `CONTRACT-01`–`CONTRACT-20`                                     | Contracts и price review                        |
+| `MSG-01`–`MSG-04`                                               | Messaging                                       |
+| `ADMIN-01`–`ADMIN-03`, `PRIV-01`–`PRIV-03`                      | Admin и privacy                                 |
+| `REL-01`–`REL-02`, `TIME-01`, `UI-01`, `OBS-01`, `OPS-01`       | Cross-suite quality/release gates               |
 
 ## Уровни
 
@@ -235,6 +235,8 @@ concurrency/idempotency проверки в названном suite. Точны
 ### Documents
 
 - PDF/JPEG/PNG correct signature;
+- encrypted PDF с literal `/Encrypt` и PDF name escapes (`/Encr#79pt`,
+  `/#45ncrypt`) отклоняется;
 - spoofed extension/MIME, oversize, too many files;
 - duplicate upload idempotency;
 - random private R2 key and no public URL;
@@ -402,6 +404,9 @@ concurrency/idempotency проверки в названном suite. Точны
 - admin answer persists when email fails;
 - outbox duplicate event sends once;
 - transient retry/backoff, permanent/dead, stale lease recovery;
+- outbox candidate-select race повторно проверяет recipient внутри claim UPDATE;
+  claim-first блокирует closure, closure-first возвращает null/cancelled и
+  никогда не даёт одновременно closed account + processing email;
 - outside hours, Friday evening/weekend;
 - DST start/end in `Europe/Berlin`;
 - payload redaction/minimal Telegram content.
@@ -414,6 +419,8 @@ concurrency/idempotency проверки в названном suite. Точны
 - mapping/capacity/publish handlers и price diagnostics without raw source;
 - subject-scoped private export без cross-user data;
 - delete dry-run, retention hold, idempotent approval/failure и R2 cleanup plan;
+- export-download audit replay после block/closure повторно проверяет actor,
+  artifact status/expiry и ownership вместо доверия старому audit ID;
 - active contract blocks account closure; without it sessions/profile close
   with `completed_with_retained_evidence` while per-record holds remain in an
   inaccessible legal archive; active path is `blocked_by_active_contract`;
@@ -428,9 +435,41 @@ concurrency/idempotency проверки в названном suite. Точны
 - accept/decline, formation/activation и price apply повторно требуют
   `users.account_status=active`; закрытый account не проходит ни один прямой API
   или queued/retried path;
+- claimed current legacy row с status не `KN` блокирует closure, включая
+  unmapped/non-occupancy row;
+- closure минимизирует operational request/support/absence/draft-offer payload,
+  но сохраняет immutable retained evidence; ordinary admin lists не показывают
+  closed/legal-archive rows;
+- document attestation, business review и funding authorization review
+  проигрывают closure/legal-archive race без позднего audit/evidence/R2 orphan;
 - legal-archive/approved-evidence records stay `disabled_by_policy`; nullable or
   elapsed `retain_until` never schedules automatic purge, while 14-day
   quarantine cleanup remains active and separate.
+
+### Stage 13 operations и storage recovery
+
+- empty migration и populated `0013 → 0014`: existing admin capability sealed,
+  privacy cleanup/support rows сохранены, новые triggers/columns работают;
+  legacy lease-less `processing` privacy cleanup становится retryable `failed`
+  и затем успешно claim-ится новым Worker;
+- clean first-admin bootstrap, invalid candidate, existing-admin denial,
+  replay и two-candidate concurrency; role/session/audit/assertion cardinality;
+  remote config `APP_ENV`, `database_id`/`preview_database_id`, UUID-bearing
+  confirmation, shared-ID/overlay/mismatch rejection и escaped batch rendering;
+- exact Cron allowlist, все fast/maintenance job IDs, scheduled disable,
+  duplicate bucket, busy lease, manual audit/idempotency и failure isolation;
+- `/admin/operations` anonymous/parent/CSRF/job/confirmation/key denial до D1/
+  scheduler side effect;
+- R2 write-ahead intent: grace boundary, current/stale lease, wrong-owner
+  finalize, authoritative reference before claim и ambiguous-result reconcile;
+- contract/document/privacy R2 paths не делают eager delete после ambiguous D1
+  response и не удаляют object, который мог быть linked;
+- один binding object для archive/quarantine отклоняется, а allowed
+  `archive/`/`quarantine/` keys маршрутизируются только в свой R2 binding;
+- upload boundary отклоняет реальный PDF/ZIP dual-parser, в котором ZIP EOCD
+  расположен до финального PDF xref/EOF, а также escaped PDF name `/Encrypt`;
+- acceptance IP hash получает технический expiry 30×24h; cleanup до expiry не
+  проходит, после expiry null-ит только IP value и сохраняет immutable evidence.
 
 ## Quality gates
 

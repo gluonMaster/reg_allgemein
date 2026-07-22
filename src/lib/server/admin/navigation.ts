@@ -51,6 +51,10 @@ export const privacyAdminNavigation: readonly AdminNavigationItem[] = [
 	{ id: 'privacy', href: '/admin/privacy', labelKey: 'admin.nav.privacy', order: 69.75 },
 ];
 
+export const operationsAdminNavigation: readonly AdminNavigationItem[] = [
+	{ id: 'operations', href: '/admin/operations', labelKey: 'admin.nav.operations', order: 69.9 },
+];
+
 export function buildAdminNavigation(
 	extensions: readonly AdminNavigationItem[] = []
 ): readonly AdminNavigationItem[] {

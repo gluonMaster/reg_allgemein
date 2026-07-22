@@ -31,23 +31,37 @@ export class UnavailableDocumentStore implements PrivateDocumentStore {
 }
 
 export class CloudflareR2DocumentStore implements PrivateDocumentStore {
-	constructor(private readonly bucket: R2Bucket) {}
+	constructor(
+		private readonly quarantineBucket: R2Bucket,
+		private readonly archiveBucket: R2Bucket
+	) {}
+
+	private bucketFor(key: string): R2Bucket {
+		if (key.startsWith('quarantine/')) return this.quarantineBucket;
+		if (key.startsWith('archive/')) return this.archiveBucket;
+		throw new DocumentStorageUnavailableError();
+	}
 
 	async put(key: string, body: Uint8Array, sha256: string): Promise<void> {
-		await this.bucket.put(key, body, { customMetadata: { sha256 } });
+		await this.bucketFor(key).put(key, body, { customMetadata: { sha256 } });
 	}
 
 	async get(key: string): Promise<PrivateDocumentObject | null> {
-		const object = await this.bucket.get(key);
+		const object = await this.bucketFor(key).get(key);
 		if (!object) return null;
 		return { body: await object.arrayBuffer(), size: object.size };
 	}
 
 	async delete(key: string): Promise<void> {
-		await this.bucket.delete(key);
+		await this.bucketFor(key).delete(key);
 	}
 }
 
-export function documentStore(bucket?: R2Bucket): PrivateDocumentStore {
-	return bucket ? new CloudflareR2DocumentStore(bucket) : new UnavailableDocumentStore();
+export function documentStore(
+	quarantineBucket?: R2Bucket,
+	archiveBucket?: R2Bucket
+): PrivateDocumentStore {
+	return quarantineBucket && archiveBucket
+		? new CloudflareR2DocumentStore(quarantineBucket, archiveBucket)
+		: new UnavailableDocumentStore();
 }

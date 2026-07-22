@@ -16,6 +16,7 @@ import {
 	ContractFundingDiscontinuityContributor,
 	ContractRequestMutationGuard,
 } from '$lib/server/contracts/boundaries';
+import { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 
 export function createRequestRuntime(config: RuntimeConfig) {
 	const database = new DatabaseBoundary(config.db);
@@ -27,7 +28,8 @@ export function createRequestRuntime(config: RuntimeConfig) {
 		database,
 		new ContractDocumentMutationGuard()
 	);
-	const store = documentStore(config.r2Bucket);
+	const store = documentStore(config.r2QuarantineBucket, config.r2ArchiveBucket);
+	const storageIntents = new StorageIntentRepository(database);
 	const limiter = new AuthRateLimiter(
 		new FoundationRepository(database),
 		config.jwtSecret ?? 'document-upload-disabled-without-secret',
@@ -47,10 +49,18 @@ export function createRequestRuntime(config: RuntimeConfig) {
 			documentRepository,
 			store,
 			config.documents,
-			limiter
+			limiter,
+			undefined,
+			storageIntents
 		),
 		adminRepository,
-		adminService: new RequestAdminService(adminRepository, documentRepository, store),
+		adminService: new RequestAdminService(
+			adminRepository,
+			documentRepository,
+			store,
+			undefined,
+			storageIntents
+		),
 		documentConfig: config.documents,
 		cabinetRepository: new CabinetRepository(database),
 	};

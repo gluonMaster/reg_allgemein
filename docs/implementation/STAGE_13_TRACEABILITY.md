@@ -1,0 +1,151 @@
+# Stage 13: traceability требований и release evidence
+
+Актуально на 2026-07-22. Матрица связывает
+[MVP requirements](../spec/MVP_SPEC.md),
+[acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md), реализацию и automated
+tests. Она фиксирует реализованный stage-13 hardening и отделяет локально
+проверенное поведение от обязательного environment-specific release evidence.
+
+Матрица не заменяет текущий
+[production checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md). Наличие
+реализации/unit test не даёт production `passed` без environment-specific
+evidence.
+
+## Обозначения
+
+- **Local evidence** — существующая реализация и автоматический тест найдены.
+- **Gap** — отсутствует обязательная реализация или test/evidence.
+- `feature_disabled` — production path fail-closed; это не `passed`.
+- `blocked` — обязательный release input/evidence отсутствует.
+- Локально прошедший тест не снимает `blocked`, если gate требует preview,
+  restore, approval или immutable release evidence.
+
+## Системные, reliability и operations требования
+
+| Requirement / acceptance                                                                              | Реализация                                                                                                    | Automated evidence                                                                              | Gap / release status                                                                                                 |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| SYS-01: самостоятельный portal Worker/origin/D1/R2/auth lifecycle, без CMS/runtime сайта              | `svelte.config.js`, `wrangler.example.toml`, `src/hooks.server.ts`, `src/lib/server/security/route-policy.ts` | `tests/unit/config.test.ts`, `tests/unit/auth-security.test.ts`, `tests/e2e/foundation.spec.ts` | Local boundary есть; exact preview/production manifest и remote smoke отсутствуют — `blocked`                        |
+| SYS-02: только HTTPS link integration; portal → Datenschutz/Impressum/Kontakt; отдельный site go-live | Root footer и versioned `OFFICIAL_*_URL`/`OFFICIAL_LINKS_VERSION`; CMS/сайт не изменяются                     | `tests/unit/config.test.ts`, i18n tests, local build                                            | Exact approved URLs/site surfaces, visual smoke и отдельное поручение отсутствуют — `blocked`                        |
+| SYS-03: `PORTAL_PUBLIC_ORIGIN`, absolute links, host-only cookie, release manifest                    | `src/lib/server/config/runtime.ts`, `src/lib/server/auth/session.ts`, `src/lib/server/outbox/templates.ts`    | `tests/unit/config.test.ts`, `tests/unit/auth-security.test.ts`                                 | Final origin/link manifest/remote TLS-cookie smoke отсутствуют — `blocked`                                           |
+| REL-01: атомарность, идемпотентность, duplicate/concurrency safety                                    | D1 batch boundary; import, claim, contract, price-review, closure repositories/services                       | D1 suites, `migration-upgrade-d1.test.ts`, `production-readiness-flow-d1.test.ts`               | Empty/upgrade и связный domain flow локально проверены; browser/remote critical path отсутствует — release `blocked` |
+| REL-02: retryable external actions, backup/restore/rollback                                           | Outbox lease/retry/dead worker; import local rollback                                                         | `tests/integration/messaging-outbox-d1.test.ts`, import tests                                   | Real providers/Cron `feature_disabled`/`blocked`; D1/R2 backup и isolated restore отсутствуют — `blocked`            |
+| OPS-01: deploy/monitor/backup/bootstrap/runbooks                                                      | Four runbooks/checklist, migration, Worker scheduler/triggers, operations page, bootstrap и release helpers   | Local tests + independent 2026-07-22 content cold-read passed                                   | Full preview/bootstrap/restore/provider rehearsal и approvals не подтверждены — `blocked`                            |
+
+## Product/security traceability
+
+Матрица группирует только требования с одной реализационной границей. Каждый
+указанный ID остаётся отдельным обязательным требованием канонической
+спецификации.
+
+| Requirement IDs                  | Acceptance area                                                                                         | Основная реализация                                                                                               | Automated tests                                                                                                                             | Остаточный gap/status                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| AUTH-01–AUTH-09                  | Registration, verification, login/logout, reset/change email/password, rate limit, session/CSRF         | `src/lib/server/auth/*`, `src/routes/auth/*`, `src/routes/account/security/*`                                     | `tests/integration/auth-d1.test.ts`, `tests/unit/auth-security.test.ts`, `config.test.ts`                                                   | Real email adapter отсутствует; public auth production fail-closed — `feature_disabled`; full browser auth E2E `blocked`                      |
+| CLAIM-01–CLAIM-09                | Exact verified-email matching, 0/1/multiple, namespace reservation, race/stale snapshot                 | `src/lib/server/family/*`, `src/routes/cabinet/legacy-claim/*`                                                    | `tests/integration/family-cabinet-d1.test.ts`, `legacy-import-d1.test.ts`, `tests/unit/family-cabinet.test.ts`                              | Current promoted real legacy snapshot/preview lookup smoke отсутствуют — `blocked`                                                            |
+| CHILD-01–CHILD-03, CAB-01–CAB-05 | Parent-owned children/cabinet, object ownership, legacy-only view                                       | family/cabinet repositories and routes                                                                            | `family-cabinet-d1.test.ts`, guards/unit tests                                                                                              | Browser cross-user/mobile journey не выполнен — `blocked`                                                                                     |
+| ADMIN-01–ADMIN-03                | Admin RBAC, audit, role/session actions                                                                 | Admin routes/repositories; one-shot bootstrap migration/repository/CLI with exact config/environment/D1-ID guard  | Admin/auth tests, `admin-bootstrap-d1.test.ts`, `admin-bootstrap-command.test.ts`, `admin-bootstrap-remote.test.ts`, operations route tests | One-shot/replay/session revoke и selector isolation локально проверены; remote clean-room bootstrap/zero-admin recovery rehearsal — `blocked` |
+| CAT-01–CAT-04                    | Current catalog, availability, CTA/kind semantics                                                       | `src/routes/catalog/*`, catalog services                                                                          | `tests/integration/catalog-trials-d1.test.ts`                                                                                               | Official-site schedule не заменяется; preview responsive/accessibility smoke отсутствует — `blocked`                                          |
+| TRIAL-01–TRIAL-05                | Trial request/confirm/reject/cancel/attendance/convert, capacity/races                                  | trial repository/service/admin routes                                                                             | `tests/integration/catalog-trials-d1.test.ts`                                                                                               | Full browser/production-shaped concurrency evidence отсутствует — `blocked`                                                                   |
+| REQ-01–REQ-10                    | Individual/Nachhilfe requests, funding authorization, document upload/review/expiry                     | `src/routes/requests/*`, `src/routes/admin/requests/*`, `src/lib/server/requests/*`, `src/lib/server/documents/*` | `tests/integration/requests-documents-d1.test.ts`, `tests/unit/document-validation.test.ts`                                                 | Archive/quarantine split и race guards проверены локально; remote private-EU R2/training отсутствуют — `feature_disabled` + release `blocked` |
+| CONTRACT-01–CONTRACT-20          | Versioned offer/PDF, accept/formation/activation/evidence, numbering, termination/statutory/media gates | `src/lib/server/contracts/*`, parent/admin contract routes                                                        | `tests/integration/contracts-d1.test.ts`, `tests/unit/contracts.test.ts`                                                                    | Browser remote conformance, production templates/legal approvals absent; send/statutory/media paths `feature_disabled`                        |
+| PRICE-01–PRICE-04                | Deterministic prices/overrides, price review state machine/apply once                                   | `src/lib/server/pricing/*`, `src/lib/server/price-reviews/*`, UI routes                                           | `tests/integration/pricing-d1.test.ts`, `price-reviews-d1.test.ts`, pricing unit tests                                                      | Scheduled maintenance локально проверено; preview Cron/freshness alert отсутствуют — `blocked`                                                |
+| MSG-01–MSG-04                    | Support/absence/admin reply, email and Telegram outboxes, Berlin business hours                         | Outbox routes/workers; stage-13 scheduler/manual page                                                             | Outbox/time/scheduler integration and scheduler boundary tests                                                                              | Only fake/disabled adapters; external delivery `feature_disabled`, freshness/dead alerts `blocked`                                            |
+| PRIV-01–PRIV-03                  | Subject export, closure blockers, retention/archive separation, media revoke, cleanup                   | `src/lib/server/privacy/*`, account/admin privacy routes, scheduled cleanup                                       | `privacy-closure-d1.test.ts`, storage-intent/scheduler/connected-flow tests                                                                 | Cleanup/races локально проверены; legal retention/notice и remote R2 evidence — `blocked`; archive purge/read `feature_disabled`              |
+| SEC-01–SEC-02                    | Server ownership/RBAC, CSRF, safe errors/audit                                                          | route policy/hooks, repositories, auth/security/observability modules                                             | auth, guards, every D1 integration suite, `tests/unit/observability.test.ts`                                                                | Independent indirect-query/remote-log review и full browser IDOR matrix отсутствуют — `blocked`                                               |
+| OBS-01                           | Request/correlation IDs and PII-safe diagnostics                                                        | `src/hooks.server.ts`, observability helpers                                                                      | `tests/unit/observability.test.ts`, foundation E2E                                                                                          | Production monitoring/signals/alert rehearsal отсутствуют — `blocked`                                                                         |
+| TIME-01                          | UTC Cron/expiry и Europe/Berlin/DST-safe business time                                                  | exact `* * * * *`/`*/15 * * * *` UTC mapping; Berlin-time domain helpers                                          | `tests/unit/berlin-time.test.ts`, outbox/scheduler tests                                                                                    | Local semantics проверены; preview Cron delivery/freshness alert отсутствуют — `blocked`                                                      |
+| UI-01                            | German, responsive, accessible keyboard/errors                                                          | German translations/layout/routes, focus CSS                                                                      | `tests/unit/i18n.test.ts`, limited `tests/e2e/foundation.spec.ts`                                                                           | Нет authenticated mobile/keyboard/focus/error association/axe/manual evidence — `blocked`                                                     |
+
+## Data/import traceability
+
+| Acceptance area                                   | Реализация                                                                                                     | Automated tests                                                     | Gap                                                                                       |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Immutable ordered migrations                      | `migrations/0001_foundation.sql`–`0014_production_operations.sql`; helper/foundation inventory синхронизирован | `foundation-d1.test.ts`, `migration-upgrade-d1.test.ts`             | Empty и populated `0013 → 0014` локально проверены; remote backup/apply/restore `blocked` |
+| Price/schedule/access/PlusBText parser allowlists | `scripts/import-references.ts`, local parsers                                                                  | parser unit suites, `import-d1.test.ts`, `legacy-import-d1.test.ts` | Current authorized real source rehearsal отсутствует                                      |
+| Dry-run/promote/idempotency/dependency checks     | import repository and CLI                                                                                      | `tests/integration/import-d1.test.ts`                               | CLI local-only; preview/production safe import path отсутствует                           |
+| Rollback current import pointer                   | `npm run import:rollback:local`/repository                                                                     | import rollback tests                                               | Remote audited operation/rehearsal отсутствует                                            |
+| Fail-closed stale/unavailable legacy lookup       | family/import boundaries                                                                                       | family/legacy integration tests                                     | Production-shaped smoke/current snapshot отсутствует                                      |
+
+## Storage traceability
+
+| Acceptance area                                                                        | Реализация                                                                                                          | Automated tests                                                                                   | Gap                                                                                            |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Random private object keys, size/MIME/signature/count validation                       | document validation/storage/service                                                                                 | `tests/unit/document-validation.test.ts`, `tests/integration/requests-documents-d1.test.ts`       | Provider policy and private EU placement not proven                                            |
+| Quarantined forced download, hash-bound local AV attestation, separate business review | admin requests route/repository                                                                                     | request/document integration tests                                                                | Admin training/control passage absent; uploads `feature_disabled`                              |
+| 14×24h cleanup, no early delete, duplicate-safe cleanup                                | `DocumentService.cleanupExpired()` and repository claim                                                             | request/document integration and scheduler tests                                                  | Preview trigger/backlog alert отсутствуют                                                      |
+| Archive/quarantine isolation                                                           | Отдельные `R2_ARCHIVE`/`R2_QUARANTINE` bindings, namespace router, same-object runtime reject и write-ahead intents | `document-storage.test.ts`, `storage-intents-d1.test.ts`, request/document и runtime config tests | Локальные tests не доказывают разные физические private-EU buckets/provider policy — `blocked` |
+| Backup/restore                                                                         | Runbook command templates only                                                                                      | Нет full restore test                                                                             | D1/R2 rehearsal, RPO/RTO/cadence `blocked`                                                     |
+
+## Stage-13 implementation contracts
+
+| Name                             | Роль                                                         | Локальное evidence на 2026-07-22                                                                                                     | Остаточный release gap                                                      |
+| -------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `R2_ARCHIVE`/`R2_QUARANTINE`     | Требуемые физически разные retained/transient private stores | Binding-object/namespace routing, unknown namespace fail-closed и storage-intent tests passed                                        | Физическая private-EU resource identity/policy/restore evidence отсутствует |
+| `0014_production_operations.sql` | job/storage/bootstrap/IP-minimization state and invariants   | Empty + populated upgrade, bootstrap and storage-intent tests passed                                                                 | Immutable candidate run + remote backup/apply/restore                       |
+| scheduled Worker/Cron            | bounded dispatch/maintenance/cleanup                         | Cron allowlist, dedupe/lease, failure isolation, manual audit and fresh-clock tests                                                  | Preview trigger, freshness thresholds and alerts                            |
+| manual operations page           | RBAC/audited bounded manual-run                              | Admin-only, CSRF, allowlist, confirmation, idempotency and no-GET-bypass tests 7/7                                                   | Preview UX/monitoring rehearsal                                             |
+| `admin:bootstrap`                | one-shot audited first-admin setup                           | Exact config/APP_ENV/UUID confirmation, selector-free child config, result assertions, replay/concurrency/audit/session-revoke tests | Remote clean-room rehearsal and approved zero-admin recovery                |
+| `docs:check`                     | Markdown link and executable-command consistency             | 138 local links/51 files + 82 executable command lines passed                                                                        | Immutable-candidate rerun                                                   |
+| `release:scan`                   | forbidden artifact/high-confidence secret/PII scan           | 469/469 repository/build candidates scanned as text where required; unexpected controls fail closed                                  | Immutable-candidate rerun                                                   |
+| `release:verify`                 | consolidated release verification                            | Clean working-tree run: check 0/0, Vitest 44/241, Playwright 3/3, build, production audit 0, docs and scan passed                    | Immutable candidate and remote gates remain `blocked`                       |
+
+## Automated suite inventory
+
+| Suite                                                                                           | Покрытие                                                      | Ограничение stage 13                                        |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `tests/unit/config.test.ts`, `auth-security.test.ts`, `guards.test.ts`, `observability.test.ts` | origin, runtime config, cookies, RBAC/CSRF/error redaction    | не заменяет remote config/log smoke                         |
+| Parser/pricing/time/i18n unit suites                                                            | allowlists, deterministic calculations, DST, German text      | не покрывает full browser/accessibility                     |
+| `foundation-d1.test.ts`, `migration-upgrade-d1.test.ts`                                         | ordered empty and representative populated upgrade            | remote backup/apply/restore отсутствуют                     |
+| Auth/family/admin/bootstrap D1 suites                                                           | registration, claim, ownership, admin transitions/audit       | real email/remote bootstrap отсутствуют                     |
+| Catalog/trial/request/document/storage suites                                                   | capacity/races/request/document/storage state/security        | production R2/training отсутствуют                          |
+| Contracts/price/outbox/privacy/scheduler suites                                                 | atomic states, dedupe/concurrency/retry/closure/jobs          | Browser/provider/restore отсутствуют                        |
+| `production-readiness-flow-d1.test.ts`                                                          | register→cabinet→request/trial→contract→price→message→closure | domain-level synthetic flow; не browser/remote E2E          |
+| `tests/e2e/foundation.spec.ts`                                                                  | home, unauthenticated/mobile boundary, protected-route denial | только 3 smoke tests; нет authenticated synthetic lifecycle |
+
+## Global Definition of Done
+
+| DoD item                                                    | Текущее evidence                                                                                   | Статус / next action                                    |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Clean `npm ci`                                              | Passed после удаления generated Worker output; `prepare` выполнил только clean `svelte-kit sync`   | Локально passed; release `blocked` до immutable SHA     |
+| Empty D1 migrations                                         | Final foundation sequence test passed для `0001`–`0014`                                            | Локально passed; remote apply/restore `blocked`         |
+| Representative upgraded D1                                  | Populated `0013 → 0014` upgrade passed 1/1; migration file 2/2 с отдельным selector-rejection test | `blocked` до remote backup/restore rehearsal            |
+| `npm run check`, `npm test`, `npm run build`                | Clean-source check 0/0, Vitest 44 files/241 tests, build и wrapper dry-run passed                  | Локально passed; release `blocked` до immutable SHA     |
+| `npm audit --omit=dev`                                      | Final working-tree production audit passed: 0 vulnerabilities; adapter is dev-only                 | Локально passed; release `blocked` до immutable SHA     |
+| Full automated + targeted negative/concurrency/DST/security | Final full suite passed 241/241; отдельные Stage-13 reviews не нашли remaining HIGH/blocker        | Локально passed; remote gates остаются `blocked`        |
+| Synthetic end-to-end lifecycle                              | Connected migrated-D1 synthetic lifecycle passed 1/1                                               | `blocked`: это не authenticated browser/preview E2E     |
+| German accessibility/mobile/keyboard                        | Неполное                                                                                           | `blocked`                                               |
+| Preview production-shaped bindings/smoke                    | Нет approved resources                                                                             | `blocked`                                               |
+| Browser/provider/Cron smoke                                 | Wiring/adapters неполны                                                                            | `blocked`/affected provider `feature_disabled`          |
+| Current promoted legacy snapshot + 0/1/multiple/fail-closed | Только tests                                                                                       | `blocked` до preview/production-shaped evidence         |
+| D1/R2 backup/isolated restore                               | Отсутствует                                                                                        | `blocked`                                               |
+| Migration/code/import rollback rehearsal                    | Local pieces есть                                                                                  | `blocked` до full decision drill                        |
+| RPO/RTO/cadence                                             | Inputs отсутствуют                                                                                 | `blocked`; не выдумывать                                |
+| Legal/privacy/template/provider approvals                   | Inputs отсутствуют                                                                                 | `blocked`; only authorized owners                       |
+| Manual AV training/test passage                             | Не выполнялся                                                                                      | `blocked`; upload остаётся `feature_disabled`           |
+| Clean-room walkthrough 4 runbooks                           | Independent content cold-read 2026-07-22 passed; commands/routes/stop/rollback сверены             | Content passed; full non-production rehearsal `blocked` |
+| Production deploy/site go-live approvals                    | Отсутствуют                                                                                        | `blocked`; отдельные поручения                          |
+
+## Отдельные feature-disabled paths
+
+На baseline fail-closed и не должны ошибочно отмечаться `passed`:
+
+- public registration и real email delivery;
+- Telegram delivery;
+- production document upload;
+- production contract rendering/send;
+- public statutory contract functions;
+- online media grant/publication;
+- automatic retained legal-archive purge;
+- ordinary retained-archive read/search.
+
+Ограниченный release с любым из этих выключений требует отдельного явного
+owner approval и не называется полным MVP.
+
+## Итог аудита
+
+Локальные domain/D1 state machines имеют значительное автоматическое покрытие.
+Stage 13 добавил и локально проверил SYS-02 footer/config, R2 split и write-ahead
+intents, migration `0014`, upgraded fixture, scheduler/triggers/operations page,
+one-shot bootstrap, release helpers и связный synthetic D1 lifecycle. Dev-tooling
+advisory классифицирован и production audit чист. Alerts, authenticated
+browser/accessibility, provider/Browser preview, backup/restore и внешние
+approvals отсутствуют. Текущий итог production readiness: `blocked`.

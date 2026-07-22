@@ -4,6 +4,7 @@ import { DatabaseBoundary } from '$lib/server/db/database';
 import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
 import { PrivacyService } from '$lib/server/privacy/privacy-service';
 import type { PrivacyArtifactStore } from '$lib/server/privacy/storage';
+import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
@@ -239,6 +240,83 @@ describe('stage 12 privacy export and account closure', () => {
 		expect(store.values.size).toBe(0);
 	});
 
+	it('revalidates current authorization when a download audit is replayed', async () => {
+		const generated = await service.generateExport({
+			actor: parentA,
+			idempotencyKey: 'privacy-export-download-race',
+			requestId: 'privacy-export-download-race',
+		});
+		await service.downloadExport({
+			actor: parentA,
+			artifactId: generated.artifactId!,
+			requestId: 'privacy-download-reused-request',
+		});
+		await db.run({
+			sql: `UPDATE users SET is_blocked = 1, updated_at = ? WHERE id = ?`,
+			params: [now, parentA.id],
+		});
+
+		await expect(repository.auditExportDownload({
+			actor: parentA,
+			artifactId: generated.artifactId!,
+			requestId: 'privacy-download-reused-request',
+			now,
+		})).rejects.toMatchObject({ code: 'PRIVACY_EXPORT_NOT_FOUND' });
+	});
+
+	it('does not report cleanup completion when the linked D1 record cannot be finalized', async () => {
+		const generated = await service.generateExport({ actor: parentA,
+			idempotencyKey: 'privacy-export-cleanup-guard', requestId: 'privacy-export-cleanup-guard' });
+		const expiredAt = '2026-07-22T11:00:01.000Z';
+		await repository.queueExpiredExports(expiredAt, 10);
+		await db.run({
+			sql: `UPDATE privacy_r2_cleanup_jobs SET source_record_id = 'missing-artifact'
+				WHERE private_r2_key = (SELECT private_r2_key FROM privacy_export_artifacts WHERE id = ?)`,
+			params: [generated.artifactId],
+		});
+		const expiredService = new PrivacyService(repository, store,
+			{ exportTtlSeconds: 3600 }, () => expiredAt);
+
+		expect(await expiredService.runCleanup({ privacyRequestId: null, limit: 10 })).toEqual({
+			claimed: 1, completed: 0, failed: 1,
+		});
+		expect(await db.first<{ status: string }>({
+			sql: `SELECT status FROM privacy_export_artifacts WHERE id = ?`,
+			params: [generated.artifactId],
+		})).toEqual({ status: 'delete_pending' });
+		expect(await db.first<{ status: string; last_error_code: string }>({
+			sql: `SELECT status, last_error_code FROM privacy_r2_cleanup_jobs
+				WHERE source_record_id = 'missing-artifact'`,
+		})).toEqual({ status: 'failed', last_error_code: 'D1_FINALIZE_FAILED' });
+	});
+
+	it('lets only the current cleanup lease complete and emits one deterministic audit event', async () => {
+		await service.generateExport({ actor: parentA,
+			idempotencyKey: 'privacy-export-cleanup-race', requestId: 'privacy-export-cleanup-race' });
+		const firstNow = '2026-07-22T11:00:01.000Z';
+		await repository.queueExpiredExports(firstNow, 10);
+		const first = await repository.claimCleanupJobs(null, firstNow, 10, 'worker-a', 300);
+		expect(first).toHaveLength(1);
+		const secondNow = '2026-07-22T11:05:02.000Z';
+		const second = await repository.claimCleanupJobs(null, secondNow, 10, 'worker-b', 300);
+		expect(second).toEqual(first);
+
+		expect(await repository.completeCleanupJob({
+			jobId: second[0].id, leaseOwner: 'worker-b', objectKind: second[0].object_kind,
+			sourceRecordId: second[0].source_record_id, now: secondNow,
+		})).toBe(true);
+		expect(await repository.completeCleanupJob({
+			jobId: first[0].id, leaseOwner: 'worker-a', objectKind: first[0].object_kind,
+			sourceRecordId: first[0].source_record_id, now: secondNow,
+		})).toBe(false);
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM audit_events
+				WHERE action = 'privacy.r2_cleanup.completed'
+					AND target_id = ?`,
+			params: [first[0].id],
+		})).toEqual({ count: 1 });
+	});
+
 	it('blocks the whole closure with an active service and creates no media revoke', async () => {
 		await db.batch([
 			{ sql: `INSERT INTO course_groups
@@ -276,6 +354,62 @@ describe('stage 12 privacy export and account closure', () => {
 			sql: `SELECT COUNT(*) AS count FROM privacy_r2_cleanup_jobs
 			WHERE privacy_request_id = ?`, params: [blocked.requestId],
 		})).toEqual({ count: 0 });
+	});
+
+	it('fails closed for a claimed current legacy service that is not an occupancy row', async () => {
+		await db.batch([
+			{
+				sql: `INSERT INTO legacy_families
+					(id, source_namespace, source_family_id, family_number_id, numbering_status,
+					 claimed_by_user_id, claimed_at, continuity_status, created_at, updated_at)
+				VALUES ('privacy-legacy-family-a', 'legacy_1', 'privacy-legacy-a',
+					'privacy-family-a', 'valid', ?, ?, 'stable', ?, ?)`,
+				params: [parentA.id, now, now, now],
+			},
+			{
+				sql: `INSERT INTO children
+					(id, owner_user_id, legacy_family_id, family_number_id, origin,
+					 source_child_key, source_full_name, source_full_name_normalized,
+					 source_birth_date, full_name_override, birth_date_override, full_name,
+					 full_name_normalized, birth_date, last_seen_run_id, is_current,
+					 created_at, updated_at)
+				VALUES ('privacy-legacy-child-a', ?, 'privacy-legacy-family-a',
+					'privacy-family-a', 'legacy', 'privacy-legacy-child-a', 'Legacy Kind',
+					'legacy kind', '2016-01-02', NULL, NULL, 'Legacy Kind', 'legacy kind',
+					'2016-01-02', 'privacy-run', 1, ?, ?)`,
+				params: [parentA.id, now, now],
+			},
+			{
+				sql: `INSERT INTO legacy_source_rows
+					(id, source_namespace, academic_period_id, source_access_id, value48_mirror,
+					 legacy_family_id, child_id, import_run_id, source_hash, source_values_json,
+					 last_seen_run_id, is_current, retired_at, created_at, updated_at)
+				VALUES ('privacy-legacy-row-a', 'legacy_1', 'privacy-period', 99001, NULL,
+					'privacy-legacy-family-a', 'privacy-legacy-child-a', 'privacy-run', ?, '{}',
+					'privacy-run', 1, NULL, ?, ?)`,
+				params: [hash('9'), now, now],
+			},
+			{
+				sql: `INSERT INTO legacy_enrollments
+					(id, legacy_source_row_id, legacy_family_id, child_id, academic_period_id,
+					 source_slot, source_record_key, group_name_raw, group_name_normalized,
+					 status_code_raw, lesson_kind, contract_kind, needs_admin_review,
+					 is_active_for_occupancy, represented_by_enrollment_id, last_seen_run_id,
+					 is_current, created_at, updated_at, payment_arrangement)
+				VALUES ('privacy-legacy-nachhilfe-a', 'privacy-legacy-row-a',
+					'privacy-legacy-family-a', 'privacy-legacy-child-a', 'privacy-period',
+					'main_next', 'privacy-legacy-nachhilfe-a', 'Legacy Nachhilfe',
+					'legacy nachhilfe', 'NH', 'nachhilfe', 'nachhilfe', 0, 0, NULL,
+					'privacy-run', 1, ?, ?, 'not_applicable')`,
+				params: [now, now],
+			},
+		]);
+
+		const result = await service.requestDeletion({ actor: parentA,
+			idempotencyKey: 'privacy-delete-legacy-blocked', requestId: 'privacy-delete-legacy' });
+		expect(result.status).toBe('blocked_by_active_contract');
+		expect((await service.dryRunDeletion(parentA)).activeContracts)
+			.toContainEqual({ category: 'legacy_active_service', count: 1 });
 	});
 
 	it('closes atomically, revokes grants once, separates retained evidence, and cleans R2', async () => {
@@ -346,11 +480,77 @@ describe('stage 12 privacy export and account closure', () => {
 			sql: `SELECT quarantine_delete_state, review_status
 			FROM authorization_documents WHERE id = 'privacy-document-a'`,
 		})).toEqual({ quarantine_delete_state: 'present', review_status: 'quarantined' });
-		expect(await db.first<{ status: string }>({
-			sql: `SELECT status FROM support_threads WHERE id = 'privacy-thread-a'`,
-		})).toEqual({ status: 'closed' });
+		expect(await db.first<{ status: string; subject: string }>({
+			sql: `SELECT status, subject FROM support_threads WHERE id = 'privacy-thread-a'`,
+		})).toEqual({ status: 'closed', subject: '[account-closed]' });
+		expect(await db.first<{ body: string }>({
+			sql: `SELECT body FROM support_messages WHERE id = 'privacy-message-a'`,
+		})).toEqual({ body: '[account-closed]' });
+		expect(await db.first<{
+			subjects_raw: string;
+			description: string;
+			preferred_days_json: string;
+			admin_notes: string | null;
+		}>({
+			sql: `SELECT subjects_raw, description, preferred_days_json, admin_notes
+				FROM individual_requests WHERE id = 'privacy-request-a'`,
+		})).toEqual({
+			subjects_raw: '[account-closed]', description: '', preferred_days_json: '[]',
+			admin_notes: null,
+		});
 		expect(await db.first<{ status: string }>({
 			sql: `SELECT status FROM support_threads WHERE id = 'privacy-thread-b'`,
 		})).toEqual({ status: 'waiting_for_admin' });
 	});
+
+	it('serializes account closure with an email-outbox claim', async () => {
+		await db.run({
+			sql: `INSERT INTO email_outbox
+				(id, source_kind, source_id, template_or_category, recipient_user_id,
+				 recipient_address_kind, locale, payload_json, dedupe_key, not_before,
+				 status, attempts, max_attempts, created_at, updated_at)
+			VALUES ('privacy-email-race', 'support_message', 'privacy-message-a',
+				'support_reply', ?, 'current', 'de', '{}', 'privacy-email-race', ?,
+				'pending', 0, 5, ?, ?)`,
+			params: [parentA.id, now, now, now],
+		});
+		const requested = await service.requestDeletion({
+			actor: parentA,
+			idempotencyKey: 'privacy-delete-email-race',
+			requestId: 'privacy-delete-email-race',
+		});
+		const outbox = new OutboxRepository(db);
+
+		const [closureAttempt, claimAttempt] = await Promise.allSettled([
+			service.processDeletion({
+				admin,
+				privacyRequestId: requested.requestId,
+				reason: 'Synthetic concurrency verification.',
+				idempotencyKey: 'privacy-admin-email-race',
+				requestId: 'privacy-admin-email-race',
+			}),
+			outbox.claimEmail({
+				now,
+				leaseOwner: 'privacy-email-worker',
+				leaseUntil: '2026-07-22T10:05:00.000Z',
+			}),
+		]);
+
+		const state = await db.first<{ account_status: string; outbox_status: string }>({
+			sql: `SELECT user.account_status, outbox.status AS outbox_status
+				FROM users user JOIN email_outbox outbox ON outbox.id = 'privacy-email-race'
+				WHERE user.id = ?`,
+			params: [parentA.id],
+		});
+		expect(state).not.toEqual({ account_status: 'closed', outbox_status: 'processing' });
+		if (closureAttempt.status === 'fulfilled') {
+			expect(closureAttempt.value.status).toBe('completed_with_retained_evidence');
+			expect(state?.account_status).toBe('closed');
+			expect(claimAttempt).toMatchObject({ status: 'fulfilled', value: null });
+		} else {
+			expect(state).toEqual({ account_status: 'active', outbox_status: 'processing' });
+			expect(claimAttempt.status).toBe('fulfilled');
+			if (claimAttempt.status === 'fulfilled') expect(claimAttempt.value?.id).toBe('privacy-email-race');
+		}
+	}, 45_000);
 });

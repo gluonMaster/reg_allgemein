@@ -6,9 +6,13 @@ import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import type { AdminActor } from '$lib/server/security/authorization';
 import { calendarDayAfter } from '$lib/server/time/berlin';
 import type { ContractRenderInput, ContractTemplateId } from './contracts';
+import type { ContractArtifactDownloadPurpose } from '$lib/server/security/download-purpose';
 
 export class ContractRepositoryError extends Error {
-	constructor(readonly code: string, options?: { cause?: unknown }) {
+	constructor(
+		readonly code: string,
+		options?: { cause?: unknown }
+	) {
 		super(code, options);
 		this.name = 'ContractRepositoryError';
 	}
@@ -84,9 +88,7 @@ export interface StoredTemplateVersion {
 	approval_status: 'draft' | 'approved' | 'retired';
 	approval_basis: 'synthetic_fixture' | 'authorized_verein_approval' | 'legal_review';
 	distance_legal_profile:
-		| 'offline_only'
-		| 'widerruf_applicable'
-		| 'widerruf_not_applicable_312g_2_9';
+		'offline_only' | 'widerruf_applicable' | 'widerruf_not_applicable_312g_2_9';
 	distance_legal_basis_hash: string | null;
 	kuendigung_function_required: 0 | 1;
 	early_performance_supported: 0 | 1;
@@ -171,7 +173,8 @@ export class ContractRepository {
 			sql: `SELECT id FROM contract_template_versions WHERE usage_scope = 'synthetic_test'
 				AND template_version = 'synthetic-core-v1'`,
 		});
-		if (existing.results.length === input.templates.length) return existing.results.map((row) => row.id);
+		if (existing.results.length === input.templates.length)
+			return existing.results.map((row) => row.id);
 		const statements: StatementSpec[] = [
 			{
 				sql: `INSERT OR IGNORE INTO contract_provider_versions
@@ -179,8 +182,15 @@ export class ContractRepository {
 					 payment_terms_hash, approval_status, approved_by, approved_at, created_at)
 				SELECT ?, 'synthetic-provider-v1', ?, 'synthetic-payment-v1', ?,
 					'approved', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
-				params: [providerId, input.providerSnapshotJson, input.providerPaymentTermsHash,
-					input.admin.id, input.now, input.now, input.admin.id],
+				params: [
+					providerId,
+					input.providerSnapshotJson,
+					input.providerPaymentTermsHash,
+					input.admin.id,
+					input.now,
+					input.now,
+					input.admin.id,
+				],
 			},
 			{
 				sql: `INSERT OR IGNORE INTO media_withdrawal_contact_versions
@@ -188,8 +198,15 @@ export class ContractRepository {
 					 approval_status, compliance_assessment_status, approved_by, approved_at, created_at)
 				SELECT ?, 'synthetic-media-contact-v1', ?, ?, 'synthetic-media-text-v1',
 					'approved', 'not_assessed', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
-				params: [mediaContactId, input.mediaContactSnapshotJson, input.mediaContactSnapshotHash,
-					input.admin.id, input.now, input.now, input.admin.id],
+				params: [
+					mediaContactId,
+					input.mediaContactSnapshotJson,
+					input.mediaContactSnapshotHash,
+					input.admin.id,
+					input.now,
+					input.now,
+					input.admin.id,
+				],
 			},
 			...input.templates.map<StatementSpec>((template) => ({
 				sql: `INSERT OR IGNORE INTO contract_template_versions
@@ -209,9 +226,22 @@ export class ContractRepository {
 					NULL, NULL, 0, 0, ?, ?, NULL, NULL, ? WHERE ${ACTIVE_ADMIN}
 					AND EXISTS (SELECT 1 FROM contract_provider_versions WHERE id = ?)
 					AND EXISTS (SELECT 1 FROM media_withdrawal_contact_versions WHERE id = ?)`,
-				params: [template.id, template.templateId, providerId, mediaContactId, template.bundleKey,
-					template.bundleHash, template.htmlSourceHash, template.cssSourceHash,
-					input.admin.id, input.now, input.now, input.admin.id, providerId, mediaContactId],
+				params: [
+					template.id,
+					template.templateId,
+					providerId,
+					mediaContactId,
+					template.bundleKey,
+					template.bundleHash,
+					template.htmlSourceHash,
+					template.cssSourceHash,
+					input.admin.id,
+					input.now,
+					input.now,
+					input.admin.id,
+					providerId,
+					mediaContactId,
+				],
 			})),
 		];
 		await this.db.batch(statements);
@@ -356,8 +386,12 @@ export class ContractRepository {
 							AND (document.review_status <> 'approved'
 								OR document.archive_r2_key IS NULL))
 			) AS eligible`,
-			params: [input.requestId, input.authorizationId, input.plannedFrom,
-				input.plannedUntilInclusive],
+			params: [
+				input.requestId,
+				input.authorizationId,
+				input.plannedFrom,
+				input.plannedUntilInclusive,
+			],
 		});
 		if (row?.eligible !== 1) throw new ContractRepositoryError('FUNDING_NOT_ELIGIBLE');
 	}
@@ -528,7 +562,9 @@ export class ContractRepository {
 				ordinary: render.term.ordinaryTerminationText,
 				extraordinary: render.term.extraordinaryTerminationText,
 			}),
-			withdrawal_snapshot_json: JSON.stringify({ version: render.legal.withdrawalTextVersion }),
+			withdrawal_snapshot_json: JSON.stringify({
+				version: render.legal.withdrawalTextVersion,
+			}),
 			distance_legal_profile_snapshot_json: JSON.stringify({
 				profile: render.legal.distanceLegalProfile,
 			}),
@@ -536,7 +572,9 @@ export class ContractRepository {
 			early_performance_request_version: render.legal.earlyPerformanceRequestVersion,
 			early_performance_requested_at: null,
 			wertersatz_notice_version: render.legal.wertersatzNoticeVersion,
-			clauses_manifest_json: JSON.stringify({ clauseSetVersion: render.legal.clauseSetVersion }),
+			clauses_manifest_json: JSON.stringify({
+				clauseSetVersion: render.legal.clauseSetVersion,
+			}),
 			attachments_manifest_json: JSON.stringify(render.legal.attachments),
 			privacy_notice_version: render.legal.privacyNoticeVersion,
 			media_clause_version: render.legal.mediaClauseVersion,
@@ -639,9 +677,19 @@ export class ContractRepository {
 					 request_id, safe_diff_json, created_at)
 				SELECT ?, ?, 'user', 'contract_offer.created', 'contract_offer', ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ?)`,
-				params: [auditId, input.admin.id, input.id, input.requestId,
-					JSON.stringify({ contractKind: render.templateId, status: 'draft',
-						priceMode: render.billing.priceMode }), input.now, input.id],
+				params: [
+					auditId,
+					input.admin.id,
+					input.id,
+					input.requestId,
+					JSON.stringify({
+						contractKind: render.templateId,
+						status: 'draft',
+						priceMode: render.billing.priceMode,
+					}),
+					input.now,
+					input.id,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_admin_actions
@@ -649,8 +697,17 @@ export class ContractRepository {
 					 request_hash_sha256, result_ref, audit_event_id, created_at)
 				SELECT ?, ?, 'create', ?, ?, ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
-				params: [actionId, input.id, input.admin.id, input.idempotencyKey,
-					input.requestHash, input.id, auditId, input.now, auditId],
+				params: [
+					actionId,
+					input.id,
+					input.admin.id,
+					input.idempotencyKey,
+					input.requestHash,
+					input.id,
+					auditId,
+					input.now,
+					auditId,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_action_assertions
@@ -661,8 +718,17 @@ export class ContractRepository {
 					AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
 					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
 				THEN 1 ELSE 0 END, ?)`,
-				params: [assertionId, input.id, actionId, input.admin.id, auditId,
-					input.id, actionId, auditId, input.now],
+				params: [
+					assertionId,
+					input.id,
+					actionId,
+					input.admin.id,
+					auditId,
+					input.id,
+					actionId,
+					auditId,
+					input.now,
+				],
 			},
 		];
 
@@ -670,11 +736,13 @@ export class ContractRepository {
 			await this.db.batch(statements);
 			return { offerId: input.id, replayed: false };
 		} catch (error) {
-			const replay = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
-				sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
+			const replay = await this.db.first<{ request_hash_sha256: string; result_ref: string }>(
+				{
+					sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
 				WHERE actor_user_id = ? AND idempotency_key = ?`,
-				params: [input.admin.id, input.idempotencyKey],
-			});
+					params: [input.admin.id, input.idempotencyKey],
+				}
+			);
 			if (replay?.request_hash_sha256 === input.requestHash) {
 				return { offerId: replay.result_ref, replayed: true };
 			}
@@ -728,10 +796,20 @@ export class ContractRepository {
 					 status, error_code, browser_ms_used, pdf_size_bytes, pdf_sha256,
 					 retry_after_seconds, created_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`,
-				params: [crypto.randomUUID(), input.offerId, input.attemptNo,
-					input.template.renderer_id, input.template.worker_compatibility_date,
-					input.sourceManifestHash, input.startedAt, input.finishedAt, input.status,
-					input.errorCode, input.retryAfterSeconds, input.finishedAt],
+				params: [
+					crypto.randomUUID(),
+					input.offerId,
+					input.attemptNo,
+					input.template.renderer_id,
+					input.template.worker_compatibility_date,
+					input.sourceManifestHash,
+					input.startedAt,
+					input.finishedAt,
+					input.status,
+					input.errorCode,
+					input.retryAfterSeconds,
+					input.finishedAt,
+				],
 			},
 			{
 				sql: `UPDATE contract_offers SET render_status = 'failed',
@@ -760,6 +838,8 @@ export class ContractRepository {
 		idempotencyKey: string;
 		requestHash: string;
 		requestId: string;
+		htmlStorageIntentId?: string;
+		pdfStorageIntentId?: string;
 	}) {
 		const auditId = crypto.randomUUID();
 		const actionId = crypto.randomUUID();
@@ -770,14 +850,44 @@ export class ContractRepository {
 					contract_pdf_r2_key = ?, contract_hash = ?, render_status = 'ready',
 					status_reason = NULL, updated_at = ?
 				WHERE id = ? AND status = 'draft' AND render_status = 'rendering'
-					AND render_input_hash = ? AND source_manifest_hash = ?`,
-				params: [input.htmlKey, input.pdfKey, input.contractHash, input.now,
-					input.offer.id, input.offer.render_input_hash, input.offer.source_manifest_hash],
+					AND render_input_hash = ? AND source_manifest_hash = ?
+					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents
+						WHERE id = ? AND status = 'staged' AND storage_class = 'archive'
+							AND object_key = ?))
+					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents
+						WHERE id = ? AND status = 'staged' AND storage_class = 'archive'
+							AND object_key = ?))`,
+				params: [
+					input.htmlKey,
+					input.pdfKey,
+					input.contractHash,
+					input.now,
+					input.offer.id,
+					input.offer.render_input_hash,
+					input.offer.source_manifest_hash,
+					input.htmlStorageIntentId ?? null,
+					input.htmlStorageIntentId ?? null,
+					input.htmlKey,
+					input.pdfStorageIntentId ?? null,
+					input.pdfStorageIntentId ?? null,
+					input.pdfKey,
+				],
 			},
-			...([
-				['offer_html', input.htmlKey, 'text/html; charset=utf-8', input.htmlSize,
-					input.htmlSha256] as const,
-				['offer_pdf', input.pdfKey, 'application/pdf', input.pdfSize, input.pdfSha256] as const,
+			...[
+				[
+					'offer_html',
+					input.htmlKey,
+					'text/html; charset=utf-8',
+					input.htmlSize,
+					input.htmlSha256,
+				] as const,
+				[
+					'offer_pdf',
+					input.pdfKey,
+					'application/pdf',
+					input.pdfSize,
+					input.pdfSha256,
+				] as const,
 			].map<StatementSpec>((artifact) => ({
 				sql: `INSERT INTO contract_artifacts
 					(id, contract_offer_id, formation_certificate_id, artifact_kind,
@@ -787,12 +897,63 @@ export class ContractRepository {
 				SELECT ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ?
 					AND render_status = 'ready' AND status = 'draft')`,
-				params: [crypto.randomUUID(), input.offer.id, artifact[0], artifact[1],
-					artifact[2], artifact[3], artifact[4], input.offer.source_manifest_hash,
-					input.template.id, input.template.renderer_id,
+				params: [
+					crypto.randomUUID(),
+					input.offer.id,
+					artifact[0],
+					artifact[1],
+					artifact[2],
+					artifact[3],
+					artifact[4],
+					input.offer.source_manifest_hash,
+					input.template.id,
+					input.template.renderer_id,
 					input.template.renderer_contract_version,
-					input.template.worker_compatibility_date, input.now, input.offer.id],
-			}))),
+					input.template.worker_compatibility_date,
+					input.now,
+					input.offer.id,
+				],
+			})),
+			...(
+				[
+					[input.htmlStorageIntentId, input.htmlKey, 'contract_offer_html'],
+					[input.pdfStorageIntentId, input.pdfKey, 'contract_offer_pdf'],
+				] as const
+			).flatMap<StatementSpec>(([intentId, key, targetKind]) =>
+				intentId
+					? [
+							{
+								sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
+						updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+					WHERE id = ? AND status = 'staged' AND object_key = ?
+						AND EXISTS (SELECT 1 FROM contract_artifacts
+							WHERE contract_offer_id = ? AND private_r2_key = ?)`,
+								params: [input.now, input.now, intentId, key, input.offer.id, key],
+							},
+							{
+								sql: `INSERT INTO storage_intent_link_assertions
+						(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+					VALUES (?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM storage_object_intents
+							WHERE id = ? AND status = 'linked' AND object_key = ?)
+						AND EXISTS (SELECT 1 FROM contract_artifacts
+							WHERE contract_offer_id = ? AND private_r2_key = ?)
+					THEN 1 ELSE 0 END, ?)`,
+								params: [
+									crypto.randomUUID(),
+									intentId,
+									targetKind,
+									input.offer.id,
+									intentId,
+									key,
+									input.offer.id,
+									key,
+									input.now,
+								],
+							},
+						]
+					: []
+			),
 			{
 				sql: `INSERT INTO contract_render_attempts
 					(id, contract_offer_id, attempt_no, renderer_id,
@@ -800,10 +961,20 @@ export class ContractRepository {
 					 status, error_code, browser_ms_used, pdf_size_bytes, pdf_sha256,
 					 retry_after_seconds, created_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'succeeded', NULL, ?, ?, ?, NULL, ?)`,
-				params: [crypto.randomUUID(), input.offer.id, input.attemptNo,
-					input.template.renderer_id, input.template.worker_compatibility_date,
-					input.offer.source_manifest_hash, input.startedAt, input.now,
-					input.browserMsUsed, input.pdfSize, input.pdfSha256, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.offer.id,
+					input.attemptNo,
+					input.template.renderer_id,
+					input.template.worker_compatibility_date,
+					input.offer.source_manifest_hash,
+					input.startedAt,
+					input.now,
+					input.browserMsUsed,
+					input.pdfSize,
+					input.pdfSha256,
+					input.now,
+				],
 			},
 			{
 				sql: `UPDATE contract_offers SET status = 'sent', sent_at = ?, updated_at = ?
@@ -812,15 +983,24 @@ export class ContractRepository {
 					AND ${ACTIVE_ADMIN}
 					AND EXISTS (SELECT 1 FROM contract_template_versions template
 						WHERE template.id = template_version_id AND template.approval_status = 'approved')`,
-				params: [input.now, input.now, input.offer.id, input.contractHash,
-					input.now, input.admin.id],
+				params: [
+					input.now,
+					input.now,
+					input.offer.id,
+					input.contractHash,
+					input.now,
+					input.admin.id,
+				],
 			},
 			{
 				sql: `UPDATE ${input.offer.enrollment_id ? 'enrollments' : 'service_engagements'}
 				SET status = 'contract_offered', updated_at = ? WHERE id = ? AND status = 'draft'
 					AND EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent')`,
-				params: [input.now, input.offer.enrollment_id ?? input.offer.service_engagement_id,
-					input.offer.id],
+				params: [
+					input.now,
+					input.offer.enrollment_id ?? input.offer.service_engagement_id,
+					input.offer.id,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_deliveries
@@ -830,9 +1010,17 @@ export class ContractRepository {
 				SELECT ?, ?, NULL, 'offer_pdf', ?, 'portal', 'parent', ?, 'available',
 					?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM contract_offers
 						WHERE id = ? AND status = 'sent')`,
-				params: [deliveryId, input.offer.id, input.pdfSha256, input.offer.user_id,
-					`offer-pdf:portal:${input.offer.id}`, input.now, input.offer.expires_at,
-					input.now, input.offer.id],
+				params: [
+					deliveryId,
+					input.offer.id,
+					input.pdfSha256,
+					input.offer.user_id,
+					`offer-pdf:portal:${input.offer.id}`,
+					input.now,
+					input.offer.expires_at,
+					input.now,
+					input.offer.id,
+				],
 			},
 			{
 				sql: `INSERT INTO audit_events
@@ -841,9 +1029,19 @@ export class ContractRepository {
 				SELECT ?, ?, 'user', 'contract_offer.rendered_and_sent',
 					'contract_offer', ?, ?, ?, ? WHERE EXISTS (
 						SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent')`,
-				params: [auditId, input.admin.id, input.offer.id, input.requestId,
-					JSON.stringify({ status: 'sent', renderer: input.template.renderer_id,
-						attempt: input.attemptNo }), input.now, input.offer.id],
+				params: [
+					auditId,
+					input.admin.id,
+					input.offer.id,
+					input.requestId,
+					JSON.stringify({
+						status: 'sent',
+						renderer: input.template.renderer_id,
+						attempt: input.attemptNo,
+					}),
+					input.now,
+					input.offer.id,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_admin_actions
@@ -851,8 +1049,17 @@ export class ContractRepository {
 					 request_hash_sha256, result_ref, audit_event_id, created_at)
 				SELECT ?, ?, 'render_send', ?, ?, ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
-				params: [actionId, input.offer.id, input.admin.id, input.idempotencyKey,
-					input.requestHash, input.offer.id, auditId, input.now, auditId],
+				params: [
+					actionId,
+					input.offer.id,
+					input.admin.id,
+					input.idempotencyKey,
+					input.requestHash,
+					input.offer.id,
+					auditId,
+					input.now,
+					auditId,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_outbox_events
@@ -860,9 +1067,14 @@ export class ContractRepository {
 					 status, created_at)
 				SELECT ?, 'offer_available', 'contract_offer', ?, ?, ?, 'pending', ?
 				WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent')`,
-				params: [crypto.randomUUID(), input.offer.id,
+				params: [
+					crypto.randomUUID(),
+					input.offer.id,
 					JSON.stringify({ offerId: input.offer.id, deliveryId }),
-					`offer-available:${input.offer.id}`, input.now, input.offer.id],
+					`offer-available:${input.offer.id}`,
+					input.now,
+					input.offer.id,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_action_assertions
@@ -875,10 +1087,30 @@ export class ContractRepository {
 						GROUP BY contract_offer_id HAVING COUNT(*) = 2)
 					AND EXISTS (SELECT 1 FROM contract_deliveries WHERE id = ?)
 					AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
+					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents
+						WHERE id = ? AND status = 'linked' AND object_key = ?))
+					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents
+						WHERE id = ? AND status = 'linked' AND object_key = ?))
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), input.offer.id, actionId, input.admin.id,
-					auditId, input.offer.id, input.contractHash, input.offer.id, deliveryId,
-					actionId, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.offer.id,
+					actionId,
+					input.admin.id,
+					auditId,
+					input.offer.id,
+					input.contractHash,
+					input.offer.id,
+					deliveryId,
+					actionId,
+					input.htmlStorageIntentId ?? null,
+					input.htmlStorageIntentId ?? null,
+					input.htmlKey,
+					input.pdfStorageIntentId ?? null,
+					input.pdfStorageIntentId ?? null,
+					input.pdfKey,
+					input.now,
+				],
 			},
 		]);
 	}
@@ -897,9 +1129,13 @@ export class ContractRepository {
 		requestId: string;
 		now: string;
 	}) {
-		const requestHash = await hashCanonical({ offerId: input.offerId,
-			expectedContractHash: input.expectedContractHash, decision: input.decision,
-			textVersion: input.textVersion, text: input.text });
+		const requestHash = await hashCanonical({
+			offerId: input.offerId,
+			expectedContractHash: input.expectedContractHash,
+			decision: input.decision,
+			textVersion: input.textVersion,
+			text: input.text,
+		});
 		const prior = await this.db.first<{ request_hash_sha256: string; to_status: string }>({
 			sql: `SELECT request_hash_sha256, to_status FROM contract_parent_actions
 			WHERE user_id = ? AND idempotency_key = ?`,
@@ -931,9 +1167,19 @@ export class ContractRepository {
 								AND child.family_number_id = owner.family_number_id
 								AND owner.family_number_id = contract_offers.family_number_id_at_issue
 								AND owner.family_version = contract_offers.family_version_at_issue)`,
-					params: [toStatus, input.decision, input.now, input.decision, input.now,
-						input.now, input.offerId, input.actor.id, input.now,
-						input.expectedContractHash, input.actor.id],
+					params: [
+						toStatus,
+						input.decision,
+						input.now,
+						input.decision,
+						input.now,
+						input.now,
+						input.offerId,
+						input.actor.id,
+						input.now,
+						input.expectedContractHash,
+						input.actor.id,
+					],
 				},
 				{
 					sql: `INSERT INTO audit_events
@@ -941,9 +1187,17 @@ export class ContractRepository {
 						 request_id, safe_diff_json, created_at)
 					SELECT ?, ?, 'user', ?, 'contract_offer', id, ?, ?, ?
 					FROM contract_offers WHERE id = ? AND user_id = ? AND status = ?`,
-					params: [auditId, input.actor.id, `contract_offer.${input.decision}`,
-						input.requestId, JSON.stringify({ status: toStatus }), input.now,
-						input.offerId, input.actor.id, toStatus],
+					params: [
+						auditId,
+						input.actor.id,
+						`contract_offer.${input.decision}`,
+						input.requestId,
+						JSON.stringify({ status: toStatus }),
+						input.now,
+						input.offerId,
+						input.actor.id,
+						toStatus,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_parent_actions
@@ -952,25 +1206,52 @@ export class ContractRepository {
 						 idempotency_key, request_hash_sha256, audit_event_id, created_at)
 					SELECT ?, ?, ?, ?, 'sent', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
-					params: [actionId, input.offerId, input.actor.id, input.decision, toStatus,
-						input.expectedContractHash, input.textVersion, input.userAgent,
-						input.ipRetentionValue, input.ipExpiresAt, input.idempotencyKey,
-						requestHash, auditId, input.now, auditId],
+					params: [
+						actionId,
+						input.offerId,
+						input.actor.id,
+						input.decision,
+						toStatus,
+						input.expectedContractHash,
+						input.textVersion,
+						input.userAgent,
+						input.ipRetentionValue,
+						input.ipExpiresAt,
+						input.idempotencyKey,
+						requestHash,
+						auditId,
+						input.now,
+						auditId,
+					],
 				},
 				...(input.decision === 'accept'
-					? [{
-							sql: `INSERT INTO contract_acceptances
+					? [
+							{
+								sql: `INSERT INTO contract_acceptances
 								(id, contract_offer_id, parent_action_id, user_id, accepted_at,
 								 ip_retention_value, ip_expires_at, user_agent,
 								 acceptance_text_version, acceptance_text, contract_hash,
 								 idempotency_key, created_at)
 							SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 							WHERE EXISTS (SELECT 1 FROM contract_parent_actions WHERE id = ?)`,
-							params: [acceptanceId, input.offerId, actionId, input.actor.id, input.now,
-								input.ipRetentionValue, input.ipExpiresAt, input.userAgent,
-								input.textVersion, input.text, input.expectedContractHash,
-								input.idempotencyKey, input.now, actionId],
-						}]
+								params: [
+									acceptanceId,
+									input.offerId,
+									actionId,
+									input.actor.id,
+									input.now,
+									input.ipRetentionValue,
+									input.ipExpiresAt,
+									input.userAgent,
+									input.textVersion,
+									input.text,
+									input.expectedContractHash,
+									input.idempotencyKey,
+									input.now,
+									actionId,
+								],
+							},
+						]
 					: []),
 				{
 					sql: `INSERT INTO contract_action_assertions
@@ -982,9 +1263,20 @@ export class ContractRepository {
 						AND (? = 'decline' OR EXISTS (SELECT 1 FROM contract_acceptances
 							WHERE id = ? AND contract_hash = ?))
 					THEN 1 ELSE 0 END, ?)`,
-					params: [crypto.randomUUID(), input.offerId, actionId, input.actor.id,
-						auditId, actionId, input.offerId, toStatus, input.decision,
-						acceptanceId, input.expectedContractHash, input.now],
+					params: [
+						crypto.randomUUID(),
+						input.offerId,
+						actionId,
+						input.actor.id,
+						auditId,
+						actionId,
+						input.offerId,
+						toStatus,
+						input.decision,
+						acceptanceId,
+						input.expectedContractHash,
+						input.now,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_outbox_events
@@ -992,10 +1284,15 @@ export class ContractRepository {
 						 status, created_at)
 					SELECT ?, ?, 'contract_offer', ?, ?, ?, 'pending', ?
 					WHERE EXISTS (SELECT 1 FROM contract_parent_actions WHERE id = ?)`,
-					params: [crypto.randomUUID(), input.decision === 'decline'
-						? 'offer_declined' : 'offer_available', input.offerId,
+					params: [
+						crypto.randomUUID(),
+						input.decision === 'decline' ? 'offer_declined' : 'offer_available',
+						input.offerId,
 						JSON.stringify({ offerId: input.offerId, action: input.decision }),
-						`parent-${input.decision}:${input.offerId}`, input.now, actionId],
+						`parent-${input.decision}:${input.offerId}`,
+						input.now,
+						actionId,
+					],
 				},
 			]);
 			return { status: toStatus, replayed: false };
@@ -1054,18 +1351,17 @@ export class ContractRepository {
 		const activeUntil = input.offer.effective_to
 			? calendarDayAfter(input.offer.effective_to)
 			: null;
-		const occupancy = input.offer.enrollment_id
-			? new OccupancyRepository(this.db)
-			: null;
+		const occupancy = input.offer.enrollment_id ? new OccupancyRepository(this.db) : null;
 		const activationOldCount = occupancy
 			? await occupancy.activeChildrenCount(
 					input.offer.course_group_id!,
 					input.offer.effective_from
 				)
 			: 0;
-		const expiryNewCount = occupancy && activeUntil
-			? await occupancy.activeChildrenCount(input.offer.course_group_id!, activeUntil)
-			: null;
+		const expiryNewCount =
+			occupancy && activeUntil
+				? await occupancy.activeChildrenCount(input.offer.course_group_id!, activeUntil)
+				: null;
 		const activationTriggerId = crypto.randomUUID();
 		const expiryTriggerId = activeUntil ? crypto.randomUUID() : null;
 		const operationalTable = input.offer.enrollment_id ? 'enrollments' : 'service_engagements';
@@ -1119,9 +1415,19 @@ export class ContractRepository {
 						AND EXISTS (SELECT 1 FROM ${operationalTable} operation
 							WHERE operation.id = ? AND operation.status = 'contract_offered')
 						${groupGuard} ${fundingGuard}`,
-					params: [contractId, acceptance.id, input.now, input.admin.id, input.now,
-						input.now, input.offer.id, input.offer.contract_hash, input.now,
-						input.admin.id, operationalId],
+					params: [
+						contractId,
+						acceptance.id,
+						input.now,
+						input.admin.id,
+						input.now,
+						input.now,
+						input.offer.id,
+						input.offer.contract_hash,
+						input.now,
+						input.admin.id,
+						operationalId,
+					],
 				},
 				{
 					sql: `UPDATE ${operationalTable} SET status = 'active',
@@ -1130,9 +1436,21 @@ export class ContractRepository {
 					WHERE id = ? AND status = 'contract_offered'
 						AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
 					params: input.offer.service_engagement_id
-						? [input.offer.effective_from, activeUntil, contractId, input.now,
-							operationalId, contractId]
-						: [input.offer.effective_from, activeUntil, input.now, operationalId, contractId],
+						? [
+								input.offer.effective_from,
+								activeUntil,
+								contractId,
+								input.now,
+								operationalId,
+								contractId,
+							]
+						: [
+								input.offer.effective_from,
+								activeUntil,
+								input.now,
+								operationalId,
+								contractId,
+							],
 				},
 				...(input.offer.enrollment_id
 					? [
@@ -1149,13 +1467,21 @@ export class ContractRepository {
 								WHERE id = ? AND status = 'accepted_by_parent'
 									AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)
 									AND EXISTS (SELECT 1 FROM enrollments WHERE id = ? AND status = 'active')`,
-								params: [activationTriggerId, contractId, activationOldCount,
+								params: [
+									activationTriggerId,
+									contractId,
+									activationOldCount,
 									activationOldCount + 1,
 									repricingLookupChildrenCount(activationOldCount),
 									repricingLookupChildrenCount(activationOldCount + 1),
 									`enrollment:${input.offer.enrollment_id}:active_from:${input.offer.effective_from}:v1`,
-									input.admin.id, input.now, input.now, input.offer.id,
-									contractId, input.offer.enrollment_id],
+									input.admin.id,
+									input.now,
+									input.now,
+									input.offer.id,
+									contractId,
+									input.offer.enrollment_id,
+								],
 							},
 							...(activeUntil && expiryTriggerId && expiryNewCount !== null
 								? [
@@ -1172,13 +1498,22 @@ export class ContractRepository {
 											WHERE id = ? AND status = 'accepted_by_parent'
 												AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)
 												AND EXISTS (SELECT 1 FROM enrollments WHERE id = ? AND status = 'active')`,
-											params: [expiryTriggerId, input.offer.enrollment_id, activeUntil,
-												expiryNewCount + 1, expiryNewCount,
+											params: [
+												expiryTriggerId,
+												input.offer.enrollment_id,
+												activeUntil,
+												expiryNewCount + 1,
+												expiryNewCount,
 												repricingLookupChildrenCount(expiryNewCount + 1),
 												repricingLookupChildrenCount(expiryNewCount),
 												`enrollment:${input.offer.enrollment_id}:active_until:${activeUntil}:v1`,
-												input.admin.id, input.now, input.now, input.offer.id,
-												contractId, input.offer.enrollment_id],
+												input.admin.id,
+												input.now,
+												input.now,
+												input.offer.id,
+												contractId,
+												input.offer.enrollment_id,
+											],
 										},
 									]
 								: []),
@@ -1207,11 +1542,22 @@ export class ContractRepository {
 						AND artifact.artifact_kind = 'offer_pdf'
 					WHERE offer.id = ? AND offer.status = 'approved_by_admin'
 						AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
-					params: [input.certificateId, contractId, input.offer.id,
-						input.offer.contract_number, input.certificateSourceJson,
-						input.certificateSourceHash, acceptance.id, acceptance.accepted_at,
-						input.admin.id, input.now, input.now, input.now,
-						input.offer.id, contractId],
+					params: [
+						input.certificateId,
+						contractId,
+						input.offer.id,
+						input.offer.contract_number,
+						input.certificateSourceJson,
+						input.certificateSourceHash,
+						acceptance.id,
+						acceptance.accepted_at,
+						input.admin.id,
+						input.now,
+						input.now,
+						input.now,
+						input.offer.id,
+						contractId,
+					],
 				},
 				...(['formed', 'activated'] as const).map<StatementSpec>((eventType) => ({
 					sql: `INSERT INTO contract_events
@@ -1219,12 +1565,24 @@ export class ContractRepository {
 						 source_offer_id, actor_user_id, metadata_json, dedupe_key, created_at)
 					SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
-					params: [crypto.randomUUID(), contractId, eventType,
-						eventType === 'formed' ? input.now : `${input.offer.effective_from}T00:00:00.000Z`,
-						input.reason, input.offer.id, input.admin.id,
-						JSON.stringify({ effectiveFrom: input.offer.effective_from,
-							effectiveTo: input.offer.effective_to }),
-						`${eventType}:${contractId}`, input.now, contractId],
+					params: [
+						crypto.randomUUID(),
+						contractId,
+						eventType,
+						eventType === 'formed'
+							? input.now
+							: `${input.offer.effective_from}T00:00:00.000Z`,
+						input.reason,
+						input.offer.id,
+						input.admin.id,
+						JSON.stringify({
+							effectiveFrom: input.offer.effective_from,
+							effectiveTo: input.offer.effective_to,
+						}),
+						`${eventType}:${contractId}`,
+						input.now,
+						contractId,
+					],
 				})),
 				{
 					sql: `INSERT INTO audit_events
@@ -1232,9 +1590,18 @@ export class ContractRepository {
 						 request_id, safe_diff_json, created_at)
 					SELECT ?, ?, 'user', 'contract.formed_and_activated', 'contract',
 						?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
-					params: [auditId, input.admin.id, contractId, input.requestId,
-						JSON.stringify({ offerId: input.offer.id, effectiveFrom: input.offer.effective_from }),
-						input.now, contractId],
+					params: [
+						auditId,
+						input.admin.id,
+						contractId,
+						input.requestId,
+						JSON.stringify({
+							offerId: input.offer.id,
+							effectiveFrom: input.offer.effective_from,
+						}),
+						input.now,
+						contractId,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_admin_actions
@@ -1242,8 +1609,17 @@ export class ContractRepository {
 						 request_hash_sha256, result_ref, audit_event_id, created_at)
 					SELECT ?, ?, 'form_activate', ?, ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
-					params: [actionId, input.offer.id, input.admin.id, input.idempotencyKey,
-						requestHash, contractId, auditId, input.now, auditId],
+					params: [
+						actionId,
+						input.offer.id,
+						input.admin.id,
+						input.idempotencyKey,
+						requestHash,
+						contractId,
+						auditId,
+						input.now,
+						auditId,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_outbox_events
@@ -1251,9 +1627,14 @@ export class ContractRepository {
 						 status, created_at)
 					SELECT ?, 'contract_formed', 'contract', ?, ?, ?, 'pending', ?
 					WHERE EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
-					params: [crypto.randomUUID(), contractId,
+					params: [
+						crypto.randomUUID(),
+						contractId,
 						JSON.stringify({ contractId, certificateId: input.certificateId }),
-						`contract-formed:${contractId}`, input.now, contractId],
+						`contract-formed:${contractId}`,
+						input.now,
+						contractId,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_action_assertions
@@ -1266,18 +1647,30 @@ export class ContractRepository {
 						AND EXISTS (SELECT 1 FROM ${operationalTable} WHERE id = ? AND status = 'active')
 						AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
 					THEN 1 ELSE 0 END, ?)`,
-					params: [crypto.randomUUID(), contractId, actionId, input.admin.id,
-						auditId, contractId, input.certificateId, input.certificateSourceHash,
-						operationalId, actionId, input.now],
+					params: [
+						crypto.randomUUID(),
+						contractId,
+						actionId,
+						input.admin.id,
+						auditId,
+						contractId,
+						input.certificateId,
+						input.certificateSourceHash,
+						operationalId,
+						actionId,
+						input.now,
+					],
 				},
 			]);
 			return { contractId, replayed: false };
 		} catch (error) {
-			const replay = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
-				sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
+			const replay = await this.db.first<{ request_hash_sha256: string; result_ref: string }>(
+				{
+					sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
 				WHERE actor_user_id = ? AND idempotency_key = ?`,
-				params: [input.admin.id, input.idempotencyKey],
-			});
+					params: [input.admin.id, input.idempotencyKey],
+				}
+			);
 			if (replay?.request_hash_sha256 === requestHash) {
 				return { contractId: replay.result_ref, replayed: true };
 			}
@@ -1299,10 +1692,11 @@ export class ContractRepository {
 			offer_pdf_hash: string;
 			render_status: 'pending' | 'rendering' | 'ready' | 'failed';
 			attempts: number;
+			certificate_pdf_r2_key: string | null;
 		}>({
 			sql: `SELECT id, contract_id, contract_offer_id, contract_number,
 				source_snapshot_json, source_hash, template_version, parent_accepted_at,
-				formed_at, offer_pdf_hash, render_status, attempts
+				formed_at, offer_pdf_hash, render_status, attempts, certificate_pdf_r2_key
 			FROM contract_formation_certificates WHERE contract_id = ?`,
 			params: [contractId],
 		});
@@ -1318,6 +1712,7 @@ export class ContractRepository {
 		sha256: string;
 		sourceHash: string;
 		now: string;
+		storageIntentId?: string;
 	}) {
 		await this.db.batch([
 			{
@@ -1325,9 +1720,22 @@ export class ContractRepository {
 					attempts = attempts + 1, error_code = NULL, certificate_pdf_r2_key = ?,
 					certificate_pdf_hash = ?, generated_at = ?, updated_at = ?
 				WHERE id = ? AND contract_id = ? AND source_hash = ?
-					AND render_status IN ('pending', 'failed') AND attempts < 3`,
-				params: [input.key, input.sha256, input.now, input.now, input.certificateId,
-					input.contractId, input.sourceHash],
+					AND render_status IN ('pending', 'failed') AND attempts < 3
+					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents
+						WHERE id = ? AND status = 'staged' AND storage_class = 'archive'
+							AND object_key = ?))`,
+				params: [
+					input.key,
+					input.sha256,
+					input.now,
+					input.now,
+					input.certificateId,
+					input.contractId,
+					input.sourceHash,
+					input.storageIntentId ?? null,
+					input.storageIntentId ?? null,
+					input.key,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_artifacts
@@ -1339,11 +1747,61 @@ export class ContractRepository {
 					?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (
 					SELECT 1 FROM contract_formation_certificates WHERE id = ?
 						AND render_status = 'ready' AND certificate_pdf_hash = ?)`,
-				params: [crypto.randomUUID(), input.certificateId, input.key, input.size,
-					input.sha256, input.sourceHash, input.template.id, input.template.renderer_id,
-					input.template.renderer_contract_version, input.template.worker_compatibility_date,
-					input.now, input.certificateId, input.sha256],
+				params: [
+					crypto.randomUUID(),
+					input.certificateId,
+					input.key,
+					input.size,
+					input.sha256,
+					input.sourceHash,
+					input.template.id,
+					input.template.renderer_id,
+					input.template.renderer_contract_version,
+					input.template.worker_compatibility_date,
+					input.now,
+					input.certificateId,
+					input.sha256,
+				],
 			},
+			...(input.storageIntentId
+				? [
+						{
+							sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
+						updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+					WHERE id = ? AND status = 'staged' AND object_key = ?
+						AND EXISTS (SELECT 1 FROM contract_artifacts
+							WHERE formation_certificate_id = ? AND private_r2_key = ?)`,
+							params: [
+								input.now,
+								input.now,
+								input.storageIntentId,
+								input.key,
+								input.certificateId,
+								input.key,
+							],
+						},
+						{
+							sql: `INSERT INTO storage_intent_link_assertions
+						(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+					VALUES (?, ?, 'formation_certificate_pdf', ?, CASE WHEN
+						EXISTS (SELECT 1 FROM storage_object_intents
+							WHERE id = ? AND status = 'linked' AND object_key = ?)
+						AND EXISTS (SELECT 1 FROM contract_artifacts
+							WHERE formation_certificate_id = ? AND private_r2_key = ?)
+					THEN 1 ELSE 0 END, ?)`,
+							params: [
+								crypto.randomUUID(),
+								input.storageIntentId,
+								input.certificateId,
+								input.storageIntentId,
+								input.key,
+								input.certificateId,
+								input.key,
+								input.now,
+							],
+						},
+					]
+				: []),
 			...(['parent', 'verein'] as const).map<StatementSpec>((role) => ({
 				sql: `INSERT INTO contract_deliveries
 					(id, contract_offer_id, contract_id, artifact_kind, artifact_hash,
@@ -1354,9 +1812,19 @@ export class ContractRepository {
 					'available', ?, ?, NULL, ? FROM contracts contract
 				WHERE contract.id = ? AND EXISTS (SELECT 1 FROM contract_formation_certificates
 					WHERE id = ? AND render_status = 'ready')`,
-				params: [crypto.randomUUID(), input.offerId, input.contractId, input.sha256,
-					role, role, `formation-certificate:${role}:${input.contractId}`,
-					input.now, input.now, input.contractId, input.certificateId],
+				params: [
+					crypto.randomUUID(),
+					input.offerId,
+					input.contractId,
+					input.sha256,
+					role,
+					role,
+					`formation-certificate:${role}:${input.contractId}`,
+					input.now,
+					input.now,
+					input.contractId,
+					input.certificateId,
+				],
 			})),
 		]);
 	}
@@ -1378,9 +1846,10 @@ export class ContractRepository {
 			effective_to: string | null;
 			enrollment_id: string | null;
 			service_engagement_id: string | null;
-			distance_legal_profile: 'offline_only' | 'widerruf_applicable' | 'widerruf_not_applicable_312g_2_9';
+			distance_legal_profile:
+				'offline_only' | 'widerruf_applicable' | 'widerruf_not_applicable_312g_2_9';
 			kuendigung_function_required: number;
-		}>( {
+		}>({
 			sql: `SELECT contract.id, contract.contract_offer_id, offer.contract_kind,
 				contract.effective_to, contract.enrollment_id, contract.service_engagement_id,
 				template.distance_legal_profile, template.kuendigung_function_required
@@ -1397,7 +1866,11 @@ export class ContractRepository {
 	async recordEndRequest(input: {
 		actor: AuthenticatedUser;
 		contract: Awaited<ReturnType<ContractRepository['loadOwnedContract']>> & {};
-		kind: 'withdrawal' | 'ordinary_termination' | 'extraordinary_termination' | 'mutual_termination_request';
+		kind:
+			| 'withdrawal'
+			| 'ordinary_termination'
+			| 'extraordinary_termination'
+			| 'mutual_termination_request';
 		requestedEffectiveOn: string | null;
 		calculatedEffectiveOn: string | null;
 		requestTextVersion: string;
@@ -1418,16 +1891,24 @@ export class ContractRepository {
 			params: [input.idempotencyKey],
 		});
 		if (prior) {
-			if (prior.requested_by_user_id !== input.actor.id || prior.request_hash !== input.requestHash) {
+			if (
+				prior.requested_by_user_id !== input.actor.id ||
+				prior.request_hash !== input.requestHash
+			) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
-			return { requestId: prior.id, status: prior.status,
-				calculatedEffectiveOn: prior.calculated_effective_on, replayed: true };
+			return {
+				requestId: prior.id,
+				status: prior.status,
+				calculatedEffectiveOn: prior.calculated_effective_on,
+				replayed: true,
+			};
 		}
 		const endRequestId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
 		const initialStatus = input.kind === 'withdrawal' ? 'completed' : 'received';
-		const firstEvent = input.kind === 'withdrawal' ? 'withdrawal_received' : 'termination_received';
+		const firstEvent =
+			input.kind === 'withdrawal' ? 'withdrawal_received' : 'termination_received';
 		const statements: StatementSpec[] = [
 			{
 				sql: `INSERT INTO contract_end_requests
@@ -1442,10 +1923,24 @@ export class ContractRepository {
 				JOIN users owner ON owner.id = contract.user_id
 				WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
 					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
-				params: [endRequestId, input.actor.id, input.kind, input.requestedEffectiveOn,
-					input.now, input.now, input.now, input.requestTextVersion, input.requestHash,
-					input.idempotencyKey, initialStatus, input.calculatedEffectiveOn, input.now,
-					input.now, input.contract.id, input.actor.id],
+				params: [
+					endRequestId,
+					input.actor.id,
+					input.kind,
+					input.requestedEffectiveOn,
+					input.now,
+					input.now,
+					input.now,
+					input.requestTextVersion,
+					input.requestHash,
+					input.idempotencyKey,
+					initialStatus,
+					input.calculatedEffectiveOn,
+					input.now,
+					input.now,
+					input.contract.id,
+					input.actor.id,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_events
@@ -1453,56 +1948,107 @@ export class ContractRepository {
 					 actor_user_id, metadata_json, dedupe_key, created_at)
 				SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-				params: [crypto.randomUUID(), input.contract.id, firstEvent, input.now, input.kind,
-					input.contract.contract_offer_id, input.actor.id,
-					JSON.stringify({ requestId: endRequestId, requestedEffectiveOn: input.requestedEffectiveOn,
-						calculatedEffectiveOn: input.calculatedEffectiveOn }),
-					`end-received:${endRequestId}`, input.now, endRequestId],
+				params: [
+					crypto.randomUUID(),
+					input.contract.id,
+					firstEvent,
+					input.now,
+					input.kind,
+					input.contract.contract_offer_id,
+					input.actor.id,
+					JSON.stringify({
+						requestId: endRequestId,
+						requestedEffectiveOn: input.requestedEffectiveOn,
+						calculatedEffectiveOn: input.calculatedEffectiveOn,
+					}),
+					`end-received:${endRequestId}`,
+					input.now,
+					endRequestId,
+				],
 			},
-			...(input.kind === 'ordinary_termination' && input.contract.contract_kind === 'group_yearly'
-				? [{
-					sql: `UPDATE contracts SET auto_renewal_blocked_at = ? WHERE id = ?
+			...(input.kind === 'ordinary_termination' &&
+			input.contract.contract_kind === 'group_yearly'
+				? ([
+						{
+							sql: `UPDATE contracts SET auto_renewal_blocked_at = ? WHERE id = ?
 						AND EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-					params: [input.now, input.contract.id, endRequestId],
-				}, {
-					sql: `INSERT INTO contract_events
+							params: [input.now, input.contract.id, endRequestId],
+						},
+						{
+							sql: `INSERT INTO contract_events
 						(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
 						 actor_user_id, metadata_json, dedupe_key, created_at)
 					SELECT ?, ?, 'renewal_blocked', ?, 'ordinary_termination', ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-					params: [crypto.randomUUID(), input.contract.id, input.now,
-						input.contract.contract_offer_id, input.actor.id,
-						JSON.stringify({ requestId: endRequestId, contractualEnd: input.contract.effective_to }),
-						`renewal-blocked:${endRequestId}`, input.now, endRequestId],
-				}] satisfies StatementSpec[] : []),
+							params: [
+								crypto.randomUUID(),
+								input.contract.id,
+								input.now,
+								input.contract.contract_offer_id,
+								input.actor.id,
+								JSON.stringify({
+									requestId: endRequestId,
+									contractualEnd: input.contract.effective_to,
+								}),
+								`renewal-blocked:${endRequestId}`,
+								input.now,
+								endRequestId,
+							],
+						},
+					] satisfies StatementSpec[])
+				: []),
 			...(input.kind === 'withdrawal'
-				? [{
-					sql: `UPDATE contracts SET operational_status = 'terminated'
+				? ([
+						{
+							sql: `UPDATE contracts SET operational_status = 'terminated'
 						WHERE id = ? AND EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-					params: [input.contract.id, endRequestId],
-				}, {
-					sql: `UPDATE ${input.contract.enrollment_id ? 'enrollments' : 'service_engagements'}
+							params: [input.contract.id, endRequestId],
+						},
+						{
+							sql: `UPDATE ${input.contract.enrollment_id ? 'enrollments' : 'service_engagements'}
 						SET status = 'ended', updated_at = ? WHERE id = ? AND status = 'active'`,
-					params: [input.now, input.contract.enrollment_id ?? input.contract.service_engagement_id],
-				}, {
-					sql: `INSERT INTO contract_events
+							params: [
+								input.now,
+								input.contract.enrollment_id ??
+									input.contract.service_engagement_id,
+							],
+						},
+						{
+							sql: `INSERT INTO contract_events
 						(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
 						 actor_user_id, metadata_json, dedupe_key, created_at)
 					SELECT ?, ?, 'withdrawn', ?, 'statutory_withdrawal', ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-					params: [crypto.randomUUID(), input.contract.id, input.now,
-						input.contract.contract_offer_id, input.actor.id,
-						JSON.stringify({ requestId: endRequestId }), `withdrawn:${endRequestId}`,
-						input.now, endRequestId],
-				}] satisfies StatementSpec[] : []),
+							params: [
+								crypto.randomUUID(),
+								input.contract.id,
+								input.now,
+								input.contract.contract_offer_id,
+								input.actor.id,
+								JSON.stringify({ requestId: endRequestId }),
+								`withdrawn:${endRequestId}`,
+								input.now,
+								endRequestId,
+							],
+						},
+					] satisfies StatementSpec[])
+				: []),
 			{
 				sql: `INSERT INTO contract_outbox_events
 					(id, event_type, source_kind, source_id, payload_json, dedupe_key, status, created_at)
 				SELECT ?, 'termination_received', 'contract_end_request', ?, ?, ?, 'pending', ?
 				WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-				params: [crypto.randomUUID(), endRequestId,
-					JSON.stringify({ requestId: endRequestId, confirmation: 'durable_medium_required' }),
-					`termination-confirmation:${endRequestId}`, input.now, endRequestId],
+				params: [
+					crypto.randomUUID(),
+					endRequestId,
+					JSON.stringify({
+						requestId: endRequestId,
+						confirmation: 'durable_medium_required',
+					}),
+					`termination-confirmation:${endRequestId}`,
+					input.now,
+					endRequestId,
+				],
 			},
 			{
 				sql: `INSERT INTO audit_events
@@ -1510,9 +2056,18 @@ export class ContractRepository {
 					 request_id, safe_diff_json, created_at)
 				SELECT ?, ?, 'user', 'contract.end_request.received', 'contract_end_request',
 					?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
-				params: [auditId, input.actor.id, endRequestId, input.requestId,
-					JSON.stringify({ kind: input.kind, calculatedEffectiveOn: input.calculatedEffectiveOn }),
-					input.now, endRequestId],
+				params: [
+					auditId,
+					input.actor.id,
+					endRequestId,
+					input.requestId,
+					JSON.stringify({
+						kind: input.kind,
+						calculatedEffectiveOn: input.calculatedEffectiveOn,
+					}),
+					input.now,
+					endRequestId,
+				],
 			},
 			{
 				sql: `INSERT INTO contract_action_assertions
@@ -1523,14 +2078,27 @@ export class ContractRepository {
 					AND EXISTS (SELECT 1 FROM contract_outbox_events WHERE source_id = ?)
 					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), input.contract.id, endRequestId, input.actor.id,
-					auditId, endRequestId, endRequestId, auditId, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.contract.id,
+					endRequestId,
+					input.actor.id,
+					auditId,
+					endRequestId,
+					endRequestId,
+					auditId,
+					input.now,
+				],
 			},
 		];
 		try {
 			await this.db.batch(statements);
-			return { requestId: endRequestId, status: initialStatus,
-				calculatedEffectiveOn: input.calculatedEffectiveOn, replayed: false };
+			return {
+				requestId: endRequestId,
+				status: initialStatus,
+				calculatedEffectiveOn: input.calculatedEffectiveOn,
+				replayed: false,
+			};
 		} catch (error) {
 			throw new ContractRepositoryError('CONTRACT_END_REQUEST_REJECTED', { cause: error });
 		}
@@ -1541,14 +2109,23 @@ export class ContractRepository {
 			id: string;
 			contract_id: string;
 			contract_offer_id: string;
-			kind: 'withdrawal' | 'ordinary_termination' | 'extraordinary_termination' | 'mutual_termination_request';
+			kind:
+				| 'withdrawal'
+				| 'ordinary_termination'
+				| 'extraordinary_termination'
+				| 'mutual_termination_request';
 			status: string;
 			calculated_effective_on: string | null;
 		}>({
 			sql: `SELECT request.id, request.contract_id, contract.contract_offer_id,
 				request.kind, request.status, request.calculated_effective_on
-			FROM contract_end_requests request JOIN contracts contract ON contract.id = request.contract_id
-			WHERE request.id = ?`,
+			FROM contract_end_requests request
+			JOIN contracts contract ON contract.id = request.contract_id
+			JOIN users owner ON owner.id = contract.user_id
+			WHERE request.id = ? AND owner.account_status = 'active'
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE archive.target_kind = 'contract_end_request'
+						AND archive.target_id = request.id)`,
 			params: [endRequestId],
 		});
 	}
@@ -1567,20 +2144,24 @@ export class ContractRepository {
 	}) {
 		const prior = await this.loadAdminAction(input.admin.id, input.idempotencyKey);
 		if (prior) {
-			if (prior.action !== 'termination_review' || prior.request_hash_sha256 !== input.requestHash) {
+			if (
+				prior.action !== 'termination_review' ||
+				prior.request_hash_sha256 !== input.requestHash
+			) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return { endRequestId: prior.result_ref, status: input.decision, replayed: true };
 		}
 		const auditId = crypto.randomUUID();
 		const actionId = crypto.randomUUID();
-		const eventType = input.decision === 'effective_date_confirmed'
-			? 'termination_effective_date_confirmed'
-			: input.decision === 'disputed'
-				? 'termination_disputed'
-				: input.decision === 'approved'
-					? 'mutual_termination_approved'
-					: 'mutual_termination_declined';
+		const eventType =
+			input.decision === 'effective_date_confirmed'
+				? 'termination_effective_date_confirmed'
+				: input.decision === 'disputed'
+					? 'termination_disputed'
+					: input.decision === 'approved'
+						? 'mutual_termination_approved'
+						: 'mutual_termination_declined';
 		try {
 			await this.db.batch([
 				{
@@ -1590,12 +2171,30 @@ export class ContractRepository {
 						admin_reason = ?, reviewed_by = ?, reviewed_at = ?,
 						external_debt_check_result = ?, updated_at = ?
 					WHERE id = ? AND status = 'received' AND ${ACTIVE_ADMIN}
+						AND EXISTS (SELECT 1 FROM contracts contract JOIN users owner
+							ON owner.id = contract.user_id
+							WHERE contract.id = contract_end_requests.contract_id
+								AND owner.account_status = 'active')
+						AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+							WHERE archive.target_kind = 'contract_end_request'
+								AND archive.target_id = contract_end_requests.id)
 						AND ((kind = 'mutual_termination_request' AND ? IN ('approved', 'declined'))
 							OR (kind <> 'mutual_termination_request'
 								AND ? IN ('effective_date_confirmed', 'disputed')))`,
-					params: [input.decision, input.decision, input.effectiveOn, input.reason,
-						input.admin.id, input.now, input.externalDebtCheckResult, input.now,
-						input.request.id, input.admin.id, input.decision, input.decision],
+					params: [
+						input.decision,
+						input.decision,
+						input.effectiveOn,
+						input.reason,
+						input.admin.id,
+						input.now,
+						input.externalDebtCheckResult,
+						input.now,
+						input.request.id,
+						input.admin.id,
+						input.decision,
+						input.decision,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_events
@@ -1604,10 +2203,22 @@ export class ContractRepository {
 					SELECT ?, request.contract_id, ?, ?, ?, contract.contract_offer_id, ?, ?, ?, ?
 					FROM contract_end_requests request JOIN contracts contract ON contract.id = request.contract_id
 					WHERE request.id = ? AND request.status = ? AND request.reviewed_by = ?`,
-					params: [crypto.randomUUID(), eventType, input.now, input.reason,
-						input.admin.id, JSON.stringify({ endRequestId: input.request.id,
-							effectiveOn: input.effectiveOn }), `termination-review:${input.request.id}`,
-						input.now, input.request.id, input.decision, input.admin.id],
+					params: [
+						crypto.randomUUID(),
+						eventType,
+						input.now,
+						input.reason,
+						input.admin.id,
+						JSON.stringify({
+							endRequestId: input.request.id,
+							effectiveOn: input.effectiveOn,
+						}),
+						`termination-review:${input.request.id}`,
+						input.now,
+						input.request.id,
+						input.decision,
+						input.admin.id,
+					],
 				},
 				{
 					sql: `INSERT INTO audit_events
@@ -1616,9 +2227,20 @@ export class ContractRepository {
 					SELECT ?, ?, 'user', 'contract.termination_reviewed', 'contract_end_request',
 						?, ?, ?, ? FROM contract_end_requests request
 					WHERE request.id = ? AND request.status = ? AND request.reviewed_by = ?`,
-					params: [auditId, input.admin.id, input.request.id, input.requestId,
-						JSON.stringify({ decision: input.decision, effectiveOn: input.effectiveOn }),
-						input.now, input.request.id, input.decision, input.admin.id],
+					params: [
+						auditId,
+						input.admin.id,
+						input.request.id,
+						input.requestId,
+						JSON.stringify({
+							decision: input.decision,
+							effectiveOn: input.effectiveOn,
+						}),
+						input.now,
+						input.request.id,
+						input.decision,
+						input.admin.id,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_admin_actions
@@ -1626,9 +2248,17 @@ export class ContractRepository {
 						 request_hash_sha256, result_ref, audit_event_id, created_at)
 					SELECT ?, ?, 'termination_review', ?, ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
-					params: [actionId, input.request.contract_offer_id, input.admin.id,
-						input.idempotencyKey, input.requestHash, input.request.id, auditId,
-						input.now, auditId],
+					params: [
+						actionId,
+						input.request.contract_offer_id,
+						input.admin.id,
+						input.idempotencyKey,
+						input.requestHash,
+						input.request.id,
+						auditId,
+						input.now,
+						auditId,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_action_assertions
@@ -1639,8 +2269,18 @@ export class ContractRepository {
 						AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
 						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
 					THEN 1 ELSE 0 END, ?)`,
-					params: [crypto.randomUUID(), input.request.id, actionId, input.admin.id,
-						auditId, input.request.id, input.decision, actionId, auditId, input.now],
+					params: [
+						crypto.randomUUID(),
+						input.request.id,
+						actionId,
+						input.admin.id,
+						auditId,
+						input.request.id,
+						input.decision,
+						actionId,
+						auditId,
+						input.now,
+					],
 				},
 			]);
 			return { endRequestId: input.request.id, status: input.decision, replayed: false };
@@ -1661,7 +2301,13 @@ export class ContractRepository {
 		}>({
 			sql: `SELECT request.id, contract.contract_number, request.kind, request.status,
 				request.received_at, request.requested_effective_on, request.calculated_effective_on
-			FROM contract_end_requests request JOIN contracts contract ON contract.id = request.contract_id
+			FROM contract_end_requests request
+			JOIN contracts contract ON contract.id = request.contract_id
+			JOIN users owner ON owner.id = contract.user_id
+			WHERE owner.account_status = 'active'
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE archive.target_kind = 'contract_end_request'
+						AND archive.target_id = request.id)
 			ORDER BY request.received_at DESC, request.id DESC LIMIT 100`,
 		});
 		return rows.results;
@@ -1676,12 +2322,20 @@ export class ContractRepository {
 		requestId: string;
 		now: string;
 	}) {
-		const prior = await this.db.first<{ id: string; requested_by_user_id: string; notice_hash: string }>({
+		const prior = await this.db.first<{
+			id: string;
+			requested_by_user_id: string;
+			notice_hash: string;
+		}>({
 			sql: `SELECT id, requested_by_user_id, notice_hash FROM service_attendance_notices
-			WHERE idempotency_key = ?`, params: [input.idempotencyKey],
+			WHERE idempotency_key = ?`,
+			params: [input.idempotencyKey],
 		});
 		if (prior) {
-			if (prior.requested_by_user_id !== input.actor.id || prior.notice_hash !== input.noticeHash) {
+			if (
+				prior.requested_by_user_id !== input.actor.id ||
+				prior.notice_hash !== input.noticeHash
+			) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return { noticeId: prior.id, replayed: true };
@@ -1716,9 +2370,20 @@ export class ContractRepository {
 					WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
 						AND owner.account_status = 'active' AND owner.is_blocked = 0
 						AND engagement.status IN ('active', 'funding_review')`,
-					params: [noticeId, input.actor.id, input.now, input.now, input.now,
-						input.noticeTextVersion, input.noticeHash, input.idempotencyKey, taskId, input.now,
-						input.contractId, input.actor.id],
+					params: [
+						noticeId,
+						input.actor.id,
+						input.now,
+						input.now,
+						input.now,
+						input.noticeTextVersion,
+						input.noticeHash,
+						input.idempotencyKey,
+						taskId,
+						input.now,
+						input.contractId,
+						input.actor.id,
+					],
 				},
 				{
 					sql: `UPDATE service_engagements SET status = 'ended', attendance_ceased_at = ?,
@@ -1734,18 +2399,30 @@ export class ContractRepository {
 					SELECT ?, contract.id, 'attendance_ceased', ?, 'parent_notice',
 						contract.contract_offer_id, ?, ?, ?, ? FROM contracts contract
 					WHERE contract.id = ? AND EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
-					params: [crypto.randomUUID(), input.now, input.actor.id,
-						JSON.stringify({ noticeId }), `attendance-ceased:${noticeId}`, input.now,
-						input.contractId, noticeId],
+					params: [
+						crypto.randomUUID(),
+						input.now,
+						input.actor.id,
+						JSON.stringify({ noticeId }),
+						`attendance-ceased:${noticeId}`,
+						input.now,
+						input.contractId,
+						noticeId,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_outbox_events
 						(id, event_type, source_kind, source_id, payload_json, dedupe_key, status, created_at)
 					SELECT ?, 'attendance_ceased', 'service_attendance_notice', ?, ?, ?, 'pending', ?
 					WHERE EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
-					params: [crypto.randomUUID(), noticeId,
+					params: [
+						crypto.randomUUID(),
+						noticeId,
 						JSON.stringify({ noticeId, confirmation: 'durable_medium_required' }),
-						`attendance-confirmation:${noticeId}`, input.now, noticeId],
+						`attendance-confirmation:${noticeId}`,
+						input.now,
+						noticeId,
+					],
 				},
 				{
 					sql: `INSERT INTO audit_events
@@ -1754,8 +2431,14 @@ export class ContractRepository {
 					SELECT ?, ?, 'user', 'contract.attendance_ceased', 'contract', ?, ?,
 						'{"futureUnits":"ceased"}', ?
 					WHERE EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
-					params: [auditId, input.actor.id, input.contractId, input.requestId,
-						input.now, noticeId],
+					params: [
+						auditId,
+						input.actor.id,
+						input.contractId,
+						input.requestId,
+						input.now,
+						noticeId,
+					],
 				},
 			]);
 			return { noticeId, replayed: false };
@@ -1824,12 +2507,28 @@ export class ContractRepository {
 					WHERE child.id = ? AND child.owner_user_id = ?
 						AND owner.account_status = 'active' AND owner.is_blocked = 0
 						AND contact.approval_status = 'approved' AND contact.snapshot_hash = ?`,
-					params: [consentId, input.actor.id, input.captureScopesJson,
-						input.publicationChannelsJson, input.textVersion, input.contactVersionId,
-						input.contactSnapshotHash, input.decision, input.now, input.now, input.now,
-						input.actor.id, input.now, input.evidenceHash, input.idempotencyKey,
-						input.now, input.contactVersionId, input.childId, input.actor.id,
-						input.contactSnapshotHash],
+					params: [
+						consentId,
+						input.actor.id,
+						input.captureScopesJson,
+						input.publicationChannelsJson,
+						input.textVersion,
+						input.contactVersionId,
+						input.contactSnapshotHash,
+						input.decision,
+						input.now,
+						input.now,
+						input.now,
+						input.actor.id,
+						input.now,
+						input.evidenceHash,
+						input.idempotencyKey,
+						input.now,
+						input.contactVersionId,
+						input.childId,
+						input.actor.id,
+						input.contactSnapshotHash,
+					],
 				},
 				{
 					sql: `INSERT INTO audit_events
@@ -1837,8 +2536,15 @@ export class ContractRepository {
 						 request_id, safe_diff_json, created_at)
 					SELECT ?, ?, 'user', 'media.decision', 'media_consent', ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM media_consents WHERE id = ?)`,
-					params: [auditId, input.actor.id, consentId, input.requestId,
-						JSON.stringify({ decision: input.decision }), input.now, consentId],
+					params: [
+						auditId,
+						input.actor.id,
+						consentId,
+						input.requestId,
+						JSON.stringify({ decision: input.decision }),
+						input.now,
+						consentId,
+					],
 				},
 			]);
 			return { consentId, replayed: false };
@@ -1860,12 +2566,20 @@ export class ContractRepository {
 		requestId: string;
 		now: string;
 	}) {
-		const prior = await this.db.first<{ id: string; evidence_hash: string; recorded_by_user_id: string | null }>({
+		const prior = await this.db.first<{
+			id: string;
+			evidence_hash: string;
+			recorded_by_user_id: string | null;
+		}>({
 			sql: `SELECT id, evidence_hash, recorded_by_user_id FROM media_consents
-			WHERE request_dedupe_key = ?`, params: [input.idempotencyKey],
+			WHERE request_dedupe_key = ?`,
+			params: [input.idempotencyKey],
 		});
 		if (prior) {
-			if (prior.recorded_by_user_id !== input.admin.id || prior.evidence_hash !== input.evidenceHash) {
+			if (
+				prior.recorded_by_user_id !== input.admin.id ||
+				prior.evidence_hash !== input.evidenceHash
+			) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return { consentId: prior.id, replayed: true };
@@ -1894,20 +2608,40 @@ export class ContractRepository {
 						ORDER BY candidate.effective_from DESC, candidate.created_at DESC LIMIT 1)
 						AND child.owner_user_id = ? AND owner.account_status = 'active'
 						AND owner.is_blocked = 0 AND ${ACTIVE_ADMIN}`,
-					params: [revokedId, input.captureScopesJson, input.publicationChannelsJson,
-						input.channel, input.receivedAt, input.receivedAt, input.receivedAt,
-						input.admin.id, input.now, input.evidenceHash, input.idempotencyKey, input.now,
-						input.childId, input.ownerUserId, input.captureScopesJson,
-						input.publicationChannelsJson, input.ownerUserId, input.admin.id],
+					params: [
+						revokedId,
+						input.captureScopesJson,
+						input.publicationChannelsJson,
+						input.channel,
+						input.receivedAt,
+						input.receivedAt,
+						input.receivedAt,
+						input.admin.id,
+						input.now,
+						input.evidenceHash,
+						input.idempotencyKey,
+						input.now,
+						input.childId,
+						input.ownerUserId,
+						input.captureScopesJson,
+						input.publicationChannelsJson,
+						input.ownerUserId,
+						input.admin.id,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_outbox_events
 						(id, event_type, source_kind, source_id, payload_json, dedupe_key, status, created_at)
 					SELECT ?, 'media_withdrawn', 'media_consent', ?, ?, ?, 'pending', ?
 					WHERE EXISTS (SELECT 1 FROM media_consents WHERE id = ?)`,
-					params: [crypto.randomUUID(), revokedId,
+					params: [
+						crypto.randomUUID(),
+						revokedId,
 						JSON.stringify({ consentId: revokedId, effectiveFrom: input.receivedAt }),
-						`media-withdrawn:${revokedId}`, input.now, revokedId],
+						`media-withdrawn:${revokedId}`,
+						input.now,
+						revokedId,
+					],
 				},
 				{
 					sql: `INSERT INTO audit_events
@@ -1915,9 +2649,15 @@ export class ContractRepository {
 						 request_id, safe_diff_json, created_at)
 					SELECT ?, ?, 'user', 'media.withdrawal_recorded', 'media_consent', ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM media_consents WHERE id = ?)`,
-					params: [auditId, input.admin.id, revokedId, input.requestId,
+					params: [
+						auditId,
+						input.admin.id,
+						revokedId,
+						input.requestId,
 						JSON.stringify({ channel: input.channel, receivedAt: input.receivedAt }),
-						input.now, revokedId],
+						input.now,
+						revokedId,
+					],
 				},
 			]);
 			return { consentId: revokedId, replayed: false };
@@ -1954,13 +2694,15 @@ export class ContractRepository {
 	}
 
 	async loadOwnerOfferDetail(userId: string, offerId: string) {
-		const offer = await this.db.first<StoredContractOffer & {
-			child_name: string;
-			contract_id: string | null;
-			operational_status: string | null;
-			media_contact_version_id: string | null;
-			distance_legal_profile: string;
-		}>({
+		const offer = await this.db.first<
+			StoredContractOffer & {
+				child_name: string;
+				contract_id: string | null;
+				operational_status: string | null;
+				media_contact_version_id: string | null;
+				distance_legal_profile: string;
+			}
+		>({
 			sql: `SELECT offer.*, child.full_name AS child_name, contract.id AS contract_id,
 				contract.operational_status, template.media_contact_version_id,
 				template.distance_legal_profile
@@ -1991,8 +2733,15 @@ export class ContractRepository {
 	}
 
 	async loadArtifactForOwner(userId: string, artifactId: string) {
-		return this.db.first<{ id: string; private_r2_key: string; content_type: string; sha256: string }>({
-			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type, artifact.sha256
+		return this.db.first<{
+			id: string;
+			private_r2_key: string;
+			content_type: string;
+			sha256: string;
+			size_bytes: number;
+		}>({
+			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type,
+				artifact.sha256, artifact.size_bytes
 			FROM contract_artifacts artifact
 			JOIN contract_offers offer ON offer.id = artifact.contract_offer_id
 				OR offer.id = (SELECT certificate.contract_offer_id
@@ -2001,17 +2750,35 @@ export class ContractRepository {
 			JOIN users owner ON owner.id = offer.user_id
 			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
 			WHERE artifact.id = ? AND offer.user_id = ?
-				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+				AND owner.account_status = 'active' AND owner.is_blocked = 0
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE archive.target_kind = 'contract_artifact'
+						AND archive.target_id = artifact.id)`,
 			params: [artifactId, userId],
 		});
 	}
 
 	loadArtifactForAdmin(adminUserId: string, artifactId: string) {
-		return this.db.first<{ id: string; private_r2_key: string; content_type: string; sha256: string }>({
-			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type, artifact.sha256
-			FROM contract_artifacts artifact JOIN users admin ON admin.id = ?
+		return this.db.first<{
+			id: string;
+			private_r2_key: string;
+			content_type: string;
+			sha256: string;
+			size_bytes: number;
+		}>({
+			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type,
+				artifact.sha256, artifact.size_bytes
+			FROM contract_artifacts artifact
+			JOIN contract_offers offer ON offer.id = artifact.contract_offer_id
+				OR offer.id = (SELECT certificate.contract_offer_id
+					FROM contract_formation_certificates certificate
+					WHERE certificate.id = artifact.formation_certificate_id)
+			JOIN users owner ON owner.id = offer.user_id
+			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
+			JOIN users admin ON admin.id = ?
 			WHERE artifact.id = ? AND admin.role = 'admin' AND admin.account_status = 'active'
-				AND admin.is_blocked = 0
+				AND admin.is_blocked = 0 AND owner.account_status = 'active'
+				AND owner.is_blocked = 0
 				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
 					WHERE archive.target_kind = 'contract_artifact'
 						AND archive.target_id = artifact.id)`,
@@ -2019,22 +2786,152 @@ export class ContractRepository {
 		});
 	}
 
-	async auditArtifactRead(input: {
+	async authorizeAndAuditOwnerArtifactRead(input: {
 		artifactId: string;
-		actorUserId: string;
-		actorKind: 'user';
+		ownerUserId: string;
+		expectedStorageKey: string;
+		expectedSha256: string;
+		expectedSizeBytes: number;
 		requestId: string;
 		now: string;
 	}) {
-		await this.db.run({
-			sql: `INSERT INTO audit_events
-				(id, actor_user_id, actor_kind, action, target_kind, target_id,
-				 request_id, safe_diff_json, created_at)
-			SELECT ?, ?, ?, 'contract_artifact.read', 'contract_artifact', id,
-				?, '{"forcedAttachment":true}', ? FROM contract_artifacts WHERE id = ?`,
-			params: [crypto.randomUUID(), input.actorUserId, input.actorKind, input.requestId,
-				input.now, input.artifactId],
-		});
+		const auditId = crypto.randomUUID();
+		try {
+			const results = await this.db.batch([
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'contract_artifact.read', 'contract_artifact', artifact.id,
+						?, '{"forcedAttachment":true}', ?
+					FROM contract_artifacts artifact
+					JOIN contract_offers offer ON offer.id = artifact.contract_offer_id
+						OR offer.id = (SELECT certificate.contract_offer_id
+							FROM contract_formation_certificates certificate
+							WHERE certificate.id = artifact.formation_certificate_id)
+					JOIN users owner ON owner.id = offer.user_id
+					JOIN children child ON child.id = offer.child_id
+						AND child.owner_user_id = owner.id
+					WHERE artifact.id = ? AND offer.user_id = ?
+						AND artifact.private_r2_key = ? AND artifact.sha256 = ?
+						AND artifact.size_bytes = ? AND owner.account_status = 'active'
+						AND owner.is_blocked = 0
+						AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+							WHERE archive.target_kind = 'contract_artifact'
+								AND archive.target_id = artifact.id)`,
+					params: [
+						auditId,
+						input.ownerUserId,
+						input.requestId,
+						input.now,
+						input.artifactId,
+						input.ownerUserId,
+						input.expectedStorageKey,
+						input.expectedSha256,
+						input.expectedSizeBytes,
+					],
+				},
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'artifact_owner_read', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						crypto.randomUUID(),
+						input.artifactId,
+						auditId,
+						input.ownerUserId,
+						auditId,
+						auditId,
+						input.now,
+					],
+				},
+			]);
+			if ((results[0]?.meta.changes ?? 0) !== 1) {
+				throw new ContractRepositoryError('CONTRACT_ARTIFACT_NOT_FOUND');
+			}
+		} catch (error) {
+			if (error instanceof ContractRepositoryError) throw error;
+			throw new ContractRepositoryError('CONTRACT_ARTIFACT_NOT_FOUND');
+		}
+	}
+
+	async authorizeAndAuditAdminArtifactRead(input: {
+		artifactId: string;
+		adminUserId: string;
+		purposeCode: ContractArtifactDownloadPurpose;
+		expectedStorageKey: string;
+		expectedSha256: string;
+		expectedSizeBytes: number;
+		requestId: string;
+		now: string;
+	}) {
+		const auditId = crypto.randomUUID();
+		try {
+			const results = await this.db.batch([
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'contract_artifact.read', 'contract_artifact', artifact.id,
+						?, ?, ?
+					FROM contract_artifacts artifact
+					JOIN contract_offers offer ON offer.id = artifact.contract_offer_id
+						OR offer.id = (SELECT certificate.contract_offer_id
+							FROM contract_formation_certificates certificate
+							WHERE certificate.id = artifact.formation_certificate_id)
+					JOIN users owner ON owner.id = offer.user_id
+					JOIN children child ON child.id = offer.child_id
+						AND child.owner_user_id = owner.id
+					JOIN users admin ON admin.id = ?
+					WHERE artifact.id = ? AND artifact.private_r2_key = ?
+						AND artifact.sha256 = ? AND artifact.size_bytes = ?
+						AND admin.role = 'admin' AND admin.account_status = 'active'
+						AND admin.is_blocked = 0 AND owner.account_status = 'active'
+						AND owner.is_blocked = 0
+						AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+							WHERE archive.target_kind = 'contract_artifact'
+								AND archive.target_id = artifact.id)`,
+					params: [
+						auditId,
+						input.adminUserId,
+						input.requestId,
+						JSON.stringify({ forcedAttachment: true, purposeCode: input.purposeCode }),
+						input.now,
+						input.adminUserId,
+						input.artifactId,
+						input.expectedStorageKey,
+						input.expectedSha256,
+						input.expectedSizeBytes,
+					],
+				},
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'artifact_admin_read', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						crypto.randomUUID(),
+						input.artifactId,
+						auditId,
+						input.adminUserId,
+						auditId,
+						auditId,
+						input.now,
+					],
+				},
+			]);
+			if ((results[0]?.meta.changes ?? 0) !== 1) {
+				throw new ContractRepositoryError('CONTRACT_ARTIFACT_NOT_FOUND');
+			}
+		} catch (error) {
+			if (error instanceof ContractRepositoryError) throw error;
+			throw new ContractRepositoryError('CONTRACT_ARTIFACT_NOT_FOUND');
+		}
 	}
 
 	async listAdminOffers(query = '') {
@@ -2059,7 +2956,9 @@ export class ContractRepository {
 					'kind', artifact.artifact_kind)) FROM contract_artifacts artifact
 					WHERE artifact.contract_offer_id = offer.id
 						OR artifact.formation_certificate_id = certificate.id), '[]') AS artifacts_json
-			FROM contract_offers offer JOIN children child ON child.id = offer.child_id
+			FROM contract_offers offer
+			JOIN users owner ON owner.id = offer.user_id AND owner.account_status <> 'closed'
+			JOIN children child ON child.id = offer.child_id
 			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
 			LEFT JOIN contract_formation_certificates certificate
 				ON certificate.contract_id = contract.id

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
-import { loadRuntimeConfig } from '$lib/server/config/runtime';
+import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
 import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
@@ -8,6 +8,7 @@ import type { ContractArtifactStore } from '$lib/server/contracts/storage';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
 import { PrivacyService } from '$lib/server/privacy/privacy-service';
+import { OperationsRepository } from '$lib/server/operations/operations-repository';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
@@ -22,10 +23,14 @@ const admin = requireAdmin({ id: 'admin-contract', role: 'admin', emailVerified:
 
 class MemoryStore implements ContractArtifactStore {
 	readonly values = new Map<string, Uint8Array>();
+	beforeGet?: (key: string) => Promise<void>;
 	async put(key: string, body: Uint8Array) { this.values.set(key, Uint8Array.from(body)); }
 	async get(key: string) {
 		const value = this.values.get(key);
-		return value ? { body: Uint8Array.from(value).buffer, size: value.byteLength } : null;
+		if (!value) return null;
+		const copy = Uint8Array.from(value);
+		await this.beforeGet?.(key);
+		return { body: copy.buffer, size: copy.byteLength };
 	}
 	async delete(key: string) { this.values.delete(key); }
 }
@@ -195,15 +200,17 @@ describe('stage 09 immutable contract workflow in D1', () => {
 	let store: MemoryStore;
 	let service: ContractService;
 	let repository: ContractRepository;
+	let config: RuntimeConfig;
 
 	beforeEach(async () => {
 		context = await createMigratedTestD1();
 		db = new DatabaseBoundary(context.db);
 		await seed(db);
 		store = new MemoryStore();
-		const config = loadRuntimeConfig({
+		config = loadRuntimeConfig({
 			APP_ENV: 'test', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.test', DB: context.db,
-			R2_BUCKET: { get() {}, put() {}, delete() {} } as unknown as R2Bucket,
+			R2_ARCHIVE: { get() {}, put() {}, delete() {} } as unknown as R2Bucket,
+			R2_QUARANTINE: { get() {}, put() {}, delete() {} } as unknown as R2Bucket,
 			CONTRACT_SEND_ENABLED: 'true', CONTRACT_RENDERER: 'synthetic_test',
 		});
 		repository = new ContractRepository(db);
@@ -221,6 +228,60 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			idempotencyKey: `create-contract-${key}`,
 		} });
 	}
+
+	it('expires pseudonymous acceptance IP metadata after the temporary 30-day bound', async () => {
+		const acceptanceNow = '2026-05-01T10:00:00.000Z';
+		service = new ContractService(repository, store, config, undefined, () => acceptanceNow);
+		const created = await draft('ip-retention');
+		const rendered = await service.renderAndSend({
+			admin,
+			offerId: created.offerId,
+			idempotencyKey: 'render-contract-ip-retention',
+			requestId: 'render-ip-retention',
+		});
+		await service.parentDecision({
+			actor: parent,
+			payload: {
+				offerId: created.offerId,
+				expectedContractHash: rendered.contractHash,
+				decision: 'accept',
+				acceptanceTextVersion: 'contract-acceptance-de-v1',
+				acceptanceText: 'Synthetische Annahme für den Metadaten-Löschtest.',
+				idempotencyKey: 'accept-contract-ip-retention',
+			},
+			userAgent: 'stage-13-retention-test',
+			requestSubject: '192.0.2.44',
+			requestId: 'accept-ip-retention',
+		});
+
+		const retainedMetadata = await db.first<{
+			action_ip: string | null;
+			acceptance_ip: string | null;
+			ip_expires_at: string;
+		}>({
+				sql: `SELECT action.ip_retention_value AS action_ip,
+					acceptance.ip_retention_value AS acceptance_ip, action.ip_expires_at
+				FROM contract_parent_actions action
+				JOIN contract_acceptances acceptance ON acceptance.parent_action_id = action.id
+				WHERE action.contract_offer_id = ?`,
+				params: [created.offerId],
+			});
+		expect(retainedMetadata).toMatchObject({ ip_expires_at: '2026-05-31T10:00:00.000Z' });
+		expect(retainedMetadata?.action_ip).toMatch(/^[a-f0-9]{64}$/u);
+		expect(retainedMetadata?.acceptance_ip).toMatch(/^[a-f0-9]{64}$/u);
+		const cleaned = await new OperationsRepository(db).cleanupSecurityMetadata(now, 10);
+		expect(cleaned).toMatchObject({ contractActions: 1, contractAcceptances: 1 });
+		expect(
+			await db.first<{ action_ip: string | null; acceptance_ip: string | null }>({
+				sql: `SELECT action.ip_retention_value AS action_ip,
+					acceptance.ip_retention_value AS acceptance_ip
+				FROM contract_parent_actions action
+				JOIN contract_acceptances acceptance ON acceptance.parent_action_id = action.id
+				WHERE action.contract_offer_id = ?`,
+				params: [created.offerId],
+			})
+		).toEqual({ action_ip: null, acceptance_ip: null });
+	}, 45_000);
 
 	it('reserves permanent family numbers, renders immutable artifacts, accepts, and forms once', async () => {
 		const created = await draft('full-flow');
@@ -286,6 +347,40 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			requestId: 'foreign-download' })).rejects.toMatchObject({ code: 'CONTRACT_ARTIFACT_NOT_FOUND' });
 		await expect(service.downloadArtifact({ actor: parent, artifactId: pdf.id,
 			requestId: 'owner-download' })).resolves.toMatchObject({ contentType: 'application/pdf' });
+		await expect(service.downloadAdminArtifact({ admin, artifactId: pdf.id,
+			purpose: 'free-text-purpose', requestId: 'admin-download-invalid-purpose' }))
+			.rejects.toMatchObject({ code: 'INVALID_DOWNLOAD_PURPOSE' });
+		await expect(service.downloadAdminArtifact({ admin, artifactId: pdf.id,
+			purpose: 'contract_administration', requestId: 'admin-download' }))
+			.resolves.toMatchObject({ contentType: 'application/pdf' });
+		const adminReadAudit = await db.first<{ safe_diff_json: string }>({
+			sql: `SELECT safe_diff_json FROM audit_events WHERE request_id = 'admin-download'`,
+		});
+		expect(JSON.parse(adminReadAudit!.safe_diff_json)).toMatchObject({
+			forcedAttachment: true, purposeCode: 'contract_administration',
+		});
+
+		store.beforeGet = async () => {
+			store.beforeGet = undefined;
+			await db.run({ sql: `UPDATE users SET is_blocked = 1 WHERE id = ?`, params: [parent.id] });
+		};
+		await expect(service.downloadAdminArtifact({ admin, artifactId: pdf.id,
+			purpose: 'legal_evidence_review', requestId: 'admin-download-owner-race' }))
+			.rejects.toMatchObject({ code: 'CONTRACT_ARTIFACT_NOT_FOUND' });
+		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM audit_events
+			WHERE request_id = 'admin-download-owner-race'` })).toEqual({ count: 0 });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0 WHERE id = ?`, params: [parent.id] });
+
+		store.beforeGet = async () => {
+			store.beforeGet = undefined;
+			await db.run({ sql: `UPDATE users SET is_blocked = 1 WHERE id = ?`, params: [parent.id] });
+		};
+		await expect(service.downloadArtifact({ actor: parent, artifactId: pdf.id,
+			requestId: 'owner-download-race' }))
+			.rejects.toMatchObject({ code: 'CONTRACT_ARTIFACT_NOT_FOUND' });
+		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM audit_events
+			WHERE request_id = 'owner-download-race'` })).toEqual({ count: 0 });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0 WHERE id = ?`, params: [parent.id] });
 		await expect(db.run({ sql: `UPDATE contract_artifacts SET sha256 = ? WHERE id = ?`,
 			params: [hash('f'), pdf.id] })).rejects.toThrow();
 
