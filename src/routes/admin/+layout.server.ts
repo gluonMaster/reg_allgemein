@@ -4,6 +4,7 @@ import { requireAdmin } from '$lib/server/security/authorization';
 import {
 	buildAdminNavigation,
 	contractAdminNavigation,
+	priceReviewAdminNavigation,
 	requestAdminNavigation,
 	trialAdminNavigation,
 } from '$lib/server/admin/navigation';
@@ -17,6 +18,7 @@ export const load: LayoutServerLoad = (event) => {
 			...trialAdminNavigation,
 			...requestAdminNavigation,
 			...contractAdminNavigation,
+			...priceReviewAdminNavigation,
 		]),
 		commandKey: crypto.randomUUID(),
 	};

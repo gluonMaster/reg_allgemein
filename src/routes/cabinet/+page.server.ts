@@ -8,13 +8,20 @@ import { requestSubject } from '$lib/server/auth/http';
 import { requestCabinetRuntime } from '$lib/server/cabinet/runtime';
 import { requestFamilyRuntime } from '$lib/server/family/runtime';
 import { requestTrialRuntime } from '$lib/server/trials/runtime';
+import { requestPriceReviewRuntime } from '$lib/server/price-reviews/runtime';
 
-export const load: PageServerLoad = async (event) => ({
-	csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
-	cabinet: await requestCabinetRuntime(event).service.load(
-		requireAuthenticated(event.locals.user)
-	),
-});
+export const load: PageServerLoad = async (event) => {
+	const actor = requireAuthenticated(event.locals.user);
+	const [cabinet, priceReviews] = await Promise.all([
+		requestCabinetRuntime(event).service.load(actor),
+		requestPriceReviewRuntime(event).repository.listParentItems(actor.id),
+	]);
+	return {
+		csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
+		cabinet,
+		priceReviews,
+	};
+};
 
 async function verifiedForm(event: Parameters<Actions[string]>[0]) {
 	const form = await event.request.formData();

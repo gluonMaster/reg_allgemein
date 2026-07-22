@@ -549,7 +549,9 @@ offer.
 - `lesson_kind`, `status`
   (`draft|contract_offered|active|cancelled|ended`);
 - `contract_kind`, `active_from`, `active_until`;
-- `current_price_cents`, `price_source`, `price_mode`, `price_effective_from`;
+- `current_base_price_cents`, `current_price_cents`, `price_source`, `price_mode`,
+  `current_price_version_id`, `current_price_rule_id`, `price_effective_from`,
+  `price_assignment_version`;
 - `manual_override_reason`, `manual_override_by`, `manual_override_at`;
 - `source` (`legacy|portal|admin`), `created_at`, `updated_at`.
 
@@ -1133,23 +1135,43 @@ consent или contract acceptance. SEPA/medical consent tables в MVP не со
 
 ## Пересмотр цены
 
+### `price_review_triggers` и `price_review_trigger_batches`
+
+- trigger: `id`, `course_group_id`, `source_kind`, `source_ref`, `reason_code`,
+  `effective_on`, old/new active и lookup counts, optional requested
+  `price_version_id`, stable `dedupe_key`, `status`, timestamps;
+- link: unique `trigger_id`, `batch_id`, `created_at`.
+
+Один boundary/admin-comparison dedupe key связывается максимум с одним batch.
+Price-version promotion сам trigger не вставляет. Boundary trigger записывается
+в транзакции activation/future end; reconciler использует тот же key и
+singleton `price_review_reconciler_state` watermark. Watermark начинает scan с
+момента migration, а все ещё будущие boundaries проверяются независимо от него:
+это не воспроизводит исторические activations при первом запуске и не теряет
+future activation/end.
+
 ### `price_review_batches`
 
 - `id`, `course_group_id`, `reason_code`;
 - `old_active_count`, `new_active_count`, `old_lookup_children_count`,
   `new_lookup_children_count`;
-- `price_version_id`, `earliest_effective_from`;
+- `price_version_id`, `effective_on`, `earliest_effective_from`;
+- immutable `calculation_snapshot_json`, `calculation_snapshot_hash`, stable
+  `dedupe_key`;
 - `status`
   (`draft|pending_notification_approval|notifications_approved|sending|awaiting_responses|completed|cancelled`);
 - `created_at`, `notification_approved_at`, `notification_approved_by`.
 
 ### `price_review_items`
 
-- `id`, `batch_id`, `version`, `enrollment_id` nullable,
-  `legacy_enrollment_id` nullable, `user_id` nullable;
-- `old_price_cents`, `new_base_price_cents`, `new_final_price_cents` nullable;
+- `id`, `batch_id`, `version`, random non-bearer `public_reference`,
+  `enrollment_id` nullable, `legacy_enrollment_id` nullable, `user_id` nullable;
+- `old_base_price_cents`, `old_price_cents`, `new_base_price_cents`,
+  `new_final_price_cents` nullable;
 - `old_price_source`, `new_price_source`, `old_price_mode`, `new_price_mode`
-  nullable, `decision_code`, `decision_json`;
+  nullable; old/new price-version и rule IDs;
+- expected occupancy/lookup counts, `target_state_hash`, `decision_code`,
+  `decision_json`, stable `dedupe_key`;
 - `terms_snapshot_json`, `item_hash`, `acceptance_text_version`;
 - `status`
   (`draft|manual_contact_required|notification_approved|sent|accepted_by_parent|declined_by_parent|response_overdue|approved_by_admin|scheduled|applied|cancelled|superseded`);
@@ -1201,6 +1223,24 @@ new count/version/rule и отсутствие newer open/applied item. Любо
 
 `UNIQUE(price_review_item_id)`. Согласие относится к неизменяемой item
 version/hash, не к group batch.
+
+### Evidence, delivery и apply
+
+- `price_review_parent_actions`: append-only accept/decline attempt,
+  request/idempotency hashes и `applied|stale|late` evidence status;
+- `price_review_admin_actions`: append-only admin comparison, notification
+  approval/dispatch, final confirmation и manual scheduler invocation со ссылкой
+  на обязательный `audit_events` row;
+- `price_review_outbox_events` и `price_review_deliveries`: typed deduped fake
+  delivery; cabinet URL строится из portal origin и random public reference;
+- `price_change_apply_events`: unique immutable apply evidence на item с old/new
+  amounts/provenance, effective date, evidence hash и audit link;
+- `price_review_action_assertions`: append-only transaction assertions; failed
+  guard откатывает всю mutation batch.
+
+`public_reference` только маршрутизирует owner-authenticated lookup и не является
+bearer token. Parent lookup всегда требует `user_id`; admin и document access
+остаются отдельными RBAC/audit paths.
 
 ### `legacy_service_price_assignments`
 

@@ -387,17 +387,30 @@ export class PricingRepository {
 		courseGroupId: string,
 		effectiveOn: string
 	): Promise<RepricingTarget[]> {
-		const rows = await this.db.all<{
+		const portalRows = await this.db.all<{
 			id: string;
+			user_id: string;
+			contract_kind: 'group_yearly' | 'group_monthly';
+			current_base_price_cents: number | null;
 			current_price_cents: number | null;
+			price_source: 'excel_yearly' | 'excel_monthly' | 'fallback_90' | null;
 			price_mode: 'rule_derived' | 'manual_override' | null;
+			current_price_version_id: string | null;
+			current_price_rule_id: string | null;
+			account_status: string | null;
+			is_blocked: number | null;
 			override_price_cents: number | null;
 			reason: string | null;
 			actor_user_id: string | null;
 		}>({
-			sql: `SELECT enrollment.id, enrollment.current_price_cents, enrollment.price_mode,
+			sql: `SELECT enrollment.id, enrollment.user_id, enrollment.contract_kind,
+				enrollment.current_base_price_cents, enrollment.current_price_cents,
+				enrollment.price_source, enrollment.price_mode,
+				enrollment.current_price_version_id, enrollment.current_price_rule_id,
+				owner.account_status, owner.is_blocked,
 				manual.override_price_cents, manual.reason, manual.actor_user_id
 				FROM enrollments AS enrollment
+				LEFT JOIN users AS owner ON owner.id = enrollment.user_id
 				LEFT JOIN price_manual_overrides AS manual ON manual.id = (
 					SELECT candidate.id FROM price_manual_overrides AS candidate
 					WHERE candidate.enrollment_id = enrollment.id
@@ -408,10 +421,28 @@ export class PricingRepository {
 					AND (enrollment.active_until IS NULL OR ? < enrollment.active_until)`,
 			params: [courseGroupId, effectiveOn, effectiveOn],
 		});
-		return rows.results.map((row) => ({
+		const portalTargets: RepricingTarget[] = portalRows.results.map((row) => ({
 			id: row.id,
+			targetKind: 'enrollment',
+			userId: row.user_id,
+			contractKind: row.contract_kind,
+			currentBasePriceCents: row.current_base_price_cents,
 			currentPriceCents: row.current_price_cents,
+			currentPriceSource: row.price_source,
 			currentPriceMode: row.price_mode,
+			currentPriceVersionId: row.current_price_version_id,
+			currentPriceRuleId: row.current_price_rule_id,
+			sendEligibilityCode:
+				row.account_status !== 'active' || row.is_blocked !== 0
+					? 'INACTIVE_PRICE_OWNER'
+					: row.current_base_price_cents === null ||
+						row.current_price_cents === null ||
+						row.price_source === null ||
+						row.price_mode === null ||
+						row.current_price_version_id === null ||
+						row.current_price_rule_id === null
+						? 'UNKNOWN_CURRENT_PRICE'
+						: 'ELIGIBLE',
 			manualOverride:
 				row.price_mode === 'manual_override' &&
 				row.override_price_cents !== null &&
@@ -425,19 +456,93 @@ export class PricingRepository {
 						}
 					: undefined,
 		}));
-	}
 
-	async contractKindsForTargets(
-		targetIds: readonly string[]
-	): Promise<Map<string, 'group_yearly' | 'group_monthly'>> {
-		const result = new Map<string, 'group_yearly' | 'group_monthly'>();
-		for (const id of targetIds) {
-			const row = await this.db.first<{ contract_kind: 'group_yearly' | 'group_monthly' }>({
-				sql: `SELECT contract_kind FROM enrollments WHERE id = ?`,
-				params: [id],
-			});
-			if (row) result.set(id, row.contract_kind);
-		}
-		return result;
+		const legacyRows = await this.db.all<{
+			id: string;
+			user_id: string | null;
+			contract_kind: string | null;
+			needs_admin_review: number;
+			current_base_price_cents: number | null;
+			current_price_cents: number | null;
+			price_source: string | null;
+			price_mode: 'rule_derived' | 'manual_override' | null;
+			price_version_id: string | null;
+			price_rule_id: string | null;
+			account_status: string | null;
+			is_blocked: number | null;
+			child_owner_user_id: string | null;
+		}>({
+			sql: `SELECT legacy.id, owner.id AS user_id, legacy.contract_kind,
+				legacy.needs_admin_review,
+				COALESCE(assignment.base_price_cents, legacy.planned_price_cents)
+					AS current_base_price_cents,
+				COALESCE(assignment.final_price_cents, legacy.planned_price_cents)
+					AS current_price_cents,
+				COALESCE(assignment.price_source,
+					CASE legacy.price_source WHEN 'yearly' THEN 'excel_yearly'
+						WHEN 'monthly' THEN 'excel_monthly' END) AS price_source,
+				COALESCE(assignment.price_mode, legacy.price_mode) AS price_mode,
+				assignment.price_version_id, assignment.price_rule_id,
+				owner.account_status, owner.is_blocked,
+				child.owner_user_id AS child_owner_user_id
+			FROM legacy_enrollments AS legacy
+			JOIN children AS child ON child.id = legacy.child_id
+			LEFT JOIN users AS owner ON owner.id = child.owner_user_id
+			LEFT JOIN legacy_service_price_assignments AS assignment ON assignment.id = (
+				SELECT candidate.id FROM legacy_service_price_assignments AS candidate
+				WHERE candidate.legacy_enrollment_id = legacy.id
+					AND candidate.status = 'active'
+					AND candidate.effective_from <= ?
+					AND (candidate.effective_until IS NULL OR ? < candidate.effective_until)
+				ORDER BY candidate.effective_from DESC, candidate.created_at DESC LIMIT 1
+			)
+			WHERE legacy.course_group_id = ? AND legacy.is_current = 1
+				AND legacy.is_active_for_occupancy = 1
+				AND legacy.lesson_kind IN ('group', 'dance_group')
+				AND legacy.represented_by_enrollment_id IS NULL`,
+			params: [effectiveOn, effectiveOn, courseGroupId],
+		});
+		const legacyTargets: RepricingTarget[] = legacyRows.results.map((row) => {
+			const contractKind =
+				row.contract_kind === 'yearly'
+					? 'group_yearly'
+					: row.contract_kind === 'monthly'
+						? 'group_monthly'
+						: null;
+			const source =
+				row.price_source === 'excel_yearly' || row.price_source === 'excel_monthly'
+					? row.price_source
+					: null;
+			const eligibility: NonNullable<RepricingTarget['sendEligibilityCode']> =
+				row.needs_admin_review === 1 ||
+				row.child_owner_user_id !== row.user_id ||
+				(row.price_mode === 'manual_override' && row.price_version_id === null)
+					? 'LEGACY_SERVICE_CONFLICT'
+					: !row.user_id
+						? 'UNCLAIMED_LEGACY_SERVICE'
+						: row.account_status !== 'active' || row.is_blocked !== 0
+							? 'INACTIVE_PRICE_OWNER'
+							: row.current_base_price_cents === null ||
+								row.current_price_cents === null ||
+								!source ||
+								!row.price_mode ||
+								!contractKind
+									? 'UNKNOWN_CURRENT_PRICE'
+									: 'ELIGIBLE';
+			return {
+				id: row.id,
+				targetKind: 'legacy_enrollment',
+				userId: row.user_id,
+				contractKind,
+				currentBasePriceCents: row.current_base_price_cents,
+				currentPriceCents: row.current_price_cents,
+				currentPriceSource: source,
+				currentPriceMode: row.price_mode,
+				currentPriceVersionId: row.price_version_id,
+				currentPriceRuleId: row.price_rule_id,
+				sendEligibilityCode: eligibility,
+			};
+		});
+		return [...portalTargets, ...legacyTargets];
 	}
 }

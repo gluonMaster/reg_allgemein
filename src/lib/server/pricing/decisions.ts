@@ -33,7 +33,11 @@ export type PricingDecisionCode =
 	| 'MISSING_DURATION_REPRICING_BLOCKED'
 	| 'INVALID_MANUAL_OVERRIDE_EVIDENCE'
 	| 'NO_ACTIVE_CHILDREN'
-	| 'LOOKUP_COUNT_UNCHANGED';
+	| 'LOOKUP_COUNT_UNCHANGED'
+	| 'UNKNOWN_CURRENT_PRICE'
+	| 'UNCLAIMED_LEGACY_SERVICE'
+	| 'LEGACY_SERVICE_CONFLICT'
+	| 'INACTIVE_PRICE_OWNER';
 
 export interface PriceRuleCandidate {
 	id: string;
@@ -419,18 +423,44 @@ export function occupancyRepricingDecision(input: {
 
 export interface RepricingTarget {
 	id: string;
+	targetKind?: 'enrollment' | 'legacy_enrollment';
+	userId?: string | null;
+	contractKind?: GroupContractKind | null;
+	currentBasePriceCents?: number | null;
 	currentPriceCents: number | null;
+	currentPriceSource?: PriceSource | null;
 	currentPriceMode: PriceMode | null;
+	currentPriceVersionId?: string | null;
+	currentPriceRuleId?: string | null;
+	sendEligibilityCode?:
+		| 'ELIGIBLE'
+		| 'UNKNOWN_CURRENT_PRICE'
+		| 'UNCLAIMED_LEGACY_SERVICE'
+		| 'LEGACY_SERVICE_CONFLICT'
+		| 'INACTIVE_PRICE_OWNER';
 	manualOverride?: ManualOverrideEvidence;
 }
 
 export interface RepricingProposal {
 	targetId: string;
+	targetKind: 'enrollment' | 'legacy_enrollment';
+	userId: string | null;
+	contractKind: GroupContractKind | null;
+	oldBasePriceCents: number | null;
+	oldFinalPriceCents: number | null;
+	oldPriceSource: PriceSource | null;
+	oldPriceMode: PriceMode | null;
+	oldPriceVersionId: string | null;
+	oldPriceRuleId: string | null;
 	decisionCode: PricingDecisionCode;
 	newBasePriceCents: number | null;
 	newFinalPriceCents: number | null;
+	newPriceSource: PriceSource | null;
 	newPriceMode: PriceMode | null;
+	newPriceVersionId: string | null;
+	newPriceRuleId: string | null;
 	itemRequired: boolean;
+	manualContactRequired: boolean;
 }
 
 export function buildRepricingProposals(input: {
@@ -439,6 +469,7 @@ export function buildRepricingProposals(input: {
 }): RepricingProposal[] {
 	return input.targets.map((target) => {
 		let decision = input.baseDecision;
+		const eligibility = target.sendEligibilityCode ?? 'ELIGIBLE';
 		if (target.manualOverride) {
 			if (!validOverride(target.manualOverride)) {
 				decision = review('INVALID_MANUAL_OVERRIDE_EVIDENCE', {
@@ -457,16 +488,42 @@ export function buildRepricingProposals(input: {
 				};
 			}
 		}
+		const decisionCode =
+			eligibility === 'ELIGIBLE'
+				? decision.decisionCode
+				: (eligibility as PricingDecisionCode);
+		const eligible = eligibility === 'ELIGIBLE';
 		return {
 			targetId: target.id,
-			decisionCode: decision.decisionCode,
+			targetKind: target.targetKind ?? 'enrollment',
+			userId: target.userId ?? null,
+			contractKind: target.contractKind ?? decision.contractKind,
+			oldBasePriceCents: target.currentBasePriceCents ?? target.currentPriceCents,
+			oldFinalPriceCents: target.currentPriceCents,
+			oldPriceSource: target.currentPriceSource ?? null,
+			oldPriceMode: target.currentPriceMode,
+			oldPriceVersionId: target.currentPriceVersionId ?? null,
+			oldPriceRuleId: target.currentPriceRuleId ?? null,
+			decisionCode,
 			newBasePriceCents: decision.basePriceCents,
 			newFinalPriceCents: decision.finalPriceCents,
+			newPriceSource: decision.priceSource,
 			newPriceMode: decision.priceMode,
+			newPriceVersionId: decision.priceVersionId,
+			newPriceRuleId: decision.priceRuleId,
 			itemRequired:
+				eligible &&
 				decision.status === 'quoted' &&
+				target.currentPriceCents !== null &&
+				target.currentPriceMode !== null &&
+				target.currentPriceMode !== 'manual_override' &&
 				(target.currentPriceCents !== decision.finalPriceCents ||
 					target.currentPriceMode !== decision.priceMode),
+			manualContactRequired:
+				!eligible ||
+				decision.status !== 'quoted' ||
+				target.currentPriceCents === null ||
+				target.currentPriceMode === null,
 		};
 	});
 }

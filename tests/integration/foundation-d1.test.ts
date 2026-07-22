@@ -33,6 +33,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0008_catalog_trials.sql',
 			'0009_requests_documents.sql',
 			'0010_contracts.sql',
+			'0011_price_reviews.sql',
 		]);
 
 		const result = await context.db
@@ -53,6 +54,13 @@ describe('foundation D1 migration and repositories', () => {
 				'auth_sessions',
 				'privacy_acknowledgements',
 				'email_outbox',
+				'price_review_triggers',
+				'price_review_batches',
+				'price_review_items',
+				'price_review_reconciler_state',
+				'price_change_acceptances',
+				'price_change_apply_events',
+				'legacy_service_price_assignments',
 			])
 		);
 	});

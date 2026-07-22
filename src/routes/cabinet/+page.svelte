@@ -185,6 +185,28 @@
 		</div>
 	</section>
 
+	<section class="cabinet-card" id="price-reviews">
+		<h2>{translate('de', 'cabinet.priceReviews.title')}</h2>
+		<p>{translate('de', 'cabinet.priceReviews.basePriceNotice')}</p>
+		{#if data.priceReviews.length === 0}<p>{translate('de', 'cabinet.priceReviews.empty')}</p>{/if}
+		<div class="activity-list">
+			{#each data.priceReviews as priceReview}
+				<article class="activity-item">
+					<p class="item-kicker">{priceReview.status}</p>
+					<h3>{priceReview.courseName}</h3>
+					<p>
+						{priceReview.oldPriceCents === null ? '—' : money(priceReview.oldPriceCents)}
+						→
+						{priceReview.newFinalPriceCents === null ? '—' : money(priceReview.newFinalPriceCents)}
+					</p>
+					<a href={`/price-reviews/${priceReview.publicReference}`}>
+						{translate('de', 'cabinet.priceReviews.open')}
+					</a>
+				</article>
+			{/each}
+		</div>
+	</section>
+
 	<section class="cabinet-card pricing-card">
 		<h2>{translate('de', 'cabinet.pricing.totalTitle')}</h2>
 		<p class="price-total">{money(data.cabinet.pricing.knownMonthlyBaseTotalCents)}</p>

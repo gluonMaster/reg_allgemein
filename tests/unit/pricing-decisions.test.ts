@@ -287,4 +287,58 @@ describe('pure pricing decisions', () => {
 			})[0]
 		).toMatchObject({ itemRequired: false, newFinalPriceCents: 4200 });
 	});
+
+	it('creates only changed yearly/monthly increase or decrease proposals', () => {
+		const yearly = calculateGroupPrice(groupInput(), config, {
+			allowMissingDurationFallback: false,
+		});
+		const monthly = calculateGroupPrice(
+			groupInput({ contractKind: 'group_monthly' }),
+			config,
+			{ allowMissingDurationFallback: false }
+		);
+		const target = (currentPriceCents: number) => ({
+			id: `enrollment-${currentPriceCents}`,
+			userId: 'parent-1',
+			currentBasePriceCents: currentPriceCents,
+			currentPriceCents,
+			currentPriceSource: 'excel_yearly' as const,
+			currentPriceMode: 'rule_derived' as const,
+			currentPriceVersionId: 'price-v1',
+			currentPriceRuleId: 'old-rule',
+			sendEligibilityCode: 'ELIGIBLE' as const,
+		});
+		expect(buildRepricingProposals({ baseDecision: yearly, targets: [target(4500)] })[0])
+			.toMatchObject({ itemRequired: true, oldFinalPriceCents: 4500,
+				newFinalPriceCents: 4600 });
+		expect(buildRepricingProposals({ baseDecision: yearly, targets: [target(4700)] })[0])
+			.toMatchObject({ itemRequired: true, oldFinalPriceCents: 4700,
+				newFinalPriceCents: 4600 });
+		expect(buildRepricingProposals({ baseDecision: yearly, targets: [target(4600)] })[0])
+			.toMatchObject({ itemRequired: false, manualContactRequired: false });
+		expect(buildRepricingProposals({ baseDecision: monthly, targets: [
+			{ ...target(6100), currentPriceSource: 'excel_monthly' as const,
+				contractKind: 'group_monthly' as const },
+		] })[0]).toMatchObject({ itemRequired: true, oldFinalPriceCents: 6100,
+			newFinalPriceCents: 6000 });
+	});
+
+	it('routes unknown, unclaimed, conflicting and inactive targets to manual contact', () => {
+		const decision = calculateGroupPrice(groupInput(), config, {
+			allowMissingDurationFallback: false,
+		});
+		for (const sendEligibilityCode of [
+			'UNKNOWN_CURRENT_PRICE',
+			'UNCLAIMED_LEGACY_SERVICE',
+			'LEGACY_SERVICE_CONFLICT',
+			'INACTIVE_PRICE_OWNER',
+		] as const) {
+			expect(buildRepricingProposals({
+				baseDecision: decision,
+				targets: [{ id: sendEligibilityCode, currentPriceCents: 4500,
+					currentPriceMode: 'rule_derived', sendEligibilityCode }],
+			})[0]).toMatchObject({ decisionCode: sendEligibilityCode,
+				itemRequired: false, manualContactRequired: true });
+		}
+	});
 });

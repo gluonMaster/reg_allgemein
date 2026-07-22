@@ -1,6 +1,8 @@
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
 import { hashCanonical } from '$lib/server/import/canonical';
+import { repricingLookupChildrenCount } from '$lib/server/pricing/decisions';
+import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import type { AdminActor } from '$lib/server/security/authorization';
 import { calendarDayAfter } from '$lib/server/time/berlin';
 import type { ContractRenderInput, ContractTemplateId } from './contracts';
@@ -408,9 +410,11 @@ export class ContractRepository {
 							(id, user_id, child_id, course_group_id, legacy_enrollment_id,
 							 lesson_kind, status, contract_kind, active_from, active_until,
 							 current_price_cents, price_source, price_mode, price_effective_from,
+							 current_base_price_cents, current_price_version_id,
+							 current_price_rule_id, price_assignment_version,
 							 manual_override_reason, manual_override_by, manual_override_at,
 							 source, created_at, updated_at)
-						SELECT ?, ?, ?, ?, NULL, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+						SELECT ?, ?, ?, ?, NULL, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?,
 							'admin', ?, ? WHERE ${ACTIVE_ADMIN}
 							AND EXISTS (SELECT 1 FROM course_groups WHERE id = ?
 								AND academic_period_id = ? AND lesson_kind IN ('group', 'dance_group'))`,
@@ -429,6 +433,9 @@ export class ContractRepository {
 							render.billing.priceSource,
 							render.billing.priceMode,
 							render.service.effectiveFrom,
+							render.billing.basePriceCents,
+							input.pricing.priceVersionId,
+							input.pricing.priceRuleId,
 							input.manualOverride?.reason ?? null,
 							input.manualOverride ? input.admin.id : null,
 							input.manualOverride ? input.now : null,
@@ -1047,6 +1054,20 @@ export class ContractRepository {
 		const activeUntil = input.offer.effective_to
 			? calendarDayAfter(input.offer.effective_to)
 			: null;
+		const occupancy = input.offer.enrollment_id
+			? new OccupancyRepository(this.db)
+			: null;
+		const activationOldCount = occupancy
+			? await occupancy.activeChildrenCount(
+					input.offer.course_group_id!,
+					input.offer.effective_from
+				)
+			: 0;
+		const expiryNewCount = occupancy && activeUntil
+			? await occupancy.activeChildrenCount(input.offer.course_group_id!, activeUntil)
+			: null;
+		const activationTriggerId = crypto.randomUUID();
+		const expiryTriggerId = activeUntil ? crypto.randomUUID() : null;
 		const operationalTable = input.offer.enrollment_id ? 'enrollments' : 'service_engagements';
 		const operationalId = input.offer.enrollment_id ?? input.offer.service_engagement_id;
 		const groupGuard = input.offer.enrollment_id
@@ -1113,6 +1134,56 @@ export class ContractRepository {
 							operationalId, contractId]
 						: [input.offer.effective_from, activeUntil, input.now, operationalId, contractId],
 				},
+				...(input.offer.enrollment_id
+					? [
+							{
+								sql: `INSERT OR IGNORE INTO price_review_triggers
+									(id, course_group_id, source_kind, source_ref, reason_code,
+									 effective_on, old_active_count, new_active_count,
+									 old_lookup_children_count, new_lookup_children_count,
+									 requested_price_version_id, dedupe_key, status, error_code,
+									 created_by_user_id, created_at, processed_at, updated_at)
+								SELECT ?, course_group_id, 'contract_activation', ?, 'activation',
+									effective_from, ?, ?, ?, ?, price_version_id, ?, 'pending', NULL,
+									?, ?, NULL, ? FROM contract_offers
+								WHERE id = ? AND status = 'accepted_by_parent'
+									AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)
+									AND EXISTS (SELECT 1 FROM enrollments WHERE id = ? AND status = 'active')`,
+								params: [activationTriggerId, contractId, activationOldCount,
+									activationOldCount + 1,
+									repricingLookupChildrenCount(activationOldCount),
+									repricingLookupChildrenCount(activationOldCount + 1),
+									`enrollment:${input.offer.enrollment_id}:active_from:${input.offer.effective_from}:v1`,
+									input.admin.id, input.now, input.now, input.offer.id,
+									contractId, input.offer.enrollment_id],
+							},
+							...(activeUntil && expiryTriggerId && expiryNewCount !== null
+								? [
+										{
+											sql: `INSERT OR IGNORE INTO price_review_triggers
+												(id, course_group_id, source_kind, source_ref, reason_code,
+												 effective_on, old_active_count, new_active_count,
+												 old_lookup_children_count, new_lookup_children_count,
+												 requested_price_version_id, dedupe_key, status, error_code,
+												 created_by_user_id, created_at, processed_at, updated_at)
+											SELECT ?, course_group_id, 'enrollment_boundary', ?, 'expiry',
+												?, ?, ?, ?, ?, price_version_id, ?, 'pending', NULL,
+												?, ?, NULL, ? FROM contract_offers
+											WHERE id = ? AND status = 'accepted_by_parent'
+												AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)
+												AND EXISTS (SELECT 1 FROM enrollments WHERE id = ? AND status = 'active')`,
+											params: [expiryTriggerId, input.offer.enrollment_id, activeUntil,
+												expiryNewCount + 1, expiryNewCount,
+												repricingLookupChildrenCount(expiryNewCount + 1),
+												repricingLookupChildrenCount(expiryNewCount),
+												`enrollment:${input.offer.enrollment_id}:active_until:${activeUntil}:v1`,
+												input.admin.id, input.now, input.now, input.offer.id,
+												contractId, input.offer.enrollment_id],
+										},
+									]
+								: []),
+						]
+					: []),
 				{
 					sql: `UPDATE contract_offers SET status = 'approved_by_admin',
 						admin_approved_at = ?, updated_at = ?

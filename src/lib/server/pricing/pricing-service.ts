@@ -201,16 +201,12 @@ export class PricingService {
 			input.courseGroupId,
 			input.effectiveOn
 		);
-		const contractKinds = await this.pricing.contractKindsForTargets(
-			targets.map((target) => target.id)
-		);
 		const proposals = targets.flatMap((target) => {
-			const contractKind = contractKinds.get(target.id);
 			const decision = calculateGroupPrice(
 				{
 					lessonKind: context.lessonKind,
 					mappingStatus: context.mappingStatus,
-					contractKind: contractKind ?? null,
+					contractKind: target.contractKind ?? null,
 					priceVersionId: context.priceVersionId,
 					normalizedPriceKey: context.normalizedPriceKey,
 					durationSource: context.durationSource,
@@ -225,7 +221,17 @@ export class PricingService {
 			);
 			return buildRepricingProposals({ baseDecision: decision, targets: [target] });
 		});
-		const firstBlocking = proposals.find((proposal) => proposal.decisionCode !== 'EXACT_RULE');
+		const targetEligibilityCodes = new Set<PricingDecisionCode>([
+			'UNKNOWN_CURRENT_PRICE',
+			'UNCLAIMED_LEGACY_SERVICE',
+			'LEGACY_SERVICE_CONFLICT',
+			'INACTIVE_PRICE_OWNER',
+		]);
+		const firstBlocking = proposals.find(
+			(proposal) =>
+				proposal.decisionCode !== 'EXACT_RULE' &&
+				!targetEligibilityCodes.has(proposal.decisionCode)
+		);
 		return {
 			decisionCode: firstBlocking?.decisionCode ?? 'EXACT_RULE',
 			activeChildrenCount,
