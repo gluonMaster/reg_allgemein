@@ -32,6 +32,7 @@
 		<a href="/">{translate('de', 'cabinet.link.home')}</a>
 		<a href="/account/security">{translate('de', 'cabinet.link.security')}</a>
 		<a href="/messages">{translate('de', 'cabinet.link.messages')}</a>
+		<a href="/account/privacy">{translate('de', 'cabinet.link.privacy')}</a>
 	</nav>
 	<h1>{translate('de', 'cabinet.title')}</h1>
 	{#if form?.message}<p class="form-status" aria-live="polite">{form.message}</p>{/if}

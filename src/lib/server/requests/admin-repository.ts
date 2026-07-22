@@ -722,7 +722,12 @@ export class RequestAdminRepository {
 			LEFT JOIN funding_authorizations AS authorization
 				ON authorization.request_id = request.id
 				AND authorization.status IN ('pending_review', 'approved')
-			WHERE (? = '' OR request.status = ?)
+			WHERE NOT EXISTS (SELECT 1 FROM authorization_documents document
+				JOIN legal_archive_records archive
+					ON archive.target_kind = 'authorization_document'
+					AND archive.target_id = document.id
+				WHERE document.authorization_id = authorization.id)
+				AND (? = '' OR request.status = ?)
 				AND (? = '' OR request.request_kind = ?)
 				AND (? = '' OR lower(child.full_name) LIKE ?
 					OR lower(request.subjects_raw) LIKE ? OR request.id = ?)

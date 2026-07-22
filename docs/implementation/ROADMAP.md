@@ -55,7 +55,7 @@ npm run build
 | 09 | done | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
 | 10 | done | Price review batches/items, notifications и effective-date apply | 04, 09 |
 | 11 | done | Support/absence, email/Telegram outboxes и cron retry | 05–10 |
-| 12 | pending | Privacy export/delete, account closure, retained-archive separation и closure races | 05–11, включая 06A |
+| 12 | done | Privacy export/delete, account closure, retained-archive separation и closure races | 05–11, включая 06A |
 | 13 | pending | Независимый hardening, production readiness и проверенные русские operator runbooks | 01–12 |
 
 ## 01. Foundation

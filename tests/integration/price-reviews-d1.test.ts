@@ -528,9 +528,9 @@ describe('stage 10 controlled price reviews in D1', () => {
 
 		const closedOwnerItem = (await repository.listParentItems('price-parent-4'))[0];
 		await db.run({
-			sql: `UPDATE users SET account_status = 'closed', closed_at = ?, updated_at = ?
+			sql: `UPDATE users SET account_status = 'deletion_requested', updated_at = ?
 				WHERE id = 'price-parent-4'`,
-			params: [now(5), now(5)],
+			params: [now(5)],
 		});
 		await expect(service.respond({
 			actor: parentActor(4),

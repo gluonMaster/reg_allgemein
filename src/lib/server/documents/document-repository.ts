@@ -689,7 +689,10 @@ export class AuthorizationDocumentRepository {
 			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
 			JOIN individual_requests AS request ON request.id = authorization.request_id
 			JOIN children AS child ON child.id = document.child_id
-			WHERE (? = '' OR document.review_status = ?)
+			WHERE NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE archive.target_kind = 'authorization_document'
+						AND archive.target_id = document.id)
+				AND (? = '' OR document.review_status = ?)
 				AND (? = '' OR lower(child.full_name) LIKE ? OR document.id = ?
 					OR authorization.request_id = ?)
 			ORDER BY CASE document.review_status

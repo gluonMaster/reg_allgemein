@@ -2011,7 +2011,10 @@ export class ContractRepository {
 			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type, artifact.sha256
 			FROM contract_artifacts artifact JOIN users admin ON admin.id = ?
 			WHERE artifact.id = ? AND admin.role = 'admin' AND admin.account_status = 'active'
-				AND admin.is_blocked = 0`,
+				AND admin.is_blocked = 0
+				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE archive.target_kind = 'contract_artifact'
+						AND archive.target_id = artifact.id)`,
 			params: [adminUserId, artifactId],
 		});
 	}
@@ -2060,7 +2063,9 @@ export class ContractRepository {
 			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
 			LEFT JOIN contract_formation_certificates certificate
 				ON certificate.contract_id = contract.id
-			WHERE (? = '' OR lower(child.full_name) LIKE ? OR offer.contract_number = ?
+			WHERE NOT EXISTS (SELECT 1 FROM legal_archive_records archive
+					WHERE archive.target_kind = 'contract_offer' AND archive.target_id = offer.id)
+				AND (? = '' OR lower(child.full_name) LIKE ? OR offer.contract_number = ?
 				OR offer.id = ?) ORDER BY offer.created_at DESC, offer.id DESC LIMIT 100`,
 			params: [q, `%${q}%`, query, query],
 		});

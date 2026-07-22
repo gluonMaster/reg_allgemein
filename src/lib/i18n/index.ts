@@ -186,6 +186,69 @@ export const germanCatalog = {
 	'cabinet.link.security': 'Kontosicherheit',
 	'cabinet.link.cabinet': 'Mein Bereich',
 	'cabinet.link.messages': 'Nachrichten',
+	'cabinet.link.privacy': 'Datenschutz und Kontoschließung',
+	'privacy.title': 'Datenschutz und Kontoschließung',
+	'privacy.intro':
+		'Hier können Sie eine private Datenauskunft anfordern und die Folgen einer Kontoschließung prüfen.',
+	'privacy.export.title': 'Private Datenauskunft',
+	'privacy.export.notice':
+		'Die Datei enthält nur Daten dieses Kontos. Sie ist ausschließlich nach Anmeldung und nur für kurze Zeit verfügbar.',
+	'privacy.export.submit': 'Datenauskunft erstellen',
+	'privacy.export.ready': 'Die private Datenauskunft wurde erstellt.',
+	'privacy.export.download': 'Datenauskunft herunterladen',
+	'privacy.kind.export': 'Datenauskunft',
+	'privacy.kind.delete': 'Kontoschließung',
+	'privacy.delete.title': 'Kontoschließung',
+	'privacy.delete.dryRun': 'Sichere Vorprüfung',
+	'privacy.delete.activeContracts': 'Aktive Verträge oder Leistungen, die die Schließung blockieren',
+	'privacy.delete.retained': 'Nach der Schließung getrennt aufbewahrte Nachweise',
+	'privacy.delete.holds': 'Zusätzliche rechtliche Sperren einzelner Nachweise',
+	'privacy.delete.cleanup': 'Zu schließende oder zu minimierende Arbeitsdaten',
+	'privacy.delete.r2Cleanup': 'Private, nicht aufzubewahrende Speicherobjekte zur Löschung',
+	'privacy.delete.noBlockers': 'Es wurde kein aktiver Vertrag als Sperre gefunden.',
+	'privacy.delete.retentionNotice':
+		'Vertrags-, Annahme- und freigegebene Förderungsnachweise werden vom Arbeitsprofil getrennt. Eine automatische Löschung dieses Rechtsarchivs ist deaktiviert; ein angezeigtes Prüfdatum löst keine Löschung aus.',
+	'privacy.delete.submit': 'Kontoschließung zur Prüfung anfordern',
+	'privacy.delete.requested': 'Die Kontoschließung wurde zur Prüfung angefordert.',
+	'privacy.delete.blocked': 'Die Kontoschließung wurde wegen eines aktiven Vertrags vollständig blockiert. Es wurden keine Profildaten teilweise gelöscht und keine Medienfreigaben widerrufen.',
+	'privacy.history.title': 'Ihre Datenschutzvorgänge',
+	'privacy.history.empty': 'Noch kein Datenschutzvorgang vorhanden.',
+	'privacy.failed': 'Der Datenschutzvorgang konnte nicht sicher ausgeführt werden.',
+	'privacy.status.requested': 'Angefordert',
+	'privacy.status.reviewing': 'In Prüfung',
+	'privacy.status.processing': 'Wird verarbeitet',
+	'privacy.status.completed': 'Abgeschlossen',
+	'privacy.status.completed_with_retained_evidence': 'Abgeschlossen; Nachweise getrennt aufbewahrt',
+	'privacy.status.blocked_by_active_contract': 'Durch aktiven Vertrag blockiert',
+	'privacy.status.failed': 'Fehlgeschlagen',
+	'privacy.status.cancelled': 'Beendet',
+	'privacy.status.approved': 'Freigegeben',
+	'privacy.category.digital_contract': 'Aktiver digitaler Vertrag',
+	'privacy.category.active_enrollment': 'Aktive Gruppenleistung',
+	'privacy.category.active_service': 'Aktive Einzelleistung oder Nachhilfe',
+	'privacy.category.legacy_active_service': 'Aktive übernommene Leistung',
+	'privacy.category.privacy_accountability': 'Nachweis zur Datenschutzerklärung',
+	'privacy.category.media_consent_evidence': 'Medienentscheidungen und Widerrufe',
+	'privacy.category.contract_source_bundle': 'Vertragsangebot und Quellenstand',
+	'privacy.category.contract_pdf_source_bundle': 'Vertrags-PDF und Quelldatei',
+	'privacy.category.contract_acceptance_evidence': 'Nachweis der Annahme',
+	'privacy.category.contract_formation_evidence': 'Nachweis der Vertragsbildung',
+	'privacy.category.contract_delivery_evidence': 'Auslieferungsnachweis',
+	'privacy.category.contract_lifecycle_evidence': 'Vertragsverlauf',
+	'privacy.category.termination_withdrawal_evidence': 'Beendigungs- und Widerrufsnachweis',
+	'privacy.category.funding_document_evidence': 'Freigegebener Förderungsnachweis',
+	'privacy.category.funding_authorization_evidence': 'Förderungsentscheidung',
+	'privacy.category.price_acceptance_evidence': 'Nachweis einer Preisannahme',
+	'privacy.category.sessions_tokens': 'Sitzungen und offene Zugangslinks',
+	'privacy.category.children_profile': 'Arbeitsprofile der Kinder',
+	'privacy.category.nonterminal_offers': 'Offene Vertragsangebote',
+	'privacy.category.nonterminal_price_items': 'Offene Preisänderungen',
+	'privacy.category.nonterminal_requests': 'Offene Unterrichtsanfragen',
+	'privacy.category.nonterminal_trials': 'Offene Probestunden',
+	'privacy.category.support_threads': 'Offene Nachrichten',
+	'privacy.category.nonterminal_services': 'Noch nicht aktive Leistungsentwürfe',
+	'privacy.category.short_lived_export': 'Kurzlebige Datenauskunft',
+	'privacy.category.document_quarantine': 'Nicht aufzubewahrende Quarantänekopie',
 	'cabinet.messages.title': 'Nachrichten und Abwesenheiten',
 	'cabinet.messages.empty': 'Noch keine Nachricht vorhanden.',
 	'cabinet.messages.open': 'Vorgang öffnen',
@@ -293,6 +356,17 @@ export const germanCatalog = {
 	'admin.nav.priceReviews': 'Preisänderungen',
 	'admin.nav.messages': 'Nachrichten',
 	'admin.nav.outbox': 'Versandstatus',
+	'admin.nav.privacy': 'Datenschutz',
+	'admin.privacy.title': 'Datenschutzvorgänge und Kontoschließung',
+	'admin.privacy.notice':
+		'Diese Ansicht zeigt nur sichere Vorgangs- und Bestandsangaben. Rechtsarchiv, Dokumentinhalt und Kontaktdaten erscheinen nicht in der normalen Suche.',
+	'admin.privacy.subjectUserId': 'Interne Konto-ID',
+	'admin.privacy.createExport': 'Private Datenauskunft für das Konto erstellen',
+	'admin.privacy.processDelete': 'Kontoschließung verbindlich verarbeiten',
+	'admin.privacy.confirmDelete':
+		'Ich bestätige die erneute Prüfung aktiver Verträge und die unwiderrufliche Schließung des Arbeitskontos.',
+	'admin.privacy.completed': 'Der Datenschutzvorgang wurde sicher verarbeitet.',
+	'admin.privacy.failed': 'Der Datenschutzvorgang wurde sicher abgelehnt.',
 	'admin.messages.title': 'Nachrichten und Abwesenheiten',
 	'admin.messages.notice':
 		'Freie Texte sind nur in diesem geschützten Vorgang sichtbar und werden nicht in Telegram oder Diagnoseprotokolle kopiert.',
@@ -780,6 +854,47 @@ const adminCodeKeys = {
 	destination_claim: 'admin.code.destination_claim',
 } as const satisfies Readonly<Record<string, MessageKey>>;
 
+const privacyCategoryKeys = {
+	digital_contract: 'privacy.category.digital_contract',
+	active_enrollment: 'privacy.category.active_enrollment',
+	active_service: 'privacy.category.active_service',
+	legacy_active_service: 'privacy.category.legacy_active_service',
+	privacy_accountability: 'privacy.category.privacy_accountability',
+	media_consent_evidence: 'privacy.category.media_consent_evidence',
+	contract_source_bundle: 'privacy.category.contract_source_bundle',
+	contract_pdf_source_bundle: 'privacy.category.contract_pdf_source_bundle',
+	contract_acceptance_evidence: 'privacy.category.contract_acceptance_evidence',
+	contract_formation_evidence: 'privacy.category.contract_formation_evidence',
+	contract_delivery_evidence: 'privacy.category.contract_delivery_evidence',
+	contract_lifecycle_evidence: 'privacy.category.contract_lifecycle_evidence',
+	termination_withdrawal_evidence: 'privacy.category.termination_withdrawal_evidence',
+	funding_document_evidence: 'privacy.category.funding_document_evidence',
+	funding_authorization_evidence: 'privacy.category.funding_authorization_evidence',
+	price_acceptance_evidence: 'privacy.category.price_acceptance_evidence',
+	sessions_tokens: 'privacy.category.sessions_tokens',
+	children_profile: 'privacy.category.children_profile',
+	nonterminal_offers: 'privacy.category.nonterminal_offers',
+	nonterminal_price_items: 'privacy.category.nonterminal_price_items',
+	nonterminal_requests: 'privacy.category.nonterminal_requests',
+	nonterminal_trials: 'privacy.category.nonterminal_trials',
+	support_threads: 'privacy.category.support_threads',
+	nonterminal_services: 'privacy.category.nonterminal_services',
+	short_lived_export: 'privacy.category.short_lived_export',
+	document_quarantine: 'privacy.category.document_quarantine',
+} as const satisfies Readonly<Record<string, MessageKey>>;
+
+const privacyStatusKeys = {
+	requested: 'privacy.status.requested',
+	reviewing: 'privacy.status.reviewing',
+	approved: 'privacy.status.approved',
+	processing: 'privacy.status.processing',
+	completed: 'privacy.status.completed',
+	completed_with_retained_evidence: 'privacy.status.completed_with_retained_evidence',
+	blocked_by_active_contract: 'privacy.status.blocked_by_active_contract',
+	failed: 'privacy.status.failed',
+	cancelled: 'privacy.status.cancelled',
+} as const satisfies Readonly<Record<string, MessageKey>>;
+
 type Catalog = Partial<Record<MessageKey, string>>;
 
 const catalogs: Record<string, Catalog> = {
@@ -796,6 +911,16 @@ export function translate(locale: string | undefined, key: MessageKey): string {
 
 export function translateAdminCode(locale: string | undefined, code: string): string {
 	const key = adminCodeKeys[code as keyof typeof adminCodeKeys];
+	return key ? translate(locale, key) : code;
+}
+
+export function translatePrivacyCategory(locale: string | undefined, code: string): string {
+	const key = privacyCategoryKeys[code as keyof typeof privacyCategoryKeys];
+	return key ? translate(locale, key) : code;
+}
+
+export function translatePrivacyStatus(locale: string | undefined, code: string): string {
+	const key = privacyStatusKeys[code as keyof typeof privacyStatusKeys];
 	return key ? translate(locale, key) : code;
 }
 

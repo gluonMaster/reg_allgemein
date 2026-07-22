@@ -63,6 +63,7 @@ declare global {
 				BROWSER_RUN_DAILY_BUDGET_MS?: string;
 				MEDIA_ONLINE_GRANT_ENABLED?: string;
 				PUBLIC_CONTRACT_FUNCTIONS_ENABLED?: string;
+				PRIVACY_EXPORT_TTL_SECONDS?: string;
 				TELEGRAM_BOT_TOKEN?: string;
 				TELEGRAM_CHAT_ID?: string;
 				TELEGRAM_BUSINESS_TIMEZONE?: string;

@@ -47,6 +47,10 @@ export const messagingAdminNavigation: readonly AdminNavigationItem[] = [
 	{ id: 'outbox', href: '/admin/outbox', labelKey: 'admin.nav.outbox', order: 69.5 },
 ];
 
+export const privacyAdminNavigation: readonly AdminNavigationItem[] = [
+	{ id: 'privacy', href: '/admin/privacy', labelKey: 'admin.nav.privacy', order: 69.75 },
+];
+
 export function buildAdminNavigation(
 	extensions: readonly AdminNavigationItem[] = []
 ): readonly AdminNavigationItem[] {

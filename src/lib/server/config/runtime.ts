@@ -51,6 +51,7 @@ const rawConfigSchema = z.object({
 	BROWSER_RUN_DAILY_BUDGET_MS: z.string().optional(),
 	MEDIA_ONLINE_GRANT_ENABLED: z.enum(['true', 'false']).optional(),
 	PUBLIC_CONTRACT_FUNCTIONS_ENABLED: z.enum(['true', 'false']).optional(),
+	PRIVACY_EXPORT_TTL_SECONDS: z.string().optional(),
 });
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
@@ -70,6 +71,7 @@ export interface RuntimeConfig {
 	documents: DocumentRuntimeConfig;
 	contracts: ContractRuntimeConfig;
 	messaging: MessagingRuntimeConfig;
+	privacy: PrivacyRuntimeConfig;
 }
 
 export interface AuthRuntimeConfig {
@@ -127,6 +129,10 @@ export interface MessagingRuntimeConfig {
 	retryBaseSeconds: number;
 	retryMaxSeconds: number;
 	telegramSchedule: BusinessHoursSchedule;
+}
+
+export interface PrivacyRuntimeConfig {
+	exportTtlSeconds: number;
 }
 
 export class RuntimeConfigError extends Error {
@@ -624,6 +630,19 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('CONTRACT_MAX_RENDER_ATTEMPTS:risk_ceiling_exceeded');
 	}
 
+	const privacy: PrivacyRuntimeConfig = {
+		exportTtlSeconds: parseIntegerConfig({
+			name: 'PRIVACY_EXPORT_TTL_SECONDS',
+			value: parsed.data.PRIVACY_EXPORT_TTL_SECONDS,
+			defaultValue: 3_600,
+			minimum: 300,
+			issues,
+		}),
+	};
+	if (privacy.exportTtlSeconds > 86_400) {
+		issues.push('PRIVACY_EXPORT_TTL_SECONDS:risk_ceiling_exceeded');
+	}
+
 	if (issues.length > 0) throw new RuntimeConfigError(issues);
 
 	return {
@@ -644,6 +663,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		documents,
 		contracts,
 		messaging,
+		privacy,
 	};
 }
 

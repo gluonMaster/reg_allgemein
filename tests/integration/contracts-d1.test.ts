@@ -6,6 +6,8 @@ import { ContractService } from '$lib/server/contracts/contract-service';
 import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
 import type { ContractArtifactStore } from '$lib/server/contracts/storage';
 import { DatabaseBoundary } from '$lib/server/db/database';
+import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
+import { PrivacyService } from '$lib/server/privacy/privacy-service';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
@@ -360,6 +362,93 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			idempotencyKey: 'closed-account-accept' }, userAgent: 'vitest',
 			requestSubject: '127.0.0.2', requestId: 'closed-account' }))
 			.rejects.toMatchObject({ code: 'CONTRACT_PARENT_DECISION_REJECTED' });
+	});
+
+	it('serializes account closure against parent acceptance and preserves any winning evidence', async () => {
+		const created = await draft('privacy-parent-race');
+		const rendered = await service.renderAndSend({ admin, offerId: created.offerId,
+			idempotencyKey: 'render-privacy-parent-race', requestId: 'render-privacy-parent-race' });
+		const privacy = new PrivacyService(new PrivacyRepository(db), store,
+			{ exportTtlSeconds: 3600 }, () => now);
+		const deletion = await privacy.requestDeletion({ actor: parent,
+			idempotencyKey: 'request-privacy-parent-race', requestId: 'request-privacy-parent-race' });
+		const [acceptance, closure] = await Promise.allSettled([
+			service.parentDecision({ actor: parent, payload: {
+				offerId: created.offerId, expectedContractHash: rendered.contractHash,
+				decision: 'accept', acceptanceTextVersion: 'contract-acceptance-de-v1',
+				acceptanceText: 'Ich nehme dieses unveränderte Angebot im Closure-Race verbindlich an.',
+				idempotencyKey: 'accept-privacy-parent-race',
+			}, userAgent: 'vitest', requestSubject: '127.0.0.8', requestId: 'accept-privacy-parent-race' }),
+			privacy.processDeletion({ admin, privacyRequestId: deletion.requestId,
+				reason: 'Verified closure race against parent acceptance and retained evidence.',
+				idempotencyKey: 'close-privacy-parent-race', requestId: 'close-privacy-parent-race' }),
+		]);
+		expect(closure).toMatchObject({ status: 'fulfilled', value: {
+			status: 'completed_with_retained_evidence',
+		} });
+		expect(await db.first<{ account_status: string }>({
+			sql: `SELECT account_status FROM users WHERE id = ?`, params: [parent.id],
+		})).toEqual({ account_status: 'closed' });
+		expect(await repository.loadOffer(created.offerId)).toMatchObject({ status: 'cancelled' });
+		const acceptanceCount = await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM contract_acceptances WHERE contract_offer_id = ?`,
+			params: [created.offerId],
+		});
+		expect(acceptanceCount!.count).toBe(acceptance.status === 'fulfilled' ? 1 : 0);
+		if (acceptance.status === 'fulfilled') {
+			expect(await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM legal_archive_records
+				WHERE target_kind = 'contract_acceptance'`,
+			})).toEqual({ count: 1 });
+		}
+	});
+
+	it('allows exactly one final state in account-closure versus admin-formation race', async () => {
+		const created = await draft('privacy-formation-race');
+		const rendered = await service.renderAndSend({ admin, offerId: created.offerId,
+			idempotencyKey: 'render-privacy-formation-race', requestId: 'render-privacy-formation-race' });
+		await service.parentDecision({ actor: parent, payload: {
+			offerId: created.offerId, expectedContractHash: rendered.contractHash,
+			decision: 'accept', acceptanceTextVersion: 'contract-acceptance-de-v1',
+			acceptanceText: 'Ich nehme dieses unveränderte Angebot im Formation-Race verbindlich an.',
+			idempotencyKey: 'accept-privacy-formation-race',
+		}, userAgent: 'vitest', requestSubject: '127.0.0.9', requestId: 'accept-privacy-formation-race' });
+		const privacy = new PrivacyService(new PrivacyRepository(db), store,
+			{ exportTtlSeconds: 3600 }, () => now);
+		const deletion = await privacy.requestDeletion({ actor: parent,
+			idempotencyKey: 'request-privacy-formation-race', requestId: 'request-privacy-formation-race' });
+		const [formation, closure] = await Promise.allSettled([
+			service.formAndActivate({ admin, requestId: 'form-privacy-race', payload: {
+				offerId: created.offerId, reason: 'Formation revalidated during closure race.',
+				confirmation: 'confirmed', idempotencyKey: 'form-privacy-race',
+			} }),
+			privacy.processDeletion({ admin, privacyRequestId: deletion.requestId,
+				reason: 'Verified closure race against administrative contract formation.',
+				idempotencyKey: 'close-privacy-formation-race', requestId: 'close-privacy-formation-race' }),
+		]);
+		const account = await db.first<{ account_status: string }>({
+			sql: `SELECT account_status FROM users WHERE id = ?`, params: [parent.id],
+		});
+		const activeContracts = await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM contracts WHERE user_id = ?
+				AND operational_status = 'active'`, params: [parent.id],
+		});
+		expect((account!.account_status === 'closed' ? 1 : 0) + activeContracts!.count).toBe(1);
+		if (account!.account_status === 'closed') {
+			expect(formation.status).toBe('rejected');
+			expect(closure).toMatchObject({ status: 'fulfilled', value: {
+				status: 'completed_with_retained_evidence',
+			} });
+		} else {
+			expect(formation.status).toBe('fulfilled');
+			expect(closure).toMatchObject({ status: 'fulfilled', value: {
+				status: 'blocked_by_active_contract',
+			} });
+			expect(await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM media_consents
+				WHERE source_privacy_request_id = ?`, params: [deletion.requestId],
+			})).toEqual({ count: 0 });
+		}
 	});
 
 	it('keeps media choice separate, permits decline, and fails closed for online grant/public functions', async () => {
