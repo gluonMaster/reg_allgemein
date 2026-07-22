@@ -1,0 +1,2001 @@
+import type { AuthenticatedUser } from '$lib/server/auth/session';
+import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
+import { hashCanonical } from '$lib/server/import/canonical';
+import type { AdminActor } from '$lib/server/security/authorization';
+import { calendarDayAfter } from '$lib/server/time/berlin';
+import type { ContractRenderInput, ContractTemplateId } from './contracts';
+
+export class ContractRepositoryError extends Error {
+	constructor(readonly code: string, options?: { cause?: unknown }) {
+		super(code, options);
+		this.name = 'ContractRepositoryError';
+	}
+}
+
+export interface StoredContractOffer {
+	id: string;
+	series_id: string;
+	version: number;
+	offer_number: string;
+	contract_number: string;
+	user_id: string;
+	child_id: string;
+	family_number_id_at_issue: string;
+	family_display_id_at_issue: string;
+	family_version_at_issue: number;
+	academic_period_id: string;
+	course_group_id: string | null;
+	individual_request_id: string | null;
+	funding_authorization_id: string | null;
+	enrollment_id: string | null;
+	service_engagement_id: string | null;
+	price_quote_id: string | null;
+	price_version_id: string | null;
+	price_rule_id: string | null;
+	contract_kind: ContractTemplateId;
+	template_version_id: string;
+	render_schema_version: string;
+	effective_from: string;
+	effective_to: string | null;
+	price_cents: number;
+	base_price_cents: number;
+	price_source: string;
+	price_mode: string;
+	render_input_json: string;
+	render_input_hash: string;
+	source_manifest_json: string;
+	source_manifest_hash: string;
+	render_status: 'not_started' | 'rendering' | 'ready' | 'failed';
+	status:
+		| 'draft'
+		| 'sent'
+		| 'accepted_by_parent'
+		| 'declined_by_parent'
+		| 'approved_by_admin'
+		| 'cancelled'
+		| 'expired'
+		| 'superseded';
+	contract_html_r2_key: string | null;
+	contract_pdf_r2_key: string | null;
+	contract_hash: string | null;
+	expires_at: string;
+	sent_at: string | null;
+	accepted_at: string | null;
+	admin_approved_at: string | null;
+	created_at: string;
+}
+
+export interface StoredTemplateVersion {
+	id: string;
+	template_id: ContractTemplateId;
+	template_version: string;
+	render_schema_version: string;
+	clause_set_version: string;
+	template_bundle_r2_key: string;
+	bundle_hash: string;
+	html_source_hash: string;
+	css_source_hash: string;
+	renderer_id: 'synthetic-test-pdf-v1' | 'cloudflare-browser-run-pdf-v1';
+	renderer_contract_version: string;
+	worker_compatibility_date: string;
+	usage_scope: 'synthetic_test' | 'production';
+	approval_status: 'draft' | 'approved' | 'retired';
+	approval_basis: 'synthetic_fixture' | 'authorized_verein_approval' | 'legal_review';
+	distance_legal_profile:
+		| 'offline_only'
+		| 'widerruf_applicable'
+		| 'widerruf_not_applicable_312g_2_9';
+	distance_legal_basis_hash: string | null;
+	kuendigung_function_required: 0 | 1;
+	early_performance_supported: 0 | 1;
+	media_contact_version_id: string | null;
+	provider_approval_status: string;
+	media_contact_approval_status: string | null;
+}
+
+interface NumberContext {
+	user_id: string;
+	child_id: string;
+	family_number_id: string;
+	family_display_id: string;
+	family_version: number;
+	next_contract_sequence: number;
+	sequence_exists: number;
+}
+
+export interface DraftOfferPersistence {
+	id: string;
+	seriesId: string;
+	offerNumber: string;
+	contractNumber: string;
+	userId: string;
+	childId: string;
+	academicPeriodId: string;
+	template: StoredTemplateVersion;
+	renderInput: ContractRenderInput;
+	renderInputHash: string;
+	sourceManifestJson: string;
+	sourceManifestHash: string;
+	expiresAt: string;
+	requestId: string;
+	admin: AdminActor;
+	idempotencyKey: string;
+	requestHash: string;
+	service: {
+		courseGroupId: string | null;
+		individualRequestId: string | null;
+		fundingAuthorizationId: string | null;
+		enrollmentId: string | null;
+		serviceEngagementId: string | null;
+		lessonKind: 'group' | 'dance_group' | null;
+	};
+	pricing: {
+		priceQuoteId: string | null;
+		priceVersionId: string | null;
+		priceRuleId: string | null;
+	};
+	manualOverride: {
+		reason: string;
+		responsibilityConfirmed: true;
+	} | null;
+	now: string;
+}
+
+const ACTIVE_ADMIN = `EXISTS (SELECT 1 FROM users admin WHERE admin.id = ?
+	AND admin.role = 'admin' AND admin.account_status = 'active' AND admin.is_blocked = 0)`;
+
+export class ContractRepository {
+	constructor(private readonly db: DatabaseBoundary) {}
+
+	async installSyntheticTemplateFixtures(input: {
+		admin: AdminActor;
+		providerSnapshotJson: string;
+		providerPaymentTermsHash: string;
+		mediaContactSnapshotJson: string;
+		mediaContactSnapshotHash: string;
+		templates: ReadonlyArray<{
+			id: string;
+			templateId: ContractTemplateId;
+			bundleKey: string;
+			bundleHash: string;
+			htmlSourceHash: string;
+			cssSourceHash: string;
+		}>;
+		now: string;
+	}) {
+		const providerId = 'contract-provider:synthetic-v1';
+		const mediaContactId = 'media-contact:synthetic-v1';
+		const existing = await this.db.all<{ id: string }>({
+			sql: `SELECT id FROM contract_template_versions WHERE usage_scope = 'synthetic_test'
+				AND template_version = 'synthetic-core-v1'`,
+		});
+		if (existing.results.length === input.templates.length) return existing.results.map((row) => row.id);
+		const statements: StatementSpec[] = [
+			{
+				sql: `INSERT OR IGNORE INTO contract_provider_versions
+					(id, version, provider_snapshot_json, payment_terms_version,
+					 payment_terms_hash, approval_status, approved_by, approved_at, created_at)
+				SELECT ?, 'synthetic-provider-v1', ?, 'synthetic-payment-v1', ?,
+					'approved', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
+				params: [providerId, input.providerSnapshotJson, input.providerPaymentTermsHash,
+					input.admin.id, input.now, input.now, input.admin.id],
+			},
+			{
+				sql: `INSERT OR IGNORE INTO media_withdrawal_contact_versions
+					(id, version, contact_snapshot_json, snapshot_hash, german_text_version,
+					 approval_status, compliance_assessment_status, approved_by, approved_at, created_at)
+				SELECT ?, 'synthetic-media-contact-v1', ?, ?, 'synthetic-media-text-v1',
+					'approved', 'not_assessed', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
+				params: [mediaContactId, input.mediaContactSnapshotJson, input.mediaContactSnapshotHash,
+					input.admin.id, input.now, input.now, input.admin.id],
+			},
+			...input.templates.map<StatementSpec>((template) => ({
+				sql: `INSERT OR IGNORE INTO contract_template_versions
+					(id, template_id, template_version, render_schema_version,
+					 clause_set_version, provider_version_id, media_contact_version_id,
+					 template_bundle_r2_key, bundle_hash, html_source_hash, css_source_hash,
+					 asset_manifest_json, font_manifest_json, required_fields_json,
+					 renderer_id, renderer_contract_version, worker_compatibility_date,
+					 usage_scope, approval_status, approval_basis, distance_legal_profile,
+					 distance_legal_basis_version, distance_legal_basis_hash,
+					 kuendigung_function_required, early_performance_supported,
+					 approved_by, approved_at, valid_from, valid_to, created_at)
+				SELECT ?, ?, 'synthetic-core-v1', 'contract-render-v1',
+					'synthetic-clause-v1', ?, ?, ?, ?, ?, ?, '{}', '{}',
+					'[]', 'synthetic-test-pdf-v1', 'pdf-adapter-v1', '2026-03-24',
+					'synthetic_test', 'approved', 'synthetic_fixture', 'offline_only',
+					NULL, NULL, 0, 0, ?, ?, NULL, NULL, ? WHERE ${ACTIVE_ADMIN}
+					AND EXISTS (SELECT 1 FROM contract_provider_versions WHERE id = ?)
+					AND EXISTS (SELECT 1 FROM media_withdrawal_contact_versions WHERE id = ?)`,
+				params: [template.id, template.templateId, providerId, mediaContactId, template.bundleKey,
+					template.bundleHash, template.htmlSourceHash, template.cssSourceHash,
+					input.admin.id, input.now, input.now, input.admin.id, providerId, mediaContactId],
+			})),
+		];
+		await this.db.batch(statements);
+		return input.templates.map((template) => template.id);
+	}
+
+	loadTemplate(templateVersionId: string): Promise<StoredTemplateVersion | null> {
+		return this.db.first<StoredTemplateVersion>({
+			sql: `SELECT template.id, template.template_id, template.template_version,
+				template.render_schema_version, template.clause_set_version,
+				template.template_bundle_r2_key, template.bundle_hash,
+				template.html_source_hash, template.css_source_hash, template.renderer_id,
+				template.renderer_contract_version, template.worker_compatibility_date,
+				template.usage_scope, template.approval_status, template.approval_basis,
+				template.distance_legal_profile, template.distance_legal_basis_hash,
+				template.kuendigung_function_required, template.early_performance_supported,
+				template.media_contact_version_id,
+				provider.approval_status AS provider_approval_status,
+				contact.approval_status AS media_contact_approval_status
+			FROM contract_template_versions template
+			JOIN contract_provider_versions provider ON provider.id = template.provider_version_id
+			LEFT JOIN media_withdrawal_contact_versions contact
+				ON contact.id = template.media_contact_version_id
+			WHERE template.id = ?`,
+			params: [templateVersionId],
+		});
+	}
+
+	loadAdminAction(actorUserId: string, idempotencyKey: string) {
+		return this.db.first<{
+			action: string;
+			request_hash_sha256: string;
+			result_ref: string;
+		}>({
+			sql: `SELECT action, request_hash_sha256, result_ref FROM contract_admin_actions
+			WHERE actor_user_id = ? AND idempotency_key = ?`,
+			params: [actorUserId, idempotencyKey],
+		});
+	}
+
+	loadOffer(offerId: string): Promise<StoredContractOffer | null> {
+		return this.db.first<StoredContractOffer>({
+			sql: `SELECT * FROM contract_offers WHERE id = ?`,
+			params: [offerId],
+		});
+	}
+
+	async loadOfferPdfHash(offerId: string): Promise<string | null> {
+		const row = await this.db.first<{ sha256: string }>({
+			sql: `SELECT sha256 FROM contract_artifacts
+			WHERE contract_offer_id = ? AND artifact_kind = 'offer_pdf'`,
+			params: [offerId],
+		});
+		return row?.sha256 ?? null;
+	}
+
+	loadCourseService(input: { courseGroupId: string; academicPeriodId: string }) {
+		return this.db.first<{ id: string; lesson_kind: 'group' | 'dance_group' }>({
+			sql: `SELECT id, lesson_kind FROM course_groups WHERE id = ?
+				AND academic_period_id = ? AND lesson_kind IN ('group', 'dance_group')
+				AND catalog_status IN ('published', 'draft')`,
+			params: [input.courseGroupId, input.academicPeriodId],
+		});
+	}
+
+	loadGroupPriceQuote(input: {
+		quoteId: string;
+		userId: string;
+		childId: string;
+		courseGroupId: string;
+	}) {
+		return this.db.first<{
+			id: string;
+			contract_kind: 'group_yearly' | 'group_monthly';
+			price_version_id: string | null;
+			price_rule_id: string | null;
+			price_source: string;
+			price_mode: string;
+			base_price_cents: number;
+			final_price_cents: number;
+			status: string;
+			expires_at: string;
+			price_version_current: number;
+		}>({
+			sql: `SELECT quote.id, quote.contract_kind, quote.price_version_id,
+				quote.price_rule_id, quote.price_source, quote.price_mode,
+				quote.base_price_cents,
+				COALESCE(quote.confirmed_price_cents, quote.final_price_cents) AS final_price_cents,
+				quote.status, quote.expires_at,
+				CASE WHEN quote.price_version_id IS NULL OR EXISTS (SELECT 1 FROM price_versions version
+					WHERE version.id = quote.price_version_id AND version.is_active = 1)
+				THEN 1 ELSE 0 END AS price_version_current
+			FROM price_quotes quote WHERE quote.id = ? AND quote.user_id = ? AND quote.child_id = ?
+				AND quote.course_group_id = ?`,
+			params: [input.quoteId, input.userId, input.childId, input.courseGroupId],
+		});
+	}
+
+	loadRequestService(input: { requestId: string; userId: string; childId: string }) {
+		return this.db.first<{
+			id: string;
+			request_kind: 'individual' | 'nachhilfe';
+			funding_kind: 'self_pay' | 'jobcenter' | 'socialamt';
+			unit_rate_cents: number;
+			status: string;
+		}>({
+			sql: `SELECT id, request_kind, funding_kind, unit_rate_cents, status
+			FROM individual_requests WHERE id = ? AND user_id = ? AND child_id = ?
+				AND status = 'approved'`,
+			params: [input.requestId, input.userId, input.childId],
+		});
+	}
+
+	async assertFundingEligible(input: {
+		requestId: string;
+		authorizationId: string;
+		plannedFrom: string;
+		plannedUntilInclusive: string;
+	}) {
+		const row = await this.db.first<{ eligible: number }>({
+			sql: `SELECT EXISTS (
+				SELECT 1 FROM individual_requests request
+				JOIN users owner ON owner.id = request.user_id
+				JOIN funding_authorizations authorization
+					ON authorization.request_id = request.id
+				WHERE request.id = ? AND authorization.id = ?
+					AND request.request_kind = 'nachhilfe' AND request.status = 'approved'
+					AND owner.account_status = 'active' AND owner.is_blocked = 0
+					AND authorization.status = 'approved'
+					AND authorization.kind = request.funding_kind
+					AND authorization.valid_from <= ? AND authorization.valid_until >= ?
+					AND EXISTS (SELECT 1 FROM authorization_documents document
+						WHERE document.authorization_id = authorization.id
+							AND document.review_status = 'approved'
+							AND document.archive_r2_key IS NOT NULL
+							AND document.deleted_at IS NULL
+							AND document.replaced_by_document_id IS NULL)
+					AND NOT EXISTS (SELECT 1 FROM authorization_documents document
+						WHERE document.authorization_id = authorization.id
+							AND document.deleted_at IS NULL
+							AND document.replaced_by_document_id IS NULL
+							AND (document.review_status <> 'approved'
+								OR document.archive_r2_key IS NULL))
+			) AS eligible`,
+			params: [input.requestId, input.authorizationId, input.plannedFrom,
+				input.plannedUntilInclusive],
+		});
+		if (row?.eligible !== 1) throw new ContractRepositoryError('FUNDING_NOT_ELIGIBLE');
+	}
+
+	async prepareNumber(userId: string, childId: string): Promise<NumberContext> {
+		const context = await this.db.first<NumberContext>({
+			sql: `SELECT owner.id AS user_id, child.id AS child_id,
+				family.id AS family_number_id, family.display_family_id AS family_display_id,
+				owner.family_version,
+				COALESCE(sequence.next_contract_sequence, 1) AS next_contract_sequence,
+				CASE WHEN sequence.id IS NULL THEN 0 ELSE 1 END AS sequence_exists
+			FROM users owner
+			JOIN children child ON child.owner_user_id = owner.id
+				AND child.family_number_id = owner.family_number_id AND child.is_current = 1
+			JOIN family_number_allocations family ON family.id = owner.family_number_id
+				AND family.owner_user_id = owner.id AND family.status = 'assigned'
+			LEFT JOIN contract_number_sequences sequence ON sequence.family_number_id = family.id
+			WHERE owner.id = ? AND child.id = ? AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.family_version > 0
+				AND (sequence.id IS NULL OR sequence.status = 'active')`,
+			params: [userId, childId],
+		});
+		if (!context) throw new ContractRepositoryError('CONTRACT_NUMBER_CONTEXT_REJECTED');
+		return context;
+	}
+
+	async createDraft(input: DraftOfferPersistence, number: NumberContext) {
+		const prior = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
+			sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
+			WHERE actor_user_id = ? AND idempotency_key = ?`,
+			params: [input.admin.id, input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.request_hash_sha256 !== input.requestHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { offerId: prior.result_ref, replayed: true };
+		}
+
+		const render = input.renderInput;
+		const auditId = crypto.randomUUID();
+		const actionId = crypto.randomUUID();
+		const assertionId = crypto.randomUUID();
+		const sequenceId = `contract-sequence:${number.family_number_id}`;
+		const operationalStatements: StatementSpec[] = input.service.enrollmentId
+			? [
+					{
+						sql: `INSERT INTO enrollments
+							(id, user_id, child_id, course_group_id, legacy_enrollment_id,
+							 lesson_kind, status, contract_kind, active_from, active_until,
+							 current_price_cents, price_source, price_mode, price_effective_from,
+							 manual_override_reason, manual_override_by, manual_override_at,
+							 source, created_at, updated_at)
+						SELECT ?, ?, ?, ?, NULL, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+							'admin', ?, ? WHERE ${ACTIVE_ADMIN}
+							AND EXISTS (SELECT 1 FROM course_groups WHERE id = ?
+								AND academic_period_id = ? AND lesson_kind IN ('group', 'dance_group'))`,
+						params: [
+							input.service.enrollmentId,
+							input.userId,
+							input.childId,
+							input.service.courseGroupId,
+							input.service.lessonKind,
+							render.templateId,
+							render.service.effectiveFrom,
+							render.service.effectiveTo
+								? calendarDayAfter(render.service.effectiveTo)
+								: null,
+							render.billing.finalPriceCents,
+							render.billing.priceSource,
+							render.billing.priceMode,
+							render.service.effectiveFrom,
+							input.manualOverride?.reason ?? null,
+							input.manualOverride ? input.admin.id : null,
+							input.manualOverride ? input.now : null,
+							input.now,
+							input.now,
+							input.admin.id,
+							input.service.courseGroupId,
+							input.academicPeriodId,
+						],
+					},
+				]
+			: [
+					{
+						sql: `INSERT INTO service_engagements
+							(id, user_id, child_id, individual_request_id, request_kind,
+							 initial_funding_authorization_id, current_funding_authorization_id,
+							 status, active_from, active_until, attendance_ceased_at,
+							 attendance_notice_id, contract_id, created_at, updated_at)
+						SELECT ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, NULL, NULL, NULL, ?, ?
+						WHERE ${ACTIVE_ADMIN} AND EXISTS (
+							SELECT 1 FROM individual_requests request
+							WHERE request.id = ? AND request.user_id = ? AND request.child_id = ?
+								AND request.request_kind = ? AND request.status = 'approved')`,
+						params: [
+							input.service.serviceEngagementId,
+							input.userId,
+							input.childId,
+							input.service.individualRequestId,
+							render.service.requestKind,
+							input.service.fundingAuthorizationId,
+							input.service.fundingAuthorizationId,
+							render.service.effectiveFrom,
+							render.service.effectiveTo
+								? calendarDayAfter(render.service.effectiveTo)
+								: null,
+							input.now,
+							input.now,
+							input.admin.id,
+							input.service.individualRequestId,
+							input.userId,
+							input.childId,
+							render.service.requestKind,
+						],
+					},
+				];
+		const offerRecord: Record<string, unknown> = {
+			id: input.id,
+			series_id: input.seriesId,
+			version: 1,
+			offer_number: input.offerNumber,
+			contract_number: input.contractNumber,
+			user_id: input.userId,
+			child_id: input.childId,
+			family_number_id_at_issue: number.family_number_id,
+			family_display_id_at_issue: number.family_display_id,
+			family_version_at_issue: number.family_version,
+			academic_period_id: input.academicPeriodId,
+			course_group_id: input.service.courseGroupId,
+			individual_request_id: input.service.individualRequestId,
+			funding_authorization_id: input.service.fundingAuthorizationId,
+			enrollment_id: input.service.enrollmentId,
+			service_engagement_id: input.service.serviceEngagementId,
+			price_quote_id: input.pricing.priceQuoteId,
+			contract_kind: render.templateId,
+			template_version_id: input.template.id,
+			render_schema_version: render.schemaVersion,
+			effective_from: render.service.effectiveFrom,
+			effective_to: render.service.effectiveTo,
+			billing_model: render.billing.model,
+			currency: 'EUR',
+			unit_minutes: render.billing.unitMinutes,
+			price_version_id: input.pricing.priceVersionId,
+			price_rule_id: input.pricing.priceRuleId,
+			price_source: render.billing.priceSource,
+			price_mode: render.billing.priceMode,
+			base_price_cents: render.billing.basePriceCents,
+			price_cents: render.billing.finalPriceCents,
+			amount_semantics: render.billing.amountSemantics,
+			payment_arrangement: render.billing.paymentArrangement,
+			payment_due_day: render.billing.paymentDueDay,
+			billing_period_code: render.billing.billingPeriodCode,
+			provider_snapshot_json: JSON.stringify(render.provider),
+			party_snapshot_json: JSON.stringify({ parent: render.parent, child: render.child }),
+			service_snapshot_json: JSON.stringify(render.service),
+			schedule_snapshot_json: JSON.stringify(render.service.scheduleLines),
+			billing_snapshot_json: JSON.stringify(render.billing),
+			line_items_json: JSON.stringify(render.billing.lineItems),
+			term_snapshot_json: JSON.stringify(render.term),
+			termination_snapshot_json: JSON.stringify({
+				ordinary: render.term.ordinaryTerminationText,
+				extraordinary: render.term.extraordinaryTerminationText,
+			}),
+			withdrawal_snapshot_json: JSON.stringify({ version: render.legal.withdrawalTextVersion }),
+			distance_legal_profile_snapshot_json: JSON.stringify({
+				profile: render.legal.distanceLegalProfile,
+			}),
+			distance_legal_basis_hash: render.legal.distanceLegalBasisHash,
+			early_performance_request_version: render.legal.earlyPerformanceRequestVersion,
+			early_performance_requested_at: null,
+			wertersatz_notice_version: render.legal.wertersatzNoticeVersion,
+			clauses_manifest_json: JSON.stringify({ clauseSetVersion: render.legal.clauseSetVersion }),
+			attachments_manifest_json: JSON.stringify(render.legal.attachments),
+			privacy_notice_version: render.legal.privacyNoticeVersion,
+			media_clause_version: render.legal.mediaClauseVersion,
+			media_decision_snapshot_json: null,
+			render_input_json: JSON.stringify(render),
+			render_input_hash: input.renderInputHash,
+			source_manifest_json: input.sourceManifestJson,
+			source_manifest_hash: input.sourceManifestHash,
+			contract_html_r2_key: null,
+			contract_pdf_r2_key: null,
+			contract_hash: null,
+			render_status: 'not_started',
+			status: 'draft',
+			sent_at: null,
+			expires_at: input.expiresAt,
+			accepted_at: null,
+			declined_at: null,
+			admin_approved_at: null,
+			cancelled_at: null,
+			status_reason: null,
+			created_by_admin_user_id: input.admin.id,
+			created_at: input.now,
+			updated_at: input.now,
+		};
+		const offerColumns = Object.keys(offerRecord);
+
+		const statements: StatementSpec[] = [
+			{
+				sql: `INSERT OR IGNORE INTO contract_number_sequences
+					(id, family_number_id, format_version, next_contract_sequence,
+					 status, created_at, updated_at)
+				VALUES (?, ?, 'family-contract-v1', 1, 'active', ?, ?)`,
+				params: [sequenceId, number.family_number_id, input.now, input.now],
+			},
+			{
+				sql: `UPDATE contract_number_sequences
+				SET next_contract_sequence = next_contract_sequence + 1, updated_at = ?
+				WHERE family_number_id = ? AND status = 'active'
+					AND next_contract_sequence = ? AND ${ACTIVE_ADMIN}
+					AND EXISTS (SELECT 1 FROM users owner JOIN children child
+						ON child.owner_user_id = owner.id AND child.family_number_id = owner.family_number_id
+						WHERE owner.id = ? AND child.id = ? AND owner.family_number_id = ?
+							AND owner.family_version = ? AND owner.account_status = 'active'
+							AND owner.is_blocked = 0)`,
+				params: [
+					input.now,
+					number.family_number_id,
+					number.next_contract_sequence,
+					input.admin.id,
+					input.userId,
+					input.childId,
+					number.family_number_id,
+					number.family_version,
+				],
+			},
+			...operationalStatements,
+			{
+				sql: `INSERT INTO contract_offers (${offerColumns.join(', ')})
+				SELECT ${offerColumns.map(() => '?').join(', ')}
+				WHERE EXISTS (SELECT 1 FROM contract_number_sequences
+					WHERE family_number_id = ? AND next_contract_sequence = ?)
+					AND EXISTS (SELECT 1 FROM ${input.service.enrollmentId ? 'enrollments' : 'service_engagements'}
+						WHERE id = ?)`,
+				params: [
+					...Object.values(offerRecord),
+					number.family_number_id,
+					number.next_contract_sequence + 1,
+					input.service.enrollmentId ?? input.service.serviceEngagementId,
+				],
+			},
+			...(input.manualOverride
+				? [
+						{
+							sql: `INSERT INTO offer_manual_price_overrides
+								(id, contract_offer_id, base_price_cents, override_price_cents,
+								 delta_cents, price_version_id, price_rule_id, reason,
+								 actor_user_id, responsibility_confirmed, request_hash_sha256, created_at)
+							SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?
+							WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ?)`,
+							params: [
+								crypto.randomUUID(),
+								input.id,
+								render.billing.basePriceCents,
+								render.billing.finalPriceCents,
+								render.billing.finalPriceCents - render.billing.basePriceCents,
+								input.pricing.priceVersionId,
+								input.pricing.priceRuleId,
+								input.manualOverride.reason,
+								input.admin.id,
+								input.requestHash,
+								input.now,
+								input.id,
+							],
+						},
+					]
+				: []),
+			{
+				sql: `INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, created_at)
+				SELECT ?, ?, 'user', 'contract_offer.created', 'contract_offer', ?, ?, ?, ?
+				WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ?)`,
+				params: [auditId, input.admin.id, input.id, input.requestId,
+					JSON.stringify({ contractKind: render.templateId, status: 'draft',
+						priceMode: render.billing.priceMode }), input.now, input.id],
+			},
+			{
+				sql: `INSERT INTO contract_admin_actions
+					(id, contract_offer_id, action, actor_user_id, idempotency_key,
+					 request_hash_sha256, result_ref, audit_event_id, created_at)
+				SELECT ?, ?, 'create', ?, ?, ?, ?, ?, ?
+				WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+				params: [actionId, input.id, input.admin.id, input.idempotencyKey,
+					input.requestHash, input.id, auditId, input.now, auditId],
+			},
+			{
+				sql: `INSERT INTO contract_action_assertions
+					(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+					 assertion_passed, created_at)
+				VALUES (?, 'offer_create', ?, ?, ?, ?, CASE WHEN
+					EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = 'draft')
+					AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
+					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+				THEN 1 ELSE 0 END, ?)`,
+				params: [assertionId, input.id, actionId, input.admin.id, auditId,
+					input.id, actionId, auditId, input.now],
+			},
+		];
+
+		try {
+			await this.db.batch(statements);
+			return { offerId: input.id, replayed: false };
+		} catch (error) {
+			const replay = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
+				sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
+				WHERE actor_user_id = ? AND idempotency_key = ?`,
+				params: [input.admin.id, input.idempotencyKey],
+			});
+			if (replay?.request_hash_sha256 === input.requestHash) {
+				return { offerId: replay.result_ref, replayed: true };
+			}
+			throw new ContractRepositoryError('CONTRACT_DRAFT_CREATE_REJECTED', { cause: error });
+		}
+	}
+
+	markRendering(offerId: string, adminId: string, now: string) {
+		return this.db.run({
+			sql: `UPDATE contract_offers SET render_status = 'rendering', updated_at = ?
+			WHERE id = ? AND status = 'draft' AND render_status IN ('not_started', 'failed')
+				AND ${ACTIVE_ADMIN}`,
+			params: [now, offerId, adminId],
+		});
+	}
+
+	async browserBudgetUsed(dayPrefix: string): Promise<number> {
+		const row = await this.db.first<{ used: number }>({
+			sql: `SELECT COALESCE(SUM(browser_ms_used), 0) AS used
+			FROM contract_render_attempts WHERE started_at >= ? AND started_at < ?`,
+			params: [`${dayPrefix}T00:00:00.000Z`, `${calendarDayAfter(dayPrefix)}T00:00:00.000Z`],
+		});
+		return row?.used ?? 0;
+	}
+
+	async nextAttemptNumber(offerId: string): Promise<number> {
+		const row = await this.db.first<{ next_attempt: number }>({
+			sql: `SELECT COALESCE(MAX(attempt_no), 0) + 1 AS next_attempt
+			FROM contract_render_attempts WHERE contract_offer_id = ?`,
+			params: [offerId],
+		});
+		return row?.next_attempt ?? 1;
+	}
+
+	async recordRenderFailure(input: {
+		offerId: string;
+		attemptNo: number;
+		template: StoredTemplateVersion;
+		sourceManifestHash: string;
+		startedAt: string;
+		finishedAt: string;
+		status: 'retryable_failed' | 'failed';
+		errorCode: string;
+		retryAfterSeconds: number | null;
+	}) {
+		await this.db.batch([
+			{
+				sql: `INSERT INTO contract_render_attempts
+					(id, contract_offer_id, attempt_no, renderer_id,
+					 worker_compatibility_date, source_manifest_hash, started_at, finished_at,
+					 status, error_code, browser_ms_used, pdf_size_bytes, pdf_sha256,
+					 retry_after_seconds, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`,
+				params: [crypto.randomUUID(), input.offerId, input.attemptNo,
+					input.template.renderer_id, input.template.worker_compatibility_date,
+					input.sourceManifestHash, input.startedAt, input.finishedAt, input.status,
+					input.errorCode, input.retryAfterSeconds, input.finishedAt],
+			},
+			{
+				sql: `UPDATE contract_offers SET render_status = 'failed',
+					status_reason = ?, updated_at = ?
+				WHERE id = ? AND status = 'draft' AND render_status = 'rendering'`,
+				params: [input.errorCode, input.finishedAt, input.offerId],
+			},
+		]);
+	}
+
+	async completeRenderAndSend(input: {
+		offer: StoredContractOffer;
+		template: StoredTemplateVersion;
+		admin: AdminActor;
+		attemptNo: number;
+		startedAt: string;
+		now: string;
+		htmlKey: string;
+		pdfKey: string;
+		htmlSize: number;
+		htmlSha256: string;
+		pdfSize: number;
+		pdfSha256: string;
+		contractHash: string;
+		browserMsUsed: number | null;
+		idempotencyKey: string;
+		requestHash: string;
+		requestId: string;
+	}) {
+		const auditId = crypto.randomUUID();
+		const actionId = crypto.randomUUID();
+		const deliveryId = crypto.randomUUID();
+		await this.db.batch([
+			{
+				sql: `UPDATE contract_offers SET contract_html_r2_key = ?,
+					contract_pdf_r2_key = ?, contract_hash = ?, render_status = 'ready',
+					status_reason = NULL, updated_at = ?
+				WHERE id = ? AND status = 'draft' AND render_status = 'rendering'
+					AND render_input_hash = ? AND source_manifest_hash = ?`,
+				params: [input.htmlKey, input.pdfKey, input.contractHash, input.now,
+					input.offer.id, input.offer.render_input_hash, input.offer.source_manifest_hash],
+			},
+			...([
+				['offer_html', input.htmlKey, 'text/html; charset=utf-8', input.htmlSize,
+					input.htmlSha256] as const,
+				['offer_pdf', input.pdfKey, 'application/pdf', input.pdfSize, input.pdfSha256] as const,
+			].map<StatementSpec>((artifact) => ({
+				sql: `INSERT INTO contract_artifacts
+					(id, contract_offer_id, formation_certificate_id, artifact_kind,
+					 private_r2_key, content_type, size_bytes, sha256, source_hash,
+					 template_version_id, renderer_id, renderer_contract_version,
+					 worker_compatibility_date, created_at)
+				SELECT ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+				WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ?
+					AND render_status = 'ready' AND status = 'draft')`,
+				params: [crypto.randomUUID(), input.offer.id, artifact[0], artifact[1],
+					artifact[2], artifact[3], artifact[4], input.offer.source_manifest_hash,
+					input.template.id, input.template.renderer_id,
+					input.template.renderer_contract_version,
+					input.template.worker_compatibility_date, input.now, input.offer.id],
+			}))),
+			{
+				sql: `INSERT INTO contract_render_attempts
+					(id, contract_offer_id, attempt_no, renderer_id,
+					 worker_compatibility_date, source_manifest_hash, started_at, finished_at,
+					 status, error_code, browser_ms_used, pdf_size_bytes, pdf_sha256,
+					 retry_after_seconds, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'succeeded', NULL, ?, ?, ?, NULL, ?)`,
+				params: [crypto.randomUUID(), input.offer.id, input.attemptNo,
+					input.template.renderer_id, input.template.worker_compatibility_date,
+					input.offer.source_manifest_hash, input.startedAt, input.now,
+					input.browserMsUsed, input.pdfSize, input.pdfSha256, input.now],
+			},
+			{
+				sql: `UPDATE contract_offers SET status = 'sent', sent_at = ?, updated_at = ?
+				WHERE id = ? AND status = 'draft' AND render_status = 'ready'
+					AND contract_hash = ? AND expires_at > ?
+					AND ${ACTIVE_ADMIN}
+					AND EXISTS (SELECT 1 FROM contract_template_versions template
+						WHERE template.id = template_version_id AND template.approval_status = 'approved')`,
+				params: [input.now, input.now, input.offer.id, input.contractHash,
+					input.now, input.admin.id],
+			},
+			{
+				sql: `UPDATE ${input.offer.enrollment_id ? 'enrollments' : 'service_engagements'}
+				SET status = 'contract_offered', updated_at = ? WHERE id = ? AND status = 'draft'
+					AND EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent')`,
+				params: [input.now, input.offer.enrollment_id ?? input.offer.service_engagement_id,
+					input.offer.id],
+			},
+			{
+				sql: `INSERT INTO contract_deliveries
+					(id, contract_offer_id, contract_id, artifact_kind, artifact_hash,
+					 channel, recipient_role, recipient_user_id, delivery_status,
+					 dedupe_key, delivered_at, access_expires_at, created_at)
+				SELECT ?, ?, NULL, 'offer_pdf', ?, 'portal', 'parent', ?, 'available',
+					?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM contract_offers
+						WHERE id = ? AND status = 'sent')`,
+				params: [deliveryId, input.offer.id, input.pdfSha256, input.offer.user_id,
+					`offer-pdf:portal:${input.offer.id}`, input.now, input.offer.expires_at,
+					input.now, input.offer.id],
+			},
+			{
+				sql: `INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, created_at)
+				SELECT ?, ?, 'user', 'contract_offer.rendered_and_sent',
+					'contract_offer', ?, ?, ?, ? WHERE EXISTS (
+						SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent')`,
+				params: [auditId, input.admin.id, input.offer.id, input.requestId,
+					JSON.stringify({ status: 'sent', renderer: input.template.renderer_id,
+						attempt: input.attemptNo }), input.now, input.offer.id],
+			},
+			{
+				sql: `INSERT INTO contract_admin_actions
+					(id, contract_offer_id, action, actor_user_id, idempotency_key,
+					 request_hash_sha256, result_ref, audit_event_id, created_at)
+				SELECT ?, ?, 'render_send', ?, ?, ?, ?, ?, ?
+				WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+				params: [actionId, input.offer.id, input.admin.id, input.idempotencyKey,
+					input.requestHash, input.offer.id, auditId, input.now, auditId],
+			},
+			{
+				sql: `INSERT INTO contract_outbox_events
+					(id, event_type, source_kind, source_id, payload_json, dedupe_key,
+					 status, created_at)
+				SELECT ?, 'offer_available', 'contract_offer', ?, ?, ?, 'pending', ?
+				WHERE EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent')`,
+				params: [crypto.randomUUID(), input.offer.id,
+					JSON.stringify({ offerId: input.offer.id, deliveryId }),
+					`offer-available:${input.offer.id}`, input.now, input.offer.id],
+			},
+			{
+				sql: `INSERT INTO contract_action_assertions
+					(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+					 assertion_passed, created_at)
+				VALUES (?, 'render_send', ?, ?, ?, ?, CASE WHEN
+					EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = 'sent'
+						AND render_status = 'ready' AND contract_hash = ?)
+					AND EXISTS (SELECT 1 FROM contract_artifacts WHERE contract_offer_id = ?
+						GROUP BY contract_offer_id HAVING COUNT(*) = 2)
+					AND EXISTS (SELECT 1 FROM contract_deliveries WHERE id = ?)
+					AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
+				THEN 1 ELSE 0 END, ?)`,
+				params: [crypto.randomUUID(), input.offer.id, actionId, input.admin.id,
+					auditId, input.offer.id, input.contractHash, input.offer.id, deliveryId,
+					actionId, input.now],
+			},
+		]);
+	}
+
+	async parentDecision(input: {
+		actor: AuthenticatedUser;
+		offerId: string;
+		expectedContractHash: string;
+		decision: 'accept' | 'decline';
+		textVersion: string;
+		text: string;
+		idempotencyKey: string;
+		userAgent: string;
+		ipRetentionValue: string | null;
+		ipExpiresAt: string | null;
+		requestId: string;
+		now: string;
+	}) {
+		const requestHash = await hashCanonical({ offerId: input.offerId,
+			expectedContractHash: input.expectedContractHash, decision: input.decision,
+			textVersion: input.textVersion, text: input.text });
+		const prior = await this.db.first<{ request_hash_sha256: string; to_status: string }>({
+			sql: `SELECT request_hash_sha256, to_status FROM contract_parent_actions
+			WHERE user_id = ? AND idempotency_key = ?`,
+			params: [input.actor.id, input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.request_hash_sha256 !== requestHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { status: prior.to_status, replayed: true };
+		}
+		const toStatus = input.decision === 'accept' ? 'accepted_by_parent' : 'declined_by_parent';
+		const actionId = crypto.randomUUID();
+		const auditId = crypto.randomUUID();
+		const acceptanceId = crypto.randomUUID();
+		try {
+			await this.db.batch([
+				{
+					sql: `UPDATE contract_offers SET status = ?,
+						accepted_at = CASE WHEN ? = 'accept' THEN ? ELSE accepted_at END,
+						declined_at = CASE WHEN ? = 'decline' THEN ? ELSE declined_at END,
+						updated_at = ?
+					WHERE id = ? AND user_id = ? AND status = 'sent' AND expires_at > ?
+						AND contract_hash = ? AND render_status = 'ready'
+						AND EXISTS (SELECT 1 FROM users owner JOIN children child
+							ON child.owner_user_id = owner.id
+							WHERE owner.id = ? AND child.id = contract_offers.child_id
+								AND owner.account_status = 'active' AND owner.is_blocked = 0
+								AND child.family_number_id = owner.family_number_id
+								AND owner.family_number_id = contract_offers.family_number_id_at_issue
+								AND owner.family_version = contract_offers.family_version_at_issue)`,
+					params: [toStatus, input.decision, input.now, input.decision, input.now,
+						input.now, input.offerId, input.actor.id, input.now,
+						input.expectedContractHash, input.actor.id],
+				},
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', ?, 'contract_offer', id, ?, ?, ?
+					FROM contract_offers WHERE id = ? AND user_id = ? AND status = ?`,
+					params: [auditId, input.actor.id, `contract_offer.${input.decision}`,
+						input.requestId, JSON.stringify({ status: toStatus }), input.now,
+						input.offerId, input.actor.id, toStatus],
+				},
+				{
+					sql: `INSERT INTO contract_parent_actions
+						(id, contract_offer_id, user_id, action, from_status, to_status,
+						 offer_hash, text_version, user_agent, ip_retention_value, ip_expires_at,
+						 idempotency_key, request_hash_sha256, audit_event_id, created_at)
+					SELECT ?, ?, ?, ?, 'sent', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+					params: [actionId, input.offerId, input.actor.id, input.decision, toStatus,
+						input.expectedContractHash, input.textVersion, input.userAgent,
+						input.ipRetentionValue, input.ipExpiresAt, input.idempotencyKey,
+						requestHash, auditId, input.now, auditId],
+				},
+				...(input.decision === 'accept'
+					? [{
+							sql: `INSERT INTO contract_acceptances
+								(id, contract_offer_id, parent_action_id, user_id, accepted_at,
+								 ip_retention_value, ip_expires_at, user_agent,
+								 acceptance_text_version, acceptance_text, contract_hash,
+								 idempotency_key, created_at)
+							SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+							WHERE EXISTS (SELECT 1 FROM contract_parent_actions WHERE id = ?)`,
+							params: [acceptanceId, input.offerId, actionId, input.actor.id, input.now,
+								input.ipRetentionValue, input.ipExpiresAt, input.userAgent,
+								input.textVersion, input.text, input.expectedContractHash,
+								input.idempotencyKey, input.now, actionId],
+						}]
+					: []),
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'parent_decision', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM contract_parent_actions WHERE id = ?)
+						AND EXISTS (SELECT 1 FROM contract_offers WHERE id = ? AND status = ?)
+						AND (? = 'decline' OR EXISTS (SELECT 1 FROM contract_acceptances
+							WHERE id = ? AND contract_hash = ?))
+					THEN 1 ELSE 0 END, ?)`,
+					params: [crypto.randomUUID(), input.offerId, actionId, input.actor.id,
+						auditId, actionId, input.offerId, toStatus, input.decision,
+						acceptanceId, input.expectedContractHash, input.now],
+				},
+				{
+					sql: `INSERT INTO contract_outbox_events
+						(id, event_type, source_kind, source_id, payload_json, dedupe_key,
+						 status, created_at)
+					SELECT ?, ?, 'contract_offer', ?, ?, ?, 'pending', ?
+					WHERE EXISTS (SELECT 1 FROM contract_parent_actions WHERE id = ?)`,
+					params: [crypto.randomUUID(), input.decision === 'decline'
+						? 'offer_declined' : 'offer_available', input.offerId,
+						JSON.stringify({ offerId: input.offerId, action: input.decision }),
+						`parent-${input.decision}:${input.offerId}`, input.now, actionId],
+				},
+			]);
+			return { status: toStatus, replayed: false };
+		} catch (error) {
+			const replay = await this.db.first<{ request_hash_sha256: string; to_status: string }>({
+				sql: `SELECT request_hash_sha256, to_status FROM contract_parent_actions
+				WHERE user_id = ? AND idempotency_key = ?`,
+				params: [input.actor.id, input.idempotencyKey],
+			});
+			if (replay?.request_hash_sha256 === requestHash) {
+				return { status: replay.to_status, replayed: true };
+			}
+			throw new ContractRepositoryError('CONTRACT_PARENT_DECISION_REJECTED');
+		}
+	}
+
+	async formContract(input: {
+		offer: StoredContractOffer;
+		admin: AdminActor;
+		idempotencyKey: string;
+		reason: string;
+		requestId: string;
+		now: string;
+		certificateId: string;
+		certificateSourceJson: string;
+		certificateSourceHash: string;
+	}) {
+		const requestHash = await hashCanonical({ offerId: input.offer.id, reason: input.reason });
+		const prior = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
+			sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
+			WHERE actor_user_id = ? AND idempotency_key = ?`,
+			params: [input.admin.id, input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.request_hash_sha256 !== requestHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { contractId: prior.result_ref, replayed: true };
+		}
+		const acceptance = await this.db.first<{
+			id: string;
+			accepted_at: string;
+			contract_hash: string;
+		}>({
+			sql: `SELECT id, accepted_at, contract_hash FROM contract_acceptances
+			WHERE contract_offer_id = ? AND user_id = ?`,
+			params: [input.offer.id, input.offer.user_id],
+		});
+		if (!acceptance || acceptance.contract_hash !== input.offer.contract_hash) {
+			throw new ContractRepositoryError('PARENT_ACCEPTANCE_REQUIRED');
+		}
+
+		const contractId = crypto.randomUUID();
+		const auditId = crypto.randomUUID();
+		const actionId = crypto.randomUUID();
+		const activeUntil = input.offer.effective_to
+			? calendarDayAfter(input.offer.effective_to)
+			: null;
+		const operationalTable = input.offer.enrollment_id ? 'enrollments' : 'service_engagements';
+		const operationalId = input.offer.enrollment_id ?? input.offer.service_engagement_id;
+		const groupGuard = input.offer.enrollment_id
+			? `AND EXISTS (SELECT 1 FROM course_groups course WHERE course.id = contract_offers.course_group_id
+				AND COALESCE(course.capacity_override, course.capacity_default) IS NOT NULL
+				AND (SELECT COUNT(DISTINCT enrollment.child_id) FROM enrollments enrollment
+					WHERE enrollment.course_group_id = course.id AND enrollment.status = 'active'
+						AND enrollment.active_from <= contract_offers.effective_from
+						AND (enrollment.active_until IS NULL OR contract_offers.effective_from < enrollment.active_until))
+					< COALESCE(course.capacity_override, course.capacity_default))`
+			: '';
+		const fundingGuard = input.offer.funding_authorization_id
+			? `AND EXISTS (SELECT 1 FROM funding_authorizations authorization
+				WHERE authorization.id = contract_offers.funding_authorization_id
+					AND authorization.request_id = contract_offers.individual_request_id
+					AND authorization.status = 'approved'
+					AND authorization.valid_from <= contract_offers.effective_from
+					AND authorization.valid_until >= contract_offers.effective_to
+					AND EXISTS (SELECT 1 FROM authorization_documents document
+						WHERE document.authorization_id = authorization.id
+							AND document.review_status = 'approved'
+							AND document.archive_r2_key IS NOT NULL
+							AND document.deleted_at IS NULL
+							AND document.replaced_by_document_id IS NULL)
+					AND NOT EXISTS (SELECT 1 FROM authorization_documents document
+						WHERE document.authorization_id = authorization.id
+							AND document.deleted_at IS NULL
+							AND document.replaced_by_document_id IS NULL
+							AND (document.review_status <> 'approved' OR document.archive_r2_key IS NULL)))`
+			: '';
+		try {
+			await this.db.batch([
+				{
+					sql: `INSERT INTO contracts
+						(id, contract_offer_id, contract_number, user_id, child_id,
+						 course_group_id, individual_request_id, funding_authorization_id,
+						 enrollment_id, service_engagement_id, operational_status,
+						 parent_acceptance_id, formed_at, formed_by_admin_user_id,
+						 activated_at, effective_from, effective_to,
+						 auto_renewal_blocked_at, created_at)
+					SELECT ?, id, contract_number, user_id, child_id, course_group_id,
+						individual_request_id, funding_authorization_id, enrollment_id,
+						service_engagement_id, 'active', ?, ?, ?, ?, effective_from,
+						effective_to, NULL, ? FROM contract_offers
+					WHERE id = ? AND status = 'accepted_by_parent' AND contract_hash = ?
+						AND expires_at > ? AND ${ACTIVE_ADMIN}
+						AND EXISTS (SELECT 1 FROM users owner WHERE owner.id = user_id
+							AND owner.account_status = 'active' AND owner.is_blocked = 0)
+						AND EXISTS (SELECT 1 FROM ${operationalTable} operation
+							WHERE operation.id = ? AND operation.status = 'contract_offered')
+						${groupGuard} ${fundingGuard}`,
+					params: [contractId, acceptance.id, input.now, input.admin.id, input.now,
+						input.now, input.offer.id, input.offer.contract_hash, input.now,
+						input.admin.id, operationalId],
+				},
+				{
+					sql: `UPDATE ${operationalTable} SET status = 'active',
+						active_from = ?, active_until = ?, ${input.offer.service_engagement_id ? 'contract_id = ?,' : ''}
+						updated_at = ?
+					WHERE id = ? AND status = 'contract_offered'
+						AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
+					params: input.offer.service_engagement_id
+						? [input.offer.effective_from, activeUntil, contractId, input.now,
+							operationalId, contractId]
+						: [input.offer.effective_from, activeUntil, input.now, operationalId, contractId],
+				},
+				{
+					sql: `UPDATE contract_offers SET status = 'approved_by_admin',
+						admin_approved_at = ?, updated_at = ?
+					WHERE id = ? AND status = 'accepted_by_parent'
+						AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
+					params: [input.now, input.now, input.offer.id, contractId],
+				},
+				{
+					sql: `INSERT INTO contract_formation_certificates
+						(id, contract_id, contract_offer_id, contract_number,
+						 source_snapshot_json, source_hash, schema_version, template_version,
+						 parent_acceptance_id, parent_accepted_at, formed_by_admin_user_id,
+						 formed_at, offer_pdf_hash, render_status, attempts, error_code,
+						 certificate_pdf_r2_key, certificate_pdf_hash, generated_at,
+						 created_at, updated_at)
+					SELECT ?, ?, ?, ?, ?, ?, 'contract-formation-v1', template.template_version,
+						?, ?, ?, ?, artifact.sha256, 'pending', 0, NULL, NULL, NULL, NULL, ?, ?
+					FROM contract_offers offer
+					JOIN contract_template_versions template ON template.id = offer.template_version_id
+					JOIN contract_artifacts artifact ON artifact.contract_offer_id = offer.id
+						AND artifact.artifact_kind = 'offer_pdf'
+					WHERE offer.id = ? AND offer.status = 'approved_by_admin'
+						AND EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
+					params: [input.certificateId, contractId, input.offer.id,
+						input.offer.contract_number, input.certificateSourceJson,
+						input.certificateSourceHash, acceptance.id, acceptance.accepted_at,
+						input.admin.id, input.now, input.now, input.now,
+						input.offer.id, contractId],
+				},
+				...(['formed', 'activated'] as const).map<StatementSpec>((eventType) => ({
+					sql: `INSERT INTO contract_events
+						(id, contract_id, event_type, effective_at, reason_code,
+						 source_offer_id, actor_user_id, metadata_json, dedupe_key, created_at)
+					SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
+					params: [crypto.randomUUID(), contractId, eventType,
+						eventType === 'formed' ? input.now : `${input.offer.effective_from}T00:00:00.000Z`,
+						input.reason, input.offer.id, input.admin.id,
+						JSON.stringify({ effectiveFrom: input.offer.effective_from,
+							effectiveTo: input.offer.effective_to }),
+						`${eventType}:${contractId}`, input.now, contractId],
+				})),
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'contract.formed_and_activated', 'contract',
+						?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
+					params: [auditId, input.admin.id, contractId, input.requestId,
+						JSON.stringify({ offerId: input.offer.id, effectiveFrom: input.offer.effective_from }),
+						input.now, contractId],
+				},
+				{
+					sql: `INSERT INTO contract_admin_actions
+						(id, contract_offer_id, action, actor_user_id, idempotency_key,
+						 request_hash_sha256, result_ref, audit_event_id, created_at)
+					SELECT ?, ?, 'form_activate', ?, ?, ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+					params: [actionId, input.offer.id, input.admin.id, input.idempotencyKey,
+						requestHash, contractId, auditId, input.now, auditId],
+				},
+				{
+					sql: `INSERT INTO contract_outbox_events
+						(id, event_type, source_kind, source_id, payload_json, dedupe_key,
+						 status, created_at)
+					SELECT ?, 'contract_formed', 'contract', ?, ?, ?, 'pending', ?
+					WHERE EXISTS (SELECT 1 FROM contracts WHERE id = ?)`,
+					params: [crypto.randomUUID(), contractId,
+						JSON.stringify({ contractId, certificateId: input.certificateId }),
+						`contract-formed:${contractId}`, input.now, contractId],
+				},
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'form_activate', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM contracts WHERE id = ?)
+						AND EXISTS (SELECT 1 FROM contract_formation_certificates
+							WHERE id = ? AND source_hash = ?)
+						AND EXISTS (SELECT 1 FROM ${operationalTable} WHERE id = ? AND status = 'active')
+						AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [crypto.randomUUID(), contractId, actionId, input.admin.id,
+						auditId, contractId, input.certificateId, input.certificateSourceHash,
+						operationalId, actionId, input.now],
+				},
+			]);
+			return { contractId, replayed: false };
+		} catch (error) {
+			const replay = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
+				sql: `SELECT request_hash_sha256, result_ref FROM contract_admin_actions
+				WHERE actor_user_id = ? AND idempotency_key = ?`,
+				params: [input.admin.id, input.idempotencyKey],
+			});
+			if (replay?.request_hash_sha256 === requestHash) {
+				return { contractId: replay.result_ref, replayed: true };
+			}
+			throw new ContractRepositoryError('CONTRACT_FORMATION_REJECTED', { cause: error });
+		}
+	}
+
+	loadCertificateByContract(contractId: string) {
+		return this.db.first<{
+			id: string;
+			contract_id: string;
+			contract_offer_id: string;
+			contract_number: string;
+			source_snapshot_json: string;
+			source_hash: string;
+			template_version: string;
+			parent_accepted_at: string;
+			formed_at: string;
+			offer_pdf_hash: string;
+			render_status: 'pending' | 'rendering' | 'ready' | 'failed';
+			attempts: number;
+		}>({
+			sql: `SELECT id, contract_id, contract_offer_id, contract_number,
+				source_snapshot_json, source_hash, template_version, parent_accepted_at,
+				formed_at, offer_pdf_hash, render_status, attempts
+			FROM contract_formation_certificates WHERE contract_id = ?`,
+			params: [contractId],
+		});
+	}
+
+	async completeCertificate(input: {
+		certificateId: string;
+		contractId: string;
+		offerId: string;
+		template: StoredTemplateVersion;
+		key: string;
+		size: number;
+		sha256: string;
+		sourceHash: string;
+		now: string;
+	}) {
+		await this.db.batch([
+			{
+				sql: `UPDATE contract_formation_certificates SET render_status = 'ready',
+					attempts = attempts + 1, error_code = NULL, certificate_pdf_r2_key = ?,
+					certificate_pdf_hash = ?, generated_at = ?, updated_at = ?
+				WHERE id = ? AND contract_id = ? AND source_hash = ?
+					AND render_status IN ('pending', 'failed') AND attempts < 3`,
+				params: [input.key, input.sha256, input.now, input.now, input.certificateId,
+					input.contractId, input.sourceHash],
+			},
+			{
+				sql: `INSERT INTO contract_artifacts
+					(id, contract_offer_id, formation_certificate_id, artifact_kind,
+					 private_r2_key, content_type, size_bytes, sha256, source_hash,
+					 template_version_id, renderer_id, renderer_contract_version,
+					 worker_compatibility_date, created_at)
+				SELECT ?, NULL, ?, 'formation_certificate_pdf', ?, 'application/pdf',
+					?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (
+					SELECT 1 FROM contract_formation_certificates WHERE id = ?
+						AND render_status = 'ready' AND certificate_pdf_hash = ?)`,
+				params: [crypto.randomUUID(), input.certificateId, input.key, input.size,
+					input.sha256, input.sourceHash, input.template.id, input.template.renderer_id,
+					input.template.renderer_contract_version, input.template.worker_compatibility_date,
+					input.now, input.certificateId, input.sha256],
+			},
+			...(['parent', 'verein'] as const).map<StatementSpec>((role) => ({
+				sql: `INSERT INTO contract_deliveries
+					(id, contract_offer_id, contract_id, artifact_kind, artifact_hash,
+					 channel, recipient_role, recipient_user_id, delivery_status,
+					 dedupe_key, delivered_at, access_expires_at, created_at)
+				SELECT ?, ?, ?, 'formation_certificate_pdf', ?, 'portal', ?,
+					CASE WHEN ? = 'parent' THEN contract.user_id ELSE NULL END,
+					'available', ?, ?, NULL, ? FROM contracts contract
+				WHERE contract.id = ? AND EXISTS (SELECT 1 FROM contract_formation_certificates
+					WHERE id = ? AND render_status = 'ready')`,
+				params: [crypto.randomUUID(), input.offerId, input.contractId, input.sha256,
+					role, role, `formation-certificate:${role}:${input.contractId}`,
+					input.now, input.now, input.contractId, input.certificateId],
+			})),
+		]);
+	}
+
+	markCertificateFailed(certificateId: string, errorCode: string, now: string) {
+		return this.db.run({
+			sql: `UPDATE contract_formation_certificates SET render_status = 'failed',
+				attempts = attempts + 1, error_code = ?, updated_at = ?
+			WHERE id = ? AND render_status IN ('pending', 'failed') AND attempts < 3`,
+			params: [errorCode, now, certificateId],
+		});
+	}
+
+	loadOwnedContract(userId: string, contractId: string) {
+		return this.db.first<{
+			id: string;
+			contract_offer_id: string;
+			contract_kind: ContractTemplateId;
+			effective_to: string | null;
+			enrollment_id: string | null;
+			service_engagement_id: string | null;
+			distance_legal_profile: 'offline_only' | 'widerruf_applicable' | 'widerruf_not_applicable_312g_2_9';
+			kuendigung_function_required: number;
+		}>( {
+			sql: `SELECT contract.id, contract.contract_offer_id, offer.contract_kind,
+				contract.effective_to, contract.enrollment_id, contract.service_engagement_id,
+				template.distance_legal_profile, template.kuendigung_function_required
+			FROM contracts contract
+			JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+			JOIN contract_template_versions template ON template.id = offer.template_version_id
+			JOIN users owner ON owner.id = contract.user_id
+			WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
+				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+			params: [contractId, userId],
+		});
+	}
+
+	async recordEndRequest(input: {
+		actor: AuthenticatedUser;
+		contract: Awaited<ReturnType<ContractRepository['loadOwnedContract']>> & {};
+		kind: 'withdrawal' | 'ordinary_termination' | 'extraordinary_termination' | 'mutual_termination_request';
+		requestedEffectiveOn: string | null;
+		calculatedEffectiveOn: string | null;
+		requestTextVersion: string;
+		idempotencyKey: string;
+		requestHash: string;
+		requestId: string;
+		now: string;
+	}) {
+		const prior = await this.db.first<{
+			id: string;
+			requested_by_user_id: string | null;
+			request_hash: string;
+			status: string;
+			calculated_effective_on: string | null;
+		}>({
+			sql: `SELECT id, requested_by_user_id, request_hash, status, calculated_effective_on
+			FROM contract_end_requests WHERE idempotency_key = ?`,
+			params: [input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.requested_by_user_id !== input.actor.id || prior.request_hash !== input.requestHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { requestId: prior.id, status: prior.status,
+				calculatedEffectiveOn: prior.calculated_effective_on, replayed: true };
+		}
+		const endRequestId = crypto.randomUUID();
+		const auditId = crypto.randomUUID();
+		const initialStatus = input.kind === 'withdrawal' ? 'completed' : 'received';
+		const firstEvent = input.kind === 'withdrawal' ? 'withdrawal_received' : 'termination_received';
+		const statements: StatementSpec[] = [
+			{
+				sql: `INSERT INTO contract_end_requests
+					(id, contract_id, requested_by_user_id, submission_channel,
+					 requester_identity_evidence_json, kind, requested_effective_on,
+					 received_at, recorded_at, server_ingested_at, request_text_version,
+					 request_hash, idempotency_key, status, calculated_effective_on,
+					 admin_reason, reviewed_by, reviewed_at, external_debt_check_result,
+					 confirmation_delivery_id, created_at, updated_at)
+				SELECT ?, contract.id, ?, 'authenticated_portal', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+					NULL, NULL, NULL, NULL, NULL, ?, ? FROM contracts contract
+				JOIN users owner ON owner.id = contract.user_id
+				WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+				params: [endRequestId, input.actor.id, input.kind, input.requestedEffectiveOn,
+					input.now, input.now, input.now, input.requestTextVersion, input.requestHash,
+					input.idempotencyKey, initialStatus, input.calculatedEffectiveOn, input.now,
+					input.now, input.contract.id, input.actor.id],
+			},
+			{
+				sql: `INSERT INTO contract_events
+					(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
+					 actor_user_id, metadata_json, dedupe_key, created_at)
+				SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+				WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+				params: [crypto.randomUUID(), input.contract.id, firstEvent, input.now, input.kind,
+					input.contract.contract_offer_id, input.actor.id,
+					JSON.stringify({ requestId: endRequestId, requestedEffectiveOn: input.requestedEffectiveOn,
+						calculatedEffectiveOn: input.calculatedEffectiveOn }),
+					`end-received:${endRequestId}`, input.now, endRequestId],
+			},
+			...(input.kind === 'ordinary_termination' && input.contract.contract_kind === 'group_yearly'
+				? [{
+					sql: `UPDATE contracts SET auto_renewal_blocked_at = ? WHERE id = ?
+						AND EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+					params: [input.now, input.contract.id, endRequestId],
+				}, {
+					sql: `INSERT INTO contract_events
+						(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
+						 actor_user_id, metadata_json, dedupe_key, created_at)
+					SELECT ?, ?, 'renewal_blocked', ?, 'ordinary_termination', ?, ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+					params: [crypto.randomUUID(), input.contract.id, input.now,
+						input.contract.contract_offer_id, input.actor.id,
+						JSON.stringify({ requestId: endRequestId, contractualEnd: input.contract.effective_to }),
+						`renewal-blocked:${endRequestId}`, input.now, endRequestId],
+				}] satisfies StatementSpec[] : []),
+			...(input.kind === 'withdrawal'
+				? [{
+					sql: `UPDATE contracts SET operational_status = 'terminated'
+						WHERE id = ? AND EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+					params: [input.contract.id, endRequestId],
+				}, {
+					sql: `UPDATE ${input.contract.enrollment_id ? 'enrollments' : 'service_engagements'}
+						SET status = 'ended', updated_at = ? WHERE id = ? AND status = 'active'`,
+					params: [input.now, input.contract.enrollment_id ?? input.contract.service_engagement_id],
+				}, {
+					sql: `INSERT INTO contract_events
+						(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
+						 actor_user_id, metadata_json, dedupe_key, created_at)
+					SELECT ?, ?, 'withdrawn', ?, 'statutory_withdrawal', ?, ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+					params: [crypto.randomUUID(), input.contract.id, input.now,
+						input.contract.contract_offer_id, input.actor.id,
+						JSON.stringify({ requestId: endRequestId }), `withdrawn:${endRequestId}`,
+						input.now, endRequestId],
+				}] satisfies StatementSpec[] : []),
+			{
+				sql: `INSERT INTO contract_outbox_events
+					(id, event_type, source_kind, source_id, payload_json, dedupe_key, status, created_at)
+				SELECT ?, 'termination_received', 'contract_end_request', ?, ?, ?, 'pending', ?
+				WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+				params: [crypto.randomUUID(), endRequestId,
+					JSON.stringify({ requestId: endRequestId, confirmation: 'durable_medium_required' }),
+					`termination-confirmation:${endRequestId}`, input.now, endRequestId],
+			},
+			{
+				sql: `INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, created_at)
+				SELECT ?, ?, 'user', 'contract.end_request.received', 'contract_end_request',
+					?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)`,
+				params: [auditId, input.actor.id, endRequestId, input.requestId,
+					JSON.stringify({ kind: input.kind, calculatedEffectiveOn: input.calculatedEffectiveOn }),
+					input.now, endRequestId],
+			},
+			{
+				sql: `INSERT INTO contract_action_assertions
+					(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+					 assertion_passed, created_at)
+				VALUES (?, 'end_request', ?, ?, ?, ?, CASE WHEN
+					EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ?)
+					AND EXISTS (SELECT 1 FROM contract_outbox_events WHERE source_id = ?)
+					AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+				THEN 1 ELSE 0 END, ?)`,
+				params: [crypto.randomUUID(), input.contract.id, endRequestId, input.actor.id,
+					auditId, endRequestId, endRequestId, auditId, input.now],
+			},
+		];
+		try {
+			await this.db.batch(statements);
+			return { requestId: endRequestId, status: initialStatus,
+				calculatedEffectiveOn: input.calculatedEffectiveOn, replayed: false };
+		} catch (error) {
+			throw new ContractRepositoryError('CONTRACT_END_REQUEST_REJECTED', { cause: error });
+		}
+	}
+
+	loadEndRequestForAdmin(endRequestId: string) {
+		return this.db.first<{
+			id: string;
+			contract_id: string;
+			contract_offer_id: string;
+			kind: 'withdrawal' | 'ordinary_termination' | 'extraordinary_termination' | 'mutual_termination_request';
+			status: string;
+			calculated_effective_on: string | null;
+		}>({
+			sql: `SELECT request.id, request.contract_id, contract.contract_offer_id,
+				request.kind, request.status, request.calculated_effective_on
+			FROM contract_end_requests request JOIN contracts contract ON contract.id = request.contract_id
+			WHERE request.id = ?`,
+			params: [endRequestId],
+		});
+	}
+
+	async reviewEndRequest(input: {
+		admin: AdminActor;
+		request: Awaited<ReturnType<ContractRepository['loadEndRequestForAdmin']>> & {};
+		decision: 'effective_date_confirmed' | 'disputed' | 'approved' | 'declined';
+		effectiveOn: string | null;
+		reason: string;
+		externalDebtCheckResult: 'not_checked' | 'no_debt_reported' | 'debt_reported' | 'unknown';
+		idempotencyKey: string;
+		requestHash: string;
+		requestId: string;
+		now: string;
+	}) {
+		const prior = await this.loadAdminAction(input.admin.id, input.idempotencyKey);
+		if (prior) {
+			if (prior.action !== 'termination_review' || prior.request_hash_sha256 !== input.requestHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { endRequestId: prior.result_ref, status: input.decision, replayed: true };
+		}
+		const auditId = crypto.randomUUID();
+		const actionId = crypto.randomUUID();
+		const eventType = input.decision === 'effective_date_confirmed'
+			? 'termination_effective_date_confirmed'
+			: input.decision === 'disputed'
+				? 'termination_disputed'
+				: input.decision === 'approved'
+					? 'mutual_termination_approved'
+					: 'mutual_termination_declined';
+		try {
+			await this.db.batch([
+				{
+					sql: `UPDATE contract_end_requests SET status = ?,
+						calculated_effective_on = CASE WHEN ? = 'effective_date_confirmed'
+							THEN COALESCE(?, calculated_effective_on) ELSE calculated_effective_on END,
+						admin_reason = ?, reviewed_by = ?, reviewed_at = ?,
+						external_debt_check_result = ?, updated_at = ?
+					WHERE id = ? AND status = 'received' AND ${ACTIVE_ADMIN}
+						AND ((kind = 'mutual_termination_request' AND ? IN ('approved', 'declined'))
+							OR (kind <> 'mutual_termination_request'
+								AND ? IN ('effective_date_confirmed', 'disputed')))`,
+					params: [input.decision, input.decision, input.effectiveOn, input.reason,
+						input.admin.id, input.now, input.externalDebtCheckResult, input.now,
+						input.request.id, input.admin.id, input.decision, input.decision],
+				},
+				{
+					sql: `INSERT INTO contract_events
+						(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
+						 actor_user_id, metadata_json, dedupe_key, created_at)
+					SELECT ?, request.contract_id, ?, ?, ?, contract.contract_offer_id, ?, ?, ?, ?
+					FROM contract_end_requests request JOIN contracts contract ON contract.id = request.contract_id
+					WHERE request.id = ? AND request.status = ? AND request.reviewed_by = ?`,
+					params: [crypto.randomUUID(), eventType, input.now, input.reason,
+						input.admin.id, JSON.stringify({ endRequestId: input.request.id,
+							effectiveOn: input.effectiveOn }), `termination-review:${input.request.id}`,
+						input.now, input.request.id, input.decision, input.admin.id],
+				},
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'contract.termination_reviewed', 'contract_end_request',
+						?, ?, ?, ? FROM contract_end_requests request
+					WHERE request.id = ? AND request.status = ? AND request.reviewed_by = ?`,
+					params: [auditId, input.admin.id, input.request.id, input.requestId,
+						JSON.stringify({ decision: input.decision, effectiveOn: input.effectiveOn }),
+						input.now, input.request.id, input.decision, input.admin.id],
+				},
+				{
+					sql: `INSERT INTO contract_admin_actions
+						(id, contract_offer_id, action, actor_user_id, idempotency_key,
+						 request_hash_sha256, result_ref, audit_event_id, created_at)
+					SELECT ?, ?, 'termination_review', ?, ?, ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
+					params: [actionId, input.request.contract_offer_id, input.admin.id,
+						input.idempotencyKey, input.requestHash, input.request.id, auditId,
+						input.now, auditId],
+				},
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'termination_review', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM contract_end_requests WHERE id = ? AND status = ?)
+						AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
+						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [crypto.randomUUID(), input.request.id, actionId, input.admin.id,
+						auditId, input.request.id, input.decision, actionId, auditId, input.now],
+				},
+			]);
+			return { endRequestId: input.request.id, status: input.decision, replayed: false };
+		} catch (error) {
+			throw new ContractRepositoryError('TERMINATION_REVIEW_REJECTED', { cause: error });
+		}
+	}
+
+	async listAdminEndRequests() {
+		const rows = await this.db.all<{
+			id: string;
+			contract_number: string;
+			kind: string;
+			status: string;
+			received_at: string;
+			requested_effective_on: string | null;
+			calculated_effective_on: string | null;
+		}>({
+			sql: `SELECT request.id, contract.contract_number, request.kind, request.status,
+				request.received_at, request.requested_effective_on, request.calculated_effective_on
+			FROM contract_end_requests request JOIN contracts contract ON contract.id = request.contract_id
+			ORDER BY request.received_at DESC, request.id DESC LIMIT 100`,
+		});
+		return rows.results;
+	}
+
+	async recordAttendanceNotice(input: {
+		actor: AuthenticatedUser;
+		contractId: string;
+		noticeTextVersion: string;
+		idempotencyKey: string;
+		noticeHash: string;
+		requestId: string;
+		now: string;
+	}) {
+		const prior = await this.db.first<{ id: string; requested_by_user_id: string; notice_hash: string }>({
+			sql: `SELECT id, requested_by_user_id, notice_hash FROM service_attendance_notices
+			WHERE idempotency_key = ?`, params: [input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.requested_by_user_id !== input.actor.id || prior.notice_hash !== input.noticeHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { noticeId: prior.id, replayed: true };
+		}
+		const noticeId = crypto.randomUUID();
+		const taskId = crypto.randomUUID();
+		const auditId = crypto.randomUUID();
+		try {
+			await this.db.batch([
+				{
+					sql: `INSERT INTO admin_review_tasks
+						(id, kind, source_kind, source_id, reason_code, safe_summary,
+						 status, assigned_to, resolution, created_at, updated_at, resolved_at)
+					VALUES (?, 'contract_attendance', 'service_attendance_notice', ?,
+						'attendance_ceased', 'Attendance notice requires teacher notification',
+						'open', NULL, NULL, ?, ?, NULL)`,
+					params: [taskId, noticeId, input.now, input.now],
+				},
+				{
+					sql: `INSERT INTO service_attendance_notices
+						(id, contract_id, service_engagement_id, requested_by_user_id,
+						 submission_channel, received_at, recorded_at, server_ingested_at,
+						 notice_text_version, notice_hash, idempotency_key,
+						 teacher_notification_task_id, confirmation_delivery_id,
+						 scheduled_lesson_ref, agreed_start_at, agreed_place_ref,
+						 teacher_arrived_at, teacher_waited_until, teacher_attested_by,
+						 teacher_attested_at, created_at)
+					SELECT ?, contract.id, contract.service_engagement_id, ?, 'authenticated_portal',
+						?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?
+					FROM contracts contract JOIN users owner ON owner.id = contract.user_id
+					JOIN service_engagements engagement ON engagement.id = contract.service_engagement_id
+					WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
+						AND owner.account_status = 'active' AND owner.is_blocked = 0
+						AND engagement.status IN ('active', 'funding_review')`,
+					params: [noticeId, input.actor.id, input.now, input.now, input.now,
+						input.noticeTextVersion, input.noticeHash, input.idempotencyKey, taskId, input.now,
+						input.contractId, input.actor.id],
+				},
+				{
+					sql: `UPDATE service_engagements SET status = 'ended', attendance_ceased_at = ?,
+						attendance_notice_id = ?, updated_at = ? WHERE contract_id = ?
+						AND status IN ('active', 'funding_review')
+						AND EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
+					params: [input.now, noticeId, input.now, input.contractId, noticeId],
+				},
+				{
+					sql: `INSERT INTO contract_events
+						(id, contract_id, event_type, effective_at, reason_code, source_offer_id,
+						 actor_user_id, metadata_json, dedupe_key, created_at)
+					SELECT ?, contract.id, 'attendance_ceased', ?, 'parent_notice',
+						contract.contract_offer_id, ?, ?, ?, ? FROM contracts contract
+					WHERE contract.id = ? AND EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
+					params: [crypto.randomUUID(), input.now, input.actor.id,
+						JSON.stringify({ noticeId }), `attendance-ceased:${noticeId}`, input.now,
+						input.contractId, noticeId],
+				},
+				{
+					sql: `INSERT INTO contract_outbox_events
+						(id, event_type, source_kind, source_id, payload_json, dedupe_key, status, created_at)
+					SELECT ?, 'attendance_ceased', 'service_attendance_notice', ?, ?, ?, 'pending', ?
+					WHERE EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
+					params: [crypto.randomUUID(), noticeId,
+						JSON.stringify({ noticeId, confirmation: 'durable_medium_required' }),
+						`attendance-confirmation:${noticeId}`, input.now, noticeId],
+				},
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'contract.attendance_ceased', 'contract', ?, ?,
+						'{"futureUnits":"ceased"}', ?
+					WHERE EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
+					params: [auditId, input.actor.id, input.contractId, input.requestId,
+						input.now, noticeId],
+				},
+			]);
+			return { noticeId, replayed: false };
+		} catch (error) {
+			throw new ContractRepositoryError('ATTENDANCE_NOTICE_REJECTED', { cause: error });
+		}
+	}
+
+	loadMediaDecisionContext(userId: string, childId: string, contactVersionId: string) {
+		return this.db.first<{
+			contact_id: string;
+			snapshot_hash: string;
+			approval_status: string;
+			compliance_assessment_status: string;
+		}>({
+			sql: `SELECT contact.id AS contact_id, contact.snapshot_hash,
+				contact.approval_status, contact.compliance_assessment_status
+			FROM children child JOIN users owner ON owner.id = child.owner_user_id
+			JOIN media_withdrawal_contact_versions contact ON contact.id = ?
+			WHERE child.id = ? AND child.owner_user_id = ?
+				AND child.family_number_id = owner.family_number_id
+				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+			params: [contactVersionId, childId, userId],
+		});
+	}
+
+	async recordMediaDecision(input: {
+		actor: AuthenticatedUser;
+		childId: string;
+		captureScopesJson: string;
+		publicationChannelsJson: string;
+		textVersion: string;
+		contactVersionId: string;
+		contactSnapshotHash: string;
+		decision: 'granted' | 'declined';
+		idempotencyKey: string;
+		evidenceHash: string;
+		requestId: string;
+		now: string;
+	}) {
+		const prior = await this.db.first<{ id: string; user_id: string; evidence_hash: string }>({
+			sql: `SELECT id, user_id, evidence_hash FROM media_consents WHERE request_dedupe_key = ?`,
+			params: [input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.user_id !== input.actor.id || prior.evidence_hash !== input.evidenceHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { consentId: prior.id, replayed: true };
+		}
+		const consentId = crypto.randomUUID();
+		const auditId = crypto.randomUUID();
+		try {
+			await this.db.batch([
+				{
+					sql: `INSERT INTO media_consents
+						(id, user_id, child_id, capture_scopes_json, publication_channels_json,
+						 text_version, withdrawal_contact_version_id, withdrawal_contact_snapshot_hash,
+						 decision, decision_source, decided_at, received_at, effective_from,
+						 recorded_by_user_id, recorded_at, evidence_hash, request_dedupe_key,
+						 source_contract_offer_id, source_privacy_request_id, supersedes_consent_id, created_at)
+					SELECT ?, ?, child.id, ?, ?, ?, ?, ?, ?, 'portal', ?, ?, ?, ?, ?, ?, ?,
+						NULL, NULL, NULL, ? FROM children child
+					JOIN users owner ON owner.id = child.owner_user_id
+					JOIN media_withdrawal_contact_versions contact ON contact.id = ?
+					WHERE child.id = ? AND child.owner_user_id = ?
+						AND owner.account_status = 'active' AND owner.is_blocked = 0
+						AND contact.approval_status = 'approved' AND contact.snapshot_hash = ?`,
+					params: [consentId, input.actor.id, input.captureScopesJson,
+						input.publicationChannelsJson, input.textVersion, input.contactVersionId,
+						input.contactSnapshotHash, input.decision, input.now, input.now, input.now,
+						input.actor.id, input.now, input.evidenceHash, input.idempotencyKey,
+						input.now, input.contactVersionId, input.childId, input.actor.id,
+						input.contactSnapshotHash],
+				},
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'media.decision', 'media_consent', ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM media_consents WHERE id = ?)`,
+					params: [auditId, input.actor.id, consentId, input.requestId,
+						JSON.stringify({ decision: input.decision }), input.now, consentId],
+				},
+			]);
+			return { consentId, replayed: false };
+		} catch (error) {
+			throw new ContractRepositoryError('MEDIA_DECISION_REJECTED', { cause: error });
+		}
+	}
+
+	async recordMediaWithdrawal(input: {
+		admin: AdminActor;
+		ownerUserId: string;
+		childId: string;
+		captureScopesJson: string;
+		publicationChannelsJson: string;
+		channel: 'office' | 'email' | 'phone';
+		receivedAt: string;
+		evidenceHash: string;
+		idempotencyKey: string;
+		requestId: string;
+		now: string;
+	}) {
+		const prior = await this.db.first<{ id: string; evidence_hash: string; recorded_by_user_id: string | null }>({
+			sql: `SELECT id, evidence_hash, recorded_by_user_id FROM media_consents
+			WHERE request_dedupe_key = ?`, params: [input.idempotencyKey],
+		});
+		if (prior) {
+			if (prior.recorded_by_user_id !== input.admin.id || prior.evidence_hash !== input.evidenceHash) {
+				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { consentId: prior.id, replayed: true };
+		}
+		const revokedId = crypto.randomUUID();
+		const auditId = crypto.randomUUID();
+		try {
+			await this.db.batch([
+				{
+					sql: `INSERT INTO media_consents
+						(id, user_id, child_id, capture_scopes_json, publication_channels_json,
+						 text_version, withdrawal_contact_version_id, withdrawal_contact_snapshot_hash,
+						 decision, decision_source, decided_at, received_at, effective_from,
+						 recorded_by_user_id, recorded_at, evidence_hash, request_dedupe_key,
+						 source_contract_offer_id, source_privacy_request_id, supersedes_consent_id, created_at)
+					SELECT ?, grant.user_id, grant.child_id, ?, ?, grant.text_version,
+						grant.withdrawal_contact_version_id, grant.withdrawal_contact_snapshot_hash,
+						'revoked', ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, grant.id, ?
+					FROM media_consents grant JOIN children child ON child.id = grant.child_id
+					JOIN users owner ON owner.id = child.owner_user_id
+					WHERE grant.id = (SELECT candidate.id FROM media_consents candidate
+						WHERE candidate.child_id = ? AND candidate.user_id = ? AND candidate.decision = 'granted'
+							AND candidate.capture_scopes_json = ? AND candidate.publication_channels_json = ?
+							AND NOT EXISTS (SELECT 1 FROM media_consents revoke
+								WHERE revoke.supersedes_consent_id = candidate.id AND revoke.decision = 'revoked')
+						ORDER BY candidate.effective_from DESC, candidate.created_at DESC LIMIT 1)
+						AND child.owner_user_id = ? AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND ${ACTIVE_ADMIN}`,
+					params: [revokedId, input.captureScopesJson, input.publicationChannelsJson,
+						input.channel, input.receivedAt, input.receivedAt, input.receivedAt,
+						input.admin.id, input.now, input.evidenceHash, input.idempotencyKey, input.now,
+						input.childId, input.ownerUserId, input.captureScopesJson,
+						input.publicationChannelsJson, input.ownerUserId, input.admin.id],
+				},
+				{
+					sql: `INSERT INTO contract_outbox_events
+						(id, event_type, source_kind, source_id, payload_json, dedupe_key, status, created_at)
+					SELECT ?, 'media_withdrawn', 'media_consent', ?, ?, ?, 'pending', ?
+					WHERE EXISTS (SELECT 1 FROM media_consents WHERE id = ?)`,
+					params: [crypto.randomUUID(), revokedId,
+						JSON.stringify({ consentId: revokedId, effectiveFrom: input.receivedAt }),
+						`media-withdrawn:${revokedId}`, input.now, revokedId],
+				},
+				{
+					sql: `INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					SELECT ?, ?, 'user', 'media.withdrawal_recorded', 'media_consent', ?, ?, ?, ?
+					WHERE EXISTS (SELECT 1 FROM media_consents WHERE id = ?)`,
+					params: [auditId, input.admin.id, revokedId, input.requestId,
+						JSON.stringify({ channel: input.channel, receivedAt: input.receivedAt }),
+						input.now, revokedId],
+				},
+			]);
+			return { consentId: revokedId, replayed: false };
+		} catch (error) {
+			throw new ContractRepositoryError('MEDIA_WITHDRAWAL_REJECTED', { cause: error });
+		}
+	}
+
+	async listOwnerHistory(userId: string) {
+		const rows = await this.db.all<{
+			id: string;
+			contract_id: string | null;
+			contract_number: string;
+			contract_kind: string;
+			status: string;
+			child_name: string;
+			effective_from: string;
+			effective_to: string | null;
+			contract_hash: string | null;
+			created_at: string;
+		}>({
+			sql: `SELECT offer.id, contract.id AS contract_id, offer.contract_number,
+				offer.contract_kind, offer.status, child.full_name AS child_name,
+				offer.effective_from, offer.effective_to, offer.contract_hash, offer.created_at
+			FROM contract_offers offer
+			JOIN users owner ON owner.id = offer.user_id
+			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
+			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
+			WHERE offer.user_id = ? AND owner.account_status = 'active' AND owner.is_blocked = 0
+			ORDER BY offer.created_at DESC, offer.id DESC LIMIT 100`,
+			params: [userId],
+		});
+		return rows.results;
+	}
+
+	async loadOwnerOfferDetail(userId: string, offerId: string) {
+		const offer = await this.db.first<StoredContractOffer & {
+			child_name: string;
+			contract_id: string | null;
+			operational_status: string | null;
+			media_contact_version_id: string | null;
+			distance_legal_profile: string;
+		}>({
+			sql: `SELECT offer.*, child.full_name AS child_name, contract.id AS contract_id,
+				contract.operational_status, template.media_contact_version_id,
+				template.distance_legal_profile
+			FROM contract_offers offer
+			JOIN users owner ON owner.id = offer.user_id
+			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
+			JOIN contract_template_versions template ON template.id = offer.template_version_id
+			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
+			WHERE offer.id = ? AND offer.user_id = ? AND owner.account_status = 'active'
+				AND owner.is_blocked = 0`,
+			params: [offerId, userId],
+		});
+		if (!offer) return null;
+		const artifacts = await this.db.all<{
+			id: string;
+			artifact_kind: string;
+			sha256: string;
+			created_at: string;
+		}>({
+			sql: `SELECT artifact.id, artifact.artifact_kind, artifact.sha256, artifact.created_at
+			FROM contract_artifacts artifact
+			WHERE artifact.contract_offer_id = ? OR artifact.formation_certificate_id IN (
+				SELECT id FROM contract_formation_certificates WHERE contract_offer_id = ?)
+			ORDER BY artifact.created_at, artifact.id`,
+			params: [offerId, offerId],
+		});
+		return { ...offer, artifacts: artifacts.results };
+	}
+
+	async loadArtifactForOwner(userId: string, artifactId: string) {
+		return this.db.first<{ id: string; private_r2_key: string; content_type: string; sha256: string }>({
+			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type, artifact.sha256
+			FROM contract_artifacts artifact
+			JOIN contract_offers offer ON offer.id = artifact.contract_offer_id
+				OR offer.id = (SELECT certificate.contract_offer_id
+					FROM contract_formation_certificates certificate
+					WHERE certificate.id = artifact.formation_certificate_id)
+			JOIN users owner ON owner.id = offer.user_id
+			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
+			WHERE artifact.id = ? AND offer.user_id = ?
+				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+			params: [artifactId, userId],
+		});
+	}
+
+	loadArtifactForAdmin(adminUserId: string, artifactId: string) {
+		return this.db.first<{ id: string; private_r2_key: string; content_type: string; sha256: string }>({
+			sql: `SELECT artifact.id, artifact.private_r2_key, artifact.content_type, artifact.sha256
+			FROM contract_artifacts artifact JOIN users admin ON admin.id = ?
+			WHERE artifact.id = ? AND admin.role = 'admin' AND admin.account_status = 'active'
+				AND admin.is_blocked = 0`,
+			params: [adminUserId, artifactId],
+		});
+	}
+
+	async auditArtifactRead(input: {
+		artifactId: string;
+		actorUserId: string;
+		actorKind: 'user';
+		requestId: string;
+		now: string;
+	}) {
+		await this.db.run({
+			sql: `INSERT INTO audit_events
+				(id, actor_user_id, actor_kind, action, target_kind, target_id,
+				 request_id, safe_diff_json, created_at)
+			SELECT ?, ?, ?, 'contract_artifact.read', 'contract_artifact', id,
+				?, '{"forcedAttachment":true}', ? FROM contract_artifacts WHERE id = ?`,
+			params: [crypto.randomUUID(), input.actorUserId, input.actorKind, input.requestId,
+				input.now, input.artifactId],
+		});
+	}
+
+	async listAdminOffers(query = '') {
+		const q = query.toLocaleLowerCase('de-DE');
+		const rows = await this.db.all<{
+			id: string;
+			contract_number: string;
+			contract_kind: string;
+			status: string;
+			render_status: string;
+			child_name: string;
+			expires_at: string;
+			contract_id: string | null;
+			certificate_status: string | null;
+			artifacts_json: string;
+		}>({
+			sql: `SELECT offer.id, offer.contract_number, offer.contract_kind,
+				offer.status, offer.render_status, child.full_name AS child_name,
+				offer.expires_at, contract.id AS contract_id,
+				certificate.render_status AS certificate_status,
+				COALESCE((SELECT json_group_array(json_object('id', artifact.id,
+					'kind', artifact.artifact_kind)) FROM contract_artifacts artifact
+					WHERE artifact.contract_offer_id = offer.id
+						OR artifact.formation_certificate_id = certificate.id), '[]') AS artifacts_json
+			FROM contract_offers offer JOIN children child ON child.id = offer.child_id
+			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
+			LEFT JOIN contract_formation_certificates certificate
+				ON certificate.contract_id = contract.id
+			WHERE (? = '' OR lower(child.full_name) LIKE ? OR offer.contract_number = ?
+				OR offer.id = ?) ORDER BY offer.created_at DESC, offer.id DESC LIMIT 100`,
+			params: [q, `%${q}%`, query, query],
+		});
+		return rows.results.map((row) => ({
+			...row,
+			artifacts: JSON.parse(row.artifacts_json) as Array<{ id: string; kind: string }>,
+		}));
+	}
+}

@@ -31,6 +31,14 @@ const rawConfigSchema = z.object({
 	DOCUMENT_UPLOAD_RATE_LIMIT_WINDOW_SECONDS: z.string().optional(),
 	DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS: z.string().optional(),
 	DOCUMENT_AV_ATTESTATION_TEXT_VERSION: z.string().min(1).optional(),
+	CONTRACT_SEND_ENABLED: z.enum(['true', 'false']).optional(),
+	CONTRACT_RENDERER: z.enum(['disabled', 'synthetic_test', 'browser_run']).optional(),
+	CONTRACT_PDF_MAX_HTML_BYTES: z.string().optional(),
+	CONTRACT_PDF_MAX_BYTES: z.string().optional(),
+	CONTRACT_MAX_RENDER_ATTEMPTS: z.string().optional(),
+	BROWSER_RUN_DAILY_BUDGET_MS: z.string().optional(),
+	MEDIA_ONLINE_GRANT_ENABLED: z.enum(['true', 'false']).optional(),
+	PUBLIC_CONTRACT_FUNCTIONS_ENABLED: z.enum(['true', 'false']).optional(),
 });
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
@@ -48,6 +56,7 @@ export interface RuntimeConfig {
 	auth: AuthRuntimeConfig;
 	pricing: PricingRuntimeConfig;
 	documents: DocumentRuntimeConfig;
+	contracts: ContractRuntimeConfig;
 }
 
 export interface AuthRuntimeConfig {
@@ -82,6 +91,17 @@ export interface DocumentRuntimeConfig {
 	uploadRateLimitWindowSeconds: number;
 	uploadRateLimitMaxAttempts: number;
 	avAttestationTextVersion: string;
+}
+
+export interface ContractRuntimeConfig {
+	sendEnabled: boolean;
+	renderer: 'disabled' | 'synthetic_test' | 'browser_run';
+	maxHtmlBytes: number;
+	maxPdfBytes: number;
+	maxRenderAttempts: number;
+	browserDailyBudgetMs: number;
+	mediaOnlineGrantEnabled: boolean;
+	publicFunctionsEnabled: boolean;
 }
 
 export class RuntimeConfigError extends Error {
@@ -235,6 +255,11 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 
 	const authPublicEnabled = parsed.data.AUTH_PUBLIC_ENABLED === 'true';
 	const documentUploadEnabled = parsed.data.DOCUMENT_UPLOAD_ENABLED === 'true';
+	const contractSendEnabled = parsed.data.CONTRACT_SEND_ENABLED === 'true';
+	const contractRenderer = parsed.data.CONTRACT_RENDERER ?? 'disabled';
+	const mediaOnlineGrantEnabled = parsed.data.MEDIA_ONLINE_GRANT_ENABLED === 'true';
+	const publicContractFunctionsEnabled =
+		parsed.data.PUBLIC_CONTRACT_FUNCTIONS_ENABLED === 'true';
 	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
 	if (authPublicEnabled && !parsed.data.PRIVACY_NOTICE_VERSION) {
 		issues.push('PRIVACY_NOTICE_VERSION:required_when_auth_enabled');
@@ -280,6 +305,27 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	if (parsed.data.APP_ENV === 'production' && documentUploadEnabled) {
 		issues.push('DOCUMENT_UPLOAD_ENABLED:production_operational_gate_not_released');
+	}
+	if (contractSendEnabled && contractRenderer === 'disabled') {
+		issues.push('CONTRACT_RENDERER:required_when_send_enabled');
+	}
+	if (contractRenderer === 'synthetic_test' && parsed.data.APP_ENV !== 'test') {
+		issues.push('CONTRACT_RENDERER:synthetic_test_only');
+	}
+	if (contractSendEnabled && !isR2Bucket(env?.R2_BUCKET)) {
+		issues.push('R2_BUCKET:required_when_contract_send_enabled');
+	}
+	if (contractSendEnabled && contractRenderer === 'browser_run' && !isBrowserRun(env?.BROWSER)) {
+		issues.push('BROWSER:required_when_contract_send_enabled');
+	}
+	if (parsed.data.APP_ENV === 'production' && contractSendEnabled) {
+		issues.push('CONTRACT_SEND_ENABLED:production_legal_gates_not_released');
+	}
+	if (parsed.data.APP_ENV === 'production' && mediaOnlineGrantEnabled) {
+		issues.push('MEDIA_ONLINE_GRANT_ENABLED:compliance_gate_not_released');
+	}
+	if (parsed.data.APP_ENV === 'production' && publicContractFunctionsEnabled) {
+		issues.push('PUBLIC_CONTRACT_FUNCTIONS_ENABLED:legal_profile_not_released');
 	}
 
 	const auth: AuthRuntimeConfig = {
@@ -450,6 +496,50 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('DOCUMENT_MAX_AUTHORIZATION_BYTES:risk_ceiling_exceeded');
 	}
 
+	const contracts: ContractRuntimeConfig = {
+		sendEnabled: contractSendEnabled,
+		renderer: contractRenderer,
+		maxHtmlBytes: parseIntegerConfig({
+			name: 'CONTRACT_PDF_MAX_HTML_BYTES',
+			value: parsed.data.CONTRACT_PDF_MAX_HTML_BYTES,
+			defaultValue: 2 * 1024 * 1024,
+			minimum: 1,
+			issues,
+		}),
+		maxPdfBytes: parseIntegerConfig({
+			name: 'CONTRACT_PDF_MAX_BYTES',
+			value: parsed.data.CONTRACT_PDF_MAX_BYTES,
+			defaultValue: 10 * 1024 * 1024,
+			minimum: 1,
+			issues,
+		}),
+		maxRenderAttempts: parseIntegerConfig({
+			name: 'CONTRACT_MAX_RENDER_ATTEMPTS',
+			value: parsed.data.CONTRACT_MAX_RENDER_ATTEMPTS,
+			defaultValue: 3,
+			minimum: 1,
+			issues,
+		}),
+		browserDailyBudgetMs: parseIntegerConfig({
+			name: 'BROWSER_RUN_DAILY_BUDGET_MS',
+			value: parsed.data.BROWSER_RUN_DAILY_BUDGET_MS,
+			defaultValue: 60_000,
+			minimum: 1,
+			issues,
+		}),
+		mediaOnlineGrantEnabled,
+		publicFunctionsEnabled: publicContractFunctionsEnabled,
+	};
+	if (contracts.maxHtmlBytes > 2 * 1024 * 1024) {
+		issues.push('CONTRACT_PDF_MAX_HTML_BYTES:risk_ceiling_exceeded');
+	}
+	if (contracts.maxPdfBytes > 10 * 1024 * 1024) {
+		issues.push('CONTRACT_PDF_MAX_BYTES:risk_ceiling_exceeded');
+	}
+	if (contracts.maxRenderAttempts > 3) {
+		issues.push('CONTRACT_MAX_RENDER_ATTEMPTS:risk_ceiling_exceeded');
+	}
+
 	if (issues.length > 0) throw new RuntimeConfigError(issues);
 
 	return {
@@ -468,6 +558,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		auth,
 		pricing,
 		documents,
+		contracts,
 	};
 }
 

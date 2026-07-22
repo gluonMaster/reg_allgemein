@@ -29,6 +29,10 @@ export const requestAdminNavigation: readonly AdminNavigationItem[] = [
 	{ id: 'requests', href: '/admin/requests', labelKey: 'admin.nav.requests', order: 66 },
 ];
 
+export const contractAdminNavigation: readonly AdminNavigationItem[] = [
+	{ id: 'contracts', href: '/admin/contracts', labelKey: 'admin.nav.contracts', order: 67 },
+];
+
 export function buildAdminNavigation(
 	extensions: readonly AdminNavigationItem[] = []
 ): readonly AdminNavigationItem[] {

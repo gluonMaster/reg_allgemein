@@ -11,11 +11,22 @@ import { RequestAdminRepository } from './admin-repository';
 import { RequestAdminService } from './admin-service';
 import { IndividualRequestRepository } from './request-repository';
 import { IndividualRequestService } from './request-service';
+import {
+	ContractDocumentMutationGuard,
+	ContractFundingDiscontinuityContributor,
+	ContractRequestMutationGuard,
+} from '$lib/server/contracts/boundaries';
 
 export function createRequestRuntime(config: RuntimeConfig) {
 	const database = new DatabaseBoundary(config.db);
-	const requestRepository = new IndividualRequestRepository(database);
-	const documentRepository = new AuthorizationDocumentRepository(database);
+	const requestRepository = new IndividualRequestRepository(
+		database,
+		new ContractRequestMutationGuard()
+	);
+	const documentRepository = new AuthorizationDocumentRepository(
+		database,
+		new ContractDocumentMutationGuard()
+	);
 	const store = documentStore(config.r2Bucket);
 	const limiter = new AuthRateLimiter(
 		new FoundationRepository(database),
@@ -23,7 +34,11 @@ export function createRequestRuntime(config: RuntimeConfig) {
 		config.documents.uploadRateLimitWindowSeconds,
 		config.documents.uploadRateLimitMaxAttempts
 	);
-	const adminRepository = new RequestAdminRepository(database, config.documents);
+	const adminRepository = new RequestAdminRepository(
+		database,
+		config.documents,
+		new ContractFundingDiscontinuityContributor(database)
+	);
 	return {
 		requestRepository,
 		requestService: new IndividualRequestService(requestRepository, config.pricing),

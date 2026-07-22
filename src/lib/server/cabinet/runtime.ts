@@ -10,6 +10,36 @@ import { TrialRepository } from '$lib/server/trials/trial-repository';
 import { TrialService } from '$lib/server/trials/trial-service';
 import { IndividualRequestRepository } from '$lib/server/requests/request-repository';
 import { IndividualRequestService } from '$lib/server/requests/request-service';
+import { ContractRepository } from '$lib/server/contracts/contract-repository';
+import type { CabinetReadModelContributor } from './cabinet-service';
+
+class ContractCabinetContributor implements CabinetReadModelContributor {
+	constructor(private readonly contracts: ContractRepository) {}
+
+	async contribute(userId: string) {
+		const rows = await this.contracts.listOwnerHistory(userId);
+		return {
+			contractOffers: rows
+				.filter((row) => ['draft', 'sent', 'accepted_by_parent'].includes(row.status))
+				.map((row) => ({
+					id: row.id,
+					label: `${row.child_name} · ${row.contract_number}`,
+					status: row.status,
+					detail: `${row.contract_kind} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
+					href: `/contracts/${row.id}`,
+				})),
+			contractHistory: rows
+				.filter((row) => !['draft', 'sent', 'accepted_by_parent'].includes(row.status))
+				.map((row) => ({
+					id: row.id,
+					label: `${row.child_name} · ${row.contract_number}`,
+					status: row.status,
+					detail: `${row.contract_kind} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
+					href: `/contracts/${row.id}`,
+				})),
+		};
+	}
+}
 
 export function createCabinetRuntime(config: RuntimeConfig) {
 	const database = new DatabaseBoundary(config.db);
@@ -24,11 +54,13 @@ export function createCabinetRuntime(config: RuntimeConfig) {
 		new IndividualRequestRepository(database),
 		config.pricing
 	);
+	const contractContributor = new ContractCabinetContributor(new ContractRepository(database));
 	return {
 		repository,
 		service: new CabinetService(repository, new CabinetPricingService(config.pricing), [
 			trialService,
 			requestService,
+			contractContributor,
 		]),
 	};
 }

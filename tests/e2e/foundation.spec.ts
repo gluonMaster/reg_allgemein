@@ -36,6 +36,8 @@ test('renders the mobile German registration form and protects account routes', 
 	expect(protectedTrialResponse?.status()).toBe(401);
 	const protectedRequestResponse = await page.goto('/requests/new?kind=nachhilfe');
 	expect(protectedRequestResponse?.status()).toBe(401);
+	const protectedContractResponse = await page.goto('/contracts/00000000-0000-4000-8000-000000000001');
+	expect(protectedContractResponse?.status()).toBe(401);
 });
 
 test('rejects unauthenticated admin pages and direct mutation actions', async ({
@@ -46,6 +48,8 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 	expect(shellResponse?.status()).toBe(401);
 	const requestReviewResponse = await page.goto('/admin/requests');
 	expect(requestReviewResponse?.status()).toBe(401);
+	const contractsResponse = await page.goto('/admin/contracts');
+	expect(contractsResponse?.status()).toBe(401);
 
 	const mutationResponse = await request.post('/admin/users/unknown-user?/block', {
 		form: {
@@ -54,4 +58,9 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 		},
 	});
 	expect(mutationResponse.status()).toBe(401);
+	const contractMutationResponse = await request.post(
+		'/contracts/00000000-0000-4000-8000-000000000001?/accept',
+		{ form: { expectedContractHash: 'a'.repeat(64), idempotencyKey: 'e2e-contract-denial' } }
+	);
+	expect(contractMutationResponse.status()).toBe(401);
 });

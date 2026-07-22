@@ -232,4 +232,41 @@ describe('runtime configuration', () => {
 			DOCUMENT_UPLOAD_ENABLED: 'true',
 		})).toThrow(RuntimeConfigError);
 	});
+
+	it('keeps contract send, public functions, and online media grant fail-closed', () => {
+		const defaults = loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
+		});
+		expect(defaults.contracts).toEqual({
+			sendEnabled: false,
+			renderer: 'disabled',
+			maxHtmlBytes: 2 * 1024 * 1024,
+			maxPdfBytes: 10 * 1024 * 1024,
+			maxRenderAttempts: 3,
+			browserDailyBudgetMs: 60_000,
+			mediaOnlineGrantEnabled: false,
+			publicFunctionsEnabled: false,
+		});
+		expect(() => loadRuntimeConfig({
+			APP_ENV: 'development', PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173', DB: fakeDb,
+			CONTRACT_SEND_ENABLED: 'true', CONTRACT_RENDERER: 'disabled',
+		})).toThrow(RuntimeConfigError);
+		expect(() => loadRuntimeConfig({
+			APP_ENV: 'production', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org', DB: fakeDb,
+			R2_BUCKET: fakeR2, ASSETS: fakeAssets, BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32), TURNSTILE_SITE_KEY: 'site', TURNSTILE_SECRET_KEY: 'secret',
+			CONTRACT_SEND_ENABLED: 'true', CONTRACT_RENDERER: 'browser_run',
+		})).toThrow(RuntimeConfigError);
+		for (const forbidden of [
+			{ MEDIA_ONLINE_GRANT_ENABLED: 'true' },
+			{ PUBLIC_CONTRACT_FUNCTIONS_ENABLED: 'true' },
+		]) {
+			expect(() => loadRuntimeConfig({
+				APP_ENV: 'production', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org', DB: fakeDb,
+				R2_BUCKET: fakeR2, ASSETS: fakeAssets, BROWSER: fakeBrowser,
+				JWT_SECRET: 'x'.repeat(32), TURNSTILE_SITE_KEY: 'site', TURNSTILE_SECRET_KEY: 'secret',
+				...forbidden,
+			})).toThrow(RuntimeConfigError);
+		}
+	});
 });

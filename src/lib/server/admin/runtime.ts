@@ -7,6 +7,7 @@ import {
 	type FamilyCorrectionContributor,
 } from './family-correction-repository';
 import { AdminMutationRepository } from './mutation-repository';
+import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
 
 export function createAdminConsoleRuntime(
 	config: RuntimeConfig,
@@ -18,7 +19,7 @@ export function createAdminConsoleRuntime(
 		mutations: new AdminMutationRepository(database),
 		familyCorrection: new FamilyCorrectionRepository(
 			database,
-			options.familyCorrectionContributor
+			options.familyCorrectionContributor ?? new ContractFamilyCorrectionContributor(database)
 		),
 	};
 }

@@ -32,6 +32,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0007_admin_console.sql',
 			'0008_catalog_trials.sql',
 			'0009_requests_documents.sql',
+			'0010_contracts.sql',
 		]);
 
 		const result = await context.db

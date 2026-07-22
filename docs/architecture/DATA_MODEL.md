@@ -750,11 +750,23 @@ status `expired` не добавляется.
 
 ## Договоры
 
+### `contract_provider_versions` и `media_withdrawal_contact_versions`
+
+- provider version хранит immutable provider/payment-terms snapshot и hash;
+- media contact version хранит immutable German-text/contact snapshot и hash,
+  `approval_status` и `compliance_assessment_status`
+  (`not_assessed|passed|failed`).
+
+Approved versions не изменяются. `compliance_assessment_status=passed` является
+обязательным, но не единственным gate для online media grant; synthetic fixture
+остаётся `not_assessed` и не открывает grant.
+
 ### `contract_template_versions`
 
 - `id`, `template_id`
   (`group_yearly|group_monthly|individual_hourly|nachhilfe_hourly`);
 - `template_version`, `render_schema_version`, `clause_set_version`;
+- `provider_version_id`, `media_contact_version_id` nullable;
 - `template_bundle_r2_key`, `bundle_hash`, `html_source_hash`,
   `css_source_hash`;
 - `asset_manifest_json`, `font_manifest_json`, `required_fields_json`;
@@ -766,9 +778,8 @@ status `expired` не добавляется.
 - `distance_legal_profile`
   (`offline_only|widerruf_applicable|widerruf_not_applicable_312g_2_9`),
   `distance_legal_basis_version`, `distance_legal_basis_hash`,
-  `kuendigung_function_required`;
-- `approved_by`, `approved_at`, `valid_from`, `valid_to`,
-  `retention_control_id`, `created_at`.
+  `kuendigung_function_required`, `early_performance_supported`;
+- `approved_by`, `approved_at`, `valid_from`, `valid_to`, `created_at`.
 
 `UNIQUE(template_id, template_version)`. После `approved` bundle и manifests
 immutable и удерживаются не короче связанных договоров; automatic archive purge
@@ -801,9 +812,9 @@ collision или stale `family_version` завершает reservation fail-clos
 
 ### `contract_offers`
 
-- `id`, `series_id`, `version`, `offer_number`, `contract_number` nullable,
-  `user_id`, `child_id`, `family_number_id_at_issue` nullable,
-  `family_display_id_at_issue` nullable, `family_version_at_issue` nullable;
+- `id`, `series_id`, `version`, `offer_number`, `contract_number`,
+  `user_id`, `child_id`, `family_number_id_at_issue`,
+  `family_display_id_at_issue`, `family_version_at_issue`;
 - `course_group_id`, `individual_request_id`, `funding_authorization_id`,
   `enrollment_id`, `service_engagement_id`;
 - `contract_kind`, `template_version_id`, `render_schema_version`,
@@ -825,13 +836,13 @@ collision или stale `family_version` завершает reservation fail-clos
 - `clauses_manifest_json`, `attachments_manifest_json`,
   `privacy_notice_version`, `media_clause_version` nullable,
   `media_decision_snapshot_json` nullable;
-- `render_input_hash`, `artifact_manifest_json`, `contract_html_r2_key`,
-  `contract_pdf_r2_key`, `contract_hash`;
+- `render_input_json`, `render_input_hash`, `source_manifest_json`,
+  `source_manifest_hash`, `contract_html_r2_key`, `contract_pdf_r2_key`,
+  `contract_hash`;
 - `render_status` (`not_started|rendering|ready|failed`);
 - `status` (`draft|sent|accepted_by_parent|declined_by_parent|approved_by_admin|cancelled|expired|superseded`);
 - `sent_at`, `expires_at`, `accepted_at`, `declined_at`;
 - `admin_approved_at`, `cancelled_at`, `status_reason`;
-- `retention_control_id` nullable;
 - `created_at`, `updated_at`.
 
 После `sent` содержимое immutable. Изменение условий создает новую version и
@@ -876,10 +887,22 @@ send и revoke не мутируют offer/PDF. Отсутствие explicit gr
 publication. Production требует approved German text и immutable withdrawal
 contact snapshot/hash, но не меняет уже отправленный offer при последующем
 обновлении контактов.
-`UNIQUE(series_id, version)` и
-`UNIQUE(offer_number)`. Для непустого `contract_number` действует partial
-unique. В production `contract_number` обязателен до render и `sent`; null
-допустим только для synthetic test/draft до reservation.
+`UNIQUE(series_id, version)`, `UNIQUE(offer_number)` и
+`UNIQUE(contract_number)`. Номер current family резервируется атомарно при
+создании draft до render; synthetic test использует тот же non-reuse invariant.
+
+### `contract_artifacts`
+
+- `id`, ровно одна ссылка `contract_offer_id XOR formation_certificate_id`;
+- `artifact_kind` (`offer_html|offer_pdf|formation_certificate_pdf`),
+  `private_r2_key`, `content_type`, `size_bytes`, `sha256`, `source_hash`;
+- `template_version_id`, `renderer_id`, `renderer_contract_version`,
+  `worker_compatibility_date`, `created_at`.
+
+По одному artifact каждого kind на offer/certificate. Строки и private object
+append-only: download повторно вычисляет SHA-256, проверяет owner/admin на сервере
+и пишет audit. HTML/PDF сохраняются до перевода offer в `sent`; неудачная D1
+фиксация удаляет только новую orphan R2 copy.
 
 ### `contract_render_attempts`
 
@@ -887,7 +910,7 @@ unique. В production `contract_number` обязателен до render и `sen
 - `renderer_id` (`cloudflare-browser-run-pdf-v1`),
   `worker_compatibility_date`;
 - `source_manifest_hash`, `started_at`, `finished_at`;
-- `status` (`running|succeeded|retryable_failed|failed`), `error_code`;
+- `status` (`succeeded|retryable_failed|failed`), `error_code`;
 - `browser_ms_used`, `pdf_size_bytes`, `pdf_sha256`, `retry_after_seconds`.
 
 `UNIQUE(contract_offer_id, attempt_no)`. Не более трёх retry на 429/5xx;
@@ -904,15 +927,19 @@ hash имеют разные назначения.
 
 `UNIQUE(contract_offer_id)`. Parent acceptance и последующее admin
 approval/activation — разные действия; только второе формирует contract.
+Отдельная append-only `contract_parent_actions` хранит accept и decline,
+request hash/idempotency, offer hash, versioned text, user-agent и ограниченное
+по сроку hashed IP evidence. `contract_admin_actions` аналогично дедуплицирует
+create/render-send/form-activate и связывает каждое действие с audit event.
 
 ### `contract_deliveries`
 
 - `id`, `contract_offer_id`, `contract_id` nullable,
   `artifact_kind` (`offer_html|offer_pdf|formation_certificate_pdf`),
   `artifact_hash`;
-- `channel` (`portal|email`), `recipient_user_id`, `delivery_status`;
-- `dedupe_key`, `delivered_at`, `access_expires_at`, `provider_message_id`,
-  `created_at`.
+- `channel` (`portal|fake_email`), `recipient_role` (`parent|verein`),
+  `recipient_user_id`, `delivery_status`;
+- `dedupe_key`, `delivered_at`, `access_expires_at`, `created_at`.
 
 Delivery evidence не содержит body договора. Повторная доставка имеет
 idempotency/dedupe key; ссылка на private artifact не заменяет запись события.
@@ -924,8 +951,7 @@ idempotency/dedupe key; ссылка на private artifact не заменяет
 - `parent_acceptance_id`, `parent_accepted_at`, `formed_by_admin_user_id`,
   `formed_at`, `offer_pdf_hash`;
 - `render_status` (`pending|rendering|ready|failed`), `attempts`, `error_code`;
-- `certificate_pdf_r2_key`, `certificate_pdf_hash`, `generated_at`,
-  `retention_control_id`, timestamps.
+- `certificate_pdf_r2_key`, `certificate_pdf_hash`, `generated_at`, timestamps.
 
 `UNIQUE(contract_id)` и `UNIQUE(contract_offer_id)`. Formation transaction
 создаёт immutable source snapshot/hash с обеими сторонами/timestamps и pending
@@ -942,7 +968,7 @@ certificate record. Renderer может retry только тот же source ha
 - `operational_status` (`active|terminated|expired|void`);
 - `parent_acceptance_id`, `formed_at`, `formed_by_admin_user_id`;
 - `activated_at`, `effective_from`, `effective_to`,
-  `auto_renewal_blocked_at` nullable, `retention_control_id`;
+  `auto_renewal_blocked_at` nullable;
 - `created_at`.
 
 `UNIQUE(contract_offer_id)`. Contract указывает на immutable approved offer, а
@@ -1052,7 +1078,7 @@ external receipt отдельно от `recorded_at` и не превращае�
 - `id`, `user_id`, `child_id`,
   `capture_scopes_json` (`photo|video` only),
   `publication_channels_json` (`website|social_media|print` only),
-  `text_version`, `withdrawal_contact_snapshot_json`,
+  `text_version`, `withdrawal_contact_version_id`,
   `withdrawal_contact_snapshot_hash`;
 - `decision` (`granted|declined|revoked`), `decision_source`
   (`portal|office|email|phone|account_deletion`), `decided_at`, `received_at`,

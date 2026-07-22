@@ -18,3 +18,16 @@ export function berlinCalendarDate(instant: string): string {
 	const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
 	return `${value.year}-${value.month}-${value.day}`;
 }
+
+export function calendarDayAfter(value: string): string {
+	if (!isCalendarDate(value)) throw new TypeError('value must be a valid calendar date.');
+	const next = new Date(`${value}T12:00:00.000Z`);
+	next.setUTCDate(next.getUTCDate() + 1);
+	return next.toISOString().slice(0, 10);
+}
+
+export function calendarMonthEnd(value: string): string {
+	if (!isCalendarDate(value)) throw new TypeError('value must be a valid calendar date.');
+	const [year, month] = value.split('-').map(Number);
+	return new Date(Date.UTC(year, month, 0, 12)).toISOString().slice(0, 10);
+}

@@ -512,3 +512,30 @@ a.metric-card {
 @media (max-width: 40rem) {
 	.request-shell { width: min(100% - 1rem, 64rem); }
 }
+
+.contract-shell {
+	width: min(100% - 2rem, 64rem);
+	margin: 0 auto;
+	padding: 1.5rem 0 4rem;
+}
+
+.contract-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.8rem;
+	margin-top: 1rem;
+}
+
+.contract-actions button {
+	padding: 0.7rem 1rem;
+	border: 0;
+	border-radius: 0.4rem;
+	background: #3157a4;
+	color: white;
+	font: inherit;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.contract-actions .secondary-button { background: #596273; }
+.contract-shell :focus-visible { outline: 3px solid #f2b84b; outline-offset: 2px; }

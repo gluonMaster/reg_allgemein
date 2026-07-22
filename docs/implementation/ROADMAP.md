@@ -52,7 +52,7 @@ npm run build
 | 06A | done | Admin shell, import/review/legacy/users/catalog core surfaces | 02–06 |
 | 07 | done | Published catalog, availability и полный trial workflow | 04, 06, 06A |
 | 08 | done | Nachhilfe/individual requests, private R2 documents и review | 05, 06, 06A |
-| 09 | pending | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
+| 09 | done | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
 | 10 | pending | Price review batches/items, notifications и effective-date apply | 04, 09 |
 | 11 | pending | Support/absence, email/Telegram outboxes и cron retry | 05–10 |
 | 12 | pending | Privacy export/delete, account closure, retained-archive separation и closure races | 05–11, включая 06A |

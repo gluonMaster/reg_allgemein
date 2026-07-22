@@ -250,4 +250,29 @@
 			{/each}
 		</div>
 	</section>
+
+	<section class="cabinet-card" id="contracts">
+		<h2>{translate('de', 'cabinet.contracts.openTitle')}</h2>
+		{#if data.cabinet.extensions.contractOffers.length === 0}<p>{translate('de', 'cabinet.contracts.empty')}</p>{/if}
+		<div class="activity-list">
+			{#each data.cabinet.extensions.contractOffers as offer}
+				<article class="activity-item">
+					<p class="item-kicker">{translate('de', `contract.status.${offer.status}` as 'contract.status.draft')}</p>
+					<h3>{offer.label}</h3>{#if offer.detail}<p>{offer.detail}</p>{/if}
+					{#if offer.href}<a href={offer.href}>{translate('de', 'cabinet.contracts.open')}</a>{/if}
+				</article>
+			{/each}
+		</div>
+		<h2>{translate('de', 'cabinet.contracts.historyTitle')}</h2>
+		{#if data.cabinet.extensions.contractHistory.length === 0}<p>{translate('de', 'cabinet.contracts.empty')}</p>{/if}
+		<div class="activity-list">
+			{#each data.cabinet.extensions.contractHistory as contract}
+				<article class="activity-item">
+					<p class="item-kicker">{translate('de', `contract.status.${contract.status}` as 'contract.status.draft')}</p>
+					<h3>{contract.label}</h3>{#if contract.detail}<p>{contract.detail}</p>{/if}
+					{#if contract.href}<a href={contract.href}>{translate('de', 'cabinet.contracts.open')}</a>{/if}
+				</article>
+			{/each}
+		</div>
+	</section>
 </main>
