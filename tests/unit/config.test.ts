@@ -11,6 +11,11 @@ const officialLinks = {
 	OFFICIAL_CONTACT_URL: 'https://www.kolibri-dresden.de/kontakt',
 	OFFICIAL_LINKS_VERSION: 'approved-test-links-v1',
 } as const;
+const previewTurnstile = {
+	TURNSTILE_SITE_KEY: 'test-site-key',
+	TURNSTILE_SECRET_KEY: 'test-secret-key',
+	TURNSTILE_HOSTNAMES: 'portal-preview.example.org',
+} as const;
 
 describe('runtime configuration', () => {
 	it('rejects one R2 binding object reused for archive and quarantine', () => {
@@ -125,13 +130,58 @@ describe('runtime configuration', () => {
 			ASSETS: fakeAssets,
 			BROWSER: fakeBrowser,
 			JWT_SECRET: 'x'.repeat(32),
-			TURNSTILE_SITE_KEY: 'test-site-key',
-			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			...previewTurnstile,
 			SCHEDULED_JOBS_ENABLED: 'true',
 			...officialLinks,
 		});
 
 		expect(config.appEnvironment).toBe('preview');
+		expect(config.turnstileHostnames).toEqual(['portal-preview.example.org']);
+	});
+
+	it('requires exact deployment-specific Turnstile hostnames and forbids local production hosts', () => {
+		const base = {
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			TURNSTILE_SITE_KEY: 'test-site-key',
+			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			SCHEDULED_JOBS_ENABLED: 'true',
+			...officialLinks,
+		} as const;
+
+		try {
+			loadRuntimeConfig({
+				...base,
+				APP_ENV: 'preview',
+				PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
+				TURNSTILE_HOSTNAMES: 'another-preview.example.org',
+			});
+			throw new Error('Expected preview hostname validation to fail');
+		} catch (error) {
+			expect(error).toBeInstanceOf(RuntimeConfigError);
+			expect((error as RuntimeConfigError).issues).toContain(
+				'TURNSTILE_HOSTNAMES:portal_hostname_required'
+			);
+		}
+
+		try {
+			loadRuntimeConfig({
+				...base,
+				APP_ENV: 'production',
+				PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+				TURNSTILE_HOSTNAMES: 'portal.example.org,localhost',
+			});
+			throw new Error('Expected production hostname validation to fail');
+		} catch (error) {
+			expect(error).toBeInstanceOf(RuntimeConfigError);
+			expect((error as RuntimeConfigError).issues).toContain(
+				'TURNSTILE_HOSTNAMES:local_hostname_forbidden_in_production'
+			);
+		}
 	});
 
 	it('rejects non-public origins and placeholder credentials in preview', () => {
@@ -176,8 +226,7 @@ describe('runtime configuration', () => {
 			ASSETS: fakeAssets,
 			BROWSER: fakeBrowser,
 			JWT_SECRET: 'x'.repeat(32),
-			TURNSTILE_SITE_KEY: 'test-site-key',
-			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			...previewTurnstile,
 			SCHEDULED_JOBS_ENABLED: 'true',
 			...officialLinks,
 			AUTH_PUBLIC_ENABLED: 'true',

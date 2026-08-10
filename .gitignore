@@ -45,6 +45,10 @@ KindElternDaten*
 # documentation or implementation-stage sources of truth.
 /docs/review-prompts/**
 
+# Project-local reusable agent workflows are operational aids, not canonical
+# product requirements or deployable application artifacts.
+/.claude/skills/turnstile-spin/**
+
 # Generated import/export artifacts.
 tmp/
 out/

@@ -29,15 +29,28 @@
 		<label for="email">{translate('de', 'auth.emailLabel')}</label>
 		<input id="email" name="email" type="email" autocomplete="email" required maxlength="254" />
 		<label for="password">{translate('de', 'auth.passwordLabel')}</label>
-		<input id="password" name="password" type="password" autocomplete="new-password" required maxlength="128" />
+		<input
+			id="password"
+			name="password"
+			type="password"
+			autocomplete="new-password"
+			required
+			maxlength="128"
+		/>
 		<label class="checkbox" for="privacyAccepted">
 			<input id="privacyAccepted" name="privacyAccepted" type="checkbox" required />
 			<span>{translate('de', 'auth.privacyAcceptance')}</span>
 		</label>
 		<input type="hidden" name="privacyNoticeVersion" value={data.privacyNoticeVersion} />
 		{#if data.authEnabled && data.turnstileSiteKey}
-			<div class="cf-turnstile" data-sitekey={data.turnstileSiteKey}></div>
+			<div
+				class="cf-turnstile"
+				data-sitekey={data.turnstileSiteKey}
+				data-action="registration"
+			></div>
 		{/if}
-		<button type="submit" disabled={!data.authEnabled}>{translate('de', 'auth.register.submit')}</button>
+		<button type="submit" disabled={!data.authEnabled}
+			>{translate('de', 'auth.register.submit')}</button
+		>
 	</form>
 </main>

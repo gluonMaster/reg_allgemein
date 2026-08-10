@@ -12,19 +12,19 @@
 Перед оценкой конкретного кандидата заполнить все поля. Placeholder не является
 evidence.
 
-| Поле                                 | Значение                                                                            |
-| ------------------------------------ | ----------------------------------------------------------------------------------- |
-| Release/commit SHA                   | `<IMMUTABLE_RELEASE>` — `blocked`                                                   |
-| Checklist revision                   | 2026-08-10, preview D1/R2 provision + empty-D1 migration evidence                    |
-| Preview environment/config           | D1 + two private EU R2 verified; Worker not deployed — `blocked`                    |
-| Production environment/config        | `<PRODUCTION_ENVIRONMENT>` — `blocked`                                              |
-| Portal preview/production origins    | `<APPROVED_ORIGINS>` — `blocked`                                                    |
-| Migration set                        | `0001`–`0014`; local tests + empty preview remote apply passed                      |
-| Operator/reviewer                    | `<OWNER_ROLE>` — `blocked`                                                          |
-| Release window                       | `<APPROVED_WINDOW>` — `blocked`                                                     |
-| RPO/RTO/cadence                      | не утверждены — `blocked`                                                           |
-| Production action approval           | отсутствует — `blocked`                                                             |
-| Exact official-site URL/surface list | отсутствует — `blocked`                                                             |
+| Поле                                 | Значение                                                          |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| Release/commit SHA                   | `<IMMUTABLE_RELEASE>` — `blocked`                                 |
+| Checklist revision                   | 2026-08-10, preview D1/R2 provision + empty-D1 migration evidence |
+| Preview environment/config           | D1 + two private EU R2 verified; Worker not deployed — `blocked`  |
+| Production environment/config        | `<PRODUCTION_ENVIRONMENT>` — `blocked`                            |
+| Portal preview/production origins    | `<APPROVED_ORIGINS>` — `blocked`                                  |
+| Migration set                        | `0001`–`0014`; local tests + empty preview remote apply passed    |
+| Operator/reviewer                    | `<OWNER_ROLE>` — `blocked`                                        |
+| Release window                       | `<APPROVED_WINDOW>` — `blocked`                                   |
+| RPO/RTO/cadence                      | не утверждены — `blocked`                                         |
+| Production action approval           | отсутствует — `blocked`                                           |
+| Exact official-site URL/surface list | отсутствует — `blocked`                                           |
 
 ## Правила статуса и evidence
 
@@ -57,7 +57,7 @@ filenames, полных resource IDs или local upstream paths.
 | PR-A06 Requirement/acceptance traceability  | `blocked` | [Матрица](../implementation/STAGE_13_TRACEABILITY.md) синхронизирована; independent reviews не нашли remaining HIGH/blocker; immutable/remote evidence отсутствует | Independent reviewer                                            |
 | PR-A07 `docs:check`                         | `blocked` | Passed: 138 links/51 files + 82 executable command lines                                                                                                           | Stage-13 operator + independent docs review                     |
 | PR-A08 `release:scan`                       | `blocked` | Passed: 469/469 candidates; prohibited artifact/secret/PII/control-byte findings нет; immutable rerun нужен                                                        | Security reviewer                                               |
-| PR-A09 `release:verify`                     | `blocked` | Clean chain on `4c0b43b3db85` passed 2026-08-10 before remote apply; remaining remote gates отсутствуют                                                          | Release operator                                                |
+| PR-A09 `release:verify`                     | `blocked` | Clean chain on `4c0b43b3db85` passed 2026-08-10 before remote apply; remaining remote gates отсутствуют                                                            | Release operator                                                |
 | PR-A10 Forbidden artifact/PII/secret scan   | `blocked` | Post-build scan passed и теперь fail-closed для raw controls в ожидаемо текстовых files                                                                            | Security reviewer                                               |
 | PR-A11 Markdown links                       | `blocked` | `docs:check` и independent content cold-read passed; immutable commit/full preview rehearsal отсутствуют                                                           | Documentation reviewer                                          |
 | PR-A12 Full synthetic E2E                   | `blocked` | Connected migrated-D1 register→closure flow passed 1/1; Playwright пока содержит только boundary smoke                                                             | Implement authenticated browser/preview flow                    |
@@ -69,7 +69,7 @@ filenames, полных resource IDs или local upstream paths.
 
 | Gate                                             | Статус    | Affected path / текущее evidence                                                                                            | Owner / next action                   |
 | ------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| PR-B01 Empty D1 migrations                       | `passed`  | `4c0b43b3db85`: local + empty preview remote `0001`–`0014`; pending 0, schema parity, FK violations 0, users 0, 2026-08-10 | Codex release operator                |
+| PR-B01 Empty D1 migrations                       | `passed`  | `4c0b43b3db85`: local + empty preview remote `0001`–`0014`; pending 0, schema parity, FK violations 0, users 0, 2026-08-10  | Codex release operator                |
 | PR-B02 Migration `0014`                          | `blocked` | Targeted upgrade/recovery tests + preview remote apply passed; protected backup/isolated restore отсутствуют                | Stage-13 DB/security review           |
 | PR-B03 Representative upgraded D1                | `blocked` | Populated `0013 → 0014` upgrade passed 1/1; файл 2/2 включает отдельный selector-rejection test; remote restore отсутствует | DB reviewer                           |
 | PR-B04 Preview D1 migration                      | `passed`  | Authorized empty EU preview D1: 14/14 applied, pending 0, 396 schema objects match local, FK violations 0, 2026-08-10       | Codex release operator                |
@@ -83,18 +83,18 @@ filenames, полных resource IDs или local upstream paths.
 
 ## C. Environment, origin и bindings
 
-| Gate                                                            | Статус    | Affected path / текущее evidence                                                                                                           | Owner / next action              |
-| --------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
-| PR-C01 Independent portal boundary                              | `blocked` | Код/config/tests отделяют Worker/origin; exact production manifest/smoke отсутствуют                                                       | Architecture/operations reviewer |
-| PR-C02 `PORTAL_PUBLIC_ORIGIN`, absolute links, host-only cookie | `blocked` | Unit tests есть; final origin и remote smoke отсутствуют                                                                                   | Security/operations owner        |
-| PR-C03 Preview/production D1 isolation                          | `blocked` | Отдельная EU preview D1 + ignored config verified; production D1/config ещё отсутствуют                                                    | Cloudflare resource owner        |
+| Gate                                                            | Статус    | Affected path / текущее evidence                                                                                                          | Owner / next action              |
+| --------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| PR-C01 Independent portal boundary                              | `blocked` | Код/config/tests отделяют Worker/origin; exact production manifest/smoke отсутствуют                                                      | Architecture/operations reviewer |
+| PR-C02 `PORTAL_PUBLIC_ORIGIN`, absolute links, host-only cookie | `blocked` | Unit tests есть; final origin и remote smoke отсутствуют                                                                                  | Security/operations owner        |
+| PR-C03 Preview/production D1 isolation                          | `blocked` | Отдельная EU preview D1 + ignored config verified; production D1/config ещё отсутствуют                                                   | Cloudflare resource owner        |
 | PR-C04 Separate private EU R2                                   | `blocked` | Два разных private EU preview buckets verified; production buckets отсутствуют                                                            | Storage/security owner           |
-| PR-C05 R2 no-public-access and archive isolation                | `blocked` | Preview archive/quarantine private, r2.dev/custom domains off; production policy/restore отсутствуют                                       | Storage/security owner           |
-| PR-C06 Browser binding/quota/budget                             | `blocked` | Binding example есть; remote conformance/monitor отсутствуют                                                                               | Operations/contract owner        |
-| PR-C07 Turnstile origin/key setup                               | `blocked` | Placeholder config; approved remote keys/smoke отсутствуют                                                                                 | Auth/security owner              |
-| PR-C08 Secrets inventory/install/rotation                       | `blocked` | Имена частично известны; provider secrets и rotation rehearsal неполны                                                                     | Security/provider owners         |
-| PR-C09 DNS/TLS/custom portal origin                             | `blocked` | Exact origin/DNS approval/smoke отсутствуют                                                                                                | DNS/operations owner             |
-| PR-C10 Release manifest external links                          | `blocked` | Final origin, outbound legal links и site surfaces не утверждены                                                                           | Product/site/legal owners        |
+| PR-C05 R2 no-public-access and archive isolation                | `blocked` | Preview archive/quarantine private, r2.dev/custom domains off; production policy/restore отсутствуют                                      | Storage/security owner           |
+| PR-C06 Browser binding/quota/budget                             | `blocked` | Binding example есть; remote conformance/monitor отсутствуют                                                                              | Operations/contract owner        |
+| PR-C07 Turnstile origin/key setup                               | `blocked` | Preview widget создан; exact `registration` action/hostname fail-closed tests passed; Worker secret и real-token/replay smoke отсутствуют | Auth/security owner              |
+| PR-C08 Secrets inventory/install/rotation                       | `blocked` | Preview Turnstile secret хранится локально через DPAPI, но не установлен в Worker; provider secrets и rotation rehearsal неполны          | Security/provider owners         |
+| PR-C09 DNS/TLS/custom portal origin                             | `blocked` | Exact origin/DNS approval/smoke отсутствуют                                                                                               | DNS/operations owner             |
+| PR-C10 Release manifest external links                          | `blocked` | Final origin, outbound legal links и site surfaces не утверждены                                                                          | Product/site/legal owners        |
 
 ## D. Scheduled jobs, monitoring и operator controls
 
@@ -181,7 +181,7 @@ filenames, полных resource IDs или local upstream paths.
 | PR-I03 Disaster-recovery runbook                  | `blocked` | [DR](DISASTER_RECOVERY.md) content cold-read passed; restore inputs/resources/rehearsal отсутствуют                           | Independent operator           |
 | PR-I04 Checklist completeness                     | `blocked` | Local ledger/owners/next actions заполнены; immutable release identity и external owners/evidence отсутствуют                 | Release owner                  |
 | PR-I05 Clean-room walkthrough всех runbooks       | `blocked` | Content walkthrough passed; full non-production provisioning/bootstrap/provider/restore execution не выполнено                | Independent operator           |
-| PR-I06 Preview deploy/post-deploy smoke           | `blocked` | Preview D1/R2 готовы и D1 migrated; Worker deploy/post-deploy smoke не выполнялись                                               | Operations owner               |
+| PR-I06 Preview deploy/post-deploy smoke           | `blocked` | Preview D1/R2 готовы и D1 migrated; Worker deploy/post-deploy smoke не выполнялись                                            | Operations owner               |
 | PR-I07 Production deploy approval                 | `blocked` | Отдельное прямое поручение отсутствует                                                                                        | Authorized release owner       |
 | PR-I08 Production migration/import/send approvals | `blocked` | Отдельные разрешения отсутствуют                                                                                              | Authorized owners по действиям |
 | PR-I09 Production post-deploy smoke               | `blocked` | Deploy не выполнялся                                                                                                          | Release/security owner         |

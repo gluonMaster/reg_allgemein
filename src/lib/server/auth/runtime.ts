@@ -50,14 +50,15 @@ export function createAuthRuntime(
 		config.appEnvironment === 'test'
 			? new FakeTurnstileVerifier()
 			: config.turnstileSecretKey
-				? new CloudflareTurnstileVerifier(config.turnstileSecretKey)
+				? new CloudflareTurnstileVerifier(
+						config.turnstileSecretKey,
+						'registration',
+						config.turnstileHostnames
+					)
 				: new DenyTurnstileVerifier();
 	const passwordHasher =
 		overrides.passwordHasher ??
-		new BcryptPasswordHasher(
-			config.auth.passwordMinLength,
-			config.auth.passwordMaxLength
-		);
+		new BcryptPasswordHasher(config.auth.passwordMinLength, config.auth.passwordMaxLength);
 	const service = new AuthService(
 		repository,
 		passwordHasher,

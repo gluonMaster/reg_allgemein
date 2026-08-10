@@ -92,7 +92,9 @@ provider и operational release gates сохраняются. Актуально
   регистра; исходный вид можно хранить отдельно для отображения. Регистрация не
   может занять адрес, зарезервированный чужим неистекшим pending email-change.
 - **AUTH-02.** Регистрация требует email, пароля, имени, фамилии, принятия
-  актуальной privacy notice и успешного Turnstile.
+  актуальной privacy notice и успешного Turnstile. Серверная Siteverify-проверка
+  принимает только `success=true`, action `registration` и точный hostname
+  текущего deployment; production allowlist не содержит local hostnames.
 - **AUTH-03.** Пароль хранится только как современный salted hash. Ограничения
   длины проверяются до хеширования; пароль и hash никогда не логируются.
 - **AUTH-04.** Подтверждение email использует случайный одноразовый токен,

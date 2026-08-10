@@ -29,6 +29,7 @@ declare global {
 				JWT_SECRET?: string;
 				TURNSTILE_SITE_KEY?: string;
 				TURNSTILE_SECRET_KEY?: string;
+				TURNSTILE_HOSTNAMES?: string;
 				AUTH_PUBLIC_ENABLED?: string;
 				PRIVACY_NOTICE_VERSION?: string;
 				AUTH_VERIFICATION_TTL_SECONDS?: string;

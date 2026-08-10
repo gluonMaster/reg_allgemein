@@ -50,6 +50,9 @@ MVP готов, когда:
 - Успешная registration transaction создаёт ровно одно immutable
   acknowledgement выбранной privacy notice version; rollback или отсутствие
   явного принятия не оставляет account/acknowledgement. (`AUTH-02`, `REL-01`)
+- Регистрация отклоняет Turnstile token при `success=false`, несовпадении action
+  `registration`, отсутствии hostname или несовпадении hostname с exact allowlist
+  текущего deployment; production config не принимает local hostnames. (`AUTH-02`)
 - Два аккаунта с одинаковым паролем получают разные salted hashes. Пароль
   отклоняется по ограничению длины до hash operation; исходный пароль и hash не
   появляются в логах, telemetry или тексте ошибки. (`AUTH-03`)

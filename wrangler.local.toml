@@ -9,6 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 APP_ENV = "development"
 PORTAL_PUBLIC_ORIGIN = "http://127.0.0.1:5173"
+TURNSTILE_HOSTNAMES = "127.0.0.1,localhost"
 AUTH_PUBLIC_ENABLED = "false"
 EMAIL_PROVIDER = "fake"
 EMAIL_MAX_ATTEMPTS = "5"

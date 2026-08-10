@@ -11,6 +11,7 @@ const rawConfigSchema = z.object({
 	JWT_SECRET: z.string().min(32).optional(),
 	TURNSTILE_SITE_KEY: z.string().min(1).optional(),
 	TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
+	TURNSTILE_HOSTNAMES: z.string().min(1).optional(),
 	AUTH_PUBLIC_ENABLED: z.enum(['true', 'false']).optional(),
 	EMAIL_PROVIDER: z.enum(['disabled', 'fake']).optional(),
 	EMAIL_FROM: z.string().min(1).optional(),
@@ -75,6 +76,7 @@ export interface RuntimeConfig {
 	jwtSecret?: string;
 	turnstileSiteKey?: string;
 	turnstileSecretKey?: string;
+	turnstileHostnames: readonly string[];
 	auth: AuthRuntimeConfig;
 	pricing: PricingRuntimeConfig;
 	documents: DocumentRuntimeConfig;
@@ -273,7 +275,43 @@ function validatePortalOrigin(value: string, appEnvironment: PortalEnvironment):
 	return url.origin;
 }
 
-function validateOfficialUrl(name: string, value: string | undefined, issues: string[]): string | null {
+function parseTurnstileHostnames(value: string | undefined, issues: string[]): string[] {
+	if (!value) return [];
+
+	const hostnames = new Set<string>();
+	for (const rawHostname of value.split(',')) {
+		const hostname = rawHostname.trim().toLowerCase();
+		if (!hostname) continue;
+
+		try {
+			const url = new URL(`https://${hostname}`);
+			if (
+				url.hostname !== hostname ||
+				url.origin !== `https://${hostname}` ||
+				url.pathname !== '/' ||
+				url.username ||
+				url.password ||
+				url.port ||
+				hostname.endsWith('.')
+			) {
+				throw new Error('invalid hostname');
+			}
+		} catch {
+			issues.push('TURNSTILE_HOSTNAMES:invalid_hostname');
+			continue;
+		}
+
+		hostnames.add(hostname);
+	}
+
+	return [...hostnames];
+}
+
+function validateOfficialUrl(
+	name: string,
+	value: string | undefined,
+	issues: string[]
+): string | null {
 	if (!value) return null;
 	try {
 		const url = new URL(value);
@@ -310,6 +348,12 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	const issues: string[] = [];
 	const productionLike =
 		parsed.data.APP_ENV === 'preview' || parsed.data.APP_ENV === 'production';
+	const portalPublicOrigin = validatePortalOrigin(
+		parsed.data.PORTAL_PUBLIC_ORIGIN,
+		parsed.data.APP_ENV
+	);
+	const portalHostname = new URL(portalPublicOrigin).hostname.toLowerCase();
+	const turnstileHostnames = parseTurnstileHostnames(parsed.data.TURNSTILE_HOSTNAMES, issues);
 
 	if (!isD1Database(env?.DB)) issues.push('DB:missing_or_invalid_binding');
 	if (productionLike && !isR2Bucket(env?.R2_ARCHIVE))
@@ -340,31 +384,59 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (productionLike && isPlaceholder(parsed.data.TURNSTILE_SECRET_KEY)) {
 		issues.push('TURNSTILE_SECRET_KEY:placeholder');
 	}
+	if (productionLike && turnstileHostnames.length === 0) {
+		issues.push('TURNSTILE_HOSTNAMES:required');
+	}
+	if (productionLike && !turnstileHostnames.includes(portalHostname)) {
+		issues.push('TURNSTILE_HOSTNAMES:portal_hostname_required');
+	}
+	if (
+		parsed.data.APP_ENV === 'production' &&
+		turnstileHostnames.some(
+			(hostname) =>
+				hostname === 'localhost' ||
+				hostname.endsWith('.localhost') ||
+				hostname === '127.0.0.1' ||
+				hostname === '::1'
+		)
+	) {
+		issues.push('TURNSTILE_HOSTNAMES:local_hostname_forbidden_in_production');
+	}
 
 	const authPublicEnabled = parsed.data.AUTH_PUBLIC_ENABLED === 'true';
 	const documentUploadEnabled = parsed.data.DOCUMENT_UPLOAD_ENABLED === 'true';
 	const contractSendEnabled = parsed.data.CONTRACT_SEND_ENABLED === 'true';
 	const contractRenderer = parsed.data.CONTRACT_RENDERER ?? 'disabled';
 	const mediaOnlineGrantEnabled = parsed.data.MEDIA_ONLINE_GRANT_ENABLED === 'true';
-	const publicContractFunctionsEnabled =
-		parsed.data.PUBLIC_CONTRACT_FUNCTIONS_ENABLED === 'true';
+	const publicContractFunctionsEnabled = parsed.data.PUBLIC_CONTRACT_FUNCTIONS_ENABLED === 'true';
 	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
 	const telegramProvider = parsed.data.TELEGRAM_PROVIDER ?? 'disabled';
 	const officialPrivacyUrl = validateOfficialUrl(
-		'OFFICIAL_PRIVACY_URL', parsed.data.OFFICIAL_PRIVACY_URL, issues
+		'OFFICIAL_PRIVACY_URL',
+		parsed.data.OFFICIAL_PRIVACY_URL,
+		issues
 	);
 	const officialImprintUrl = validateOfficialUrl(
-		'OFFICIAL_IMPRINT_URL', parsed.data.OFFICIAL_IMPRINT_URL, issues
+		'OFFICIAL_IMPRINT_URL',
+		parsed.data.OFFICIAL_IMPRINT_URL,
+		issues
 	);
 	const officialContactUrl = validateOfficialUrl(
-		'OFFICIAL_CONTACT_URL', parsed.data.OFFICIAL_CONTACT_URL, issues
+		'OFFICIAL_CONTACT_URL',
+		parsed.data.OFFICIAL_CONTACT_URL,
+		issues
 	);
 	const officialLinksComplete = Boolean(
-		officialPrivacyUrl && officialImprintUrl && officialContactUrl && parsed.data.OFFICIAL_LINKS_VERSION
+		officialPrivacyUrl &&
+		officialImprintUrl &&
+		officialContactUrl &&
+		parsed.data.OFFICIAL_LINKS_VERSION
 	);
 	const officialLinksPartiallyConfigured = Boolean(
-		parsed.data.OFFICIAL_PRIVACY_URL || parsed.data.OFFICIAL_IMPRINT_URL ||
-		parsed.data.OFFICIAL_CONTACT_URL || parsed.data.OFFICIAL_LINKS_VERSION
+		parsed.data.OFFICIAL_PRIVACY_URL ||
+		parsed.data.OFFICIAL_IMPRINT_URL ||
+		parsed.data.OFFICIAL_CONTACT_URL ||
+		parsed.data.OFFICIAL_LINKS_VERSION
 	);
 	if ((productionLike || officialLinksPartiallyConfigured) && !officialLinksComplete) {
 		issues.push('OFFICIAL_LINKS:complete_approved_snapshot_required');
@@ -393,6 +465,9 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (authPublicEnabled && parsed.data.APP_ENV !== 'test' && !parsed.data.TURNSTILE_SECRET_KEY) {
 		issues.push('TURNSTILE_SECRET_KEY:required_when_auth_enabled');
 	}
+	if (authPublicEnabled && parsed.data.APP_ENV !== 'test' && turnstileHostnames.length === 0) {
+		issues.push('TURNSTILE_HOSTNAMES:required_when_auth_enabled');
+	}
 	if (parsed.data.APP_ENV === 'production' && emailProvider === 'fake') {
 		issues.push('EMAIL_PROVIDER:fake_forbidden_in_production');
 	}
@@ -420,10 +495,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (documentUploadEnabled && isPlaceholder(parsed.data.JWT_SECRET)) {
 		issues.push('JWT_SECRET:placeholder');
 	}
-	if (
-		documentUploadEnabled &&
-		isPlaceholder(parsed.data.DOCUMENT_AV_ATTESTATION_TEXT_VERSION)
-	) {
+	if (documentUploadEnabled && isPlaceholder(parsed.data.DOCUMENT_AV_ATTESTATION_TEXT_VERSION)) {
 		issues.push('DOCUMENT_AV_ATTESTATION_TEXT_VERSION:placeholder');
 	}
 	if (parsed.data.APP_ENV === 'production' && documentUploadEnabled) {
@@ -728,21 +800,33 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	const operations: OperationsRuntimeConfig = {
 		scheduledJobsEnabled: parsed.data.SCHEDULED_JOBS_ENABLED === 'true',
 		outboxBatchLimit: parseIntegerConfig({
-			name: 'SCHEDULED_OUTBOX_BATCH_LIMIT', value: parsed.data.SCHEDULED_OUTBOX_BATCH_LIMIT,
-			defaultValue: 25, minimum: 1, issues,
+			name: 'SCHEDULED_OUTBOX_BATCH_LIMIT',
+			value: parsed.data.SCHEDULED_OUTBOX_BATCH_LIMIT,
+			defaultValue: 25,
+			minimum: 1,
+			issues,
 		}),
 		maintenanceBatchLimit: parseIntegerConfig({
-			name: 'SCHEDULED_MAINTENANCE_BATCH_LIMIT', value: parsed.data.SCHEDULED_MAINTENANCE_BATCH_LIMIT,
-			defaultValue: 50, minimum: 1, issues,
+			name: 'SCHEDULED_MAINTENANCE_BATCH_LIMIT',
+			value: parsed.data.SCHEDULED_MAINTENANCE_BATCH_LIMIT,
+			defaultValue: 50,
+			minimum: 1,
+			issues,
 		}),
 		leaseSeconds: parseIntegerConfig({
-			name: 'SCHEDULED_LEASE_SECONDS', value: parsed.data.SCHEDULED_LEASE_SECONDS,
-			defaultValue: 300, minimum: 30, issues,
+			name: 'SCHEDULED_LEASE_SECONDS',
+			value: parsed.data.SCHEDULED_LEASE_SECONDS,
+			defaultValue: 300,
+			minimum: 30,
+			issues,
 		}),
 	};
-	if (operations.outboxBatchLimit > 100) issues.push('SCHEDULED_OUTBOX_BATCH_LIMIT:risk_ceiling_exceeded');
-	if (operations.maintenanceBatchLimit > 100) issues.push('SCHEDULED_MAINTENANCE_BATCH_LIMIT:risk_ceiling_exceeded');
-	if (operations.leaseSeconds > 3_600) issues.push('SCHEDULED_LEASE_SECONDS:risk_ceiling_exceeded');
+	if (operations.outboxBatchLimit > 100)
+		issues.push('SCHEDULED_OUTBOX_BATCH_LIMIT:risk_ceiling_exceeded');
+	if (operations.maintenanceBatchLimit > 100)
+		issues.push('SCHEDULED_MAINTENANCE_BATCH_LIMIT:risk_ceiling_exceeded');
+	if (operations.leaseSeconds > 3_600)
+		issues.push('SCHEDULED_LEASE_SECONDS:risk_ceiling_exceeded');
 	if (productionLike && operations.scheduledJobsEnabled === false) {
 		issues.push('SCHEDULED_JOBS_ENABLED:required');
 	}
@@ -751,10 +835,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 
 	return {
 		appEnvironment: parsed.data.APP_ENV,
-		portalPublicOrigin: validatePortalOrigin(
-			parsed.data.PORTAL_PUBLIC_ORIGIN,
-			parsed.data.APP_ENV
-		),
+		portalPublicOrigin,
 		db: env?.DB as D1Database,
 		r2ArchiveBucket: isR2Bucket(env?.R2_ARCHIVE) ? env.R2_ARCHIVE : undefined,
 		r2QuarantineBucket: isR2Bucket(env?.R2_QUARANTINE) ? env.R2_QUARANTINE : undefined,
@@ -763,6 +844,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		jwtSecret: parsed.data.JWT_SECRET,
 		turnstileSiteKey: parsed.data.TURNSTILE_SITE_KEY,
 		turnstileSecretKey: parsed.data.TURNSTILE_SECRET_KEY,
+		turnstileHostnames,
 		auth,
 		pricing,
 		documents,
@@ -770,12 +852,14 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		messaging,
 		privacy,
 		operations,
-		officialLinks: officialLinksComplete ? {
-			privacyUrl: officialPrivacyUrl!,
-			imprintUrl: officialImprintUrl!,
-			contactUrl: officialContactUrl!,
-			version: parsed.data.OFFICIAL_LINKS_VERSION!,
-		} : undefined,
+		officialLinks: officialLinksComplete
+			? {
+					privacyUrl: officialPrivacyUrl!,
+					imprintUrl: officialImprintUrl!,
+					contactUrl: officialContactUrl!,
+					version: parsed.data.OFFICIAL_LINKS_VERSION!,
+				}
+			: undefined,
 	};
 }
 

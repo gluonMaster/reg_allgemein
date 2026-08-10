@@ -13,7 +13,7 @@ export const registerInputSchema = z
 		lastName: personName,
 		privacyAccepted: z.literal(true),
 		privacyNoticeVersion: z.string().min(1).max(100),
-		turnstileToken: z.string().min(1).max(4096),
+		turnstileToken: z.string().min(1).max(2048),
 	})
 	.strict();
 

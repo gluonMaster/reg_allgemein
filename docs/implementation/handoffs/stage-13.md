@@ -67,9 +67,9 @@ blockers.
 
 | Область     | Evidence                                                                                     | Остаточный gate                                             |
 | ----------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Empty D1    | local test + preview remote `0001`–`0014` apply/schema parity passed                          | production migration и isolated restore                     |
+| Empty D1    | local test + preview remote `0001`–`0014` apply/schema parity passed                         | production migration и isolated restore                     |
 | Upgraded D1 | populated `0013 → 0014` upgrade passed 1/1; migration file 2/2 с selector-rejection test     | isolated backup/restore + rollback rehearsal                |
-| R2 split    | local guards + два отдельных private EU preview buckets verified                            | production resources/policy и isolated restore              |
+| R2 split    | local guards + два отдельных private EU preview buckets verified                             | production resources/policy и isolated restore              |
 | Scheduler   | Cron allowlist, dedupe/lease, fresh clock, disabled path, audit and failure isolation passed | preview trigger/freshness/alerts                            |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
 | Imports     | local allowlist/dry-run/promote/rollback tests remain                                        | authorized current source and remote audited path           |
@@ -97,22 +97,22 @@ approved scope и не называется полным MVP.
 
 ## Проверки 2026-07-22
 
-| Команда/сценарий                          | Sanitized result                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------- |
-| `npm ci`                                  | passed после удаления generated Worker output; 269 packages installed                 |
-| `npm run check`                           | clean-source passed: 0 errors/warnings                                                |
-| Targeted Stage-13 tests                   | migration/bootstrap/scheduler/storage/download/headers/connected-flow/security passed |
-| `npm test`                                | passed: 44 files, 241/241 tests                                                       |
-| `npm run test:e2e`                        | passed: 3/3 boundary smoke; это не full authenticated lifecycle                       |
-| `npm run build`                           | passed; adapter output собран                                                         |
-| `wrangler deploy --dry-run`               | passed на placeholder example config; 68 assets, remote deploy не выполнялся          |
-| `npm audit --omit=dev`                    | passed: 0 vulnerabilities после корректной dev-only классификации build adapter       |
-| `npm run docs:check`                      | passed: 138 local links / 51 files + 82 executable command lines                      |
-| `npm run release:scan`                    | passed: 469/469 candidates; artifact/secret/PII/control-byte findings отсутствуют     |
-| `git diff --check`                        | passed после final documentation/cold-read sync                                       |
-| Preview D1 migration                      | passed 2026-08-10: 14/14, pending 0, schema parity, FK violations 0, user rows 0        |
-| Preview Worker/Browser/provider/Cron smoke| not run; Worker/providers не развёрнуты — `blocked`                                    |
-| D1/R2 isolated restore/rollback rehearsal | not run — `blocked`                                                                   |
+| Команда/сценарий                           | Sanitized result                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `npm ci`                                   | passed после удаления generated Worker output; 269 packages installed                 |
+| `npm run check`                            | clean-source passed: 0 errors/warnings                                                |
+| Targeted Stage-13 tests                    | migration/bootstrap/scheduler/storage/download/headers/connected-flow/security passed |
+| `npm test`                                 | passed: 44 files, 241/241 tests                                                       |
+| `npm run test:e2e`                         | passed: 3/3 boundary smoke; это не full authenticated lifecycle                       |
+| `npm run build`                            | passed; adapter output собран                                                         |
+| `wrangler deploy --dry-run`                | passed на placeholder example config; 68 assets, remote deploy не выполнялся          |
+| `npm audit --omit=dev`                     | passed: 0 vulnerabilities после корректной dev-only классификации build adapter       |
+| `npm run docs:check`                       | passed: 138 local links / 51 files + 82 executable command lines                      |
+| `npm run release:scan`                     | passed: 469/469 candidates; artifact/secret/PII/control-byte findings отсутствуют     |
+| `git diff --check`                         | passed после final documentation/cold-read sync                                       |
+| Preview D1 migration                       | passed 2026-08-10: 14/14, pending 0, schema parity, FK violations 0, user rows 0      |
+| Preview Worker/Browser/provider/Cron smoke | not run; Worker/providers не развёрнуты — `blocked`                                   |
+| D1/R2 isolated restore/rollback rehearsal  | not run — `blocked`                                                                   |
 
 Полный `npm audit` сохраняет три high advisory в dev-only Wrangler/Miniflare/
 Sharp tooling; совместимый upstream fix пока отсутствует, breaking
@@ -143,7 +143,7 @@ approval gates всё равно удерживают readiness в `blocked`.
 - Immutable code candidate: `4c0b43b3db85f8d799b9d28bb0ed79505809656f`;
   materialized `wrangler.preview.toml` остаётся ignored и не содержит secrets.
 - Tooling: Wrangler `4.120.0`; перед remote action чистый `npm run
-  release:verify` завершился с exit code 0.
+release:verify` завершился с exit code 0.
 - Перед apply подтверждены ровно 14 ожидаемых pending migrations, 0 прикладных
   таблиц, 0 applied migrations и Time Travel recovery point
   `2026-08-10T15:17:57.466Z`.
@@ -153,6 +153,32 @@ approval gates всё равно удерживают readiness в `blocked`.
 - Это migration evidence, а не backup/restore rehearsal: protected export,
   isolated restore и rollback/roll-forward drill остаются `blocked`.
 
+## Preview Turnstile evidence 2026-08-10
+
+- Создан отдельный Managed widget `kolibri-reg-allgemein-preview` для preview и
+  локальной разработки; его metadata повторно прочитаны через Cloudflare API.
+- Публичный sitekey записан только в ignored `wrangler.preview.toml`. Secret не
+  записывался в репозиторий или config: локальная recovery-копия зашифрована
+  Windows DPAPI для текущего пользователя и защищена user-only ACL.
+- Dummy Siteverify подтвердил корректность secret без раскрытия его значения.
+  Временный API token отозван владельцем после завершения настройки; его
+  локальный plaintext-файл больше не используется и подлежит удалению.
+- Registration widget отправляет action `registration`; сервер требует exact
+  action и deployment-specific hostname, ограничивает token 2048 символами и
+  fail-closed обрабатывает timeout/network/schema ошибки. Preview backend
+  allowlist не включает `localhost`/`127.0.0.1`; они отделены в local config.
+- Targeted `auth-security` и `config` tests прошли: 2 files, 32/32 tests;
+  `npm run check` — 0 errors/warnings.
+- Полный post-change regression run прошёл: `npm test` — 44 files, 248/248
+  tests; `npm run build` — passed.
+- Реальный fresh-token submit и проверка replay rejection на защищённом backend
+  не выполнялись: preview Worker ещё не развёрнут, remote secret не установлен,
+  public auth/email остаются выключены. Поэтому PR-C07 остаётся `blocked`.
+- Канонический Turnstile Spin bundle сохранён локально в ignored
+  `.claude/skills/turnstile-spin/`: 13 файлов, включая SvelteKit reference и
+  helper scripts. Копия побайтово сверена с установленным bundle; frontmatter и
+  shell syntax проверены. Она является operational aid и не заменяет spec/runbook.
+
 ## Release gates
 
 Полный ledger: [PRODUCTION_READINESS_CHECKLIST.md](../../operations/PRODUCTION_READINESS_CHECKLIST.md).
@@ -161,7 +187,7 @@ approval gates всё равно удерживают readiness в `blocked`.
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
 | Local implementation/traceability | `blocked`          | local full run/cold-read passed; нужен commit и rerun на immutable candidate  | release + independent reviewer |
 | Dependency security               | `blocked`          | production audit clean; review documented dev-tooling advisory on each update | dependency/security owner      |
-| Environment/origin/R2 isolation   | `blocked`          | preview D1 + private EU R2 verified; Worker/origin/production ещё отсутствуют  | Cloudflare/security owner      |
+| Environment/origin/R2 isolation   | `blocked`          | preview D1 + private EU R2 verified; Worker/origin/production ещё отсутствуют | Cloudflare/security owner      |
 | Scheduled monitoring              | `blocked`          | local scheduler passed; define alerts/owners and preview Cron smoke           | operations owner               |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
 | Public auth/email                 | `feature_disabled` | real approved adapter absent                                                  | auth/provider owner            |

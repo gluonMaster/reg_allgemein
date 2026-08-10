@@ -263,15 +263,20 @@ approval.
 **Prerequisites:** approved provider/account/DPA inputs и exact origins.
 
 **Точная команда/поле UI:** config fields `[browser].binding = "BROWSER"`,
-`TURNSTILE_SITE_KEY`, secret `TURNSTILE_SECRET_KEY`, `PORTAL_PUBLIC_ORIGIN`,
+`TURNSTILE_SITE_KEY`, `TURNSTILE_HOSTNAMES`, secret `TURNSTILE_SECRET_KEY`,
+`PORTAL_PUBLIC_ORIGIN`,
 `OFFICIAL_PRIVACY_URL`, `OFFICIAL_IMPRINT_URL`, `OFFICIAL_CONTACT_URL`,
 `OFFICIAL_LINKS_VERSION`, `EMAIL_PROVIDER`, `EMAIL_FROM`, `EMAIL_REPLY_TO`,
 `TELEGRAM_PROVIDER`. Provider credential names сверх текущего inventory нельзя
 придумывать; `OFFICIAL_*` values требуют approved versioned snapshot.
 
-**Ожидаемый безопасный результат:** preview keys разрешают только preview origin;
-production keys — только production origin; Browser binding принадлежит portal
-Worker; TLS действителен; официальный сайт не является application origin.
+**Ожидаемый безопасный результат:** widget разрешает только утверждённые hostnames;
+сервер принимает только `success=true`, action `registration` и exact hostname
+своего deployment. Даже если preview widget также используется для локальной
+разработки, preview backend allowlist содержит только preview hostname, а
+production backend и production widget не разрешают local hostnames. Browser
+binding принадлежит portal Worker; TLS действителен; официальный сайт не является
+application origin.
 
 **Проверка:** production-shaped config validation и remote smoke без PII.
 

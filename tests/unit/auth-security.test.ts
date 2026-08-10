@@ -1,17 +1,11 @@
 import { registerInputSchema } from '$lib/server/auth/contracts';
 import { BcryptPasswordHasher } from '$lib/server/auth/password';
-import {
-	CSRF_COOKIE_NAME,
-	SESSION_COOKIE_NAME,
-	setSessionCookies,
-} from '$lib/server/auth/session';
+import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, setSessionCookies } from '$lib/server/auth/session';
 import { createRandomToken, hashCsrfToken } from '$lib/server/auth/tokens';
 import { requireCsrf } from '$lib/server/security/csrf';
-import {
-	requireAdmin,
-	requireObjectOwner,
-} from '$lib/server/security/authorization';
+import { requireAdmin, requireObjectOwner } from '$lib/server/security/authorization';
 import { routeAccessPolicy } from '$lib/server/security/route-policy';
+import { CloudflareTurnstileVerifier } from '$lib/server/security/turnstile';
 
 describe('auth security boundaries', () => {
 	it('rejects role injection and applies deny-by-default route policy', () => {
@@ -47,12 +41,12 @@ describe('auth security boundaries', () => {
 		};
 		const admin = { ...parent, id: 'user-admin', role: 'admin' as const };
 		expect(requireObjectOwner({ actor: parent, ownerUserId: parent.id })).toBe(parent);
-		expect(() =>
-			requireObjectOwner({ actor: parent, ownerUserId: 'user-other' })
-		).toThrowError(/denied/i);
-		expect(requireObjectOwner({ actor: admin, ownerUserId: 'user-other', allowAdmin: true })).toBe(
-			admin
+		expect(() => requireObjectOwner({ actor: parent, ownerUserId: 'user-other' })).toThrowError(
+			/denied/i
 		);
+		expect(
+			requireObjectOwner({ actor: admin, ownerUserId: 'user-other', allowAdmin: true })
+		).toBe(admin);
 		expect(() => requireAdmin(parent)).toThrowError(/denied/i);
 		expect(requireAdmin(admin).id).toBe('user-admin');
 	});
@@ -71,7 +65,9 @@ describe('auth security boundaries', () => {
 			get: vi.fn((name: string) => (name === CSRF_COOKIE_NAME ? token : undefined)),
 		} as never;
 
-		await expect(requireCsrf({ cookies, user: actor, submittedToken: token })).resolves.toBeUndefined();
+		await expect(
+			requireCsrf({ cookies, user: actor, submittedToken: token })
+		).resolves.toBeUndefined();
 		await expect(
 			requireCsrf({ cookies, user: actor, submittedToken: undefined })
 		).rejects.toMatchObject({ code: 'CSRF_REJECTED' });
@@ -128,5 +124,73 @@ describe('auth security boundaries', () => {
 		await expect(hasher.hash('🔐'.repeat(40))).rejects.toMatchObject({
 			code: 'PASSWORD_TOO_LONG',
 		});
+	});
+
+	it('accepts Turnstile only for the exact registration action and deployment hostname', async () => {
+		const fetcher = vi.fn(
+			async (_input: RequestInfo | URL, _init?: RequestInit) =>
+				new Response(
+					JSON.stringify({
+						success: true,
+						action: 'registration',
+						hostname: 'portal-preview.example.org',
+					}),
+					{ status: 200, headers: { 'content-type': 'application/json' } }
+				)
+		);
+		const verifier = new CloudflareTurnstileVerifier(
+			'test-secret',
+			'registration',
+			['portal-preview.example.org'],
+			fetcher as unknown as typeof fetch
+		);
+
+		await expect(
+			verifier.verify({ token: 'synthetic-token', remoteIp: '192.0.2.10' })
+		).resolves.toBe(true);
+		const request = fetcher.mock.calls[0]?.[1];
+		expect(request?.method).toBe('POST');
+		expect(request?.headers).toEqual({
+			'content-type': 'application/x-www-form-urlencoded',
+		});
+		expect(request?.body).toBeInstanceOf(URLSearchParams);
+		expect((request?.body as URLSearchParams).get('response')).toBe('synthetic-token');
+		expect((request?.body as URLSearchParams).get('remoteip')).toBe('192.0.2.10');
+	});
+
+	it.each([
+		{ success: true, action: 'login', hostname: 'portal-preview.example.org' },
+		{ success: true, action: 'registration', hostname: 'another-preview.example.org' },
+		{ success: true, action: 'registration' },
+		{ success: false, action: 'registration', hostname: 'portal-preview.example.org' },
+	])('rejects invalid Turnstile assertions: %#', async (assertion) => {
+		const fetcher = vi.fn(
+			async () =>
+				new Response(JSON.stringify(assertion), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				})
+		);
+		const verifier = new CloudflareTurnstileVerifier(
+			'test-secret',
+			'registration',
+			['portal-preview.example.org'],
+			fetcher as unknown as typeof fetch
+		);
+
+		await expect(verifier.verify({ token: 'synthetic-token' })).resolves.toBe(false);
+	});
+
+	it('rejects oversized Turnstile tokens before contacting Siteverify', async () => {
+		const fetcher = vi.fn();
+		const verifier = new CloudflareTurnstileVerifier(
+			'test-secret',
+			'registration',
+			['portal-preview.example.org'],
+			fetcher as unknown as typeof fetch
+		);
+
+		await expect(verifier.verify({ token: 'x'.repeat(2_049) })).resolves.toBe(false);
+		expect(fetcher).not.toHaveBeenCalled();
 	});
 });
