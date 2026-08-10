@@ -5,9 +5,10 @@
 Production readiness: **`blocked` / NO-GO**
 
 Stage 13 реализует технический hardening и operator packet, но не даёт права на
-production actions. Preview/provider/Browser/Cron evidence,
-backup/restore rehearsal, legal/privacy approvals, RPO/RTO и отдельное deploy
-поручение остаются release blockers.
+production actions. Preview D1/R2 provision/migration evidence уже получено;
+preview Worker/provider/Browser/Cron evidence, backup/restore rehearsal,
+legal/privacy approvals, RPO/RTO и отдельное deploy поручение остаются release
+blockers.
 
 ## Baseline
 
@@ -17,8 +18,8 @@ backup/restore rehearsal, legal/privacy approvals, RPO/RTO и отдельное
 - Предыдущий handoff: [stage-12.md](stage-12.md).
 - Operational contract:
   [PRODUCTION_READINESS.md](../../operations/PRODUCTION_READINESS.md).
-- Production, remote migration/import/send, DNS/CMS и официальный сайт не
-  изменялись.
+- Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
+  Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
 ## Реализовано
 
@@ -38,8 +39,8 @@ backup/restore rehearsal, legal/privacy approvals, RPO/RTO и отдельное
 - Архив и quarantine используют разные `R2_ARCHIVE`/`R2_QUARANTINE` bindings и
   namespace router; runtime отвергает один binding object для обеих ролей. Все
   новые R2 writes регистрируют intent до `put`; orphan cleanup имеет grace, lease
-  и reconciliation. Физическая раздельность/private-EU policy удалённых buckets
-  остаётся неподтверждённым release gate.
+  и reconciliation. Для preview подтверждены два отдельных private EU buckets;
+  production resources и restore evidence отсутствуют.
 - Добавлены Worker scheduled handler, две UTC Cron-группы, allowlist jobs,
   dedupe/leases, per-job failure isolation, safe run history и admin-only manual
   operations page с CSRF/confirmation/idempotency/audit.
@@ -64,11 +65,11 @@ backup/restore rehearsal, legal/privacy approvals, RPO/RTO и отдельное
 
 ## Environment, migrations и compatibility
 
-| Область     | Локальное evidence                                                                           | Остаточный gate                                             |
+| Область     | Evidence                                                                                     | Остаточный gate                                             |
 | ----------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Empty D1    | `0001`–`0014` migration sequence test passed                                                 | immutable candidate rerun                                   |
+| Empty D1    | local test + preview remote `0001`–`0014` apply/schema parity passed                          | production migration и isolated restore                     |
 | Upgraded D1 | populated `0013 → 0014` upgrade passed 1/1; migration file 2/2 с selector-rejection test     | isolated backup/restore + rollback rehearsal                |
-| R2 split    | binding-object/namespace routing, unknown namespace и storage-intent tests passed            | physical private-EU preview resources/policy/restore        |
+| R2 split    | local guards + два отдельных private EU preview buckets verified                            | production resources/policy и isolated restore              |
 | Scheduler   | Cron allowlist, dedupe/lease, fresh clock, disabled path, audit and failure isolation passed | preview trigger/freshness/alerts                            |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
 | Imports     | local allowlist/dry-run/promote/rollback tests remain                                        | authorized current source and remote audited path           |
@@ -109,7 +110,8 @@ approved scope и не называется полным MVP.
 | `npm run docs:check`                      | passed: 138 local links / 51 files + 82 executable command lines                      |
 | `npm run release:scan`                    | passed: 469/469 candidates; artifact/secret/PII/control-byte findings отсутствуют     |
 | `git diff --check`                        | passed после final documentation/cold-read sync                                       |
-| Preview/Browser/provider/Cron smoke       | not run; no authorized resources — `blocked`                                          |
+| Preview D1 migration                      | passed 2026-08-10: 14/14, pending 0, schema parity, FK violations 0, user rows 0        |
+| Preview Worker/Browser/provider/Cron smoke| not run; Worker/providers не развёрнуты — `blocked`                                    |
 | D1/R2 isolated restore/rollback rehearsal | not run — `blocked`                                                                   |
 
 Полный `npm audit` сохраняет три high advisory в dev-only Wrangler/Miniflare/
@@ -129,11 +131,27 @@ approval gates всё равно удерживают readiness в `blocked`.
   routes, flags, prerequisites, stop/rollback и NO-GO сверены; `docs:check`
   подтвердил 138 links/51 files + 82 command lines. Найденная неясность хранения
   materialized config закрыта exact ignored paths и `git check-ignore` guard.
-- Full preview/provider/Cron/bootstrap/restore rehearsal не выполнялся и остаётся
-  `blocked`. Новые deliverables должны войти в будущий immutable commit; `git
-add`/commit в рамках этапа не выполнялись.
-- Preview walkthrough, remote Browser conformance и full D1/R2 restore не
-  подменялись локальным чтением и остаются `blocked`.
+- Full preview Worker/provider/Cron/bootstrap/restore rehearsal не выполнялся и
+  остаётся `blocked`. Новые deliverables должны войти в будущий immutable commit;
+  `git add`/commit в рамках этапа не выполнялись.
+- Preview D1 migration и R2 provisioning не подменяют remote Browser conformance,
+  full walkthrough и полный D1/R2 restore; эти gates остаются `blocked`.
+
+## Remote preview evidence 2026-08-10
+
+- Authorized target: отдельная preview D1; production resources не затронуты.
+- Immutable code candidate: `4c0b43b3db85f8d799b9d28bb0ed79505809656f`;
+  materialized `wrangler.preview.toml` остаётся ignored и не содержит secrets.
+- Tooling: Wrangler `4.120.0`; перед remote action чистый `npm run
+  release:verify` завершился с exit code 0.
+- Перед apply подтверждены ровно 14 ожидаемых pending migrations, 0 прикладных
+  таблиц, 0 applied migrations и Time Travel recovery point
+  `2026-08-10T15:17:57.466Z`.
+- Remote apply: `0001`–`0014` применены; повторный list — pending 0. Remote/local
+  schema-object inventory совпадает (396), `PRAGMA foreign_key_check` — 0,
+  user rows — 0; присутствуют только две ожидаемые control seed rows.
+- Это migration evidence, а не backup/restore rehearsal: protected export,
+  isolated restore и rollback/roll-forward drill остаются `blocked`.
 
 ## Release gates
 
@@ -143,7 +161,7 @@ add`/commit в рамках этапа не выполнялись.
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
 | Local implementation/traceability | `blocked`          | local full run/cold-read passed; нужен commit и rerun на immutable candidate  | release + independent reviewer |
 | Dependency security               | `blocked`          | production audit clean; review documented dev-tooling advisory on each update | dependency/security owner      |
-| Environment/origin/R2 isolation   | `blocked`          | local guards passed; provision and test approved preview                      | Cloudflare/security owner      |
+| Environment/origin/R2 isolation   | `blocked`          | preview D1 + private EU R2 verified; Worker/origin/production ещё отсутствуют  | Cloudflare/security owner      |
 | Scheduled monitoring              | `blocked`          | local scheduler passed; define alerts/owners and preview Cron smoke           | operations owner               |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
 | Public auth/email                 | `feature_disabled` | real approved adapter absent                                                  | auth/provider owner            |
@@ -176,8 +194,8 @@ add`/commit в рамках этапа не выполнялись.
 
 1. Повторить clean `release:verify` на immutable candidate; при обновлении
    Wrangler/Miniflare проверить устранение documented dev-tooling advisory.
-2. Получить preview approval/resources и выполнить production-shaped smoke без
-   PII и real sends, включая authenticated browser/accessibility и Cron alerts.
+2. Развернуть preview Worker и выполнить production-shaped smoke без PII и real
+   sends, включая authenticated browser/accessibility и Cron alerts.
 3. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
    restore + rollback/roll-forward drill.
 4. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.
