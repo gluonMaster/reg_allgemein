@@ -1,6 +1,7 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
 import { DatabaseBoundary } from '$lib/server/db/database';
+import { ResendEmailProvider } from '$lib/server/email/resend';
 import {
 	DisabledEmailProvider,
 	DisabledTelegramProvider,
@@ -21,7 +22,9 @@ export function createOutboxRuntime(
 		overrides.emailProvider ??
 		(config.messaging.emailProvider === 'fake'
 			? new FakeEmailProvider()
-			: new DisabledEmailProvider());
+			: config.messaging.emailProvider === 'resend'
+				? createResendEmailProvider(config)
+				: new DisabledEmailProvider());
 	const telegramProvider =
 		overrides.telegramProvider ??
 		(config.messaging.telegramProvider === 'fake'
@@ -54,7 +57,18 @@ export function createOutboxRuntime(
 	};
 }
 
+function createResendEmailProvider(config: RuntimeConfig): ResendEmailProvider {
+	const { resendApiKey, emailFrom, emailReplyTo } = config.messaging;
+	if (!resendApiKey || !emailFrom || !emailReplyTo) {
+		throw new Error('Validated Resend configuration is incomplete.');
+	}
+	return new ResendEmailProvider({
+		apiKey: resendApiKey,
+		from: emailFrom,
+		replyTo: emailReplyTo,
+	});
+}
+
 export function requestOutboxRuntime(event: RequestEvent) {
 	return createOutboxRuntime(loadRuntimeConfig(event.platform?.env));
 }
-

@@ -5,8 +5,9 @@
 Production readiness: **`blocked` / NO-GO**
 
 Stage 13 реализует технический hardening и operator packet, но не даёт права на
-production actions. Preview D1/R2 provision/migration evidence уже получено;
-preview Worker/provider/Browser/Cron evidence, backup/restore rehearsal,
+production actions. Preview D1/R2 provision/migration и fail-closed Worker
+evidence, включая automatic Cron delivery/freshness, уже получены;
+provider/Browser/Cron alerts и manual-run evidence, backup/restore rehearsal,
 legal/privacy approvals, RPO/RTO и отдельное deploy поручение остаются release
 blockers.
 
@@ -70,7 +71,7 @@ blockers.
 | Empty D1    | local test + preview remote `0001`–`0014` apply/schema parity passed                         | production migration и isolated restore                     |
 | Upgraded D1 | populated `0013 → 0014` upgrade passed 1/1; migration file 2/2 с selector-rejection test     | isolated backup/restore + rollback rehearsal                |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                             | production resources/policy и isolated restore              |
-| Scheduler   | Cron allowlist, dedupe/lease, fresh clock, disabled path, audit and failure isolation passed | preview trigger/freshness/alerts                            |
+| Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs passed                  | remote manual/dedupe/failure/alerts rehearsal               |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
 | Imports     | local allowlist/dry-run/promote/rollback tests remain                                        | authorized current source and remote audited path           |
 
@@ -111,7 +112,7 @@ approved scope и не называется полным MVP.
 | `npm run release:scan`                     | passed: 469/469 candidates; artifact/secret/PII/control-byte findings отсутствуют     |
 | `git diff --check`                         | passed после final documentation/cold-read sync                                       |
 | Preview D1 migration                       | passed 2026-08-10: 14/14, pending 0, schema parity, FK violations 0, user rows 0      |
-| Preview Worker/Browser/provider/Cron smoke | not run; Worker/providers не развёрнуты — `blocked`                                   |
+| Preview Worker/Browser/provider/Cron smoke | partial 2026-08-11: fail-closed GET + automatic Cron passed; Browser/provider/alerts/manual — `blocked` |
 | D1/R2 isolated restore/rollback rehearsal  | not run — `blocked`                                                                   |
 
 Полный `npm audit` сохраняет три high advisory в dev-only Wrangler/Miniflare/
@@ -131,7 +132,7 @@ approval gates всё равно удерживают readiness в `blocked`.
   routes, flags, prerequisites, stop/rollback и NO-GO сверены; `docs:check`
   подтвердил 138 links/51 files + 82 command lines. Найденная неясность хранения
   materialized config закрыта exact ignored paths и `git check-ignore` guard.
-- Full preview Worker/provider/Cron/bootstrap/restore rehearsal не выполнялся и
+- Full preview provider/Cron alerts/manual/bootstrap/restore rehearsal не выполнялся и
   остаётся `blocked`. Новые deliverables должны войти в будущий immutable commit;
   `git add`/commit в рамках этапа не выполнялись.
 - Preview D1 migration и R2 provisioning не подменяют remote Browser conformance,
@@ -171,13 +172,102 @@ release:verify` завершился с exit code 0.
   `npm run check` — 0 errors/warnings.
 - Полный post-change regression run прошёл: `npm test` — 44 files, 248/248
   tests; `npm run build` — passed.
-- Реальный fresh-token submit и проверка replay rejection на защищённом backend
-  не выполнялись: preview Worker ещё не развёрнут, remote secret не установлен,
-  public auth/email остаются выключены. Поэтому PR-C07 остаётся `blocked`.
+- Turnstile secret установлен в preview Worker без раскрытия значения; DPAPI ACL
+  повторно проверен и ограничен текущим Windows-пользователем. Реальный
+  fresh-token submit и проверка replay rejection на защищённом backend не
+  выполнялись, потому что public auth/email остаются выключены. Поэтому PR-C07
+  остаётся `blocked`.
 - Канонический Turnstile Spin bundle сохранён локально в ignored
   `.claude/skills/turnstile-spin/`: 13 файлов, включая SvelteKit reference и
   helper scripts. Копия побайтово сверена с установленным bundle; frontmatter и
   shell syntax проверены. Она является operational aid и не заменяет spec/runbook.
+
+## Resend email preparation 2026-08-11
+
+- Выбран существующий Resend domain `kolibri-dresden.de` без отдельного
+  user-facing sending subdomain. Public DNS audit подтвердил, что root MX остаются
+  IONOS, root SPF ровно один, а Resend DKIM и `send` MX/SPF уже присутствуют;
+  DNS не изменялся.
+- Утверждены exact identity
+  `Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>` и
+  Reply-To `registration@kolibri-dresden.de`; preview materialized config обновлён,
+  но `EMAIL_PROVIDER=disabled` сохранён.
+- Реализован direct HTTPS Resend adapter без дополнительного SDK: bounded timeout,
+  pseudonymous stable idempotency key, safe request-ID response parsing и
+  retryable/permanent classification без provider diagnostic/recipient/body в
+  error. Production fake mode остаётся запрещён.
+- Targeted config/provider tests прошли: 2 files, 33/33 tests; полный
+  post-change regression — 45 files, 261/261 tests; `npm run check` — 0
+  errors/warnings; `npm run build`, `docs:check`, `release:scan` и
+  `git diff --check` прошли. Release scan проверил 471 text candidate и получил
+  узкий allowlist только для утверждённого неперсонального registration mailbox;
+  произвольный адрес по-прежнему fail-closed.
+- Resend dashboard подтвердил `Verified` для `kolibri-dresden.de` в `eu-west-1`.
+  Отдельный domain-scoped `Sending access` key создан, recovery-копия защищена
+  Windows DPAPI, а `RESEND_API_KEY` установлен в preview Worker без раскрытия
+  значения. `EMAIL_PROVIDER=disabled` не изменялся; synthetic delivery/reply
+  smoke и реальная отправка не выполнялись. Поэтому PR-F01/PR-F02 остаются
+  `feature_disabled`, а provider/privacy approval — `blocked`.
+
+## Fail-closed preview Worker evidence 2026-08-11
+
+- По отдельному прямому разрешению создан только Worker `reg-allgemein-preview`:
+  `https://preview.example.com`. Production,
+  DNS, CMS и официальный сайт не изменялись.
+- Использован локальный Wrangler `4.109.0`; перед remote action прошли exact
+  preview dry-run, проверка pending D1 migrations = 0 и `npm run release:verify`
+  с exit code 0. Последний включил `check`, 45 files / 261 tests, Playwright,
+  build, production dependency audit, `docs:check` и 471/471 release scan.
+- SHA-256 ignored materialized config:
+  `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`.
+  Git HEAD во время deploy — `9d321758c67f111fb5de17b32e6434641f5bd654`,
+  но worktree содержал незакоммиченные изменения; это не immutable release
+  candidate. Remote evidence привязано к Cloudflare version
+  `sha256:d483454a2af1` и не закрывает immutable Git gate.
+- В Worker установлены только ожидаемые secret names: `JWT_SECRET`,
+  `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`. Значения не выводились и не
+  записывались в repository/config; JWT создан криптографически случайно только
+  в памяти, provider recovery-копии прочитаны из DPAPI.
+- Сохранён exact fail-closed набор: `AUTH_PUBLIC_ENABLED=false`,
+  `EMAIL_PROVIDER=disabled`, `TELEGRAM_PROVIDER=disabled`,
+  `DOCUMENT_UPLOAD_ENABLED=false`, `CONTRACT_SEND_ENABLED=false`,
+  `CONTRACT_RENDERER=disabled`, `MEDIA_ONLINE_GRANT_ENABLED=false` и
+  `PUBLIC_CONTRACT_FUNCTIONS_ENABLED=false`.
+- Read-only HTTP smoke: `/` и `/auth/register` вернули 200; registration page
+  показала service-unavailable state, submit остался disabled, Turnstile client
+  не загружался. POST, real-token, provider send и authenticated Browser smoke
+  не выполнялись.
+
+## Preview Cron smoke evidence 2026-08-11
+
+- Smoke выполнен по отдельному прямому разрешению только чтением automatic Cron
+  evidence. Worker version
+  `sha256:d483454a2af1`, SHA-256 ignored preview config и все
+  fail-closed feature flags остались без изменений; deploy и secret operations
+  не выполнялись.
+- Cloudflare Cron использует UTC. Оба exact bucket подтверждены remote journal:
+  `* * * * *` доставляет `email_outbox`/`telegram_outbox`, а
+  `*/15 * * * *` — семь maintenance jobs. Первый run записан
+  `2026-08-11T12:10:15.629Z`, первый maintenance batch — около 12:15 UTC.
+- Snapshot `2026-08-11T12:22:00.565Z`: 31 automatic scheduled runs, из них 7
+  `succeeded`, 24 `feature_disabled`, 0 `failed`, 0 `running`, 0 manual runs.
+  Все девять allowlisted job names присутствуют; неожиданных cron bucket нет.
+  Continuity read после локальной полной проверки в 12:27 UTC увидел уже 43
+  terminal runs, по-прежнему 0 failed/running и пустые email/Telegram outboxes.
+- Email/Telegram каждый раз завершились safe result `provider_disabled` до
+  provider call. Семь maintenance jobs завершились `succeeded` с нулевыми
+  claimed/processed/deleted/failed effects на пустых preview resources.
+- Freshness в контрольной точке: every-minute job 19 секунд, maintenance job
+  379 секунд. Дополнительно подтверждены safe counts: users 0, email outbox 0,
+  Telegram outbox 0, manual-run audit 0, storage intents 0. Реальная отправка и
+  создание synthetic/PII records не выполнялись.
+- Remote manual-run не потребовался: automatic delivery уже дала прямое
+  evidence, а manual UI корректно требует active admin, CSRF, confirmation,
+  idempotency и audit. Bootstrap/admin exercise не входил в это разрешение.
+- Это закрывает preview automatic delivery/freshness, но не alert ownership,
+  missed-Cron/stale-lock/dead/dedupe failure injection, remote manual-run/RBAC и
+  incident rehearsal. Соответствующие PR-D gates и общий NO-GO остаются
+  `blocked`.
 
 ## Release gates
 
@@ -187,10 +277,10 @@ release:verify` завершился с exit code 0.
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
 | Local implementation/traceability | `blocked`          | local full run/cold-read passed; нужен commit и rerun на immutable candidate  | release + independent reviewer |
 | Dependency security               | `blocked`          | production audit clean; review documented dev-tooling advisory on each update | dependency/security owner      |
-| Environment/origin/R2 isolation   | `blocked`          | preview D1 + private EU R2 verified; Worker/origin/production ещё отсутствуют | Cloudflare/security owner      |
-| Scheduled monitoring              | `blocked`          | local scheduler passed; define alerts/owners and preview Cron smoke           | operations owner               |
+| Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
+| Scheduled monitoring              | `blocked`          | preview automatic delivery/freshness passed; alerts/owners/manual failure rehearsal absent | operations owner               |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
-| Public auth/email                 | `feature_disabled` | real approved adapter absent                                                  | auth/provider owner            |
+| Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
 | Telegram                          | `feature_disabled` | approved adapter/DPA absent                                                   | provider/privacy owner         |
 | Upload                            | `feature_disabled` | remote R2/scanner/training/legal evidence absent                              | storage/security/legal owner   |
 | Contract/statutory/media          | `feature_disabled` | production renderer/templates/legal assessment absent                         | contract/legal/privacy owners  |
@@ -220,8 +310,9 @@ release:verify` завершился с exit code 0.
 
 1. Повторить clean `release:verify` на immutable candidate; при обновлении
    Wrangler/Miniflare проверить устранение documented dev-tooling advisory.
-2. Развернуть preview Worker и выполнить production-shaped smoke без PII и real
-   sends, включая authenticated browser/accessibility и Cron alerts.
+2. Продолжить production-shaped preview smoke без PII: authenticated
+   browser/accessibility, real-token Turnstile, Cron alerts/manual failures и отдельно
+   разрешённый synthetic email delivery/reply smoke.
 3. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
    restore + rollback/roll-forward drill.
 4. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.

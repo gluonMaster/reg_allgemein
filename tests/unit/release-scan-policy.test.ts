@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { hasUnexpectedTextControl, requiresTextScan } from '../../scripts/release-scan-policy';
+import {
+	hasUnexpectedTextControl,
+	isApprovedOperationalEmail,
+	requiresTextScan,
+} from '../../scripts/release-scan-policy';
 
 describe('release scan text policy', () => {
 	it('requires source, config, documentation and generated web text to stay text', () => {
@@ -22,5 +26,12 @@ describe('release scan text policy', () => {
 		expect(hasUnexpectedTextControl(Buffer.from([0x61, 0x00, 0x62]))).toBe(true);
 		expect(hasUnexpectedTextControl(Buffer.from([0x61, 0x1f, 0x62]))).toBe(true);
 		expect(hasUnexpectedTextControl(Buffer.from([0x61, 0x7f, 0x62]))).toBe(true);
+	});
+
+	it('allowlists only the approved non-personal registration mailbox', () => {
+		expect(isApprovedOperationalEmail('registration@kolibri-dresden.de')).toBe(true);
+		expect(isApprovedOperationalEmail('Registration@Kolibri-Dresden.de')).toBe(true);
+		expect(isApprovedOperationalEmail(['person', 'kolibri-dresden.de'].join('@'))).toBe(false);
+		expect(isApprovedOperationalEmail('registration@example.org')).toBe(false);
 	});
 });

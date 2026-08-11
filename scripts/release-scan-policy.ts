@@ -28,6 +28,12 @@ const expectedTextExtensions = new Set([
 	'.yml',
 ]);
 
+const approvedOperationalEmails = new Set(['registration@kolibri-dresden.de']);
+
+export function isApprovedOperationalEmail(value: string): boolean {
+	return approvedOperationalEmails.has(value.toLocaleLowerCase('en-US'));
+}
+
 export function requiresTextScan(path: string): boolean {
 	const normalized = path.replaceAll('\\', '/').toLocaleLowerCase('en-US');
 	const fileName = basename(normalized);

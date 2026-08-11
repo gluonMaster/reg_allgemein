@@ -267,7 +267,7 @@ approval.
 `PORTAL_PUBLIC_ORIGIN`,
 `OFFICIAL_PRIVACY_URL`, `OFFICIAL_IMPRINT_URL`, `OFFICIAL_CONTACT_URL`,
 `OFFICIAL_LINKS_VERSION`, `EMAIL_PROVIDER`, `EMAIL_FROM`, `EMAIL_REPLY_TO`,
-`TELEGRAM_PROVIDER`. Provider credential names сверх текущего inventory нельзя
+secret `RESEND_API_KEY`, `TELEGRAM_PROVIDER`. Provider credential names сверх текущего inventory нельзя
 придумывать; `OFFICIAL_*` values требуют approved versioned snapshot.
 
 **Ожидаемый безопасный результат:** widget разрешает только утверждённые hostnames;
@@ -286,6 +286,55 @@ key допускает лишние origins, real send не разрешён и�
 **Rollback/recovery:** оставить provider `disabled` и public auth false; revoke
 ошибочно выданный credential через provider-owned procedure.
 
+### 4.4 Resend: домен, identity и least-privilege key
+
+**Prerequisites:** владелец вошёл в тот же Resend team/account, где уже настроен
+`kolibri-dresden.de`; публичный DNS audit подтверждает root MX IONOS, один root
+SPF, Resend DKIM и служебные `send` MX/SPF. Реальная отправка ещё не разрешена.
+
+**Поля UI:** `Resend → Domains → kolibri-dresden.de` должен иметь status
+`Verified` и region `eu-west-1`. Повторно добавлять домен, менять root MX или
+создавать второй TXT SPF на `@` нельзя. Затем `Resend → API Keys → Create API
+Key`: отдельное имя для приложения/environment, permission `Sending access`,
+domain `kolibri-dresden.de`. Не использовать Full access и ключ другого проекта.
+
+Token показывается один раз. Его нужно сразу сохранить в Windows DPAPI store для
+текущего пользователя с user-only ACL, очистить clipboard и не помещать в
+`.env`, Wrangler config, командную строку, ticket или transcript. Для Worker
+secret используется только имя `RESEND_API_KEY` и интерактивный stdin.
+
+Vars имеют exact значения:
+
+```text
+EMAIL_PROVIDER=disabled
+EMAIL_FROM=Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>
+EMAIL_REPLY_TO=registration@kolibri-dresden.de
+```
+
+`EMAIL_PROVIDER` меняется на `resend` только в отдельно утверждённом preview
+enablement. Первый smoke использует один контролируемый синтетический recipient,
+проверяет доставку и Reply-To, но не включает клиента/ребёнка/договор или другой
+PII. Production key выпускается отдельно после preview gate; preview key нельзя
+копировать в production.
+
+**Ожидаемый безопасный результат:** IONOS продолжает принимать входящую почту;
+adapter отправляет с утверждённой Verein identity; API key может только отправлять
+с разрешённого домена; outbox dedupe и provider idempotency не создают повтор в
+обычном retry window.
+
+**Проверка:** status/region в Resend, sanitized key name/permission/domain,
+runtime config tests, один отдельно разрешённый preview delivery/reply smoke и
+provider request ID без recipient/body в evidence.
+
+**Stop condition:** domain не `Verified`, region/account неизвестен, DNS требует
+удалить IONOS MX/заменить root SPF, key имеет Full access/другой domain, secret
+попал в plaintext/history, либо нет отдельного разрешения на real send.
+
+**Rollback/recovery:** оставить `EMAIL_PROVIDER=disabled`; revoke environment key
+в Resend при раскрытии/ошибочном scope и выпустить новый. DNS и IONOS mailbox не
+удалять. Remote Worker secret rotation/deploy выполняются отдельной change
+procedure.
+
 ## 5. Установить vars, secrets и feature flags
 
 **Prerequisites:** target config и Worker name проверены; secret передаётся через
@@ -297,9 +346,10 @@ key допускает лишние origins, real send не разрешён и�
 npx wrangler secret put <SECRET_NAME> --config <TARGET_CONFIG>
 ```
 
-Текущий inventory secret names: `JWT_SECRET`, `TURNSTILE_SECRET_KEY`,
+Текущий inventory secret names: `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`,
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`. Последние два не устанавливать без
-approved Telegram path. Реальный email adapter и его secret names отсутствуют.
+approved Telegram path. `RESEND_API_KEY` устанавливается только для точного
+environment Worker после проверки key scope по § 4.4.
 
 **Ожидаемый безопасный результат:** CLI подтверждает имя secret и target Worker,
 но evidence не содержит value. Vars из config не имеют `replace-*` или

@@ -30,8 +30,8 @@ OFFICIAL_IMPRINT_URL = "https://www.kolibri-dresden.de/replace-with-approved-imp
 OFFICIAL_CONTACT_URL = "https://www.kolibri-dresden.de/replace-with-approved-kontakt-url"
 OFFICIAL_LINKS_VERSION = "replace-with-approved-links-version"
 EMAIL_PROVIDER = "disabled"
-EMAIL_FROM = "Example Anmeldung <noreply@example.invalid>"
-EMAIL_REPLY_TO = "Example Anmeldung <reply@example.invalid>"
+EMAIL_FROM = "Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>"
+EMAIL_REPLY_TO = "registration@kolibri-dresden.de"
 TURNSTILE_SITE_KEY = "replace-me"
 TURNSTILE_HOSTNAMES = "portal.example.invalid"
 AUTH_PUBLIC_ENABLED = "false"
@@ -101,5 +101,6 @@ jurisdiction = "eu"
 # Secrets:
 # JWT_SECRET
 # TURNSTILE_SECRET_KEY
+# RESEND_API_KEY
 # TELEGRAM_BOT_TOKEN
 # TELEGRAM_CHAT_ID

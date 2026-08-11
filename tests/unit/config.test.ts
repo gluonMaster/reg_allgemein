@@ -1,4 +1,10 @@
-import { buildPortalUrl, loadRuntimeConfig, RuntimeConfigError } from '$lib/server/config/runtime';
+import {
+	APPROVED_EMAIL_FROM,
+	APPROVED_EMAIL_REPLY_TO,
+	buildPortalUrl,
+	loadRuntimeConfig,
+	RuntimeConfigError,
+} from '$lib/server/config/runtime';
 
 const fakeDb = { prepare() {} } as unknown as D1Database;
 const fakeArchive = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
@@ -252,6 +258,64 @@ describe('runtime configuration', () => {
 				PRIVACY_NOTICE_VERSION: 'production-notice-v1',
 			})
 		).toThrow(RuntimeConfigError);
+	});
+
+	it('requires the approved registration identity and a dedicated key for Resend', () => {
+		const base = {
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+			EMAIL_PROVIDER: 'resend',
+			RESEND_API_KEY: 're_' + 'x'.repeat(32),
+			EMAIL_FROM: APPROVED_EMAIL_FROM,
+			EMAIL_REPLY_TO: APPROVED_EMAIL_REPLY_TO,
+		} as const;
+
+		const configured = loadRuntimeConfig(base);
+		expect(configured.messaging).toMatchObject({
+			emailProvider: 'resend',
+			emailFrom: APPROVED_EMAIL_FROM,
+			emailReplyTo: APPROVED_EMAIL_REPLY_TO,
+			resendApiKey: base.RESEND_API_KEY,
+		});
+
+		for (const invalid of [
+			{ ...base, RESEND_API_KEY: undefined },
+			{
+				...base,
+				EMAIL_FROM: `Kolibri <${['info', 'kolibri-dresden.de'].join('@')}>`,
+			},
+			{ ...base, EMAIL_REPLY_TO: ['info', 'kolibri-dresden.de'].join('@') },
+		]) {
+			expect(() => loadRuntimeConfig(invalid)).toThrow(RuntimeConfigError);
+		}
+	});
+
+	it('allows Resend-backed public auth in production-shaped configuration', () => {
+		const config = loadRuntimeConfig({
+			APP_ENV: 'production',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			TURNSTILE_SITE_KEY: 'test-site-key',
+			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			TURNSTILE_HOSTNAMES: 'portal.example.org',
+			SCHEDULED_JOBS_ENABLED: 'true',
+			...officialLinks,
+			AUTH_PUBLIC_ENABLED: 'true',
+			PRIVACY_NOTICE_VERSION: 'production-notice-v1',
+			EMAIL_PROVIDER: 'resend',
+			RESEND_API_KEY: 're_' + 'x'.repeat(32),
+			EMAIL_FROM: APPROVED_EMAIL_FROM,
+			EMAIL_REPLY_TO: APPROVED_EMAIL_REPLY_TO,
+		});
+
+		expect(config.auth).toMatchObject({ publicEnabled: true, emailProvider: 'resend' });
+		expect(config.messaging.emailProvider).toBe('resend');
 	});
 
 	it('builds absolute links only below the configured portal origin', () => {

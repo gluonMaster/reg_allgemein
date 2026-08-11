@@ -170,6 +170,36 @@ versioned contact configuration со ссылками на официальны�
 Не следует логировать полный recipient email или body. Для диагностики можно
 хранить internal user ID, provider request ID и безопасный error code.
 
+### Транзакционный email provider
+
+Для портала выбран Resend через HTTPS Email API. Входящая почта домена остаётся
+в IONOS: подключение Resend не изменяет root MX и не создаёт второй SPF record на
+`@`. Утверждённая identity одинакова для preview и production:
+
+```text
+From: Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>
+Reply-To: registration@kolibri-dresden.de
+```
+
+Runtime mode `EMAIL_PROVIDER=resend` разрешён только при exact значениях выше и
+secret `RESEND_API_KEY`; production fake mode запрещён. Ключ выпускается отдельно
+для этого приложения с `Sending access` и ограничением доменом
+`kolibri-dresden.de`, не переиспользуется из другого проекта и не хранится в Git,
+vars, документации или shell history.
+
+Adapter отправляет plain-text template через `POST /emails`, передаёт стабильный
+псевдонимизированный `Idempotency-Key` из outbox identity и сохраняет только
+provider request ID. Network/rate-limit/5xx ошибки повторяются через outbox;
+validation, credential, domain и исчерпание quota переводятся в безопасную
+permanent provider error для operator review. Текст provider error, recipient,
+subject/body и credential не попадают в логи или audit. После неопределённого
+network result ручной retry старше provider idempotency window требует отдельной
+operator-проверки, чтобы не создать поздний дубль.
+
+Provider остаётся `disabled` до установки environment-specific secret,
+разрешённого preview smoke с синтетическим адресатом и отдельного решения о
+включении реальной отправки.
+
 ## Языки
 
 Обязательный MVP locale — German. Template keys и UI не должны блокировать

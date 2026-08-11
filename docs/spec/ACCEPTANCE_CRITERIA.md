@@ -559,6 +559,13 @@ MVP готов, когда:
 - Временная ошибка Telegram использует backoff и конечное число попыток;
   permanent failure становится `dead` и виден админу, а повтор cron не шлет
   уже отправленное сообщение. (`REL-02`)
+- Resend mode загружается только с отдельным secret и exact identity
+  `Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>` /
+  `registration@kolibri-dresden.de`; adapter передаёт псевдонимизированный
+  стабильный idempotency key, классифицирует retryable/permanent failures и не
+  раскрывает API key, recipient, body или provider diagnostic. Fake provider в
+  production отклоняется, а disabled mode не имеет внешнего fallback.
+  (`MSG-03`, `SEC-02`, `REL-02`)
 - Telegram отправляется только в служебный канал бюро; Telegram/email payload
   не содержит содержимого funding-файла Jobcenter/Sozialamt, полного адреса,
   токена, документа или служебного stack trace. (`MSG-04`)

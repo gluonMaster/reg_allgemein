@@ -13,9 +13,10 @@ const rawConfigSchema = z.object({
 	TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
 	TURNSTILE_HOSTNAMES: z.string().min(1).optional(),
 	AUTH_PUBLIC_ENABLED: z.enum(['true', 'false']).optional(),
-	EMAIL_PROVIDER: z.enum(['disabled', 'fake']).optional(),
+	EMAIL_PROVIDER: z.enum(['disabled', 'fake', 'resend']).optional(),
 	EMAIL_FROM: z.string().min(1).optional(),
 	EMAIL_REPLY_TO: z.string().min(1).optional(),
+	RESEND_API_KEY: z.string().min(20).optional(),
 	PRIVACY_NOTICE_VERSION: z.string().min(1).optional(),
 	AUTH_VERIFICATION_TTL_SECONDS: z.string().optional(),
 	AUTH_RESET_TTL_SECONDS: z.string().optional(),
@@ -64,6 +65,11 @@ const rawConfigSchema = z.object({
 });
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
+export type EmailProviderKind = 'disabled' | 'fake' | 'resend';
+
+export const APPROVED_EMAIL_FROM =
+	'Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>';
+export const APPROVED_EMAIL_REPLY_TO = 'registration@kolibri-dresden.de';
 
 export interface RuntimeConfig {
 	appEnvironment: PortalEnvironment;
@@ -89,7 +95,7 @@ export interface RuntimeConfig {
 
 export interface AuthRuntimeConfig {
 	publicEnabled: boolean;
-	emailProvider: 'disabled' | 'fake';
+	emailProvider: EmailProviderKind;
 	privacyNoticeVersion?: string;
 	verificationTtlSeconds: number;
 	resetTtlSeconds: number;
@@ -133,7 +139,10 @@ export interface ContractRuntimeConfig {
 }
 
 export interface MessagingRuntimeConfig {
-	emailProvider: 'disabled' | 'fake';
+	emailProvider: EmailProviderKind;
+	emailFrom?: string;
+	emailReplyTo?: string;
+	resendApiKey?: string;
 	telegramProvider: 'disabled' | 'fake';
 	telegramChatId?: string;
 	emailMaxAttempts: number;
@@ -453,6 +462,18 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (authPublicEnabled && emailProvider === 'disabled') {
 		issues.push('EMAIL_PROVIDER:required_when_auth_enabled');
 	}
+	if (emailProvider === 'resend' && !parsed.data.RESEND_API_KEY) {
+		issues.push('RESEND_API_KEY:required_when_provider_enabled');
+	}
+	if (emailProvider === 'resend' && isPlaceholder(parsed.data.RESEND_API_KEY)) {
+		issues.push('RESEND_API_KEY:placeholder');
+	}
+	if (emailProvider === 'resend' && parsed.data.EMAIL_FROM !== APPROVED_EMAIL_FROM) {
+		issues.push('EMAIL_FROM:approved_registration_identity_required');
+	}
+	if (emailProvider === 'resend' && parsed.data.EMAIL_REPLY_TO !== APPROVED_EMAIL_REPLY_TO) {
+		issues.push('EMAIL_REPLY_TO:approved_registration_mailbox_required');
+	}
 	if (authPublicEnabled && !parsed.data.JWT_SECRET) {
 		issues.push('JWT_SECRET:required_when_auth_enabled');
 	}
@@ -470,12 +491,6 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	if (parsed.data.APP_ENV === 'production' && emailProvider === 'fake') {
 		issues.push('EMAIL_PROVIDER:fake_forbidden_in_production');
-	}
-	if (parsed.data.APP_ENV === 'production' && authPublicEnabled) {
-		issues.push('AUTH_PUBLIC_ENABLED:production_email_provider_not_implemented');
-	}
-	if (parsed.data.APP_ENV === 'production' && emailProvider !== 'disabled') {
-		issues.push('EMAIL_PROVIDER:production_provider_not_implemented');
 	}
 	if (parsed.data.APP_ENV === 'production' && telegramProvider !== 'disabled') {
 		issues.push('TELEGRAM_PROVIDER:production_provider_not_implemented');
@@ -614,6 +629,9 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	const messaging: MessagingRuntimeConfig = {
 		emailProvider,
+		emailFrom: parsed.data.EMAIL_FROM,
+		emailReplyTo: parsed.data.EMAIL_REPLY_TO,
+		resendApiKey: parsed.data.RESEND_API_KEY,
 		telegramProvider,
 		telegramChatId: parsed.data.TELEGRAM_CHAT_ID,
 		emailMaxAttempts: auth.emailMaxAttempts,

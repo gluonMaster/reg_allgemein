@@ -1,7 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, relative, resolve, sep } from 'node:path';
-import { hasUnexpectedTextControl, requiresTextScan } from './release-scan-policy';
+import {
+	hasUnexpectedTextControl,
+	isApprovedOperationalEmail,
+	requiresTextScan,
+} from './release-scan-policy';
 
 interface ScanTarget {
 	absolutePath: string;
@@ -284,6 +288,7 @@ function piiFindings(target: ScanTarget, content: string): Finding[] {
 	const ibanPattern = /\bDE\d{20}\b/gi;
 	for (const [index, line] of lines.entries()) {
 		for (const match of line.matchAll(emailPattern)) {
+			if (isApprovedOperationalEmail(match[0])) continue;
 			const domain = (match[1] ?? '').toLocaleLowerCase('en-US');
 			const nearbyPrefix = line.slice(Math.max(0, (match.index ?? 0) - 24), match.index ?? 0);
 			const reservedDomain =
