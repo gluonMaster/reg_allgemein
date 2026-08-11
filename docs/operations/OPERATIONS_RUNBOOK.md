@@ -2,8 +2,10 @@
 
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
 handler и manual operations реализованы и локально протестированы; независимый
-content cold-read 2026-07-22 прошёл. Remote preview/Cron evidence и alerts
-отсутствуют, а local чтение не заменяет исполнение remote процедур.
+content cold-read 2026-07-22 прошёл. Preview Worker/D1/R2, automatic Cron
+delivery/freshness и независимый 5-minute HEAD alert с DOWN→UP delivery
+подтверждены 2026-08-11; remote manual/provider/failure и restore procedures
+остаются непроверенными.
 
 Runbook относится только к самостоятельному порталу регистрации. Он не даёт
 доступа к CMS или runtime официального сайта. Production-команды выполняются
@@ -32,12 +34,12 @@ approval.
 | Область               | Реализованный интерфейс                                                                                            | Недостающее                                              | Gate                         |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------- |
 | Import review         | `/admin/imports`, `/admin/imports/<run-id>`                                                                        | remote import/recovery rehearsal                         | `blocked`                    |
-| Outbox review         | `/admin/outbox`, retry/cancel; local scheduler drain tests                                                         | production providers, preview Cron, freshness alerts     | `feature_disabled`/`blocked` |
-| Document review       | `/admin/requests`, AV/business review; отдельные R2 bindings и cleanup проверены локально                          | private remote EU R2, alerts, approved training          | `feature_disabled`/`blocked` |
-| Price maintenance     | `/admin/price-reviews` и `/admin/operations` manual/Cron run; local tests                                          | remote preview freshness/alerts                          | `blocked`                    |
-| Privacy operations    | `/admin/privacy` и `/admin/operations` cleanup run; local D1/R2 tests                                              | remote R2 retry rehearsal/alerts                         | `blocked`                    |
-| Health/cron dashboard | `/admin/operations` + empty `/_health/operations` 204/503 signal; safe run/status/result и audited manual action | independent poller/recipient, alert delivery rehearsal    | `blocked`                    |
-| Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs, repositories/page; local unit/integration tests              | remote preview Cron delivery/freshness и alerts          | `blocked`                    |
+| Outbox review         | `/admin/outbox`, retry/cancel; local scheduler tests + preview automatic Cron passed                               | production providers, dead alert/manual failure rehearsal | `feature_disabled`/`blocked` |
+| Document review       | `/admin/requests`, AV/business review; separate preview EU R2 bindings и cleanup verified                          | remote R2 failure/restore alert, approved training       | `feature_disabled`/`blocked` |
+| Price maintenance     | `/admin/price-reviews` и `/admin/operations` manual/Cron run; local tests                                          | remote manual/failure rehearsal и job-specific alert     | `blocked`                    |
+| Privacy operations    | `/admin/privacy` и `/admin/operations` cleanup run; local D1/R2 + preview automatic cleanup verified              | remote R2 failure/retry rehearsal and job-specific alert | `blocked`                    |
+| Health/cron dashboard | `/admin/operations` + empty `/_health/operations` 204/503 signal; preview external HEAD monitor delivery passed | authenticated admin/manual/failure rehearsal              | `blocked`                    |
+| Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs; preview automatic delivery/freshness passed                  | remote manual/dedupe/failure и job-specific alerts       | `blocked`                    |
 | Admin bootstrap       | `npm run admin:bootstrap`; target guard, one-shot D1 flow, session revoke/audit и upgrade auto-seal tested locally | remote exercise; отдельной post-consume recovery CLI нет | `blocked`                    |
 
 ## Scheduled jobs inventory
@@ -45,9 +47,10 @@ approval.
 Cloudflare [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/)
 исполняют expressions в UTC. Это не локальная/provider
 timezone: `Europe/Berlin` применяется только внутри Telegram business-hours
-calculation и покрыт DST-тестами. Локальные scheduler/route tests проходят, но
-alerts и preview rehearsal отсутствуют, поэтому ни один job ниже не имеет
-production `passed`.
+calculation и покрыт DST-тестами. Локальные scheduler/route tests, preview
+automatic delivery/freshness и aggregate external HEAD alert проходят, но
+job-specific backlog/dead/provider alerts и remote manual/failure rehearsals
+отсутствуют, поэтому ни один job ниже не имеет production `passed`.
 
 | Назначение                       | Реализованный service method                                   | Schedule/timezone                         | Dedupe/lock                          | Manual run / signal                               | Статус                                 |
 | -------------------------------- | -------------------------------------------------------------- | ----------------------------------------- | ------------------------------------ | ------------------------------------------------- | -------------------------------------- |
@@ -65,8 +68,9 @@ Migrations `0014_production_operations.sql` и `0015_worker_monitoring.sql`,
 clean/upgrade coverage, job/storage repositories, Worker scheduled handler,
 triggers, `/admin/operations`, empty 204/503 health signal и раздельные R2
 bindings реализованы и проходят targeted local tests. Preview Cron delivery и
-freshness подтверждены, но independent alert delivery, remote monitoring
-migration/smoke, R2 restore и failure rehearsal остаются `blocked`.
+freshness, monitoring migration/smoke и independent aggregate HEAD alert
+delivery/recovery подтверждены. R2 restore, authenticated manual run и
+job-specific failure rehearsal остаются `blocked`.
 
 ## 1. Начало смены: health и freshness
 

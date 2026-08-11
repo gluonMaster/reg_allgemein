@@ -124,10 +124,12 @@ npm run release:scan
 
 Все команды реализованы, включая Playwright E2E внутри `release:verify`.
 Build-only Cloudflare adapter находится в `devDependencies`; текущий
-`npm audit --omit=dev` показывает `0 vulnerabilities`. Полный `npm audit`
-отдельно сохраняет три high advisory в dev-only Wrangler/Miniflare/Sharp tooling,
-как описано в [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md). До полного прогона на
-immutable candidate и закрытия environment gates общий gate `blocked`.
+`npm audit --omit=dev` показывает `0 vulnerabilities`. Immutable baseline
+`b1a1505` имел 7 dev-only findings; проверенный working-tree successor обновляет
+SvelteKit/PostCSS/Wrangler/Miniflare, проходит полный audit с 0 vulnerabilities и
+описан в [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md). До фиксации successor в
+immutable commit, повторного clean прогона и закрытия environment gates общий
+gate `blocked`.
 
 **Ожидаемый безопасный результат:** все существующие команды завершаются с code
 0; связный synthetic lifecycle проходит на migrated D1, а Playwright boundary

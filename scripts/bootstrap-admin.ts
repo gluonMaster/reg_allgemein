@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Miniflare } from 'miniflare';
+import { convertV4MiniflareOptions, Miniflare } from 'miniflare';
 import { unstable_readConfig } from 'wrangler';
 import {
 	AdminBootstrapError,
@@ -102,12 +102,16 @@ async function main(): Promise<void> {
 	if (environment === 'local') {
 		const config = unstable_readConfig({ config: configPath }, { hideWarnings: true });
 		const localDatabaseId = assertLocalBootstrapConfigTarget(config);
-		const miniflare = new Miniflare({
-			modules: true,
-			script: 'export default {};',
-			d1Databases: { DB: localDatabaseId },
-			defaultPersistRoot: fileURLToPath(new URL('../.wrangler/state/v3', import.meta.url)),
-		});
+		const miniflare = new Miniflare(
+			convertV4MiniflareOptions({
+				modules: true,
+				script: 'export default {};',
+				d1Databases: { DB: localDatabaseId },
+				defaultPersistRoot: fileURLToPath(
+					new URL('../.wrangler/state/v3', import.meta.url)
+				),
+			})
+		);
 		try {
 			const repository = new AdminBootstrapRepository(
 				new DatabaseBoundary((await miniflare.getD1Database('DB')) as D1Database)

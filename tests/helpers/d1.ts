@@ -1,6 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { Miniflare } from 'miniflare';
+import { convertV4MiniflareOptions, Miniflare } from 'miniflare';
 import { unstable_splitSqlQuery } from 'wrangler';
 
 export interface TestD1Context {
@@ -88,13 +88,15 @@ export async function createMigratedTestD1(
 ): Promise<TestD1Context> {
 	const availableMigrationIds = await listTestD1MigrationIds();
 	const migrationIds = selectMigrationIds(availableMigrationIds, { through: options.through });
-	const miniflare = new Miniflare({
-		modules: true,
-		script: 'export default { fetch() { return new Response("ok"); } };',
-		compatibilityDate: '2026-03-24',
-		d1Databases: { DB: `foundation-${crypto.randomUUID()}` },
-		d1Persist: false,
-	});
+	const miniflare = new Miniflare(
+		convertV4MiniflareOptions({
+			modules: true,
+			script: 'export default { fetch() { return new Response("ok"); } };',
+			compatibilityDate: '2026-03-24',
+			d1Databases: { DB: `foundation-${crypto.randomUUID()}` },
+			d1Persist: false,
+		})
+	);
 
 	const db = (await miniflare.getD1Database('DB')) as D1Database;
 

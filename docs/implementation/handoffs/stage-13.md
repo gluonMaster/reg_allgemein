@@ -116,10 +116,11 @@ approved scope и не называется полным MVP.
 | Preview Worker/Browser/provider/Cron smoke | partial 2026-08-11: fail-closed GET/HEAD, automatic Cron и внешний alert passed; Browser/provider/manual — `blocked` |
 | D1/R2 isolated restore/rollback rehearsal  | not run — `blocked`                                                                   |
 
-Полный `npm audit` сохраняет три high advisory в dev-only Wrangler/Miniflare/
-Sharp tooling; совместимый upstream fix пока отсутствует, breaking
-`--force`/downgrade не применялся. Production audit проходит, но remote/restore/
-approval gates всё равно удерживают readiness в `blocked`.
+Этот pre-preview snapshot сохранял три high advisory в dev-only
+Wrangler/Miniflare/Sharp tooling. Post-PR-D06 dependency remediation ниже
+обновляет совместимый tooling/API boundary и даёт полный audit 0; до нового
+immutable commit/rerun dependency gate остаётся `blocked`. Remote/restore/
+approval gates также удерживают общий readiness в `blocked`.
 
 ## Independent review и cold-read
 
@@ -135,8 +136,8 @@ approval gates всё равно удерживают readiness в `blocked`.
   materialized config закрыта exact ignored paths и `git check-ignore` guard.
 - Full preview provider/manual/bootstrap/restore rehearsal не выполнялся и
   остаётся `blocked`; independent HEAD monitoring alert rehearsal passed
-  2026-08-11. Новые deliverables должны войти в будущий immutable commit;
-  `git add`/commit в рамках этапа не выполнялись.
+  2026-08-11. Monitoring evidence вошёл в immutable `b1a1505`; последующая
+  dependency remediation и её evidence должны войти в новый immutable commit.
 - Preview D1 migration и R2 provisioning не подменяют remote Browser conformance,
   full walkthrough и полный D1/R2 restore; эти gates остаются `blocked`.
 
@@ -323,14 +324,40 @@ release:verify` завершился с exit code 0.
   порядке и recovery. Application feature flags, Resend/Telegram и Cloudflare
   resources не изменялись. PR-D06 переведён в `passed`.
 
+### Post-PR-D06 immutable verification и dependency remediation
+
+- На clean HEAD `b1a15058c7d41cb226ef34c83e3f6692f8c198d6` полный
+  `npm run release:verify` прошёл: check 0 errors/warnings, 46 test files и
+  267/267 tests, 3/3 Playwright, build, production audit 0, `docs:check`
+  137 links/51 files + 82 commands и `release:scan` 474/474. Exact
+  `wrangler deploy --dry-run --config wrangler.preview.toml` также прошёл без
+  upload/deploy и подтвердил ожидаемые preview bindings/flags.
+- Отдельный clean clone exact `b1a15058c7d41cb226ef34c83e3f6692f8c198d6`
+  прошёл `npm ci`. Полный audit baseline выявил 7 исправимых dev-only findings;
+  production dependencies оставались clean.
+- В изолированном clone проверено обновление SvelteKit, PostCSS, Wrangler,
+  Miniflare и Workers types. Breaking Miniflare 5 options boundary мигрирован
+  через `convertV4MiniflareOptions`; старый global `cookie` override сужен до
+  SvelteKit, чтобы не переопределять `youch` dependency.
+- После повторного clean `npm ci` полный и production-only audit показывают 0.
+  Обновлённый candidate прошёл полный `release:verify` с теми же 267 tests и
+  3 Playwright tests. Проверенные изменения перенесены в основной worktree, но
+  ещё не являются immutable commit; remote resources не менялись.
+- Основной worktree затем повторно прошёл полный `release:verify` за 253.1 s:
+  0 diagnostics, 46 files/267 tests, 3/3 Playwright, build, production audit 0,
+  137 links/51 docs files, 82 commands и release scan 474/474. Полный audit
+  также 0; `npm ls cookie --all` подтвердил отдельные совместимые ветки.
+  Wrangler 4.120.1 exact preview-config dry-run прочитал 68 assets и ожидаемые
+  bindings/feature flags, завершившись до upload/deploy.
+
 ## Release gates
 
 Полный ledger: [PRODUCTION_READINESS_CHECKLIST.md](../../operations/PRODUCTION_READINESS_CHECKLIST.md).
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `blocked`          | local full run/cold-read passed; нужен commit и rerun на immutable candidate  | release + independent reviewer |
-| Dependency security               | `blocked`          | production audit clean; review documented dev-tooling advisory on each update | dependency/security owner      |
+| Local implementation/traceability | `blocked`          | immutable baseline passed; dependency-remediated successor ждёт commit/rerun | release + independent reviewer |
+| Dependency security               | `blocked`          | clean successor full audit 0 and release verification passed; нужен immutable commit/rerun | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
@@ -362,8 +389,9 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. Повторить clean `release:verify` на immutable candidate; при обновлении
-   Wrangler/Miniflare проверить устранение documented dev-tooling advisory.
+1. После отдельного разрешения закоммитить dependency remediation и tracked
+   evidence, затем повторить clean `npm ci`/`release:verify` на новом immutable
+   candidate. На текущем working-tree candidate полный audit уже 0.
 2. Поддерживать созданный independent uptime monitor для `/_health/operations`
    и периодически повторять delivery test; затем по отдельным разрешениям
    продолжить preview smoke: authenticated browser/accessibility, real-token
@@ -390,16 +418,20 @@ release:verify` завершился с exit code 0.
   сначала сверить tracked handoff, `git status`, current version и pending
   migrations; production, DNS/CMS, feature enablement и application sends
   требуют отдельных прямых поручений.
-- Read-only сверка этой сессии: HEAD `a47c6a9`, preview config SHA-256
+- Read-only сверка этой сессии: HEAD `b1a1505`, preview config SHA-256
   `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`,
-  Worker version `sha256:70c02839d41d`, D1 pending migrations 0.
+  Worker version `sha256:70c02839d41d`, D1 pending migrations 0;
+  read-only HEAD `2026-08-11T15:01:22Z` вернул empty 204.
+- Immutable baseline release verification и clean clone прошли. Проверенный
+  dependency-remediated successor находится в worktree: full audit 0 и
+  isolated full `release:verify` passed, но commit ещё не создан.
 - Следующий remote preview smoke или production/site action требует нового
   прямого поручения соответствующего scope.
 
 ## Итог worktree
 
-- HEAD: `a47c6a9 feat: add preview cron and worker health monitoring`.
-- Monitoring implementation checkpoint уже закоммичен; перед этой записью
-  worktree был clean. Текущие незакоммиченные изменения ограничены sanitized
-  UptimeRobot evidence в handoff/checklist.
+- HEAD: `b1a1505 fix: update production readiness checklist and monitoring status`.
+- UptimeRobot evidence закоммичен в baseline. Текущие незакоммиченные изменения
+  ограничены dependency remediation, Miniflare v5 compatibility adapter и
+  синхронизацией dependency/readiness/runbook/handoff evidence.
 - Production/CMS/official-site actions не выполнялись.

@@ -86,6 +86,27 @@ source-specific dry-run реального файла, который требу
   применяется. Эти инструменты не входят в Worker runtime, но advisory остаётся
   документированным CI/local-tooling риском и проверяется при каждом update.
 
+### Stage 13 snapshot — 2026-08-11
+
+- Clean `npm ci` на immutable `b1a15058c7d41cb226ef34c83e3f6692f8c198d6`
+  прошёл; `npm audit --omit=dev` показывал 0, а полный audit обнаружил 7
+  исправимых dev-only advisory в SvelteKit, Wrangler/Miniflare, PostCSS и их
+  транзитивных зависимостях.
+- В изолированном clean clone проверены `@sveltejs/kit@2.70.2`,
+  `postcss@8.5.26`, `wrangler@4.120.1`, `miniflare@5.20260804.0-alpha` и
+  `@cloudflare/workers-types@5.20260811.1`. Miniflare 5 меняет lower-level
+  options API; два прямых вызова мигрированы через официальный
+  `convertV4MiniflareOptions`, без изменения D1 behavior.
+- Глобальный override `cookie` сужен до транзитивной зависимости SvelteKit:
+  SvelteKit получает `cookie@0.7.2`, а `youch` сохраняет совместимую ветку
+  `cookie@1.1.1`. `npm ls cookie --all` проходит без dependency conflict.
+- Повторный clean `npm ci`, полный `npm audit` и `npm audit --omit=dev` показывают
+  0 vulnerabilities. Полный `release:verify` в изолированном clone прошёл:
+  check, 46 test files/267 tests, 3 Playwright tests, build, docs и release scan.
+  После переноса основной worktree прошёл тот же полный chain и exact preview
+  Wrangler dry-run. До нового immutable commit этот результат остаётся verified
+  working-tree candidate, а не production approval.
+
 Локальный import boundary выбирает поддерживаемый parser после отдельного spike.
 Допустимые
 варианты:
@@ -104,15 +125,17 @@ source-specific dry-run реального файла, который требу
 ```json
 {
 	"overrides": {
-		"cookie": "^0.7.2"
+		"@sveltejs/kit": {
+			"cookie": "^0.7.2"
+		}
 	}
 }
 ```
 
 Причина: использованная версия SvelteKit могла транзитивно тянуть версию
 `cookie`, ниже безопасной границы audit. При каждом обновлении SvelteKit нужно
-проверить, остается ли override необходимым и совместимым; лишний override
-удаляется.
+проверить, остается ли scoped override необходимым и совместимым. Он не должен
+переопределять независимые зависимости других packages; лишний override удаляется.
 
 ## Release gate
 

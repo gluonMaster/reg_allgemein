@@ -344,8 +344,9 @@ Exit gate:
 Traceability, hardening, migrations `0014`–`0015`, scheduler/operations,
 monitoring signal, bootstrap, release helpers и operator packet синхронизированы
 с automated и preview evidence. Preview Worker/D1/private EU R2/Cron/empty
-204|503 monitoring signal проверены; independent alert delivery, Browser/
-provider smoke, restore rehearsal и внешние release inputs отсутствуют.
+204|503 monitoring signal и independent HEAD alert delivery/recovery проверены;
+Browser/provider/manual smoke, job-specific alerts, restore rehearsal и внешние
+release inputs отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
 Tracked packet этапа:
@@ -361,8 +362,8 @@ Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, migrations `0014`–`0015`,
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
 покрыты тестами. Environment-specific release gates остаются `blocked` до
-independent alerts, оставшегося preview rehearsal, restore, approvals и
-immutable release evidence.
+job/provider-specific alerts, оставшегося preview rehearsal, restore, approvals
+и immutable release evidence.
 
 Exit gate:
 
