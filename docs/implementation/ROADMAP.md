@@ -341,9 +341,11 @@ Exit gate:
 или внешнюю отправку без отдельного прямого поручения.
 
 Текущий статус: этап локально завершён и проверен, production readiness `blocked`.
-Traceability, hardening, migration `0014`, scheduler/operations, bootstrap,
-release helpers и operator packet синхронизированы с локальным automated
-evidence. Preview/restore rehearsal и внешние release inputs отсутствуют;
+Traceability, hardening, migrations `0014`–`0015`, scheduler/operations,
+monitoring signal, bootstrap, release helpers и operator packet синхронизированы
+с automated и preview evidence. Preview Worker/D1/private EU R2/Cron/empty
+204|503 monitoring signal проверены; independent alert delivery, Browser/
+provider smoke, restore rehearsal и внешние release inputs отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
 Tracked packet этапа:
@@ -355,11 +357,12 @@ Tracked packet этапа:
 - [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md);
 - [persistent handoff](handoffs/stage-13.md).
 
-Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, migration `0014`, scheduled
-Worker/Cron и manual operations page, `admin:bootstrap`, `docs:check`,
-`release:scan`, `release:verify` реализованы и покрыты локальными тестами.
-Environment-specific release gates остаются `blocked` до preview, alerts,
-restore, approvals и immutable release evidence.
+Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, migrations `0014`–`0015`,
+scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
+`admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
+покрыты тестами. Environment-specific release gates остаются `blocked` до
+independent alerts, оставшегося preview rehearsal, restore, approvals и
+immutable release evidence.
 
 Exit gate:
 

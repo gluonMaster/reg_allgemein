@@ -36,7 +36,7 @@ approval.
 | Document review       | `/admin/requests`, AV/business review; отдельные R2 bindings и cleanup проверены локально                          | private remote EU R2, alerts, approved training          | `feature_disabled`/`blocked` |
 | Price maintenance     | `/admin/price-reviews` и `/admin/operations` manual/Cron run; local tests                                          | remote preview freshness/alerts                          | `blocked`                    |
 | Privacy operations    | `/admin/privacy` и `/admin/operations` cleanup run; local D1/R2 tests                                              | remote R2 retry rehearsal/alerts                         | `blocked`                    |
-| Health/cron dashboard | `/admin/operations`: recent safe run/status/result и audited manual action; route-security tests                   | health thresholds, alert delivery, preview evidence      | `blocked`                    |
+| Health/cron dashboard | `/admin/operations` + empty `/_health/operations` 204/503 signal; safe run/status/result и audited manual action | independent poller/recipient, alert delivery rehearsal    | `blocked`                    |
 | Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs, repositories/page; local unit/integration tests              | remote preview Cron delivery/freshness и alerts          | `blocked`                    |
 | Admin bootstrap       | `npm run admin:bootstrap`; target guard, one-shot D1 flow, session revoke/audit и upgrade auto-seal tested locally | remote exercise; отдельной post-consume recovery CLI нет | `blocked`                    |
 
@@ -61,21 +61,38 @@ production `passed`.
 | Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch      | `/admin/operations`; freshness alert missing      | `blocked`                              |
 | Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe       | `/admin/operations`; R2 retry alert missing       | `blocked`                              |
 
-Migration `0014_production_operations.sql`, clean/upgrade coverage, job/storage
-repositories, Worker scheduled handler, triggers, `/admin/operations` и
-раздельные R2 bindings реализованы и проходят targeted local tests. Это не
-production evidence: remote preview trigger/freshness, alert delivery, remote R2
-isolation и restore rehearsal остаются `blocked`.
+Migrations `0014_production_operations.sql` и `0015_worker_monitoring.sql`,
+clean/upgrade coverage, job/storage repositories, Worker scheduled handler,
+triggers, `/admin/operations`, empty 204/503 health signal и раздельные R2
+bindings реализованы и проходят targeted local tests. Preview Cron delivery и
+freshness подтверждены, но independent alert delivery, remote monitoring
+migration/smoke, R2 restore и failure rehearsal остаются `blocked`.
 
 ## 1. Начало смены: health и freshness
 
-**Prerequisites:** read-only operator/admin access; target environment и Worker
-version известны; incident log защищён.
+**Prerequisites:** target environment и Worker version известны; для деталей
+есть read-only operator/admin access; incident log защищён. Для active alert
+должны быть отдельно утверждены независимый monitor account, recipient и owner.
 
-**Точная команда/UI:** открыть `<PORTAL_ORIGIN>/admin/operations`. Страница
-показывает recent `job_name`, `status`, trigger/start/finish, safe result и safe
-error code; отдельные health/freshness thresholds и alerts пока отсутствуют.
-Дополнительный read-only tail, только если он разрешён policy:
+**Точная команда/UI:** сначала проверить обезличенный endpoint:
+
+```powershell
+$portalOriginForMonitoring = '<PORTAL_ORIGIN>'
+curl.exe --silent --show-error --output NUL --write-out "%{http_code}" "$portalOriginForMonitoring/_health/operations"
+```
+
+`204` означает: оба every-minute jobs не старше 180 секунд, все семь 15-minute
+jobs не старше 1200 секунд, нет run старше 360 секунд в `running` и за последние
+900 секунд меньше трёх `failed|skipped_locked` scheduled runs плюс application
+5xx. `feature_disabled` считается доставленным terminal run, но не включает
+соответствующую функцию. Любая D1/query/clock проблема даёт empty `503`; response
+не содержит reason, job name, error code, PII или secret.
+
+Для деталей открыть `<PORTAL_ORIGIN>/admin/operations`: страница показывает
+recent `job_name`, `status`, trigger/start/finish, safe result и safe error code.
+В Cloudflare Workers Logs фильтровать `$metadata.error EXISTS` либо
+`$workers.outcome = "exception"`, не копируя raw payload. Дополнительный
+read-only tail, только если он разрешён policy:
 
 ```powershell
 npx wrangler tail --config <TARGET_CONFIG>
@@ -83,14 +100,16 @@ npx wrangler tail --config <TARGET_CONFIG>
 
 Не копировать raw request/log payload в ticket.
 
-**Ожидаемый безопасный результат:** Worker health нормален; каждый enabled job
-имеет свежий success в пределах утверждённого schedule; нет repeated safe error
-code, stale lease или growing backlog.
+**Ожидаемый безопасный результат:** endpoint возвращает 204; independent poller
+видит ту же проверку с интервалом не более 5 минут и доставляет test alert
+утверждённому recipient; каждый job имеет свежий terminal run, repeated safe
+error, stale lease и growing backlog отсутствуют.
 
 **Проверка:** сравнить UTC timestamp с `* * * * *` или `*/15 * * * *`;
 отдельно для Telegram проверить `Europe/Berlin` business-window result. Убедиться,
-что typecheck/tests/preview trigger evidence прошли. Без alerts результат
-production gate не может быть `passed`.
+что typecheck/tests/preview trigger evidence прошли. Проверить incident/recovery
+alert без переключения feature flags и без application email/Telegram send.
+Без независимой доставки alert результат production gate не может быть `passed`.
 
 **Stop condition:** operations page отсутствует, timestamp неизвестен, missed job,
 stale lock, repeated Worker error, raw logs содержат PII или target environment

@@ -1,6 +1,6 @@
 # Production readiness checklist
 
-Актуально на 2026-08-10. Это текущий release ledger, а не обещание будущей
+Актуально на 2026-08-11. Это текущий release ledger, а не обещание будущей
 готовности.
 
 **Итог:** `blocked` — портал нельзя объявлять production-ready и нельзя
@@ -15,11 +15,11 @@ evidence.
 | Поле                                 | Значение                                                          |
 | ------------------------------------ | ----------------------------------------------------------------- |
 | Release/commit SHA                   | `<IMMUTABLE_RELEASE>` — `blocked`                                 |
-| Checklist revision                   | 2026-08-11, fail-closed Worker + automatic preview Cron evidence   |
-| Preview environment/config           | Worker + D1 + two private EU R2 + Cron verified; full smoke — `blocked` |
+| Checklist revision                   | 2026-08-11, preview monitoring signal prepared; external alert pending |
+| Preview environment/config           | Worker + D1/R2 + Cron + empty monitoring 204 verified; external alert — `blocked` |
 | Production environment/config        | `<PRODUCTION_ENVIRONMENT>` — `blocked`                            |
 | Portal preview/production origins    | preview workers.dev GET smoke passed; custom/production — `blocked` |
-| Migration set                        | `0001`–`0014`; local tests + empty preview remote apply passed    |
+| Migration set                        | `0001`–`0015`; local + empty preview remote apply passed              |
 | Operator/reviewer                    | `<OWNER_ROLE>` — `blocked`                                        |
 | Release window                       | `<APPROVED_WINDOW>` — `blocked`                                   |
 | RPO/RTO/cadence                      | не утверждены — `blocked`                                         |
@@ -100,12 +100,12 @@ filenames, полных resource IDs или local upstream paths.
 
 | Gate                                        | Статус    | Affected path / текущее evidence                                                                                  | Owner / next action          |
 | ------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| PR-D01 Scheduled Worker entrypoint/Cron     | `blocked` | Preview delivery всех 9 jobs passed; 31-run snapshot + continuity to 43, failures/running 0; alerts absent          | Operations owner             |
-| PR-D02 Job-run state migration              | `blocked` | `0014` remote journal verified: 9 names, terminal safe results/freshness; failure/restore rehearsal отсутствует    | DB/reliability reviewer      |
+| PR-D01 Scheduled Worker entrypoint/Cron     | `blocked` | All 9 jobs delivered; version `58ec000b…` empty monitoring GET/HEAD 204; external alert rehearsal pending          | Operations owner             |
+| PR-D02 Job-run state migration              | `blocked` | Remote `0001`–`0015`, pending 0; journal/counters read-only smoke passed, restore rehearsal absent                 | DB/reliability reviewer      |
 | PR-D03 Exact schedule/timezone inventory    | `blocked` | Exact UTC buckets `* * * * *`/`*/15 * * * *` delivered; Telegram Europe/Berlin local-tested; owners/alerts absent | Operations/product owners    |
 | PR-D04 Dedupe/lease/manual-run              | `blocked` | Automatic buckets unique, stuck 0; local lock/manual-audit tests passed; remote manual/failure rehearsal absent   | Reliability reviewer         |
 | PR-D05 Manual operations page/RBAC/audit    | `blocked` | Admin-only load, CSRF, allowlist, confirmation, idempotency и no-GET/direct bypass passed 7/7                     | Security/UX reviewer         |
-| PR-D06 Missed Cron/stale lock alert         | `blocked` | Signal/threshold/owner отсутствуют                                                                                | Operations owner             |
+| PR-D06 Missed Cron/stale lock alert         | `blocked` | Preview empty 204/503 signal + 180/1200/360s thresholds verified; independent poller/recipient/delivery drill absent | Operations owner           |
 | PR-D07 Dead outbox alert/manual recovery    | `blocked` | Preview outbox jobs fail closed as provider-disabled, queue 0; real provider/dead alert absent                    | Messaging/operations owner   |
 | PR-D08 Quarantine backlog/cleanup alert     | `blocked` | Preview cleanup succeeded with zero effects; remote backlog alert/manual failure rehearsal absent                | Storage/operations owner     |
 | PR-D09 Browser/provider exhaustion alert    | `blocked` | Remote metrics/threshold/failure procedure не проверены                                                           | Operations/provider owner    |

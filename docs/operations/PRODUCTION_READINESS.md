@@ -109,6 +109,15 @@ outbox, repeated Worker errors, failed import/promotion, backup failure,
 quarantine backlog и Browser/provider exhaustion. Платный сервис нельзя
 предполагать без отдельного решения.
 
+Реализованный базовый signal `GET|HEAD /_health/operations` намеренно возвращает
+только empty `204|503` с `no-store`: он проверяет свежесть всех scheduled jobs,
+stale `running` и repeated scheduled/application Worker errors по порогам
+`180s|1200s|360s|3 за 900s`. D1 недоступна — signal `503`. Application 5xx
+хранятся только как минутные PII-free counters и очищаются через 7 суток.
+Signal не является alert сам по себе: независимый внешний poller, recipient,
+owner и delivery/recovery rehearsal остаются обязательными release evidence и
+не используют прикладные Resend/Telegram adapters.
+
 ### `docs/operations/DISASTER_RECOVERY.md`
 
 Инструкция должна покрывать:

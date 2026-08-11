@@ -205,6 +205,7 @@ describe('D1 production migration upgrade', () => {
 						'admin_bootstrap_control',
 						'admin_bootstrap_actions',
 						'admin_bootstrap_assertions',
+						'worker_error_buckets',
 					])
 				);
 				const cleanupColumns = await context.db

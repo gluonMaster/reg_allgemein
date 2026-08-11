@@ -55,10 +55,11 @@ fail-closed, его выключение проверено и оставший�
 - [disaster-recovery runbook](../../operations/DISASTER_RECOVERY.md);
 - [production readiness checklist](../../operations/PRODUCTION_READINESS_CHECKLIST.md).
 
-`R2_ARCHIVE`, `R2_QUARANTINE`, migration `0014`, scheduled Worker/Cron,
-manual operations page, `admin:bootstrap`, `docs:check`, `release:scan` и
-`release:verify` реализованы и локально проверены. Это не переводит remote,
-restore, legal/provider или production-approval gates из `blocked`.
+`R2_ARCHIVE`, `R2_QUARANTINE`, migrations `0014`–`0015`, scheduled Worker/Cron,
+empty 204/503 monitoring signal, manual operations page, `admin:bootstrap`,
+`docs:check`, `release:scan` и `release:verify` реализованы и проверены. Preview
+Worker/D1/private EU R2/Cron/signal развёрнуты; independent alert delivery,
+restore, legal/provider и production-approval gates остаются `blocked`.
 
 Ветки не навязываются документацией: существующая стратегия пользователя имеет
 приоритет. Нельзя включать в stage commit чужие/предшествующие изменения только

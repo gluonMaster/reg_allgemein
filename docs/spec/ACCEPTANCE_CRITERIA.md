@@ -635,6 +635,16 @@ MVP готов, когда:
   запускает side effect без audit, не оставляет его run `running` при доступной
   D1 и не прерывает остальные jobs. Manual route требует admin, CSRF, typed job,
   confirmation и idempotency. (`REL-01`, `ADMIN-02`, `OPS-01`)
+- `GET|HEAD /_health/operations` возвращает только empty `204` либо fail-closed
+  empty `503`, `no-store` и `noindex`; D1 failure, отсутствие любого job либо
+  превышение порога не раскрывает job name/error code в ответе. Freshness
+  thresholds равны 180 секунд для `* * * * *`, 1200 секунд для
+  `*/15 * * * *`, stale-running — 360 секунд, repeated error — 3 за 900 секунд.
+  `feature_disabled` является допустимым свежим terminal delivery, но не
+  означает готовность выключенной функции. Application 5xx учитываются в
+  PII-free minute buckets с bounded 7-day cleanup. Production gate требует
+  отдельного внешнего poller, проверенной доставки alert и owner; сам Worker не
+  может доказать отсутствие собственного Cron. (`OBS-02`, `OPS-01`, `SEC-02`)
 - First-admin capability не имеет HTTP route и потребляется ровно один раз:
   verified active parent повышается только при нуле active admin, sessions
   отзываются, audit/assertion сохраняются, replay/race отклоняется. Upgrade с

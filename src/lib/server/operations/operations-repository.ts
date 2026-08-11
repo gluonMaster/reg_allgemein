@@ -133,8 +133,12 @@ export class OperationsRepository {
 		priceActions: number;
 		priceAcceptances: number;
 		rateLimitBuckets: number;
+		workerErrorBuckets: number;
 	}> {
 		assertLimit(limit);
+		const workerErrorRetentionCutoff = new Date(
+			Date.parse(now) - 7 * 24 * 60 * 60 * 1_000
+		).toISOString();
 		const results = await this.db.batch([
 			{
 				sql: `UPDATE contract_parent_actions SET ip_retention_value = NULL
@@ -170,6 +174,12 @@ export class OperationsRepository {
 					ORDER BY expires_at, id LIMIT ?)`,
 				params: [now, limit],
 			},
+			{
+				sql: `DELETE FROM worker_error_buckets WHERE minute_bucket IN (
+					SELECT minute_bucket FROM worker_error_buckets
+					WHERE updated_at < ? ORDER BY updated_at, minute_bucket LIMIT ?)`,
+				params: [workerErrorRetentionCutoff, limit],
+			},
 		]);
 		return {
 			contractActions: results[0]?.meta.changes ?? 0,
@@ -177,6 +187,7 @@ export class OperationsRepository {
 			priceActions: results[2]?.meta.changes ?? 0,
 			priceAcceptances: results[3]?.meta.changes ?? 0,
 			rateLimitBuckets: results[4]?.meta.changes ?? 0,
+			workerErrorBuckets: results[5]?.meta.changes ?? 0,
 		};
 	}
 }

@@ -37,6 +37,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0012_messaging_outboxes.sql',
 			'0013_privacy_closure.sql',
 			'0014_production_operations.sql',
+			'0015_worker_monitoring.sql',
 		]);
 
 		const result = await context.db
@@ -74,6 +75,7 @@ describe('foundation D1 migration and repositories', () => {
 				'admin_bootstrap_control',
 				'admin_bootstrap_actions',
 				'admin_bootstrap_assertions',
+				'worker_error_buckets',
 			])
 		);
 	});

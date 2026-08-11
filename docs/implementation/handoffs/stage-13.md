@@ -269,6 +269,47 @@ release:verify` завершился с exit code 0.
   incident rehearsal. Соответствующие PR-D gates и общий NO-GO остаются
   `blocked`.
 
+## Preview monitoring preparation 2026-08-11
+
+- Актуальная Cloudflare документация проверена до implementation: на Free plan
+  нет native per-Worker missed-Cron/repeated-runtime-error alert. Workers Logs и
+  Metrics доступны, но active Health Check notification требует Pro+, traffic
+  error-rate alert — Enterprise, Tail Worker — Workers Paid. Поэтому один Worker
+  не считается независимым наблюдателем собственного отсутствующего Cron.
+- Добавлена только forward migration `0015_worker_monitoring.sql`: application
+  fetch exception/5xx агрегируются в PII-free UTC minute buckets без route,
+  request ID, error text или payload; bounded maintenance удаляет buckets старше
+  7 суток. Applied migration `0014` не изменялась.
+- `GET|HEAD /_health/operations` возвращает только empty `204|503`, `no-store` и
+  `noindex`. Пороги: every-minute jobs 180 секунд, maintenance jobs 1200 секунд,
+  stale `running` 360 секунд, repeated scheduled/application errors — 3 за 900
+  секунд. Missing D1/query/invalid freshness fail closed как 503;
+  `feature_disabled` считается terminal Cron delivery, но не включает feature.
+- Нормальный Worker fetch сохраняет native exception semantics: uncaught error
+  после best-effort counter снова выбрасывается; 5xx counter записывается через
+  tracked `waitUntil`. Endpoint не отправляет Resend/Telegram и не меняет ни
+  одного feature flag.
+- Targeted migration/monitoring regression прошёл: 3 files, 14/14 tests. Полный
+  regression: 46 files, 267/267 tests; `npm run check` — 0 errors/warnings;
+  build, `docs:check`, `release:scan` (474/474) и `git diff --check` passed.
+- Preview remote apply/deploy выполнены по прямому разрешению. D1 migration list
+  после `0015` — pending 0; Worker version
+  `sha256:70c02839d41d`, ignored config SHA-256 остался
+  `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`.
+  GET/HEAD `/_health/operations` вернули 204, 0 bytes, `no-store`/`noindex`;
+  POST — empty 405 с `Allow: GET, HEAD`. Safe D1 snapshot: 0 monitoring error
+  buckets/errors, 98 `feature_disabled`, 21 `succeeded`, email/Telegram outbox 0.
+  Secret names остались JWT/Turnstile/Resend; значения не читались.
+- Все прежние feature flags сохранены, real email/Telegram send не выполнялся.
+  Кратковременный read-only D1 preflight один раз получил API `7403`; повторные
+  whoami/account/D1/migration checks сразу прошли, remote mutation до recovery не
+  запускалась.
+- Active alert пока не создан: нужен независимый external poller с интервалом не
+  более 5 минут, утверждённый recipient/owner и failure/recovery delivery drill.
+  Рекомендуемый бесплатный operational вариант — UptimeRobot Free; создание
+  внешнего account и notification contact остаётся действием владельца. Поэтому
+  PR-D06 остаётся `blocked` до реальной доставки alert.
+
 ## Release gates
 
 Полный ledger: [PRODUCTION_READINESS_CHECKLIST.md](../../operations/PRODUCTION_READINESS_CHECKLIST.md).
@@ -278,7 +319,7 @@ release:verify` завершился с exit code 0.
 | Local implementation/traceability | `blocked`          | local full run/cold-read passed; нужен commit и rerun на immutable candidate  | release + independent reviewer |
 | Dependency security               | `blocked`          | production audit clean; review documented dev-tooling advisory on each update | dependency/security owner      |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
-| Scheduled monitoring              | `blocked`          | preview automatic delivery/freshness passed; alerts/owners/manual failure rehearsal absent | operations owner               |
+| Scheduled monitoring              | `blocked`          | preview Cron + empty 204/503 signal passed; external recipient/delivery/failure rehearsal absent | operations owner            |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
 | Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
 | Telegram                          | `feature_disabled` | approved adapter/DPA absent                                                   | provider/privacy owner         |
@@ -310,8 +351,9 @@ release:verify` завершился с exit code 0.
 
 1. Повторить clean `release:verify` на immutable candidate; при обновлении
    Wrangler/Miniflare проверить устранение documented dev-tooling advisory.
-2. Продолжить production-shaped preview smoke без PII: authenticated
-   browser/accessibility, real-token Turnstile, Cron alerts/manual failures и отдельно
+2. Создать independent free uptime monitor для `/_health/operations`, назначить
+   recipient/owner и провести DOWN/UP delivery drill; затем продолжить preview
+   smoke: authenticated browser/accessibility, real-token Turnstile и отдельно
    разрешённый synthetic email delivery/reply smoke.
 3. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
    restore + rollback/roll-forward drill.
@@ -321,9 +363,44 @@ release:verify` завершился с exit code 0.
 6. Только после отсутствия `blocked` запросить отдельные production и site-link
    поручения.
 
+## Session checkpoint 2026-08-11
+
+- Это безопасная точка для новой сессии. Следующая задача — не новый Cloudflare
+  deploy, а независимая доставка monitoring alert через UptimeRobot Free.
+- На момент checkpoint UptimeRobot account ещё не создан. Владелец должен
+  создать Free account на `registration@kolibri-dresden.de`, подтвердить email и
+  включить 2FA; payment method для Free plan не требуется.
+- После подтверждения создать HTTP(s) monitor с именем
+  `Kolibri registration preview - Cron/Worker health`, URL
+  `https://preview.example.com/_health/operations`,
+  method GET, interval 5 minutes и email DOWN+UP alerts на account contact.
+  Expected healthy result — empty 204. Любой 503 должен считаться DOWN.
+- Alert delivery/recovery rehearsal не должно менять application feature flags
+  или использовать Resend/Telegram. Сначала использовать provider test action,
+  если она доступна. Иначе допустим отдельный временный UptimeRobot monitor:
+  направить его на заведомо несуществующий preview path, дождаться DOWN alert,
+  заменить URL на рабочий `/_health/operations`, дождаться UP alert и удалить
+  временный monitor. Main monitor всё время остаётся на правильном URL.
+- Browser session в предыдущей сессии не была подключена. Новая сессия должна
+  сначала проверить доступный browser connector; нельзя обходить это чтением
+  browser cookies/profile/OAuth storage. Если connector снова недоступен,
+  предоставить владельцу exact UI fields и проверить результат read-only.
+- Не повторять migration/deploy по истории чата. До любой новой remote mutation
+  сначала сверить tracked handoff, `git status`, current version и pending
+  migrations; production, DNS/CMS, feature enablement и application sends
+  требуют отдельных прямых поручений.
+- После UptimeRobot setup записать sanitized monitor identity, interval,
+  recipient role, first UP, DOWN/UP rehearsal timestamps и recovery result в
+  этот handoff и `PRODUCTION_READINESS_CHECKLIST.md`. Не записывать account
+  password, session/cookie, API key или полный provider diagnostic.
+
 ## Итог worktree
 
-- End `git status --short`: Stage-13 implementation/docs changes present; no
-  unrelated pre-existing changes were present at start.
-- Commit не создавался.
+- HEAD: `8f68636 feat: add Resend integration and verify Cloudflare preview deployment`.
+- End `git status --short`: только текущие monitoring implementation/tests/docs
+  изменены; `0015_worker_monitoring.sql`, `operations/monitoring.ts` и
+  `operations-monitoring-d1.test.ts` пока untracked. Не удалять и не сбрасывать
+  это дерево; рекомендуемый следующий logical commit message:
+  `feat: add preview cron and worker health monitoring`.
+- Commit текущего monitoring checkpoint не создавался.
 - Production/CMS/official-site actions не выполнялись.
