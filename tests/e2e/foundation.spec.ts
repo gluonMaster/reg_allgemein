@@ -12,6 +12,14 @@ test('serves the German foundation page with a correlation ID', async ({ page })
 		page.getByRole('link', { name: germanCatalog['home.catalogLink'] }).first()
 	).toHaveAttribute('href', '/catalog');
 	await expect(page).toHaveTitle(germanCatalog['home.title']);
+	await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+		'content',
+		germanCatalog['meta.description']
+	);
+	await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+	const faviconResponse = await page.request.get('/favicon.svg');
+	expect(faviconResponse.ok()).toBe(true);
+	expect(faviconResponse.headers()['content-type']).toContain('image/svg+xml');
 });
 
 test('renders the mobile German registration form and protects account routes', async ({

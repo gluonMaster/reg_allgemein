@@ -6,6 +6,11 @@
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
 </script>
 
+<svelte:head>
+	<meta name="description" content={translate('de', 'meta.description')} />
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</svelte:head>
+
 {@render children()}
 
 {#if data.officialLinks}

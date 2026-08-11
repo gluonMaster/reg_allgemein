@@ -349,6 +349,39 @@ release:verify` завершился с exit code 0.
   также 0; `npm ls cookie --all` подтвердил отдельные совместимые ветки.
   Wrangler 4.120.1 exact preview-config dry-run прочитал 68 assets и ожидаемые
   bindings/feature flags, завершившись до upload/deploy.
+- По отдельному разрешению создан commit
+  `63995f8532f45441885d7e3b042f4092471a8bc3` (`chore: remediate release tooling
+  advisories`). Новый exact clean clone прошёл `npm ci`, полный audit 0 и полный
+  `release:verify` за 264.2 s: 46 files/267 tests, 3/3 Playwright, build,
+  production audit 0, 137 links/51 docs files, 82 commands и clean-clone release
+  scan 410/410. Clone остался на exact SHA без tracked changes.
+
+### Public preview browser/accessibility smoke
+
+- После первоначальной ошибки in-app Browser использован доступный Chrome
+  DevTools MCP. Пользовательская browser session, cookies и authentication не
+  требовались и не читались.
+- Home, catalog, register, login, forgot и resend открылись на canonical preview
+  origin с document status 200. Семантические snapshots подтвердили немецкие
+  titles, один `h1`, `main`, именованные navigation/footer и доступные имена
+  form controls. Auth registration оставалась явно disabled.
+- Home и register прошли desktop/mobile Lighthouse: Accessibility 100, Best
+  Practices 100, Agentic Browsing 100. На 390×844 horizontal overflow отсутствует;
+  keyboard order проходит navigation, поля формы, checkbox и footer links с
+  видимым solid amber focus outline.
+- Lighthouse SEO 91 воспроизводимо указал только отсутствующий meta description;
+  первый home load также записал единственный console error из-за
+  `/favicon.ico` 404. Остальные проверенные страницы не имели console warnings/
+  errors, все application assets вернули 200.
+- В browser-fix candidate добавлены общий немецкий meta description, SVG favicon и E2E
+  regression для обоих ресурсов. Targeted i18n 3/3 и Playwright 3/3 passed.
+  Полный working-tree `release:verify` прошёл за 264.1 s: 46 files/267 tests,
+  3/3 Playwright, build, production audit 0, docs и release scan 476/476.
+- Post-fix Chrome re-audit локального candidate подтвердил на desktop и mobile по 100 для
+  Accessibility, Best Practices, SEO и Agentic Browsing; failed audits 0,
+  console warnings/errors 0, `/favicon.svg` 200. Временный dev server после
+  проверки остановлен. Remote preview пока не менялся; перед deploy и
+  post-deploy re-audit требуется отдельное preview deploy permission.
 
 ## Release gates
 
@@ -356,8 +389,8 @@ release:verify` завершился с exit code 0.
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `blocked`          | immutable baseline passed; dependency-remediated successor ждёт commit/rerun | release + independent reviewer |
-| Dependency security               | `blocked`          | clean successor full audit 0 and release verification passed; нужен immutable commit/rerun | dependency/security owner |
+| Local implementation/traceability | `blocked`          | immutable candidate verified; final independent review/remaining remote evidence incomplete | release + independent reviewer |
+| Dependency security               | `passed`           | immutable `63995f8`: clean install, full audit 0, full release verification | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
@@ -389,9 +422,9 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. После отдельного разрешения закоммитить dependency remediation и tracked
-   evidence, затем повторить clean `npm ci`/`release:verify` на новом immutable
-   candidate. На текущем working-tree candidate полный audit уже 0.
+1. После immutable clean-clone проверки browser-fix candidate получить отдельное
+   preview deploy permission, затем повторить console и desktop/mobile Lighthouse
+   на deployed version.
 2. Поддерживать созданный independent uptime monitor для `/_health/operations`
    и периодически повторять delivery test; затем по отдельным разрешениям
    продолжить preview smoke: authenticated browser/accessibility, real-token
@@ -412,26 +445,27 @@ release:verify` завершился с exit code 0.
 - Provider test action доставил DOWN→UP pair, recovery timestamp
   `2026-08-11T14:13:22Z`; owner подтвердил оба сообщения. Отдельный temporary
   monitor не создавался. Read-only HEAD `2026-08-11T14:22:28Z` вернул empty 204.
-- Browser connector в этой сессии не был доступен; владелец выполнил exact UI
-  fields вручную. Browser cookies/profile/OAuth storage не читались.
+- In-app Browser в этой сессии не был доступен; UptimeRobot UI ранее заполнил
+  владелец. Public preview smoke позднее выполнен через Chrome DevTools MCP без
+  user session; browser cookies/profile/OAuth storage не читались.
 - Не повторять migration/deploy по истории чата. До любой новой remote mutation
   сначала сверить tracked handoff, `git status`, current version и pending
   migrations; production, DNS/CMS, feature enablement и application sends
   требуют отдельных прямых поручений.
-- Read-only сверка этой сессии: HEAD `b1a1505`, preview config SHA-256
+- Read-only сверка этой сессии: HEAD `63995f8`, preview config SHA-256
   `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`,
   Worker version `sha256:70c02839d41d`, D1 pending migrations 0;
   read-only HEAD `2026-08-11T15:01:22Z` вернул empty 204.
-- Immutable baseline release verification и clean clone прошли. Проверенный
-  dependency-remediated successor находится в worktree: full audit 0 и
-  isolated full `release:verify` passed, но commit ещё не создан.
+- Immutable dependency-remediated candidate создан и независимо проверен в clean
+  clone: `npm ci`, full audit 0 и полный `release:verify` passed.
 - Следующий remote preview smoke или production/site action требует нового
   прямого поручения соответствующего scope.
 
 ## Итог worktree
 
-- HEAD: `b1a1505 fix: update production readiness checklist and monitoring status`.
-- UptimeRobot evidence закоммичен в baseline. Текущие незакоммиченные изменения
-  ограничены dependency remediation, Miniflare v5 compatibility adapter и
-  синхронизацией dependency/readiness/runbook/handoff evidence.
+- HEAD: текущий browser-fix commit `fix: add portal metadata and favicon` поверх
+  `63995f8 chore: remediate release tooling advisories`.
+- Dependency remediation закоммичен и проверен на exact SHA. Browser fix, E2E
+  regression и синхронизация immutable/browser evidence входят в текущий
+  candidate; его exact SHA и clean-clone результат определяются после commit.
 - Production/CMS/official-site actions не выполнялись.

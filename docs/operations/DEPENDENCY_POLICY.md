@@ -104,8 +104,10 @@ source-specific dry-run реального файла, который требу
   0 vulnerabilities. Полный `release:verify` в изолированном clone прошёл:
   check, 46 test files/267 tests, 3 Playwright tests, build, docs и release scan.
   После переноса основной worktree прошёл тот же полный chain и exact preview
-  Wrangler dry-run. До нового immutable commit этот результат остаётся verified
-  working-tree candidate, а не production approval.
+  Wrangler dry-run. Candidate зафиксирован как immutable
+  `63995f8532f45441885d7e3b042f4092471a8bc3`; повторный clean clone, полный
+  audit и `release:verify` прошли. Это закрывает dependency verification, но не
+  является production approval.
 
 Локальный import boundary выбирает поддерживаемый parser после отдельного spike.
 Допустимые

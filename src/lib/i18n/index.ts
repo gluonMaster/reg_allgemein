@@ -1,6 +1,8 @@
 export const defaultLocale = 'de' as const;
 
 export const germanCatalog = {
+	'meta.description':
+		'Online-Registrierung, Kursübersicht und Elternbereich des Kinder- und Elternzentrums Kolibri e.V.',
 	'home.title': 'Kolibri Anmeldung',
 	'home.foundationNotice':
 		'Das Registrierungsportal wird vorbereitet. Verfügbare Funktionen werden hier veröffentlicht.',
