@@ -7,9 +7,10 @@ Production readiness: **`blocked` / NO-GO**
 Stage 13 реализует технический hardening и operator packet, но не даёт права на
 production actions. Preview D1/R2 provision/migration и fail-closed Worker
 evidence, включая automatic Cron delivery/freshness, уже получены;
-provider/Browser/Cron alerts и manual-run evidence, backup/restore rehearsal,
-legal/privacy approvals, RPO/RTO и отдельное deploy поручение остаются release
-blockers.
+provider/Browser smoke и remote manual-run/failure evidence, backup/restore
+rehearsal, legal/privacy approvals, RPO/RTO и отдельное deploy поручение остаются
+release blockers. Независимый UptimeRobot alert delivery/recovery rehearsal
+пройден 2026-08-11.
 
 ## Baseline
 
@@ -71,7 +72,7 @@ blockers.
 | Empty D1    | local test + preview remote `0001`–`0014` apply/schema parity passed                         | production migration и isolated restore                     |
 | Upgraded D1 | populated `0013 → 0014` upgrade passed 1/1; migration file 2/2 с selector-rejection test     | isolated backup/restore + rollback rehearsal                |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                             | production resources/policy и isolated restore              |
-| Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs passed                  | remote manual/dedupe/failure/alerts rehearsal               |
+| Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed | remote manual/dedupe/failure rehearsal                       |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
 | Imports     | local allowlist/dry-run/promote/rollback tests remain                                        | authorized current source and remote audited path           |
 
@@ -112,7 +113,7 @@ approved scope и не называется полным MVP.
 | `npm run release:scan`                     | passed: 469/469 candidates; artifact/secret/PII/control-byte findings отсутствуют     |
 | `git diff --check`                         | passed после final documentation/cold-read sync                                       |
 | Preview D1 migration                       | passed 2026-08-10: 14/14, pending 0, schema parity, FK violations 0, user rows 0      |
-| Preview Worker/Browser/provider/Cron smoke | partial 2026-08-11: fail-closed GET + automatic Cron passed; Browser/provider/alerts/manual — `blocked` |
+| Preview Worker/Browser/provider/Cron smoke | partial 2026-08-11: fail-closed GET/HEAD, automatic Cron и внешний alert passed; Browser/provider/manual — `blocked` |
 | D1/R2 isolated restore/rollback rehearsal  | not run — `blocked`                                                                   |
 
 Полный `npm audit` сохраняет три high advisory в dev-only Wrangler/Miniflare/
@@ -132,8 +133,9 @@ approval gates всё равно удерживают readiness в `blocked`.
   routes, flags, prerequisites, stop/rollback и NO-GO сверены; `docs:check`
   подтвердил 138 links/51 files + 82 command lines. Найденная неясность хранения
   materialized config закрыта exact ignored paths и `git check-ignore` guard.
-- Full preview provider/Cron alerts/manual/bootstrap/restore rehearsal не выполнялся и
-  остаётся `blocked`. Новые deliverables должны войти в будущий immutable commit;
+- Full preview provider/manual/bootstrap/restore rehearsal не выполнялся и
+  остаётся `blocked`; independent HEAD monitoring alert rehearsal passed
+  2026-08-11. Новые deliverables должны войти в будущий immutable commit;
   `git add`/commit в рамках этапа не выполнялись.
 - Preview D1 migration и R2 provisioning не подменяют remote Browser conformance,
   full walkthrough и полный D1/R2 restore; эти gates остаются `blocked`.
@@ -304,11 +306,22 @@ release:verify` завершился с exit code 0.
   Кратковременный read-only D1 preflight один раз получил API `7403`; повторные
   whoami/account/D1/migration checks сразу прошли, remote mutation до recovery не
   запускалась.
-- Active alert пока не создан: нужен независимый external poller с интервалом не
-  более 5 минут, утверждённый recipient/owner и failure/recovery delivery drill.
-  Рекомендуемый бесплатный operational вариант — UptimeRobot Free; создание
-  внешнего account и notification contact остаётся действием владельца. Поэтому
-  PR-D06 остаётся `blocked` до реальной доставки alert.
+- Владелец подтвердил создание и email-verification UptimeRobot Free account с
+  включённой 2FA. Создан независимый HTTP(s) monitor
+  `Kolibri registration preview - Cron/Worker health` для canonical
+  `/_health/operations`, интервал 5 минут, account notification contact получает
+  DOWN и UP. Фактический HTTP method — `HEAD`: UptimeRobot Free UI не разрешил
+  планировавшийся `GET`, а endpoint поддерживает эквивалентный empty `HEAD`
+  signal со статусами `204|503`.
+- Первый dashboard state `Up` подтверждён владельцем. Независимая read-only HEAD
+  проверка `2026-08-11T14:22:28Z` вернула 204, 0 bytes, `no-store`/`noindex`.
+- Provider `Test Notification` без temporary monitor доставил account contact
+  synthetic DOWN и сразу следующий UP. Recovery notification содержит UTC
+  timestamp `2026-08-11T14:13:22Z`; synthetic DOWN incident timestamp/duration
+  provider обозначил как unavailable, поэтому отдельное выдуманное время не
+  записывается. Владелец подтвердил получение обоих сообщений в правильном
+  порядке и recovery. Application feature flags, Resend/Telegram и Cloudflare
+  resources не изменялись. PR-D06 переведён в `passed`.
 
 ## Release gates
 
@@ -319,7 +332,7 @@ release:verify` завершился с exit code 0.
 | Local implementation/traceability | `blocked`          | local full run/cold-read passed; нужен commit и rerun на immutable candidate  | release + independent reviewer |
 | Dependency security               | `blocked`          | production audit clean; review documented dev-tooling advisory on each update | dependency/security owner      |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
-| Scheduled monitoring              | `blocked`          | preview Cron + empty 204/503 signal passed; external recipient/delivery/failure rehearsal absent | operations owner            |
+| Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
 | Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
 | Telegram                          | `feature_disabled` | approved adapter/DPA absent                                                   | provider/privacy owner         |
@@ -351,10 +364,10 @@ release:verify` завершился с exit code 0.
 
 1. Повторить clean `release:verify` на immutable candidate; при обновлении
    Wrangler/Miniflare проверить устранение documented dev-tooling advisory.
-2. Создать independent free uptime monitor для `/_health/operations`, назначить
-   recipient/owner и провести DOWN/UP delivery drill; затем продолжить preview
-   smoke: authenticated browser/accessibility, real-token Turnstile и отдельно
-   разрешённый synthetic email delivery/reply smoke.
+2. Поддерживать созданный independent uptime monitor для `/_health/operations`
+   и периодически повторять delivery test; затем по отдельным разрешениям
+   продолжить preview smoke: authenticated browser/accessibility, real-token
+   Turnstile и synthetic email delivery/reply smoke.
 3. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
    restore + rollback/roll-forward drill.
 4. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.
@@ -365,42 +378,28 @@ release:verify` завершился с exit code 0.
 
 ## Session checkpoint 2026-08-11
 
-- Это безопасная точка для новой сессии. Следующая задача — не новый Cloudflare
-  deploy, а независимая доставка monitoring alert через UptimeRobot Free.
-- На момент checkpoint UptimeRobot account ещё не создан. Владелец должен
-  создать Free account на `registration@kolibri-dresden.de`, подтвердить email и
-  включить 2FA; payment method для Free plan не требуется.
-- После подтверждения создать HTTP(s) monitor с именем
-  `Kolibri registration preview - Cron/Worker health`, URL
-  `https://preview.example.com/_health/operations`,
-  method GET, interval 5 minutes и email DOWN+UP alerts на account contact.
-  Expected healthy result — empty 204. Любой 503 должен считаться DOWN.
-- Alert delivery/recovery rehearsal не должно менять application feature flags
-  или использовать Resend/Telegram. Сначала использовать provider test action,
-  если она доступна. Иначе допустим отдельный временный UptimeRobot monitor:
-  направить его на заведомо несуществующий preview path, дождаться DOWN alert,
-  заменить URL на рабочий `/_health/operations`, дождаться UP alert и удалить
-  временный monitor. Main monitor всё время остаётся на правильном URL.
-- Browser session в предыдущей сессии не была подключена. Новая сессия должна
-  сначала проверить доступный browser connector; нельзя обходить это чтением
-  browser cookies/profile/OAuth storage. Если connector снова недоступен,
-  предоставить владельцу exact UI fields и проверить результат read-only.
+- UptimeRobot Free account создан и защищён 2FA. Main HTTP(s) monitor активен на
+  canonical preview health URL с фактическим методом `HEAD`, interval 5 minutes
+  и DOWN+UP delivery на account notification contact; dashboard state `Up`.
+- Provider test action доставил DOWN→UP pair, recovery timestamp
+  `2026-08-11T14:13:22Z`; owner подтвердил оба сообщения. Отдельный temporary
+  monitor не создавался. Read-only HEAD `2026-08-11T14:22:28Z` вернул empty 204.
+- Browser connector в этой сессии не был доступен; владелец выполнил exact UI
+  fields вручную. Browser cookies/profile/OAuth storage не читались.
 - Не повторять migration/deploy по истории чата. До любой новой remote mutation
   сначала сверить tracked handoff, `git status`, current version и pending
   migrations; production, DNS/CMS, feature enablement и application sends
   требуют отдельных прямых поручений.
-- После UptimeRobot setup записать sanitized monitor identity, interval,
-  recipient role, first UP, DOWN/UP rehearsal timestamps и recovery result в
-  этот handoff и `PRODUCTION_READINESS_CHECKLIST.md`. Не записывать account
-  password, session/cookie, API key или полный provider diagnostic.
+- Read-only сверка этой сессии: HEAD `a47c6a9`, preview config SHA-256
+  `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`,
+  Worker version `sha256:70c02839d41d`, D1 pending migrations 0.
+- Следующий remote preview smoke или production/site action требует нового
+  прямого поручения соответствующего scope.
 
 ## Итог worktree
 
-- HEAD: `8f68636 feat: add Resend integration and verify Cloudflare preview deployment`.
-- End `git status --short`: только текущие monitoring implementation/tests/docs
-  изменены; `0015_worker_monitoring.sql`, `operations/monitoring.ts` и
-  `operations-monitoring-d1.test.ts` пока untracked. Не удалять и не сбрасывать
-  это дерево; рекомендуемый следующий logical commit message:
-  `feat: add preview cron and worker health monitoring`.
-- Commit текущего monitoring checkpoint не создавался.
+- HEAD: `a47c6a9 feat: add preview cron and worker health monitoring`.
+- Monitoring implementation checkpoint уже закоммичен; перед этой записью
+  worktree был clean. Текущие незакоммиченные изменения ограничены sanitized
+  UptimeRobot evidence в handoff/checklist.
 - Production/CMS/official-site actions не выполнялись.

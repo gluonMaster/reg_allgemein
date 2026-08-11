@@ -15,8 +15,8 @@ evidence.
 | Поле                                 | Значение                                                          |
 | ------------------------------------ | ----------------------------------------------------------------- |
 | Release/commit SHA                   | `<IMMUTABLE_RELEASE>` — `blocked`                                 |
-| Checklist revision                   | 2026-08-11, preview monitoring signal prepared; external alert pending |
-| Preview environment/config           | Worker + D1/R2 + Cron + empty monitoring 204 verified; external alert — `blocked` |
+| Checklist revision                   | 2026-08-11, preview external HEAD monitor and DOWN→UP delivery test passed |
+| Preview environment/config           | Worker + D1/R2 + Cron + 5-minute external empty 204/503 monitoring alert verified |
 | Production environment/config        | `<PRODUCTION_ENVIRONMENT>` — `blocked`                            |
 | Portal preview/production origins    | preview workers.dev GET smoke passed; custom/production — `blocked` |
 | Migration set                        | `0001`–`0015`; local + empty preview remote apply passed              |
@@ -100,12 +100,12 @@ filenames, полных resource IDs или local upstream paths.
 
 | Gate                                        | Статус    | Affected path / текущее evidence                                                                                  | Owner / next action          |
 | ------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| PR-D01 Scheduled Worker entrypoint/Cron     | `blocked` | All 9 jobs delivered; version `58ec000b…` empty monitoring GET/HEAD 204; external alert rehearsal pending          | Operations owner             |
+| PR-D01 Scheduled Worker entrypoint/Cron     | `passed`  | All 9 jobs delivered; version `58ec000b…`; external 5-minute HEAD monitor Up and DOWN→UP test delivered 2026-08-11 | Operations owner             |
 | PR-D02 Job-run state migration              | `blocked` | Remote `0001`–`0015`, pending 0; journal/counters read-only smoke passed, restore rehearsal absent                 | DB/reliability reviewer      |
-| PR-D03 Exact schedule/timezone inventory    | `blocked` | Exact UTC buckets `* * * * *`/`*/15 * * * *` delivered; Telegram Europe/Berlin local-tested; owners/alerts absent | Operations/product owners    |
+| PR-D03 Exact schedule/timezone inventory    | `passed`  | Exact UTC buckets `* * * * *`/`*/15 * * * *` delivered; operations owner/account contact receives monitor alerts | Operations/product owners    |
 | PR-D04 Dedupe/lease/manual-run              | `blocked` | Automatic buckets unique, stuck 0; local lock/manual-audit tests passed; remote manual/failure rehearsal absent   | Reliability reviewer         |
 | PR-D05 Manual operations page/RBAC/audit    | `blocked` | Admin-only load, CSRF, allowlist, confirmation, idempotency и no-GET/direct bypass passed 7/7                     | Security/UX reviewer         |
-| PR-D06 Missed Cron/stale lock alert         | `blocked` | Preview empty 204/503 signal + 180/1200/360s thresholds verified; independent poller/recipient/delivery drill absent | Operations owner           |
+| PR-D06 Missed Cron/stale lock alert         | `passed`  | UptimeRobot Free HTTP(s) HEAD, 5 min, account contact DOWN+UP; test pair recovered at `2026-08-11T14:13:22Z`; HEAD 204 at `14:22:28Z` | Operations owner |
 | PR-D07 Dead outbox alert/manual recovery    | `blocked` | Preview outbox jobs fail closed as provider-disabled, queue 0; real provider/dead alert absent                    | Messaging/operations owner   |
 | PR-D08 Quarantine backlog/cleanup alert     | `blocked` | Preview cleanup succeeded with zero effects; remote backlog alert/manual failure rehearsal absent                | Storage/operations owner     |
 | PR-D09 Browser/provider exhaustion alert    | `blocked` | Remote metrics/threshold/failure procedure не проверены                                                           | Operations/provider owner    |
@@ -177,11 +177,11 @@ filenames, полных resource IDs или local upstream paths.
 | Gate                                              | Статус    | Affected path / текущее evidence                                                                                              | Owner / next action            |
 | ------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | PR-I01 Deployment runbook                         | `blocked` | Content cold-read + basic preview deploy passed; immutable packaging/full walkthrough отсутствуют                              | Independent operator           |
-| PR-I02 Operations runbook                         | `blocked` | [Operations](OPERATIONS_RUNBOOK.md) content cold-read passed; remote monitoring/alert rehearsal отсутствует                   | Independent operator           |
+| PR-I02 Operations runbook                         | `blocked` | [Operations](OPERATIONS_RUNBOOK.md) cold-read and HEAD alert rehearsal passed; remote manual/provider/failure procedures remain | Independent operator           |
 | PR-I03 Disaster-recovery runbook                  | `blocked` | [DR](DISASTER_RECOVERY.md) content cold-read passed; restore inputs/resources/rehearsal отсутствуют                           | Independent operator           |
 | PR-I04 Checklist completeness                     | `blocked` | Local ledger/owners/next actions заполнены; immutable release identity и external owners/evidence отсутствуют                 | Release owner                  |
 | PR-I05 Clean-room walkthrough всех runbooks       | `blocked` | Content walkthrough passed; full non-production provisioning/bootstrap/provider/restore execution не выполнено                | Independent operator           |
-| PR-I06 Preview deploy/post-deploy smoke           | `blocked` | Worker/D1/R2 deployed; fail-closed GET + automatic Cron smoke passed; Browser/provider/alerts/manual/restore absent             | Operations owner               |
+| PR-I06 Preview deploy/post-deploy smoke           | `blocked` | Worker/D1/R2, fail-closed GET/HEAD, automatic Cron and external alert passed; Browser/provider/manual/restore absent            | Operations owner               |
 | PR-I07 Production deploy approval                 | `blocked` | Отдельное прямое поручение отсутствует                                                                                        | Authorized release owner       |
 | PR-I08 Production migration/import/send approvals | `blocked` | Отдельные разрешения отсутствуют                                                                                              | Authorized owners по действиям |
 | PR-I09 Production post-deploy smoke               | `blocked` | Deploy не выполнялся                                                                                                          | Release/security owner         |
