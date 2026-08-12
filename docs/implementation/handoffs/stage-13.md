@@ -377,11 +377,45 @@ release:verify` завершился с exit code 0.
   regression для обоих ресурсов. Targeted i18n 3/3 и Playwright 3/3 passed.
   Полный working-tree `release:verify` прошёл за 264.1 s: 46 files/267 tests,
   3/3 Playwright, build, production audit 0, docs и release scan 476/476.
+- Commit `5a982ee48c3ea262d1851a4ce966a9f88d67ecee` прошёл в новом clean clone:
+  `npm ci`, полный audit 0 и `release:verify` за 298.2 s; 46 files/267 tests,
+  3/3 Playwright, build, docs и release scan 412/412. Clone остался чистым.
 - Post-fix Chrome re-audit локального candidate подтвердил на desktop и mobile по 100 для
   Accessibility, Best Practices, SEO и Agentic Browsing; failed audits 0,
   console warnings/errors 0, `/favicon.svg` 200. Временный dev server после
-  проверки остановлен. Remote preview пока не менялся; перед deploy и
-  post-deploy re-audit требуется отдельное preview deploy permission.
+  проверки остановлен.
+- По отдельному разрешению exact commit развёрнут без миграций в существующий
+  preview Worker как version `sha256:73d63af740da` на 100%.
+  Config SHA-256 не изменился, D1 pending migrations 0, оба Cron сохранены.
+  HEAD health вернул empty 204 с `no-store`/`noindex,nofollow`; home, catalog и
+  пять auth-boundary routes вернули 200, favicon — 200 `image/svg+xml`.
+- Deployed Chrome navigation audit на desktop и mobile дал по 100 для всех
+  четырёх категорий и 0 failed audits. Console warnings/errors отсутствовали,
+  все browser assets вернули 200. На register 390×844 overflow и controls вне
+  viewport отсутствовали; Tab прошёл navigation и поля с видимым amber outline.
+- Deployed root HEAD сохранил безопасный allowlisted `X-Request-Id`. Три
+  ограниченные Wrangler tail попытки с version/method/self-IP или opaque-header
+  filters не получили event до timeout; процессы остановлены, temporary raw
+  files удалены. Последующий Workers Logs export доказал, что все четыре exact
+  probe присутствуют в stored logs на deployed version: проблема была в
+  автоматизированном live-tail capture, а не в Worker observability.
+- Read-only review внешнего export evidence (2 394 018 bytes, SHA-256
+  `28EC30B78F806C1497F425D7FE6DED115819F7DD281419D383E8304287D2E4D1`) охватил
+  1001 record за 2026-08-11 12:10:17Z–21:59:16Z. Все 949 invocation outcomes
+  были `ok`; 203 health HEAD вернули 204, 589 every-minute и 39 fifteen-minute
+  Cron invocations завершились успешно. Raw export содержит platform IP/header/
+  geo metadata и остаётся вне Git; прикладных email, bearer values или secret
+  fields review не обнаружил.
+- Review также выявил 52 ошибочно классифицированных structured error records:
+  все имели HTTP 404 с outcome `ok` для отсутствующих generic crawler/browser
+  ресурсов, но code `UNEXPECTED_SERVER_ERROR`. На deployed current version их
+  четыре (`llms.txt`/`robots.txt`); прежний `favicon.ico` 404 после browser fix
+  исчез. Локально `logServerError` теперь подавляет status ниже 500; regression
+  подтверждает отсутствие `console.error` для 404 и один PII-safe structured
+  record для 500. Полный локальный release-контур прошёл: check 0 diagnostics,
+  46 files/269 tests, Playwright 3/3, build, production audit 0, docs checks и
+  release scan 476/476. PR-A15 остаётся `blocked` до commit, immutable clean-clone
+  verify, отдельного preview deploy permission и remote recheck corrected version.
 
 ## Release gates
 
@@ -399,7 +433,7 @@ release:verify` завершился с exit code 0.
 | Upload                            | `feature_disabled` | remote R2/scanner/training/legal evidence absent                              | storage/security/legal owner   |
 | Contract/statutory/media          | `feature_disabled` | production renderer/templates/legal assessment absent                         | contract/legal/privacy owners  |
 | Backup/restore/RPO/RTO            | `blocked`          | inputs/mechanism/isolated rehearsal absent                                    | data/backup/operations owners  |
-| Accessibility/browser             | `blocked`          | authenticated mobile/keyboard/axe/remote glyph evidence absent                | UX/accessibility owner         |
+| Accessibility/browser             | `blocked`          | deployed public desktop/mobile/keyboard passed; authenticated/axe/manual glyph evidence absent | UX/accessibility owner         |
 | Legal/privacy/provider            | `blocked`          | external approvals absent                                                     | authorized owners              |
 | Production deploy                 | `blocked`          | NO-GO + direct approval absent                                                | authorized release owner       |
 | Official-site links               | `blocked`          | exact surfaces/old values/separate permission absent                          | authorized site owner          |
@@ -422,9 +456,10 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. После immutable clean-clone проверки browser-fix candidate получить отдельное
-   preview deploy permission, затем повторить console и desktop/mobile Lighthouse
-   на deployed version.
+1. После отдельного разрешения закоммитить logging remediation, проверить exact
+   SHA в clean clone, затем запросить отдельное preview deploy permission и
+   подтвердить, что probe/ordinary 404 больше не создаёт
+   `UNEXPECTED_SERVER_ERROR`, а health/Cron остаются healthy.
 2. Поддерживать созданный independent uptime monitor для `/_health/operations`
    и периодически повторять delivery test; затем по отдельным разрешениям
    продолжить preview smoke: authenticated browser/accessibility, real-token
@@ -437,7 +472,7 @@ release:verify` завершился с exit code 0.
 6. Только после отсутствия `blocked` запросить отдельные production и site-link
    поручения.
 
-## Session checkpoint 2026-08-11
+## Session checkpoint 2026-08-12
 
 - UptimeRobot Free account создан и защищён 2FA. Main HTTP(s) monitor активен на
   canonical preview health URL с фактическим методом `HEAD`, interval 5 minutes
@@ -452,20 +487,21 @@ release:verify` завершился с exit code 0.
   сначала сверить tracked handoff, `git status`, current version и pending
   migrations; production, DNS/CMS, feature enablement и application sends
   требуют отдельных прямых поручений.
-- Read-only сверка этой сессии: HEAD `63995f8`, preview config SHA-256
+- Post-deploy сверка этой сессии: HEAD `5a982ee`, preview config SHA-256
   `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`,
-  Worker version `sha256:70c02839d41d`, D1 pending migrations 0;
-  read-only HEAD `2026-08-11T15:01:22Z` вернул empty 204.
-- Immutable dependency-remediated candidate создан и независимо проверен в clean
-  clone: `npm ci`, full audit 0 и полный `release:verify` passed.
+  Worker version `sha256:73d63af740da` на 100%, D1 pending
+  migrations 0; post-deploy HEAD вернул empty 204 с обязательными headers.
+- Immutable browser-fix candidate независимо проверен в clean clone: `npm ci`,
+  full audit 0 и полный `release:verify` passed. Public deployed browser smoke
+  также passed; authenticated/provider/manual/restore evidence остаётся.
 - Следующий remote preview smoke или production/site action требует нового
   прямого поручения соответствующего scope.
 
 ## Итог worktree
 
-- HEAD: текущий browser-fix commit `fix: add portal metadata and favicon` поверх
-  `63995f8 chore: remediate release tooling advisories`.
-- Dependency remediation закоммичен и проверен на exact SHA. Browser fix, E2E
-  regression и синхронизация immutable/browser evidence входят в текущий
-  candidate; его exact SHA и clean-clone результат определяются после commit.
+- HEAD: `5a982ee48c3ea262d1851a4ce966a9f88d67ecee fix: add portal metadata and
+  favicon` поверх `63995f8 chore: remediate release tooling advisories`.
+- Dependency remediation и browser fix закоммичены и проверены на exact SHA;
+  текущие незакоммиченные изменения включают post-deploy/log-review evidence,
+  4xx logging remediation, regression и runbook/checklist synchronization.
 - Production/CMS/official-site actions не выполнялись.

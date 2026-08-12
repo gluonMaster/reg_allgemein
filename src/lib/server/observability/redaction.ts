@@ -52,5 +52,7 @@ export function createSafeErrorLog(error: unknown, context: SafeErrorContext) {
 }
 
 export function logServerError(error: unknown, context: SafeErrorContext): void {
+	if (context.status < 500) return;
+
 	console.error(JSON.stringify(createSafeErrorLog(error, context)));
 }

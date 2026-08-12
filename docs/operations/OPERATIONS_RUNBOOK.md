@@ -102,7 +102,14 @@ read-only tail, только если он разрешён policy:
 npx wrangler tail --config <TARGET_CONFIG>
 ```
 
-Не копировать raw request/log payload в ticket.
+Прикладной структурированный `UNEXPECTED_SERVER_ERROR` создаётся только для
+status `>=500`; обычный `4xx` остаётся в invocation log и не является Worker
+error. Если `4xx` помечен этим прикладным error code, это дефект классификации
+логов, а не подтверждение отказа Worker. Raw Workers Logs могут содержать
+platform request headers, IP/geo и User-Agent даже при безопасном прикладном
+логировании: не коммитить export и не копировать raw request/log payload в
+ticket; сохранять только обезличенные counts, UTC interval, version и hash
+внешнего evidence-файла.
 
 **Ожидаемый безопасный результат:** endpoint возвращает 204; independent poller
 видит ту же проверку с интервалом не более 5 минут и доставляет test alert

@@ -14,11 +14,11 @@ evidence.
 
 | Поле                                 | Значение                                                          |
 | ------------------------------------ | ----------------------------------------------------------------- |
-| Release/commit SHA                   | current `fix: add portal metadata and favicon` candidate over verified `63995f8532f45441885d7e3b042f4092471a8bc3`; exact SHA recorded by Git — `blocked` |
-| Checklist revision                   | 2026-08-11, PR-D06, immutable dependency candidate and public browser smoke verified |
-| Preview environment/config           | Worker + D1/R2 + Cron + 5-minute external empty 204/503 monitoring alert verified |
+| Release/commit SHA                   | deployed base `5a982ee48c3ea262d1851a4ce966a9f88d67ecee`; local logging-remediation candidate awaits commit/exact SHA — overall `blocked` |
+| Checklist revision                   | 2026-08-12, PR-D06/public browser smoke verified; PR-A15 log classification remediation in progress |
+| Preview environment/config           | Worker version `sha256:73d63af740da` + D1/R2 + Cron + external empty 204/503 monitor verified |
 | Production environment/config        | `<PRODUCTION_ENVIRONMENT>` — `blocked`                            |
-| Portal preview/production origins    | preview workers.dev GET smoke passed; custom/production — `blocked` |
+| Portal preview/production origins    | preview workers.dev HTTP/browser smoke passed; custom/production — `blocked` |
 | Migration set                        | `0001`–`0015`; local + empty preview remote apply passed              |
 | Operator/reviewer                    | `<OWNER_ROLE>` — `blocked`                                        |
 | Release window                       | `<APPROVED_WINDOW>` — `blocked`                                   |
@@ -56,14 +56,14 @@ filenames, полных resource IDs или local upstream paths.
 | PR-A05 `npm audit --omit=dev`               | `passed`  | Immutable candidate: production-only and full audit 0; previous 7 dev-only findings removed                                                                        | Dependency/security owner                                      |
 | PR-A06 Requirement/acceptance traceability  | `blocked` | [Матрица](../implementation/STAGE_13_TRACEABILITY.md) синхронизирована; independent reviews не нашли remaining HIGH/blocker; final review/remote evidence incomplete | Independent reviewer                                         |
 | PR-A07 `docs:check`                         | `passed`  | Immutable candidate: 137 links/51 files + 82 executable command lines                                                                                              | Codex release operator                                         |
-| PR-A08 `release:scan`                       | `passed`  | Clean immutable clone: 410/410 candidates; prohibited artifact/secret/PII/control-byte findings нет                                                                | Codex release operator                                         |
-| PR-A09 `release:verify`                     | `passed`  | Full clean chain on immutable `63995f8532f45441885d7e3b042f4092471a8bc3` passed 2026-08-11                                                                         | Codex release operator                                         |
+| PR-A08 `release:scan`                       | `passed`  | Clean immutable clone: 412/412 candidates; prohibited artifact/secret/PII/control-byte findings нет                                                                | Codex release operator                                         |
+| PR-A09 `release:verify`                     | `passed`  | Full clean chain on immutable `5a982ee48c3ea262d1851a4ce966a9f88d67ecee` passed 2026-08-11                                                                         | Codex release operator                                         |
 | PR-A10 Forbidden artifact/PII/secret scan   | `passed`  | Immutable clean-clone post-build scan passed and remains fail-closed for raw controls in expected text files                                                        | Codex release operator                                         |
 | PR-A11 Markdown links                       | `passed`  | Immutable candidate `docs:check` and independent content cold-read passed                                                                                          | Codex release operator + documentation reviewer                |
 | PR-A12 Full synthetic E2E                   | `blocked` | Connected migrated-D1 register→closure flow passed 1/1; Playwright пока содержит только boundary smoke                                                             | Implement authenticated browser/preview flow                    |
-| PR-A13 German accessibility/mobile/keyboard | `blocked` | Public preview: Accessibility 100, 390px no overflow and keyboard focus/order passed; local meta/favicon fix re-audit all categories 100; authenticated/manual evidence absent | UX/accessibility reviewer |
+| PR-A13 German accessibility/mobile/keyboard | `blocked` | Deployed public preview: desktop/mobile Accessibility/Best Practices/SEO/Agentic 100, 390px no overflow, keyboard focus/order passed; authenticated/axe/manual evidence absent | UX/accessibility reviewer |
 | PR-A14 Permission/IDOR/CSRF/session matrix  | `blocked` | Sensitive-download, admin operations, closure/contract/funding guards и race tests локально passed; browser/remote matrix отсутствует                              | Security reviewer                                               |
-| PR-A15 PII-safe logging/diagnostics         | `blocked` | Unit redaction tests есть; remote log sample/operations review отсутствуют                                                                                         | Security/operations reviewer                                    |
+| PR-A15 PII-safe logging/diagnostics         | `blocked` | Stored Workers Logs export reviewed: probes/Cron present, all invocation outcomes `ok`, no app PII/secret found; raw platform metadata kept outside Git. Misclassified 404 error noise fixed; local check, 269 tests, E2E, build, audit, docs and scan passed. Commit/clean-clone/redeploy/remote recheck pending | Codex + security/operations reviewer |
 
 ## B. Migrations, import и data integrity
 
@@ -100,7 +100,7 @@ filenames, полных resource IDs или local upstream paths.
 
 | Gate                                        | Статус    | Affected path / текущее evidence                                                                                  | Owner / next action          |
 | ------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| PR-D01 Scheduled Worker entrypoint/Cron     | `passed`  | All 9 jobs delivered; version `58ec000b…`; external 5-minute HEAD monitor Up and DOWN→UP test delivered 2026-08-11 | Operations owner             |
+| PR-D01 Scheduled Worker entrypoint/Cron     | `passed`  | All 9 jobs delivered; version `e6d904fa…`; both Cron preserved; external 5-minute HEAD monitor Up and DOWN→UP test delivered 2026-08-11 | Operations owner             |
 | PR-D02 Job-run state migration              | `blocked` | Remote `0001`–`0015`, pending 0; journal/counters read-only smoke passed, restore rehearsal absent                 | DB/reliability reviewer      |
 | PR-D03 Exact schedule/timezone inventory    | `passed`  | Exact UTC buckets `* * * * *`/`*/15 * * * *` delivered; operations owner/account contact receives monitor alerts | Operations/product owners    |
 | PR-D04 Dedupe/lease/manual-run              | `blocked` | Automatic buckets unique, stuck 0; local lock/manual-audit tests passed; remote manual/failure rehearsal absent   | Reliability reviewer         |
@@ -181,7 +181,7 @@ filenames, полных resource IDs или local upstream paths.
 | PR-I03 Disaster-recovery runbook                  | `blocked` | [DR](DISASTER_RECOVERY.md) content cold-read passed; restore inputs/resources/rehearsal отсутствуют                           | Independent operator           |
 | PR-I04 Checklist completeness                     | `blocked` | Immutable candidate recorded; external owners and remaining browser/provider/restore evidence incomplete              | Release owner                  |
 | PR-I05 Clean-room walkthrough всех runbooks       | `blocked` | Content walkthrough passed; full non-production provisioning/bootstrap/provider/restore execution не выполнено                | Independent operator           |
-| PR-I06 Preview deploy/post-deploy smoke           | `blocked` | Public desktop/mobile/keyboard passed; meta/favicon candidate has all local Lighthouse categories 100 and awaits preview deploy; authenticated/provider/manual/restore absent | Operations owner |
+| PR-I06 Preview deploy/post-deploy smoke           | `blocked` | Exact `5a982ee` deployed without migrations; public HTTP/console/desktop/mobile/keyboard passed, all Lighthouse categories 100; authenticated/provider/manual/restore absent | Operations owner |
 | PR-I07 Production deploy approval                 | `blocked` | Отдельное прямое поручение отсутствует                                                                                        | Authorized release owner       |
 | PR-I08 Production migration/import/send approvals | `blocked` | Отдельные разрешения отсутствуют                                                                                              | Authorized owners по действиям |
 | PR-I09 Production post-deploy smoke               | `blocked` | Deploy не выполнялся                                                                                                          | Release/security owner         |
