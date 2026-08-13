@@ -3,9 +3,9 @@
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
 handler и manual operations реализованы и локально протестированы; независимый
 content cold-read 2026-07-22 прошёл. Preview Worker/D1/R2, automatic Cron
-delivery/freshness и независимый 5-minute HEAD alert с DOWN→UP delivery
-подтверждены 2026-08-11; remote manual/provider/failure и restore procedures
-остаются непроверенными.
+delivery/freshness и независимый UptimeRobot 5-minute `HEAD` alert с DOWN→UP
+delivery подтверждены 2026-08-11; remote authenticated/manual/provider/Browser
+Run/failure и restore procedures остаются непроверенными.
 
 Runbook относится только к самостоятельному порталу регистрации. Он не даёт
 доступа к CMS или runtime официального сайта. Production-команды выполняются
@@ -41,6 +41,8 @@ approval.
 | Health/cron dashboard | `/admin/operations` + empty `/_health/operations` 204/503 signal; preview external HEAD monitor delivery passed | authenticated admin/manual/failure rehearsal              | `blocked`                    |
 | Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs; preview automatic delivery/freshness passed                  | remote manual/dedupe/failure и job-specific alerts       | `blocked`                    |
 | Admin bootstrap       | `npm run admin:bootstrap`; target guard, one-shot D1 flow, session revoke/audit и upgrade auto-seal tested locally | remote exercise; отдельной post-consume recovery CLI нет | `blocked`                    |
+| Email provider        | Resend HTTPS adapter, verified EU domain, scoped sending key и preview Worker secret подготовлены                 | provider disabled; delivery/reply smoke и approvals отсутствуют | `feature_disabled`/`blocked` |
+| Browser Run           | binding/config и fail-closed contract renderer path реализованы                                                    | remote conformance, quota/budget, templates/legal approval | `feature_disabled`/`blocked` |
 
 ## Scheduled jobs inventory
 
@@ -48,21 +50,23 @@ Cloudflare [Cron Triggers](https://developers.cloudflare.com/workers/configurati
 исполняют expressions в UTC. Это не локальная/provider
 timezone: `Europe/Berlin` применяется только внутри Telegram business-hours
 calculation и покрыт DST-тестами. Локальные scheduler/route tests, preview
-automatic delivery/freshness и aggregate external HEAD alert проходят, но
-job-specific backlog/dead/provider alerts и remote manual/failure rehearsals
-отсутствуют, поэтому ни один job ниже не имеет production `passed`.
+automatic delivery/freshness и aggregate external UptimeRobot `HEAD` alert
+проходят. Этот aggregate signal покрывает freshness и repeated scheduled/
+application Worker errors; он не является job-specific backlog/dead/provider/
+failure alert. Такие alerts и remote manual/dedupe/failure rehearsals отсутствуют,
+поэтому ни один job ниже не имеет production `passed`.
 
 | Назначение                       | Реализованный service method                                   | Schedule/timezone                         | Dedupe/lock                          | Manual run / signal                               | Статус                                 |
 | -------------------------------- | -------------------------------------------------------------- | ----------------------------------------- | ------------------------------------ | ------------------------------------------------- | -------------------------------------- |
-| Email outbox drain               | `EmailOutboxWorker.dispatchNext()`                             | `* * * * *` UTC                           | job lock/dedupe + outbox lease/retry | `/admin/operations`; oldest-pending alert missing | `blocked`; provider `feature_disabled` |
-| Telegram outbox drain            | Telegram dispatch worker                                       | `* * * * *`; business rules Europe/Berlin | job lock/dedupe + outbox lease/retry | `/admin/operations`; dead alert missing           | `blocked`; provider `feature_disabled` |
-| Price-review maintenance         | `PriceReviewService.runScheduledMaintenance()`                 | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | `/admin/operations`; freshness alert missing      | `blocked`                              |
-| Quarantine cleanup               | `DocumentService.cleanupExpired()`                             | `*/15 * * * *`; 14×24h threshold UTC      | job lock + conditional object claim  | `/admin/operations`; backlog alert missing        | `blocked`; uploads `feature_disabled`  |
-| Expired funding authorizations   | `IndividualRequestAdminService.processExpiredAuthorizations()` | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | `/admin/operations`; freshness alert missing      | `blocked`                              |
-| Expired email reservations       | `AuthService.cleanupExpiredEmailReservations()`                | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | `/admin/operations`; freshness alert missing      | `blocked`                              |
-| Expired privacy exports/R2 retry | `PrivacyService.cleanupExpiredExports()`                       | `*/15 * * * *` UTC                        | job lock/dedupe + object state       | `/admin/operations`; failure alert missing        | `blocked`                              |
-| Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch      | `/admin/operations`; freshness alert missing      | `blocked`                              |
-| Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe       | `/admin/operations`; R2 retry alert missing       | `blocked`                              |
+| Email outbox drain               | `EmailOutboxWorker.dispatchNext()`                             | `* * * * *` UTC                           | job lock/dedupe + outbox lease/retry | aggregate freshness/error passed; oldest/dead/provider alert missing | `blocked`; provider `feature_disabled` |
+| Telegram outbox drain            | Telegram dispatch worker                                       | `* * * * *`; business rules Europe/Berlin | job lock/dedupe + outbox lease/retry | aggregate freshness/error passed; dead/provider alert missing | `blocked`; provider `feature_disabled` |
+| Price-review maintenance         | `PriceReviewService.runScheduledMaintenance()`                 | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
+| Quarantine cleanup               | `DocumentService.cleanupExpired()`                             | `*/15 * * * *`; 14×24h threshold UTC      | job lock + conditional object claim  | aggregate freshness/error passed; backlog alert missing | `blocked`; uploads `feature_disabled`  |
+| Expired funding authorizations   | `IndividualRequestAdminService.processExpiredAuthorizations()` | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
+| Expired email reservations       | `AuthService.cleanupExpiredEmailReservations()`                | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
+| Expired privacy exports/R2 retry | `PrivacyService.cleanupExpiredExports()`                       | `*/15 * * * *` UTC                        | job lock/dedupe + object state       | aggregate freshness/error passed; R2 retry alert missing | `blocked`                              |
+| Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch      | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
+| Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe       | aggregate freshness/error passed; R2 retry/orphan alert missing | `blocked`                              |
 
 Migrations `0014_production_operations.sql` и `0015_worker_monitoring.sql`,
 clean/upgrade coverage, job/storage repositories, Worker scheduled handler,
@@ -71,6 +75,12 @@ bindings реализованы и проходят targeted local tests. Previe
 freshness, monitoring migration/smoke и independent aggregate HEAD alert
 delivery/recovery подтверждены. R2 restore, authenticated manual run и
 job-specific failure rehearsal остаются `blocked`.
+
+Current preview D1 inventory — migrations `0001`–`0015`, pending 0. Initial
+preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датированным
+историческим evidence; append-only `0015_worker_monitoring.sql` была применена
+2026-08-11. Initial 14/14 не является текущим migration inventory и не доказывает
+backup/restore.
 
 ## 1. Начало смены: health и freshness
 
@@ -110,6 +120,13 @@ platform request headers, IP/geo и User-Agent даже при безопасн�
 логировании: не коммитить export и не копировать raw request/log payload в
 ticket; сохранять только обезличенные counts, UTC interval, version и hash
 внешнего evidence-файла.
+
+Датированное preview evidence 2026-08-12 для immutable `200268f`, развёрнутого
+как version `sha256:f4cd52e14dbd`, прошло: bounded stored-log
+export содержит 60/60 outcomes `ok`, exact missing-route 404 и health `HEAD` 204,
+а `UNEXPECTED_SERVER_ERROR` отсутствует. Это подтверждает preview logging/
+aggregate health path, но не заменяет production logs, job-specific alerts или
+provider/Browser failure rehearsal.
 
 **Ожидаемый безопасный результат:** endpoint возвращает 204; independent poller
 видит ту же проверку с интервалом не более 5 минут и доставляет test alert
@@ -190,9 +207,10 @@ backlog. Эскалировать owner provider и сохранить sanitized
 ## 4. Ручная проверка quarantined document
 
 Production upload сейчас `feature_disabled`. Раздельные
-`R2_QUARANTINE`/`R2_ARCHIVE` и их local tests уже есть, но процедура применяется
-только после private remote EU wiring evidence, approved training и полного
-release gate.
+`R2_QUARANTINE`/`R2_ARCHIVE`, local tests и private preview EU wiring evidence
+уже есть, но процедура применяется только после production/restore resource
+evidence, approved training, controlled AV passage, legal/provider approval и
+полного release gate.
 
 **Prerequisites:** active admin с purpose; выделенная локальная quarantine-папка
 внутри утверждённого encrypted workspace; актуальные утверждённые AV definitions;
@@ -347,7 +365,8 @@ sanitized counts; concurrent Cron не создаёт duplicate side effects.
 для опасной операции нужен отсутствующий preview/reason, stale lease, provider
 disabled или manual action неаудируема. Local scheduler, D1 и route-security
 tests проходят, но production action сейчас `blocked` из-за отсутствующих remote
-preview/Cron и alert evidence.
+authenticated manual/dedupe/failure и job-specific alert evidence. Preview
+automatic Cron и aggregate alert уже подтверждены.
 
 **Rollback/recovery:** не повторять вслепую. Отключить affected trigger/feature по
 change procedure, дождаться lease expiry только если это подтверждено design, и
@@ -392,10 +411,10 @@ npm run release:verify
 
 `release:verify` реализован и последовательно запускает `check`, полный Vitest,
 Playwright E2E, build, `npm audit --omit=dev`, `docs:check` и `release:scan`.
-Текущий production dependency audit показывает `0 vulnerabilities`. Три high
-advisory полного audit ограничены dev-only Wrangler/Miniflare/Sharp tooling и
-документированы в [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md); полный release
-gate всё равно не passed без immutable run и environment evidence.
+Immutable `200268f` прошёл production-only и full audit с `0 advisories`, clean
+install и полный `release:verify`; история remediation документирована в
+[DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md). После новых local changes нужен
+новый immutable run; environment gates остаются отдельными.
 
 **Ожидаемый безопасный результат:** advisory triage обновлён; runtime high/critical
 не остаётся без обязательного исправления; roles, provider accounts и access
@@ -444,6 +463,8 @@ verification, restore/rollback decision и отдельного enable approval.
 adapter, scheduled job, monitoring signal или admin UI этот документ и
 checklist обновляются в том же change. Реализованные `docs:check`, `release:scan`
 и `release:verify` обязательны для release evidence, но не заменяют ручной
-review, remote preview/Cron/R2 checks, alert rehearsal или restore rehearsal.
-Пока remote preview/Cron/R2, alerts, restore и approval gates не закрыты,
+review, authenticated manual/failure/provider smoke, production-resource checks,
+job-specific alert или restore rehearsal. Preview Worker/D1/private EU R2,
+automatic Cron и aggregate alert уже подтверждены; пока оставшиеся manual/
+provider/job-specific/production-resource/restore/approval gates не закрыты,
 production verdict — **NO-GO**.

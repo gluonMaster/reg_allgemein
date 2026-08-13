@@ -5,7 +5,7 @@ import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
 import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
 import type { ContractArtifactStore } from '$lib/server/contracts/storage';
-import { DatabaseBoundary } from '$lib/server/db/database';
+import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
 import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
 import { PrivacyService } from '$lib/server/privacy/privacy-service';
 import { OperationsRepository } from '$lib/server/operations/operations-repository';
@@ -33,6 +33,46 @@ class MemoryStore implements ContractArtifactStore {
 		return { body: copy.buffer, size: copy.byteLength };
 	}
 	async delete(key: string) { this.values.delete(key); }
+}
+
+class BeforeBatchDatabaseBoundary extends DatabaseBoundary {
+	private beforeBatch: (() => Promise<void>) | null;
+
+	constructor(database: D1Database, beforeBatch: () => Promise<void>) {
+		super(database);
+		this.beforeBatch = beforeBatch;
+	}
+
+	override async batch<T = Record<string, unknown>>(
+		statements: readonly StatementSpec[]
+	): Promise<D1Result<T>[]> {
+		const beforeBatch = this.beforeBatch;
+		this.beforeBatch = null;
+		await beforeBatch?.();
+		return super.batch<T>(statements);
+	}
+}
+
+class TwoCallBatchBarrierBoundary extends DatabaseBoundary {
+	private arrivals = 0;
+	private readonly released: Promise<void>;
+	private release!: () => void;
+
+	constructor(database: D1Database) {
+		super(database);
+		this.released = new Promise<void>((resolve) => {
+			this.release = resolve;
+		});
+	}
+
+	override async batch<T = Record<string, unknown>>(
+		statements: readonly StatementSpec[]
+	): Promise<D1Result<T>[]> {
+		this.arrivals += 1;
+		if (this.arrivals === 2) this.release();
+		await this.released;
+		return super.batch<T>(statements);
+	}
 }
 
 async function seed(db: DatabaseBoundary) {
@@ -229,6 +269,70 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		} });
 	}
 
+	async function withdrawalDraft(key: string) {
+		const templateVersionId = 'contract-template:synthetic:group_yearly:withdrawal-v1';
+		const legalBasisHash = hash('a');
+		await db.run({
+			sql: `INSERT INTO contract_template_versions
+				(id, template_id, template_version, render_schema_version,
+				 clause_set_version, provider_version_id, media_contact_version_id,
+				 template_bundle_r2_key, bundle_hash, html_source_hash, css_source_hash,
+				 asset_manifest_json, font_manifest_json, required_fields_json,
+				 renderer_id, renderer_contract_version, worker_compatibility_date,
+				 usage_scope, approval_status, approval_basis, distance_legal_profile,
+				 distance_legal_basis_version, distance_legal_basis_hash,
+				 kuendigung_function_required, early_performance_supported,
+				 approved_by, approved_at, valid_from, valid_to, created_at)
+			SELECT ?, template_id, 'synthetic-withdrawal-v1', render_schema_version,
+				clause_set_version, provider_version_id, media_contact_version_id,
+				template_bundle_r2_key || '/withdrawal-v1', bundle_hash,
+				html_source_hash, css_source_hash, asset_manifest_json,
+				font_manifest_json, required_fields_json, renderer_id,
+				renderer_contract_version, worker_compatibility_date, usage_scope,
+				approval_status, approval_basis, 'widerruf_applicable',
+				'synthetic-withdrawal-basis-v1', ?, 0, 1, approved_by, approved_at,
+				valid_from, valid_to, created_at
+			FROM contract_template_versions WHERE id = ?`,
+			params: [templateVersionId, legalBasisHash,
+				'contract-template:synthetic:group_yearly:v1'],
+		});
+		const renderInput = groupRenderInput();
+		return service.createDraft({ admin, requestId: `create-${key}`, payload: {
+			userId: parent.id, childId: 'child-contract', academicPeriodId: 'period-contract',
+			templateVersionId,
+			renderInput: { ...renderInput, legal: { ...renderInput.legal,
+				distanceLegalProfile: 'widerruf_applicable' as const,
+				distanceLegalBasisHash: legalBasisHash,
+				earlyPerformanceRequestVersion: 'synthetic-early-performance-v1',
+				wertersatzNoticeVersion: 'synthetic-wertersatz-v1',
+			} },
+			expiresAt: '2026-08-05T10:00:00.000Z',
+			idempotencyKey: `create-contract-${key}`,
+		} });
+	}
+
+	async function formIndividualContract(key: string) {
+		const created = await service.createDraft({ admin, requestId: `create-${key}`,
+			payload: { userId: parent.id, childId: 'child-contract',
+				academicPeriodId: 'period-contract',
+				templateVersionId: 'contract-template:synthetic:individual_hourly:v1',
+				renderInput: individualRenderInput(),
+				expiresAt: '2026-08-05T10:00:00.000Z',
+				idempotencyKey: `create-${key}` } });
+		const rendered = await service.renderAndSend({ admin, offerId: created.offerId,
+			idempotencyKey: `render-${key}`, requestId: `render-${key}` });
+		await service.parentDecision({ actor: parent, payload: { offerId: created.offerId,
+			expectedContractHash: rendered.contractHash, decision: 'accept',
+			acceptanceTextVersion: 'contract-acceptance-de-v1',
+			acceptanceText: `Ich nehme das unveraenderte individuelle Testangebot ${key} an.`,
+			idempotencyKey: `accept-${key}` }, userAgent: 'vitest',
+			requestSubject: '127.0.0.20', requestId: `accept-${key}` });
+		const formed = await service.formAndActivate({ admin, requestId: `form-${key}`,
+			payload: { offerId: created.offerId, reason: 'Synthetic atomicity test revalidated.',
+				confirmation: 'confirmed', idempotencyKey: `form-${key}` } });
+		return { offerId: created.offerId, contractId: formed.contractId };
+	}
+
 	it('expires pseudonymous acceptance IP metadata after the temporary 30-day bound', async () => {
 		const acceptanceNow = '2026-05-01T10:00:00.000Z';
 		service = new ContractService(repository, store, config, undefined, () => acceptanceNow);
@@ -285,6 +389,7 @@ describe('stage 09 immutable contract workflow in D1', () => {
 
 	it('reserves permanent family numbers, renders immutable artifacts, accepts, and forms once', async () => {
 		const created = await draft('full-flow');
+		const mismatchedEndCarrier = await draft('mismatched-end-carrier');
 		const draftOffer = await repository.loadOffer(created.offerId);
 		expect(draftOffer).toMatchObject({ contract_number: '2. 9101-1', status: 'draft' });
 
@@ -384,9 +489,22 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		await expect(db.run({ sql: `UPDATE contract_artifacts SET sha256 = ? WHERE id = ?`,
 			params: [hash('f'), pdf.id] })).rejects.toThrow();
 
-		const endPayload = { contractId: formed.contractId, kind: 'ordinary_termination' as const,
+		const endPayload = { offerId: created.offerId, contractId: formed.contractId,
+			kind: 'ordinary_termination' as const,
 			requestedEffectiveOn: null, requestTextVersion: 'termination-de-v1',
 			idempotencyKey: 'end-contract-full-flow' };
+		await expect(service.submitEndRequest({
+			actor: parent,
+			payload: {
+				...endPayload,
+				offerId: mismatchedEndCarrier.offerId,
+				idempotencyKey: 'mismatched-end-carrier-key',
+			},
+			requestId: 'mismatched-end-carrier',
+		})).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM contract_end_requests`,
+		})).toEqual({ count: 0 });
 		const endRequest = await service.submitEndRequest({ actor: parent, payload: endPayload,
 			requestId: 'end-full-flow' });
 		expect(endRequest).toMatchObject({ status: 'received', replayed: false });
@@ -419,7 +537,227 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			requestId: 'invalid-review-end' })).rejects.toMatchObject({
 			code: 'TERMINATION_REVIEW_STATE_REJECTED',
 		});
+		});
+
+	it('replays the exact statutory withdrawal after it has terminated the contract', async () => {
+		const created = await withdrawalDraft('withdrawal-replay');
+		const mismatchedCarrier = await draft('withdrawal-replay-carrier');
+		const rendered = await service.renderAndSend({
+			admin,
+			offerId: created.offerId,
+			idempotencyKey: 'render-withdrawal-replay',
+			requestId: 'render-withdrawal-replay',
+		});
+		await service.parentDecision({
+			actor: parent,
+			payload: {
+				offerId: created.offerId,
+				expectedContractHash: rendered.contractHash,
+				decision: 'accept',
+				acceptanceTextVersion: 'contract-acceptance-de-v1',
+				acceptanceText: 'Ich nehme dieses unveränderte Widerruf-Testangebot verbindlich an.',
+				idempotencyKey: 'accept-withdrawal-replay',
+			},
+			userAgent: 'vitest',
+			requestSubject: '127.0.0.11',
+			requestId: 'accept-withdrawal-replay',
+		});
+		const formed = await service.formAndActivate({
+			admin,
+			requestId: 'form-withdrawal-replay',
+			payload: {
+				offerId: created.offerId,
+				reason: 'Synthetic withdrawal replay contract revalidated.',
+				confirmation: 'confirmed',
+				idempotencyKey: 'form-withdrawal-replay',
+			},
+		});
+		const payload = {
+			offerId: created.offerId,
+			contractId: formed.contractId,
+			kind: 'withdrawal' as const,
+			requestedEffectiveOn: null,
+			requestTextVersion: 'withdrawal-de-v1',
+			idempotencyKey: 'withdrawal-after-termination-replay',
+		};
+		const withdrawn = await service.submitEndRequest({
+			actor: parent,
+			payload,
+			requestId: 'withdrawal-first',
+		});
+		expect(withdrawn).toMatchObject({ status: 'completed', replayed: false });
+		expect(await db.first<{ operational_status: string }>({
+			sql: `SELECT operational_status FROM contracts WHERE id = ?`,
+			params: [formed.contractId],
+		})).toEqual({ operational_status: 'terminated' });
+
+		await expect(service.submitEndRequest({
+			actor: foreignParent,
+			payload,
+			requestId: 'withdrawal-replay-foreign-owner',
+		})).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
+		await expect(service.submitEndRequest({
+			actor: parent,
+			payload: { ...payload, offerId: mismatchedCarrier.offerId },
+			requestId: 'withdrawal-replay-mismatched-carrier',
+		})).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
+		expect(await service.submitEndRequest({
+			actor: parent,
+			payload,
+			requestId: 'withdrawal-exact-replay',
+		})).toEqual({ ...withdrawn, replayed: true });
+		await db.run({ sql: `UPDATE users SET is_blocked = 1, updated_at = ? WHERE id = ?`,
+			params: [now, parent.id] });
+		await expect(service.submitEndRequest({
+			actor: parent,
+			payload,
+			requestId: 'withdrawal-replay-blocked-owner',
+		})).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0, updated_at = ? WHERE id = ?`,
+			params: [now, parent.id] });
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM contract_end_requests WHERE contract_id = ?) AS requests,
+				(SELECT COUNT(*) FROM contract_events WHERE contract_id = ?
+					AND event_type IN ('withdrawal_received', 'withdrawn')) AS withdrawal_events,
+				(SELECT COUNT(*) FROM contract_outbox_events WHERE source_id = ?) AS outbox_events,
+				(SELECT COUNT(*) FROM audit_events WHERE target_kind = 'contract_end_request'
+					AND target_id = ?) AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'end_request' AND target_id = ? AND action_id = ?
+						AND actor_user_id = ? AND assertion_passed = 1) AS assertions`,
+			params: [formed.contractId, formed.contractId, withdrawn.requestId,
+				withdrawn.requestId, formed.contractId, withdrawn.requestId, parent.id],
+		})).toEqual({ requests: 1, withdrawal_events: 2, outbox_events: 1, audits: 1,
+			assertions: 1 });
 	});
+
+	it('requires a current parent role and keeps parent acceptance distinct from Verein formation', async () => {
+		const roleGuarded = await draft('parent-role-guard');
+		const roleGuardedRender = await service.renderAndSend({
+			admin,
+			offerId: roleGuarded.offerId,
+			idempotencyKey: 'render-parent-role-guard',
+			requestId: 'render-parent-role-guard',
+		});
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now, parent.id],
+		});
+		const promotedParent = requireAdmin({ ...parent, role: 'admin' });
+		const roleGuardedPayload = {
+			offerId: roleGuarded.offerId,
+			expectedContractHash: roleGuardedRender.contractHash,
+			decision: 'accept' as const,
+			acceptanceTextVersion: 'contract-acceptance-de-v1' as const,
+			acceptanceText: 'Ich nehme dieses Angebot nach einer unzulaessigen Rollenaenderung an.',
+			idempotencyKey: 'accept-parent-role-guard',
+		};
+		await expect(
+			service.parentDecision({
+				actor: promotedParent,
+				payload: roleGuardedPayload,
+				userAgent: 'vitest',
+				requestSubject: '127.0.0.10',
+				requestId: 'accept-parent-role-guard-current-admin',
+			})
+		).rejects.toMatchObject({ code: 'FORBIDDEN' });
+		await expect(
+			service.parentDecision({
+				actor: parent,
+				payload: {
+					...roleGuardedPayload,
+					idempotencyKey: 'accept-parent-role-guard-stale-session',
+				},
+				userAgent: 'vitest',
+				requestSubject: '127.0.0.11',
+				requestId: 'accept-parent-role-guard-stale-session',
+			})
+		).rejects.toMatchObject({ code: 'CONTRACT_PARENT_DECISION_REJECTED' });
+		expect(await repository.loadOffer(roleGuarded.offerId)).toMatchObject({ status: 'sent' });
+
+		await db.run({
+			sql: `UPDATE users SET role = 'parent', email_verified_at = NULL, updated_at = ?
+			WHERE id = ?`,
+			params: [now, parent.id],
+		});
+		expect(await repository.loadOwnerOfferDetail(parent.id, roleGuarded.offerId)).toBeNull();
+		await expect(
+			service.parentDecision({
+				actor: parent,
+				payload: {
+					...roleGuardedPayload,
+					idempotencyKey: 'accept-parent-role-guard-unverified',
+				},
+				userAgent: 'vitest',
+				requestSubject: '127.0.0.13',
+				requestId: 'accept-parent-role-guard-unverified',
+			})
+		).rejects.toMatchObject({ code: 'CONTRACT_PARENT_DECISION_REJECTED' });
+		await db.run({
+			sql: `UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ?`,
+			params: [now, now, parent.id],
+		});
+		const dualControl = await draft('dual-control-identity');
+		const dualControlRender = await service.renderAndSend({
+			admin,
+			offerId: dualControl.offerId,
+			idempotencyKey: 'render-dual-control-identity',
+			requestId: 'render-dual-control-identity',
+		});
+		await service.parentDecision({
+			actor: parent,
+			payload: {
+				offerId: dualControl.offerId,
+				expectedContractHash: dualControlRender.contractHash,
+				decision: 'accept',
+				acceptanceTextVersion: 'contract-acceptance-de-v1',
+				acceptanceText:
+					'Ich nehme dieses unveraenderte Angebot als Elternpartei verbindlich an.',
+				idempotencyKey: 'accept-dual-control-identity',
+			},
+			userAgent: 'vitest',
+			requestSubject: '127.0.0.12',
+			requestId: 'accept-dual-control-identity',
+		});
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now, parent.id],
+		});
+		await expect(
+			service.formAndActivate({
+				admin,
+				requestId: 'form-dual-control-owner-no-longer-parent',
+				payload: {
+					offerId: dualControl.offerId,
+					reason: 'Owner role changed before formation.',
+					confirmation: 'confirmed',
+					idempotencyKey: 'form-dual-control-owner-no-longer-parent',
+				},
+			})
+		).rejects.toMatchObject({ code: 'CONTRACT_FORMATION_REJECTED' });
+		await expect(
+			service.formAndActivate({
+				admin: promotedParent,
+				requestId: 'form-dual-control-same-identity',
+				payload: {
+					offerId: dualControl.offerId,
+					reason: 'Attempted formation after role promotion.',
+					confirmation: 'confirmed',
+					idempotencyKey: 'form-dual-control-same-identity',
+				},
+			})
+		).rejects.toMatchObject({ code: 'CONTRACT_FORMATION_REJECTED' });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM contracts WHERE contract_offer_id = ?`,
+				params: [dualControl.offerId],
+			})
+		).toEqual({ count: 0 });
+		expect(await repository.loadOffer(dualControl.offerId)).toMatchObject({
+			status: 'accepted_by_parent',
+		});
+	}, 45_000);
 
 	it('does not reuse numbers and rejects a queued parent action after account closure starts', async () => {
 		const first = await draft('number-one');
@@ -547,17 +885,99 @@ describe('stage 09 immutable contract workflow in D1', () => {
 	});
 
 	it('keeps media choice separate, permits decline, and fails closed for online grant/public functions', async () => {
+		const mediaOffer = await draft('media-decision');
 		const base = {
+			offerId: mediaOffer.offerId,
 			childId: 'child-contract', captureScopes: ['photo'] as const,
 			publicationChannels: ['website'] as const, textVersion: 'synthetic-media-text-v1',
 			withdrawalContactVersionId: 'media-contact:synthetic-v1',
 		};
+		await expect(service.recordMediaDecision({
+			actor: parent,
+			requestId: 'media-foreign-offer',
+			payload: {
+				...base,
+				offerId: crypto.randomUUID(),
+				decision: 'declined',
+				idempotencyKey: 'media-foreign-offer-contract',
+			},
+		})).rejects.toMatchObject({ code: 'MEDIA_DECISION_NOT_FOUND' });
+		await expect(service.recordMediaDecision({
+			actor: parent,
+			requestId: 'media-foreign-child',
+			payload: {
+				...base,
+				childId: 'child-foreign-contract',
+				decision: 'declined',
+				idempotencyKey: 'media-foreign-child-contract',
+			},
+		})).rejects.toMatchObject({ code: 'MEDIA_DECISION_NOT_FOUND' });
+		await expect(service.recordMediaDecision({
+			actor: parent,
+			requestId: 'media-missing-contact',
+			payload: {
+				...base,
+				withdrawalContactVersionId: 'media-contact:missing',
+				decision: 'declined',
+				idempotencyKey: 'media-missing-contact-contract',
+			},
+		})).rejects.toMatchObject({ code: 'MEDIA_DECISION_CONTEXT_REJECTED' });
+		await db.run({
+			sql: `INSERT INTO media_withdrawal_contact_versions
+				(id, version, contact_snapshot_json, snapshot_hash, german_text_version,
+				 approval_status, compliance_assessment_status, approved_by, approved_at, created_at)
+			VALUES ('media-contact:alternate-approved-v1', 'alternate-approved-v1',
+				'{"synthetic":"alternate-approved-contact"}', ?, 'alternate-media-text-v1',
+				'approved', 'not_assessed', ?, ?, ?)`,
+			params: [hash('b'), admin.id, now, now],
+		});
+		await expect(service.recordMediaDecision({
+			actor: parent,
+			requestId: 'media-approved-contact-mismatch',
+			payload: {
+				...base,
+				withdrawalContactVersionId: 'media-contact:alternate-approved-v1',
+				decision: 'declined',
+				idempotencyKey: 'media-approved-contact-mismatch',
+			},
+		})).rejects.toMatchObject({ code: 'MEDIA_DECISION_CONTEXT_REJECTED' });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM media_consents`,
+		})).toEqual({ count: 0 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM audit_events
+			WHERE request_id = 'media-approved-contact-mismatch'`,
+		})).toEqual({ count: 0 });
+		const boundContact = await db.first<{ id: string; snapshot_hash: string }>({
+			sql: `SELECT contact.id, contact.snapshot_hash FROM contract_offers offer
+			JOIN contract_template_versions template ON template.id = offer.template_version_id
+			JOIN media_withdrawal_contact_versions contact
+				ON contact.id = template.media_contact_version_id
+			WHERE offer.id = ?`,
+			params: [mediaOffer.offerId],
+		});
 		const declined = await service.recordMediaDecision({ actor: parent, requestId: 'media-decline',
 			payload: { ...base, decision: 'declined', idempotencyKey: 'media-decline-contract' } });
 		expect(declined.replayed).toBe(false);
+		expect(await db.first<{ source_contract_offer_id: string;
+			withdrawal_contact_version_id: string; withdrawal_contact_snapshot_hash: string }>({
+			sql: `SELECT source_contract_offer_id, withdrawal_contact_version_id,
+				withdrawal_contact_snapshot_hash FROM media_consents WHERE id = ?`,
+			params: [declined.consentId],
+		})).toEqual({ source_contract_offer_id: mediaOffer.offerId,
+			withdrawal_contact_version_id: boundContact!.id,
+			withdrawal_contact_snapshot_hash: boundContact!.snapshot_hash });
 		expect(await service.recordMediaDecision({ actor: parent, requestId: 'media-decline-replay',
 			payload: { ...base, decision: 'declined', idempotencyKey: 'media-decline-contract' } }))
 			.toEqual({ consentId: declined.consentId, replayed: true });
+		await db.run({ sql: `UPDATE users SET is_blocked = 1, updated_at = ? WHERE id = ?`,
+			params: [now, parent.id] });
+		await expect(service.recordMediaDecision({ actor: parent,
+			requestId: 'media-decline-blocked-replay', payload: { ...base,
+				decision: 'declined', idempotencyKey: 'media-decline-contract' } }))
+			.rejects.toMatchObject({ code: 'MEDIA_DECISION_NOT_FOUND' });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0, updated_at = ? WHERE id = ?`,
+			params: [now, parent.id] });
 		await expect(service.recordMediaDecision({ actor: parent, requestId: 'media-grant',
 			payload: { ...base, decision: 'granted', idempotencyKey: 'media-grant-contract' } }))
 			.rejects.toMatchObject({ code: 'MEDIA_ONLINE_GRANT_DISABLED' });
@@ -598,6 +1018,7 @@ describe('stage 09 immutable contract workflow in D1', () => {
 				templateVersionId: 'contract-template:synthetic:individual_hourly:v1',
 				renderInput: individualRenderInput(), expiresAt: '2026-08-05T10:00:00.000Z',
 				idempotencyKey: 'create-individual-contract' } });
+		const mismatchedAttendanceCarrier = await draft('mismatched-attendance-carrier');
 		const rendered = await service.renderAndSend({ admin, offerId: created.offerId,
 			idempotencyKey: 'render-individual-contract', requestId: 'render-individual-contract' });
 		await service.parentDecision({ actor: parent, payload: { offerId: created.offerId,
@@ -609,10 +1030,84 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		const formed = await service.formAndActivate({ admin, requestId: 'form-individual-contract',
 			payload: { offerId: created.offerId, reason: 'Tariff and service revalidated.',
 				confirmation: 'confirmed', idempotencyKey: 'form-individual-contract' } });
+		await expect(service.submitAttendanceNotice({
+			actor: parent,
+			payload: {
+				offerId: mismatchedAttendanceCarrier.offerId,
+				contractId: formed.contractId,
+				noticeTextVersion: 'attendance-ceased-de-v1',
+				idempotencyKey: 'attendance-mismatched-carrier',
+			},
+			requestId: 'attendance-mismatched-carrier',
+		})).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
+		await expect(service.submitAttendanceNotice({
+			actor: foreignParent,
+			payload: {
+				offerId: created.offerId,
+				contractId: formed.contractId,
+				noticeTextVersion: 'attendance-ceased-de-v1',
+				idempotencyKey: 'attendance-foreign-contract',
+			},
+			requestId: 'attendance-foreign',
+		})).rejects.toMatchObject({ code: 'CONTRACT_NOT_FOUND' });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM service_attendance_notices`,
+		})).toEqual({ count: 0 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM admin_review_tasks
+				WHERE kind = 'contract_attendance'`,
+		})).toEqual({ count: 0 });
 		const notice = await service.submitAttendanceNotice({ actor: parent,
-			payload: { contractId: formed.contractId, noticeTextVersion: 'attendance-ceased-de-v1',
+			payload: { offerId: created.offerId, contractId: formed.contractId,
+				noticeTextVersion: 'attendance-ceased-de-v1',
 				idempotencyKey: 'attendance-individual-contract' }, requestId: 'attendance-individual' });
 		expect(notice.replayed).toBe(false);
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM service_attendance_notices notice
+					JOIN contracts contract ON contract.id = notice.contract_id
+					JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+					JOIN users owner ON owner.id = contract.user_id
+					JOIN service_engagements engagement ON engagement.id = notice.service_engagement_id
+					WHERE notice.id = ? AND notice.contract_id = ?
+						AND notice.requested_by_user_id = ?
+						AND notice.submission_channel = 'authenticated_portal'
+						AND notice.notice_text_version = 'attendance-ceased-de-v1'
+						AND notice.idempotency_key = 'attendance-individual-contract'
+						AND contract.contract_offer_id = ? AND contract.user_id = ?
+						AND contract.operational_status = 'active'
+						AND offer.user_id = contract.user_id AND offer.child_id = contract.child_id
+						AND owner.role = 'parent' AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+						AND engagement.id = contract.service_engagement_id
+						AND engagement.contract_id = contract.id
+						AND engagement.user_id = contract.user_id
+						AND engagement.child_id = contract.child_id
+						AND engagement.status = 'ended'
+						AND engagement.attendance_notice_id = notice.id
+						AND engagement.attendance_ceased_at = ?) AS notice_chain,
+				(SELECT COUNT(*) FROM admin_review_tasks task
+					JOIN service_attendance_notices notice
+						ON notice.teacher_notification_task_id = task.id
+					WHERE notice.id = ? AND task.kind = 'contract_attendance'
+						AND task.source_kind = 'service_attendance_notice'
+						AND task.source_id = notice.id AND task.reason_code = 'attendance_ceased'
+						AND task.status = 'open') AS tasks,
+				(SELECT COUNT(*) FROM contract_events WHERE contract_id = ?
+					AND event_type = 'attendance_ceased' AND source_offer_id = ?
+					AND actor_user_id = ? AND dedupe_key = ?) AS events,
+				(SELECT COUNT(*) FROM contract_outbox_events WHERE source_id = ?
+					AND source_kind = 'service_attendance_notice'
+					AND event_type = 'attendance_ceased'
+					AND status IN ('pending', 'consumed')) AS outbox,
+				(SELECT COUNT(*) FROM audit_events WHERE actor_user_id = ?
+					AND action = 'contract.attendance_ceased' AND target_kind = 'contract'
+					AND target_id = ? AND request_id = 'attendance-individual') AS audits`,
+			params: [notice.noticeId, formed.contractId, parent.id, created.offerId,
+				parent.id, now, notice.noticeId, formed.contractId, created.offerId,
+				parent.id, `attendance-ceased:${notice.noticeId}`, notice.noticeId,
+				parent.id, formed.contractId],
+		})).toEqual({ notice_chain: 1, tasks: 1, events: 1, outbox: 1, audits: 1 });
 		expect(await db.first<{ status: string; attendance_ceased_at: string }>({
 			sql: `SELECT status, attendance_ceased_at FROM service_engagements WHERE contract_id = ?`,
 			params: [formed.contractId],
@@ -623,10 +1118,215 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			WHERE notice.id = ?`, params: [notice.noticeId],
 		})).toEqual({ kind: 'contract_attendance', status: 'open' });
 		expect(await service.submitAttendanceNotice({ actor: parent,
-			payload: { contractId: formed.contractId, noticeTextVersion: 'attendance-ceased-de-v1',
+			payload: { offerId: created.offerId, contractId: formed.contractId,
+				noticeTextVersion: 'attendance-ceased-de-v1',
 				idempotencyKey: 'attendance-individual-contract' }, requestId: 'attendance-replay' }))
 			.toEqual({ noticeId: notice.noticeId, replayed: true });
+		await expect(service.submitAttendanceNotice({ actor: parent,
+			payload: { offerId: created.offerId, contractId: formed.contractId,
+				noticeTextVersion: 'attendance-ceased-de-v1',
+				idempotencyKey: 'attendance-distinct-key-after-ended' },
+			requestId: 'attendance-distinct-key-after-ended' }))
+			.rejects.toMatchObject({ code: 'ATTENDANCE_NOTICE_REJECTED' });
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM service_attendance_notices
+					WHERE contract_id = ?) AS notices,
+				(SELECT COUNT(*) FROM admin_review_tasks
+					WHERE kind = 'contract_attendance') AS tasks,
+				(SELECT COUNT(*) FROM contract_events
+					WHERE contract_id = ? AND event_type = 'attendance_ceased') AS events,
+				(SELECT COUNT(*) FROM contract_outbox_events
+					WHERE source_kind = 'service_attendance_notice') AS outbox,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE action = 'contract.attendance_ceased' AND target_id = ?) AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'attendance_notice' AND target_id = ?
+						AND assertion_passed = 1) AS assertions`,
+			params: [formed.contractId, formed.contractId, formed.contractId,
+				formed.contractId],
+		})).toEqual({ notices: 1, tasks: 1, events: 1, outbox: 1, audits: 1,
+			assertions: 1 });
 	});
+
+	it('rolls back the full attendance chain when owner eligibility changes before batch', async () => {
+		const formed = await formIndividualContract('attendance-owner-race');
+		const raceDb = new BeforeBatchDatabaseBoundary(context.db, async () => {
+			await db.run({ sql: `UPDATE users SET is_blocked = 1, updated_at = ? WHERE id = ?`,
+				params: [now, parent.id] });
+		});
+		const raceService = new ContractService(new ContractRepository(raceDb), store,
+			config, undefined, () => now);
+		await expect(raceService.submitAttendanceNotice({ actor: parent,
+			payload: { offerId: formed.offerId, contractId: formed.contractId,
+				noticeTextVersion: 'attendance-ceased-de-v1',
+				idempotencyKey: 'attendance-owner-race' },
+			requestId: 'attendance-owner-race' }))
+			.rejects.toMatchObject({ code: 'ATTENDANCE_NOTICE_REJECTED' });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0, updated_at = ? WHERE id = ?`,
+			params: [now, parent.id] });
+		expect(await db.first<Record<string, number | string | null>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM service_attendance_notices
+					WHERE contract_id = ?) AS notices,
+				(SELECT COUNT(*) FROM admin_review_tasks
+					WHERE kind = 'contract_attendance') AS tasks,
+				(SELECT COUNT(*) FROM contract_events
+					WHERE contract_id = ? AND event_type = 'attendance_ceased') AS events,
+				(SELECT COUNT(*) FROM contract_outbox_events
+					WHERE source_kind = 'service_attendance_notice') AS outbox,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE request_id = 'attendance-owner-race') AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'attendance_notice' AND target_id = ?) AS assertions,
+				engagement.status, engagement.attendance_notice_id
+			FROM service_engagements engagement WHERE engagement.contract_id = ?`,
+			params: [formed.contractId, formed.contractId, formed.contractId,
+				formed.contractId],
+		})).toEqual({ notices: 0, tasks: 0, events: 0, outbox: 0, audits: 0,
+			assertions: 0, status: 'active', attendance_notice_id: null });
+	});
+
+	it('rolls back media consent and audit when owner eligibility changes before batch', async () => {
+		const mediaOffer = await draft('media-owner-race');
+		const raceDb = new BeforeBatchDatabaseBoundary(context.db, async () => {
+			await db.run({ sql: `UPDATE users SET is_blocked = 1, updated_at = ? WHERE id = ?`,
+				params: [now, parent.id] });
+		});
+		const raceService = new ContractService(new ContractRepository(raceDb), store,
+			config, undefined, () => now);
+		await expect(raceService.recordMediaDecision({ actor: parent,
+			requestId: 'media-owner-race', payload: {
+				offerId: mediaOffer.offerId, childId: 'child-contract',
+				captureScopes: ['photo'], publicationChannels: ['website'],
+				textVersion: 'synthetic-media-text-v1',
+				withdrawalContactVersionId: 'media-contact:synthetic-v1',
+				decision: 'declined', idempotencyKey: 'media-owner-race',
+			} })).rejects.toMatchObject({ code: 'MEDIA_DECISION_REJECTED' });
+		await db.run({ sql: `UPDATE users SET is_blocked = 0, updated_at = ? WHERE id = ?`,
+			params: [now, parent.id] });
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM media_consents
+					WHERE source_contract_offer_id = ?) AS consents,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE request_id = 'media-owner-race') AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'media_decision' AND target_id = ?) AS assertions`,
+			params: [mediaOffer.offerId, mediaOffer.offerId],
+		})).toEqual({ consents: 0, audits: 0, assertions: 0 });
+	});
+
+	it('replays concurrent identical attendance, media, and end actions with one evidence chain', async () => {
+		const formedIndividual = await formIndividualContract('concurrent-attendance');
+		const attendanceRaceDb = new TwoCallBatchBarrierBoundary(context.db);
+		const attendanceRaceService = new ContractService(
+			new ContractRepository(attendanceRaceDb), store, config, undefined, () => now);
+		const attendanceInput = { actor: parent, payload: {
+			offerId: formedIndividual.offerId, contractId: formedIndividual.contractId,
+			noticeTextVersion: 'attendance-ceased-de-v1',
+			idempotencyKey: 'attendance-concurrent-identical',
+		} };
+		const [attendanceA, attendanceB] = await Promise.all([
+			attendanceRaceService.submitAttendanceNotice({ ...attendanceInput,
+				requestId: 'attendance-concurrent-a' }),
+			attendanceRaceService.submitAttendanceNotice({ ...attendanceInput,
+				requestId: 'attendance-concurrent-b' }),
+		]);
+		expect(new Set([attendanceA.noticeId, attendanceB.noticeId]).size).toBe(1);
+		expect([attendanceA.replayed, attendanceB.replayed].sort())
+			.toEqual([false, true]);
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM service_attendance_notices
+					WHERE contract_id = ?) AS notices,
+				(SELECT COUNT(*) FROM admin_review_tasks
+					WHERE kind = 'contract_attendance') AS tasks,
+				(SELECT COUNT(*) FROM contract_events
+					WHERE contract_id = ? AND event_type = 'attendance_ceased') AS events,
+				(SELECT COUNT(*) FROM contract_outbox_events
+					WHERE source_kind = 'service_attendance_notice') AS outbox,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE action = 'contract.attendance_ceased' AND target_id = ?) AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'attendance_notice' AND target_id = ?
+						AND assertion_passed = 1) AS assertions`,
+			params: [formedIndividual.contractId, formedIndividual.contractId,
+				formedIndividual.contractId, formedIndividual.contractId],
+		})).toEqual({ notices: 1, tasks: 1, events: 1, outbox: 1, audits: 1,
+			assertions: 1 });
+
+		const groupOffer = await draft('concurrent-media-end');
+		const mediaRaceDb = new TwoCallBatchBarrierBoundary(context.db);
+		const mediaRaceService = new ContractService(new ContractRepository(mediaRaceDb),
+			store, config, undefined, () => now);
+		const mediaInput = { actor: parent, payload: {
+			offerId: groupOffer.offerId, childId: 'child-contract',
+			captureScopes: ['photo'], publicationChannels: ['website'],
+			textVersion: 'synthetic-media-text-v1',
+			withdrawalContactVersionId: 'media-contact:synthetic-v1',
+			decision: 'declined' as const, idempotencyKey: 'media-concurrent-identical',
+		} };
+		const [mediaA, mediaB] = await Promise.all([
+			mediaRaceService.recordMediaDecision({ ...mediaInput,
+				requestId: 'media-concurrent-a' }),
+			mediaRaceService.recordMediaDecision({ ...mediaInput,
+				requestId: 'media-concurrent-b' }),
+		]);
+		expect(new Set([mediaA.consentId, mediaB.consentId]).size).toBe(1);
+		expect([mediaA.replayed, mediaB.replayed].sort()).toEqual([false, true]);
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM media_consents
+					WHERE source_contract_offer_id = ?) AS consents,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE action = 'media.decision' AND target_id = ?) AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'media_decision' AND target_id = ?
+						AND assertion_passed = 1) AS assertions`,
+			params: [groupOffer.offerId, mediaA.consentId, groupOffer.offerId],
+		})).toEqual({ consents: 1, audits: 1, assertions: 1 });
+
+		const rendered = await service.renderAndSend({ admin, offerId: groupOffer.offerId,
+			idempotencyKey: 'render-concurrent-end', requestId: 'render-concurrent-end' });
+		await service.parentDecision({ actor: parent, payload: { offerId: groupOffer.offerId,
+			expectedContractHash: rendered.contractHash, decision: 'accept',
+			acceptanceTextVersion: 'contract-acceptance-de-v1',
+			acceptanceText: 'Ich nehme das unveraenderte Concurrent-Testangebot an.',
+			idempotencyKey: 'accept-concurrent-end' }, userAgent: 'vitest',
+			requestSubject: '127.0.0.21', requestId: 'accept-concurrent-end' });
+		const formedGroup = await service.formAndActivate({ admin,
+			requestId: 'form-concurrent-end', payload: { offerId: groupOffer.offerId,
+				reason: 'Synthetic concurrent end test revalidated.', confirmation: 'confirmed',
+				idempotencyKey: 'form-concurrent-end' } });
+		const endRaceDb = new TwoCallBatchBarrierBoundary(context.db);
+		const endRaceService = new ContractService(new ContractRepository(endRaceDb), store,
+			config, undefined, () => now);
+		const endInput = { actor: parent, payload: { offerId: groupOffer.offerId,
+			contractId: formedGroup.contractId, kind: 'ordinary_termination' as const,
+			requestedEffectiveOn: null, requestTextVersion: 'termination-de-v1',
+			idempotencyKey: 'end-concurrent-identical' } };
+		const [endA, endB] = await Promise.all([
+			endRaceService.submitEndRequest({ ...endInput, requestId: 'end-concurrent-a' }),
+			endRaceService.submitEndRequest({ ...endInput, requestId: 'end-concurrent-b' }),
+		]);
+		expect(new Set([endA.requestId, endB.requestId]).size).toBe(1);
+		expect([endA.replayed, endB.replayed].sort()).toEqual([false, true]);
+		expect(await db.first<Record<string, number>>({
+			sql: `SELECT
+				(SELECT COUNT(*) FROM contract_end_requests
+					WHERE contract_id = ?) AS requests,
+				(SELECT COUNT(*) FROM contract_outbox_events
+					WHERE source_kind = 'contract_end_request' AND source_id = ?) AS outbox,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE action = 'contract.end_request.received' AND target_id = ?) AS audits,
+				(SELECT COUNT(*) FROM contract_action_assertions
+					WHERE scope = 'end_request' AND target_id = ?
+						AND assertion_passed = 1) AS assertions`,
+			params: [formedGroup.contractId, endA.requestId, endA.requestId,
+				formedGroup.contractId],
+		})).toEqual({ requests: 1, outbox: 1, audits: 1, assertions: 1 });
+	}, 60_000);
 
 	it('supersedes old-family offers while preserving numbers and moving only future reservations', async () => {
 		const oldOffer = await draft('family-before-correction');

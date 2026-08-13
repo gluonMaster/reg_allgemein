@@ -93,11 +93,28 @@ concurrency/idempotency проверки в названном suite. Точны
 - register → verify → masked name-match proof → atomic FamilyID/children switch;
 - catalog → quote → trial → admin decision;
 - Nachhilfe/individual request → document/review;
-- offer → parent acceptance → admin approval/activation;
+- offer → parent acceptance → admin approval/activation; Browser lifecycle
+  evidence для этого path допускается только в явно enabled approved synthetic
+  renderer/send environment, а disabled flags дают лишь negative fail-closed
+  evidence;
 - price review → admin send approval → parent response → per-item admin
   confirmation → first-next-month scheduled apply;
 - support/absence → admin answer → outbox;
-- mobile/keyboard German UI smoke.
+- server-known login role redirect (`parent -> /cabinet`, `admin -> /admin`),
+  shared `/account/security` и взаимный `parent`/`admin` route denial;
+- parent A → parent B IDOR для child; request save/submit/cancel; document
+  download/delete и route-request carrier; trial create/cancel; contract
+  detail/artifact/end/attendance/media и route-offer carrier; price-review;
+  message; privacy artifact/subject fields, включая valid-CSRF mutation без side
+  effect;
+- direct action boundary возвращает safe `404` для inaccessible object/carrier
+  mismatch, а owned validation/state conflict остаётся `409`; обычный SvelteKit
+  form transport может сериализовать semantic action failure в rendered 2xx,
+  поэтому Browser дополнительно проверяет denial body и неизменность owner state;
+- tampered cookie, revoked session и blocked user fail closed;
+- mobile/keyboard German UI smoke и axe scan representative public/parent/admin
+  forms; любая запись в `violations` либо `incomplete` проваливает automated
+  accessibility case.
 
 ### System boundary
 
@@ -238,7 +255,14 @@ concurrency/idempotency проверки в названном suite. Точны
 - encrypted PDF с literal `/Encrypt` и PDF name escapes (`/Encr#79pt`,
   `/#45ncrypt`) отклоняется;
 - spoofed extension/MIME, oversize, too many files;
+- lowered configured count/aggregate-byte ceilings remain atomic under two
+  concurrent uploads; the losing write creates neither document nor linked
+  storage-intent assertion;
 - duplicate upload idempotency;
+- document delete связывает server-injected route `requestId` с внутренним
+  `document.request_id`; cross-owner и same-owner mismatched carrier дают safe
+  not-found до replay/mutation, а exact replay требует тот же owner/request/
+  document/key/hash и завершённую atomic assertion;
 - random private R2 key and no public URL;
 - cross-user download/delete and admin audited access;
 - quarantine запрещает inline/public/parent download; admin получает
@@ -274,6 +298,9 @@ concurrency/idempotency проверки в названном suite. Точны
   payload;
 - accept draft/cancelled/expired/superseded/changed-hash rejected;
 - parent decline;
+- current admin is rejected from parent accept/decline even for an historically
+  owned offer; parent accept followed by role promotion cannot be formed by the
+  same user ID as Verein actor;
 - double accept and concurrent accept/cancel;
 - admin approval/activation without parent acceptance rejected;
 - parent acceptance alone creates no contract; admin approval persists both
@@ -341,6 +368,18 @@ concurrency/idempotency проверки в названном suite. Точны
   decline разрешён только для mutual request; group-monthly receipt в месяце M
   заканчивает service последним днём M, group-yearly receipt до end блокирует
   renewal без сокращения term;
+- authenticated end/attendance/media actions используют server-injected route
+  `offerId`; contract/child и offer должны образовывать один owner-scoped
+  canonical context, mismatch возвращает safe not-found до replay/mutation;
+- exact statutory-withdrawal replay после terminal contract разрешён только
+  тому же current eligible parent для тех же contract, route offer,
+  idempotency key и command hash и только при passed atomic assertion; replay не
+  дублирует request/events/outbox/audit/assertion, а foreign, mismatched и blocked
+  actor fail closed;
+- owner eligibility change immediately before attendance/media D1 batch rolls
+  back the complete notice/task/event/outbox/audit/assertion or consent/audit/
+  assertion chain; concurrent identical attendance/media/end calls produce one
+  asserted evidence chain и один result reference;
 - individual/Nachhilfe notice idempotently ends engagement, stops every future
   undelivered unit and emits durable receipt without silently terminating the
   contract; receipt before teacher arrival excludes a claim, while external
@@ -375,6 +414,8 @@ concurrency/idempotency проверки в названном suite. Точны
 - one accepts, one declines/times out, one has manual price;
 - first admin notification approval does not apply price; accepted parent item
   requires second per-item admin confirmation;
+- current admin cannot submit the parent response, and parent response followed
+  by role promotion cannot be finally confirmed by the same user ID;
 - item immutable after send; changed terms supersede version/hash and require
   new acceptance;
 - second occupancy/price-version change supersedes incompatible open items
@@ -414,10 +455,21 @@ concurrency/idempotency проверки в названном suite. Точны
 ### Admin и privacy
 
 - parent/direct API denial для каждой admin surface;
+- current admin получает `403` на всех parent product routes, включая direct
+  child/correction/claim/message actions; retained parent state после
+  synthetic role change не читается и не мутируется;
+- обычное назначение admin и first-admin bootstrap отклоняют target с retained
+  child/claim/correction/trial/request/enrollment/contract/price-review/message/
+  privacy state одним batch без role/session/audit/control side effects;
+- canonical retained-state guard явно перечисляет все 31 unique
+  table/column reference, но не считает пустую FamilyID allocation
+  retained business state;
 - import issue/review task typed resolution и audit;
 - legacy search pagination/redaction, user block session revocation;
 - mapping/capacity/publish handlers и price diagnostics without raw source;
-- subject-scoped private export без cross-user data;
+- subject-scoped private export без cross-user data; оба deployable download
+  route существуют в clean source tree, self-service требует current parent,
+  admin endpoint — current admin;
 - delete dry-run, retention hold, idempotent approval/failure и R2 cleanup plan;
 - export-download audit replay после block/closure повторно проверяет actor,
   artifact status/expiry и ownership вместо доверия старому audit ID;
@@ -448,12 +500,13 @@ concurrency/idempotency проверки в названном suite. Точны
 
 ### Stage 13 operations и storage recovery
 
-- empty migration и populated `0013 → 0014`: existing admin capability sealed,
+- empty migration и populated `0013 → 0015`: existing admin capability sealed,
   privacy cleanup/support rows сохранены, новые triggers/columns работают;
   legacy lease-less `processing` privacy cleanup становится retryable `failed`
   и затем успешно claim-ится новым Worker;
 - clean first-admin bootstrap, invalid candidate, existing-admin denial,
-  replay и two-candidate concurrency; role/session/audit/assertion cardinality;
+  retained-parent-state denial, replay и two-candidate concurrency;
+  role/session/audit/assertion/control cardinality;
   remote config `APP_ENV`, `database_id`/`preview_database_id`, UUID-bearing
   confirmation, shared-ID/overlay/mismatch rejection и escaped batch rendering;
 - exact Cron allowlist, все fast/maintenance job IDs, scheduled disable,

@@ -34,23 +34,27 @@ checklist.
 
 | Объект                              | Фактическое состояние                                                                                              | Gate                                                 |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| Local config                        | `wrangler.local.toml`: `DB`, отдельные `R2_ARCHIVE`/`R2_QUARANTINE`; local config/storage/contract tests проходят  | локальное evidence есть; remote evidence `blocked`   |
-| Example production config           | `wrangler.example.toml`: отдельные archive/quarantine bindings с `jurisdiction = "eu"`, без real IDs               | remote resources/rehearsal `blocked`                 |
-| Раздельные R2                       | runtime требует оба binding в preview/production и отклоняет один object для двух ролей; локальные tests проходят  | private remote EU buckets/wiring evidence `blocked`  |
-| Последняя migration                 | `0014_production_operations.sql`; clean и populated `0013` → `0014` upgrade tests проходят локально                | remote migration/restore evidence `blocked`          |
-| Scheduled jobs/Cron                 | scheduled handler, два trigger, девять allowlisted jobs и job-run repository покрыты local unit/integration tests  | remote preview delivery/freshness и alerts `blocked` |
-| Manual operations page              | `/admin/operations`: RBAC, CSRF, allowlist, confirmation, idempotency, history и audit покрыты local tests         | remote preview/alerts/operator approval `blocked`    |
+| Local config                        | `wrangler.local.toml`: `DB`, отдельные `R2_ARCHIVE`/`R2_QUARANTINE`; local config/storage/contract tests проходят  | local evidence `passed`; environment gates отдельно |
+| Example production config           | `wrangler.example.toml`: отдельные archive/quarantine bindings с `jurisdiction = "eu"`, без real IDs               | production resources/rehearsal `blocked`             |
+| Preview Worker/D1 (2026-08-12)      | `reg-allgemein-preview`: immutable `200268f` развёрнут как version `sha256:f4cd52e14dbd`; D1 migrations `0001`–`0015`, pending 0 | preview runtime/migrations `passed`; production/custom origin `blocked` |
+| Раздельные R2                       | runtime guards и два отдельных private EU preview bucket проверены                                                | preview split `passed`; production/restore `blocked` |
+| Последняя migration                 | `0015_worker_monitoring.sql`; clean/populated `0013` → `0015` tests и preview apply `0001`–`0015`, pending 0        | apply evidence есть; protected restore `blocked`     |
+| Scheduled jobs/Cron                 | два UTC trigger доставили все девять jobs; UptimeRobot 5-minute `HEAD` aggregate monitor доставил DOWN→UP         | automatic/aggregate `passed`; manual/failure/job-specific alerts `blocked` |
+| Manual operations page              | `/admin/operations`: RBAC, CSRF, allowlist, confirmation, idempotency, history и audit покрыты local tests         | authenticated remote manual/failure rehearsal `blocked` |
 | First-admin CLI                     | `npm run admin:bootstrap` и local unit/integration tests реализованы; exact target guard и one-shot seal проверены | remote exercise и post-consume recovery `blocked`    |
-| Release helpers                     | `docs:check`, `release:scan`, `release:verify` реализованы; verify включает E2E/docs/scan/audit                    | full immutable run и remote gates ещё `blocked`      |
-| Email/Telegram adapters             | только `disabled`/fake, production adapters отсутствуют                                                            | `feature_disabled`                                   |
+| Release helpers                     | immutable `200268f`: clean `npm ci`, full и production-only audit по 0 advisories, `release:verify` passed         | local gate `passed`; environment gates отдельно      |
+| Stored Worker logs (2026-08-12)     | bounded export version `62b3cac4…`: 60/60 outcomes `ok`; exact 404/health probes корректны, `UNEXPECTED_SERVER_ERROR` отсутствует | preview observability `passed`; production evidence `blocked` |
+| Email/Telegram adapters             | Resend adapter/domain/scoped key/Worker secret подготовлены, но provider disabled; Telegram real adapter отсутствует | оба delivery path `feature_disabled`; smoke/approval `blocked` |
 | Production uploads                  | runtime запрещает включение                                                                                        | `feature_disabled`                                   |
 | Production contract send            | runtime запрещает включение                                                                                        | `feature_disabled`                                   |
 | Online media grant                  | fail-closed flag                                                                                                   | `feature_disabled`                                   |
 | Public statutory contract functions | fail-closed flag                                                                                                   | `feature_disabled`                                   |
 
-Локальные tests подтверждают реализацию, но не авторизуют remote provisioning,
-migration, preview deploy или production deploy. До remote preview evidence,
-alerting и restore rehearsal текущий production verdict остаётся **NO-GO**.
+Preview evidence не авторизует новую remote mutation или production deploy.
+Public auth/real-token, remote authenticated browser, provider delivery, Browser
+Run, manual dedupe/failure, job-specific alerts, bootstrap, production resources/
+custom origin, restore и legal/privacy approval gates остаются незакрытыми,
+поэтому текущий production verdict — **NO-GO**.
 
 ## Release inputs и доступы
 
@@ -124,19 +128,20 @@ npm run release:scan
 
 Все команды реализованы, включая Playwright E2E внутри `release:verify`.
 Build-only Cloudflare adapter находится в `devDependencies`; текущий
-`npm audit --omit=dev` показывает `0 vulnerabilities`. Immutable baseline
-`b1a1505` имел 7 dev-only findings; immutable successor `63995f8` обновляет
-SvelteKit/PostCSS/Wrangler/Miniflare и прошёл clean `npm ci`, полный audit с 0
-vulnerabilities и `release:verify`, как описано в
+`npm audit --omit=dev` показывает `0 advisories`. Immutable baseline
+`b1a1505` имел 7 dev-only findings; successor `63995f8` обновил
+SvelteKit/PostCSS/Wrangler/Miniflare, а immutable `200268f` прошёл clean
+`npm ci`, полный и production-only audit с 0 advisories и `release:verify`, как описано в
 [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md). Незакрытые environment gates всё
 равно удерживают общий gate в `blocked`.
 
 **Ожидаемый безопасный результат:** все существующие команды завершаются с code
-0; связный synthetic lifecycle проходит на migrated D1, а Playwright boundary
-smoke остаётся отдельным результатом. Полный authenticated browser lifecycle
-ещё не реализован и оставляет release gate `blocked`; его нельзя приписывать
-текущему `release:verify`. Отчёты не содержат PII/secrets; build не содержит
-source Office/Access, generated imports, DB snapshots или privacy exports.
+0; связный synthetic lifecycle проходит на migrated D1, а local Playwright
+evidence остаётся отдельным результатом. Оно не заменяет remote authenticated/
+public-auth, provider и Browser Run evidence; соответствующие release gates
+остаются `blocked|feature_disabled`. Отчёты не содержат PII/secrets; build не
+содержит source Office/Access, generated imports, DB snapshots или privacy
+exports.
 
 **Проверка:** записать только command, version/commit, дату, exit code и
 агрегированный count. Не вставлять полный dependency tree или лог с данными.
@@ -180,8 +185,10 @@ target resource IDs/names, но secrets устанавливаются толь�
 
 `R2_ARCHIVE`/`R2_QUARANTINE` закреплены в local/example config и runtime contract.
 Локальные config, request-contract, privacy и storage tests проверяют разделение;
-remote EU resource evidence по-прежнему отсутствует. Один provider bucket под
-двумя bindings этому gate не соответствует.
+два разных private preview bucket с EU jurisdiction и выключенными public/
+`r2.dev` endpoints подтверждены. Production buckets и isolated restore ещё не
+созданы/не проверены. Один provider bucket под двумя bindings этому gate не
+соответствует.
 
 **Ожидаемый безопасный результат:** каждая строка manifest указывает уникальный
 resource; buckets не имеют public access/r2.dev; archive и quarantine не являются
@@ -242,8 +249,9 @@ npx wrangler r2 bucket create <QUARANTINE_BUCKET_NAME> --jurisdiction eu --confi
 
 Bindings имеют точные имена `R2_ARCHIVE` и `R2_QUARANTINE`; их разделение
 проверено локально. Автоматический `--update-config` не используется, чтобы CLI
-не изменил не тот config. Remote bucket IDs и EU/private evidence всё ещё должны
-быть подтверждены отдельно.
+не изменил не тот config. Для preview разные private EU resources уже сверены;
+production resource IDs и EU/private evidence должны быть подтверждены отдельно
+до production provisioning gate.
 
 **Ожидаемый безопасный результат:** два пустых private bucket в EU jurisdiction,
 без public/r2.dev access.
@@ -319,6 +327,12 @@ enablement. Первый smoke использует один контролир�
 PII. Production key выпускается отдельно после preview gate; preview key нельзя
 копировать в production.
 
+Историческое preview evidence 2026-08-11 подтверждает `Verified` domain в
+`eu-west-1`, отдельный domain-scoped `Sending access` key и установленное имя
+Worker secret `RESEND_API_KEY` без раскрытия value. `EMAIL_PROVIDER=disabled`
+сохранён; delivery/reply smoke и любые реальные отправки не выполнялись. Поэтому
+подготовка adapter/domain/key/secret не переводит provider gate в `passed`.
+
 **Ожидаемый безопасный результат:** IONOS продолжает принимать входящую почту;
 adapter отправляет с утверждённой Verein identity; API key может только отправлять
 с разрешённого домена; outbox dedupe и provider idempotency не создают повтор в
@@ -360,9 +374,10 @@ environment Worker после проверки key scope по § 4.4.
 **Проверка:** реализованный `release:verify` запускает code/tests/E2E/build,
 dependency audit, documentation checks и repository scan, не печатая secret
 values. Он не доказывает наличие remote secret и не заменяет provider/UI review.
-Текущий production dependency audit проходит; dev-only tooling advisory и его
-границы документированы в [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md). Полный
-release gate всё равно требует immutable run и remote evidence.
+Immutable `200268f` прошёл production и full dependency audit с 0 findings;
+границы policy документированы в [DEPENDENCY_POLICY.md](DEPENDENCY_POLICY.md).
+Полный release gate всё равно требует свежий immutable run после локальных
+изменений и оставшееся environment evidence.
 
 **Stop condition:** secret показан в terminal history/log, target Worker не тот,
 vars содержат placeholder, feature flag включён до своего gate.
@@ -385,16 +400,17 @@ npm run db:migrate:local
 npm run db:migrations:local
 ```
 
-**Ожидаемый безопасный результат:** migrations `0001`–
-`0014_production_operations.sql` применены один раз. Local clean-D1 integration
-coverage проверяет последовательное применение и новые operations/bootstrap/
-storage tables migration `0014`.
+**Ожидаемый безопасный результат:** все migrations от `0001_foundation.sql` до
+`0015_worker_monitoring.sql` применены по одному разу. Local clean-D1 integration
+coverage проверяет последовательное применение всего набора `0001`–`0015`,
+operations/bootstrap/storage migration `0014` и append-only monitoring migration
+`0015`.
 
 **Проверка:** targeted foundation D1 test проходит локально. Это не заменяет
 полный immutable `npm run release:verify` и remote restore evidence.
 
 **Stop condition:** изменён уже применённый migration, duplicate/failed migration,
-неожиданная remote D1 или missing `0014`, если release объявляет её частью.
+неожиданная remote D1 или missing `0014|0015`, если release объявляет их частью.
 
 **Rollback/recovery:** удалить только специально созданное local persisted state
 через существующий `db:reset:local`; remote state не трогать.
@@ -406,7 +422,8 @@ pre-migration backup.
 
 **Команда:** `tests/integration/migration-upgrade-d1.test.ts`, запускаемый общим
 `npm test`, локально проверяет populated schema через `0013`, затем применяет
-`0014`, сохраняет существующие records/constraints и создаёт новые structures.
+`0014` и `0015`, сохраняет существующие records/constraints и создаёт новые
+structures.
 Если до upgrade уже есть active admin, migration автоматически и аудируемо
 запечатывает one-shot bootstrap. Remote apply имеет форму:
 
@@ -420,6 +437,12 @@ bootstrap capability открытой.
 
 **Проверка:** schema/data compatibility smoke и migration list.
 
+Датированное initial preview apply 2026-08-10 (`0001`–`0014`, 14/14, pending 0)
+сохраняется как историческое evidence именно той точки. После него append-only
+`0015_worker_monitoring.sql` применена 2026-08-11; текущий preview inventory —
+`0001`–`0015`, pending 0. Исторические 14/14 нельзя использовать как current
+schema inventory или как restore rehearsal.
+
 **Stop condition:** нет restore rehearsal, нет representative fixture, target
 не preview, command просит применить неизвестную migration. Сейчас gate
 `blocked`; production команду не выполнять.
@@ -430,8 +453,12 @@ restore по [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md).
 
 ## 7. Bootstrap первого администратора
 
-**Prerequisites:** migration `0014` и audited bootstrap mechanism реализованы;
+**Prerequisites:** schema through migration `0015` и audited bootstrap mechanism
+реализованы;
 target user уже подтверждён безопасным out-of-band способом;
+target не сохраняет parent-side child/claim/correction/trial/request/enrollment/
+contract/price-review/message/privacy state (пустая FamilyID allocation
+допустима и проверяется server-side);
 получено двухстороннее approval; значение user ID не попадает в evidence.
 
 **Точная local команда:**
@@ -464,9 +491,10 @@ ID, selector collision и placeholder config. Для дочерней Wrangler-�
 проверяют target pinning, parameter escaping, one-shot execution, session
 revocation и audit; remote clean-room rehearsal всё ещё обязателен.
 
-**Ожидаемый безопасный результат:** ровно один active account получает admin role;
-создан audit event без email/PII; bootstrap capability становится непригодна для
-повтора; старые sessions отозваны.
+**Ожидаемый безопасный результат:** ровно один eligible active account получает
+admin role; создан audit event без email/PII; bootstrap capability становится
+непригодна для повтора; старые sessions отозваны. Target с retained parent state
+отклоняется целиком: роль/sessions/control/audit остаются без изменений.
 
 **Проверка:** admin входит заново, видит только разрешённый admin shell; повтор
 той же команды fail-closed; security reviewer подтверждает audit и отсутствие
@@ -474,7 +502,8 @@ revocation и audit; remote clean-room rehearsal всё ещё обязател�
 
 **Stop condition:** config/`APP_ENV`/D1 UUID не совпали, UUID не включён в exact
 confirmation, direct SQL, вывод email, роль без audit, replay успешен, bootstrap
-secret/flag остаётся активным или невозможно немедленно снять роль.
+secret/flag остаётся активным, target имеет retained parent state или невозможно
+немедленно снять роль.
 
 **Rollback/recovery:** bootstrap нельзя reset/replay: после успешного запуска или
 автоматического seal при upgrade с существующим admin control остаётся consumed.
@@ -528,10 +557,10 @@ implementation отсутствует; production нельзя включать 
 
 ## 9. Подключить scheduled jobs и manual operations
 
-**Prerequisites:** scheduled entrypoint, migration `0014`, triggers, leases,
+**Prerequisites:** scheduled entrypoint, migrations `0014`–`0015`, triggers, leases,
 job-run state, alerts и RBAC manual operations page реализованы и протестированы.
 
-Migration `0014` и scheduler задают exact job IDs `email_outbox`, `telegram_outbox`,
+Migrations `0014`–`0015` и scheduler задают exact job IDs `email_outbox`, `telegram_outbox`,
 `price_review`, `document_quarantine`, `funding_authorization_expiry`,
 `email_reservation_cleanup`, `privacy_r2_cleanup`, `security_metadata_cleanup` и
 `storage_orphan_cleanup`. Для каждого записываются exact cron expression,
@@ -546,8 +575,10 @@ Every-minute trigger запускает email/Telegram jobs, fifteen-minute trig
 `jobName`, hidden CSRF/idempotency key и checkbox `confirmation`; action
 `?/run`. Оба Cloudflare Cron expression исполняются в UTC; только Telegram
 business-hours вычисляются в `Europe/Berlin`. Local scheduler/route tests
-проходят, но preview trigger и alert thresholds требуют явной проверки, поэтому
-gate остаётся `blocked`.
+и preview automatic delivery/freshness всех девяти jobs прошли; оба trigger
+сохранены, aggregate HEAD freshness/error signal и независимая DOWN→UP delivery
+проверены. Remote manual-run/dedupe/failure и job-specific thresholds остаются
+`blocked`.
 
 **Ожидаемый безопасный результат:** duplicate delivery не дублирует side effect;
 ошибка одного job не скрывает другие; manual run возвращает sanitized counts и
@@ -555,12 +586,14 @@ audit event; stale/missed/dead вызывает проверяемый signal.
 
 **Проверка:** local `tests/unit/operations-scheduler.test.ts`,
 `tests/integration/operations-scheduler-d1.test.ts` и security tests маршрута
-`/admin/operations` проходят. Затем всё равно обязательны remote preview
-manual-run/dedupe/dead/stale-lock, Cron delivery/freshness и alert rehearsal.
+`/admin/operations` проходят. Automatic Cron delivery/freshness и aggregate
+alert rehearsal уже получены; отдельно обязательны remote preview manual-run/
+dedupe/dead/stale-lock и job-specific failure/backlog alerts.
 
 **Stop condition:** typecheck/test failed, timezone/owner не подтверждены, job
 нельзя безопасно повторить, manual action неаудируема или alert не наблюдаем.
-Сейчас весь gate `blocked`.
+Сейчас automatic/aggregate часть `passed`, оставшаяся manual/failure/job-specific
+часть `blocked`.
 
 **Rollback/recovery:** не добавлять triggers. Если trigger уже создан ошибочно —
 сначала отключить его утверждённым config change, затем разбирать backlog по
@@ -588,9 +621,12 @@ Browser glyph/font/long-name/pagination/quota; Cron manual-run; R2 isolation;
 logs redacted.
 
 **Stop condition:** нет preview approval/resources, config содержит production
-ID/secret, E2E отсутствует либо Browser/provider/Cron wiring не проходит current
-tests/rehearsal. Текущий preview gate `blocked`: remote resources, Cron delivery,
-alerts и provider wiring не подтверждены.
+ID/secret, обязательный smoke отсутствует либо authenticated Browser/provider/
+manual-failure wiring не проходит current tests/rehearsal. Preview Worker, D1,
+private EU R2, automatic Cron, aggregate alert, public HTTP/desktop/mobile/
+keyboard smoke и stored-log review уже подтверждены; remote authenticated/IDOR/
+axe, real-token public auth, provider delivery, Browser Run, manual/dedupe/
+failure, bootstrap и restore части остаются `blocked`.
 
 **Rollback/recovery:** отключить affected feature; rollback preview Worker к
 известной совместимой version либо исправить forward. D1/R2 не удалять.
@@ -690,7 +726,9 @@ site surfaces по отдельной site change procedure. Это не отк�
 При любом `blocked`, failed обязательном check, неизвестном provider/Cron wiring,
 непроверенном restore/rollback, object-authorization/PII defect или
 несуществующей команде production-ready объявлять нельзя. Документированный
-план не является разрешением на remote действие. Сейчас remote preview/alerts,
-restore rehearsal с утверждёнными RPO/RTO, production provider adapters,
-legal/privacy/template approvals и remote resource evidence отсутствуют;
+план не является разрешением на remote действие. Preview Worker/D1/private EU
+R2/automatic Cron/aggregate alert/public browser/stored-log evidence уже есть.
+Authenticated/provider/Browser Run/manual-failure/job-specific alert/bootstrap,
+restore rehearsal с утверждёнными RPO/RTO, production resources/custom origin,
+production provider adapters и legal/privacy/template approvals отсутствуют;
 production verdict остаётся **NO-GO**.

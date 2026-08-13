@@ -255,9 +255,11 @@ end/cancel оформляется новым operational/contract flow.
 5. email outbox отправляет каждому родителю письмо increase/decrease с private
    cabinet link только на его immutable item; item даёт 14 календарных дней на
    ответ и содержит правило effective date;
-6. parent явно принимает либо отклоняет; до этого действует старая цена;
+6. current active parent явно принимает либо отклоняет; current admin не может
+   выполнить это parent-side действие, даже если сохранил ownership;
 7. parent acceptance создаёт admin task, но ещё не меняет enrollment;
-8. admin вторым явным действием подтверждает конкретный accepted item;
+8. admin с другим user ID вторым явным действием подтверждает конкретный
+   accepted item; повышение роли ответившего parent не создаёт вторую сторону;
 9. перед final confirmation и apply повторно проверить account/enrollment active
    state, current old price/mode, occupancy, price version/rule и отсутствие
    более новой item version; mismatch supersede item и запускает новый расчёт,

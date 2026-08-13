@@ -3,7 +3,7 @@ import { BcryptPasswordHasher } from '$lib/server/auth/password';
 import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, setSessionCookies } from '$lib/server/auth/session';
 import { createRandomToken, hashCsrfToken } from '$lib/server/auth/tokens';
 import { requireCsrf } from '$lib/server/security/csrf';
-import { requireAdmin, requireObjectOwner } from '$lib/server/security/authorization';
+import { requireAdmin, requireObjectOwner, requireParent } from '$lib/server/security/authorization';
 import { routeAccessPolicy } from '$lib/server/security/route-policy';
 import { CloudflareTurnstileVerifier } from '$lib/server/security/turnstile';
 
@@ -23,9 +23,16 @@ describe('auth security boundaries', () => {
 		).toBe(false);
 		expect(routeAccessPolicy('/')).toBe('public');
 		expect(routeAccessPolicy('/catalog')).toBe('public');
-		expect(routeAccessPolicy('/catalog/course-1/trial')).toBe('authenticated');
+		expect(routeAccessPolicy('/catalog/[courseId]/trial')).toBe('parent');
 		expect(routeAccessPolicy('/auth/login')).toBe('public');
 		expect(routeAccessPolicy('/account/security')).toBe('authenticated');
+		expect(routeAccessPolicy('/account/privacy')).toBe('parent');
+		expect(routeAccessPolicy('/account/privacy/exports/[artifactId]/download')).toBe('parent');
+		expect(routeAccessPolicy('/cabinet/legacy-claim')).toBe('parent');
+		expect(routeAccessPolicy('/contracts/[offerId]')).toBe('parent');
+		expect(routeAccessPolicy('/messages/[publicReference]')).toBe('parent');
+		expect(routeAccessPolicy('/price-reviews/[publicReference]')).toBe('parent');
+		expect(routeAccessPolicy('/requests/[requestId]')).toBe('parent');
 		expect(routeAccessPolicy('/future-domain-route')).toBe('authenticated');
 		expect(routeAccessPolicy('/admin/users')).toBe('admin');
 	});
@@ -49,6 +56,8 @@ describe('auth security boundaries', () => {
 		).toBe(admin);
 		expect(() => requireAdmin(parent)).toThrowError(/denied/i);
 		expect(requireAdmin(admin).id).toBe('user-admin');
+		expect(requireParent(parent).id).toBe('user-parent');
+		expect(() => requireParent(admin)).toThrowError(/denied/i);
 	});
 
 	it('requires the submitted CSRF token, host cookie and session-bound hash', async () => {

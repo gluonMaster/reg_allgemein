@@ -58,6 +58,12 @@ Claim повторяет `NOT referenced` в conditional update, поэтому 
 зафиксированная ссылка выигрывает у cleanup. Duplicate/stale Worker delivery
 ограничивается lease owner и не завершает чужую попытку.
 
+Configured ceilings, если они ниже hard default, входят в тот же conditional D1
+batch: document INSERT проверяет актуальные `COUNT`/`SUM(size_bytes)` на момент
+записи. Конкурентный upload, проигравший этот guard, не создаёт domain link и не
+переводит intent в `linked`; staged object остаётся для штатной reconciliation/
+orphan cleanup, а не удаляется по неоднозначному результату.
+
 ## Базовая изоляция
 
 Auth/ownership, idempotency, hard limits, allowlist extension/MIME, basic
@@ -164,6 +170,9 @@ processing, AVV/DPA, subprocessor/no-training/no-retention review.
 - MIME/extension spoof, реальный PDF/ZIP dual-parser polyglot (ZIP EOCD до
   финального PDF xref/EOF) и malformed file;
 - oversize, ZIP/Office/SVG/executable rejection;
+- два конкурентных upload при configured count limit `1` и при пониженном
+  aggregate byte ceiling не обходят лимит; проигравшая запись не получает
+  document/link assertion;
 - ни parent, ни обычный inline/download path не получает quarantined object;
   admin получает только forced attachment после RBAC/audit;
 - clean attestation без предшествующего download, для другого hash, без scanner

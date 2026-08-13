@@ -1,22 +1,41 @@
-import { fail } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { requestSubject } from '$lib/server/auth/http';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
+import { ContractServiceError } from '$lib/server/contracts/contract-service';
 import { requestContractRuntime } from '$lib/server/contracts/runtime';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { translate } from '$lib/i18n';
 
-export const load: PageServerLoad = async (event) => ({
-	csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
-	endIdempotencyKey: crypto.randomUUID(),
-	attendanceIdempotencyKey: crypto.randomUUID(),
-	mediaIdempotencyKey: crypto.randomUUID(),
-	offer: await requestContractRuntime(event).service.loadOwnerOffer(
-		requireAuthenticated(event.locals.user),
-		event.params.offerId
-	),
-});
+export const load: PageServerLoad = async (event) => {
+	const actor = requireParent(event.locals.user);
+	let offer: Awaited<ReturnType<
+		ReturnType<typeof requestContractRuntime>['service']['loadOwnerOffer']
+	>>;
+	try {
+		offer = await requestContractRuntime(event).service.loadOwnerOffer(
+			actor,
+			event.params.offerId
+		);
+	} catch (caught) {
+		if (caught instanceof ContractServiceError && caught.code === 'CONTRACT_NOT_FOUND') {
+			throw error(404, {
+				code: 'CONTRACT_NOT_FOUND',
+				message: translate('de', 'admin.notFound'),
+				requestId: event.locals.requestId,
+			});
+		}
+		throw caught;
+	}
+	return {
+		csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
+		endIdempotencyKey: crypto.randomUUID(),
+		attendanceIdempotencyKey: crypto.randomUUID(),
+		mediaIdempotencyKey: crypto.randomUUID(),
+		offer,
+	};
+};
 
 async function decide(event: Parameters<Actions[string]>[0], decision: 'accept' | 'decline') {
 	try {
@@ -26,7 +45,7 @@ async function decide(event: Parameters<Actions[string]>[0], decision: 'accept' 
 			user: event.locals.user,
 			submittedToken: form.get('_csrf')?.toString(),
 		});
-		const actor = requireAuthenticated(event.locals.user);
+		const actor = requireParent(event.locals.user);
 		await requestContractRuntime(event).service.parentDecision({
 			actor,
 			payload: {
@@ -60,7 +79,7 @@ async function protectedForm(event: Parameters<Actions[string]>[0]) {
 		user: event.locals.user,
 		submittedToken: form.get('_csrf')?.toString(),
 	});
-	return { form, actor: requireAuthenticated(event.locals.user) };
+	return { form, actor: requireParent(event.locals.user) };
 }
 
 export const actions = {
@@ -72,6 +91,7 @@ export const actions = {
 			await requestContractRuntime(event).service.submitEndRequest({
 				actor,
 				payload: {
+					offerId: event.params.offerId,
 					contractId: form.get('contractId'),
 					kind: form.get('kind'),
 					requestedEffectiveOn: form.get('requestedEffectiveOn')?.toString() || null,
@@ -81,8 +101,13 @@ export const actions = {
 				requestId: event.locals.requestId,
 			});
 			return { success: true, message: translate('de', 'contract.end.received') };
-		} catch {
-			return fail(409, { success: false, message: translate('de', 'contract.end.failed') });
+		} catch (caught) {
+			return fail(
+				caught instanceof ContractServiceError && caught.code === 'CONTRACT_NOT_FOUND'
+					? 404
+					: 409,
+				{ success: false, message: translate('de', 'contract.end.failed') }
+			);
 		}
 	},
 	attendance: async (event) => {
@@ -91,6 +116,7 @@ export const actions = {
 			await requestContractRuntime(event).service.submitAttendanceNotice({
 				actor,
 				payload: {
+					offerId: event.params.offerId,
 					contractId: form.get('contractId'),
 					noticeTextVersion: 'attendance-ceased-de-v1',
 					idempotencyKey: form.get('idempotencyKey'),
@@ -98,8 +124,13 @@ export const actions = {
 				requestId: event.locals.requestId,
 			});
 			return { success: true, message: translate('de', 'contract.attendance.received') };
-		} catch {
-			return fail(409, { success: false, message: translate('de', 'contract.attendance.failed') });
+		} catch (caught) {
+			return fail(
+				caught instanceof ContractServiceError && caught.code === 'CONTRACT_NOT_FOUND'
+					? 404
+					: 409,
+				{ success: false, message: translate('de', 'contract.attendance.failed') }
+			);
 		}
 	},
 	mediaDecline: async (event) => {
@@ -108,6 +139,7 @@ export const actions = {
 			await requestContractRuntime(event).service.recordMediaDecision({
 				actor,
 				payload: {
+					offerId: event.params.offerId,
 					childId: form.get('childId'),
 					captureScopes: form.getAll('captureScopes').map(String),
 					publicationChannels: form.getAll('publicationChannels').map(String),
@@ -119,8 +151,13 @@ export const actions = {
 				requestId: event.locals.requestId,
 			});
 			return { success: true, message: translate('de', 'contract.media.declined') };
-		} catch {
-			return fail(409, { success: false, message: translate('de', 'contract.media.failed') });
+		} catch (caught) {
+			return fail(
+				caught instanceof ContractServiceError && caught.code === 'MEDIA_DECISION_NOT_FOUND'
+					? 404
+					: 409,
+				{ success: false, message: translate('de', 'contract.media.failed') }
+			);
 		}
 	},
 } satisfies Actions;

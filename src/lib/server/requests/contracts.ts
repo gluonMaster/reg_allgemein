@@ -75,7 +75,7 @@ export const documentUploadCommandSchema = z
 	.strict();
 
 export const documentDeleteCommandSchema = z
-	.object({ documentId: opaqueId, idempotencyKey })
+	.object({ requestId: opaqueId, documentId: opaqueId, idempotencyKey })
 	.strict();
 
 export const adminRequestTransitionSchema = z

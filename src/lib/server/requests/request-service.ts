@@ -8,6 +8,7 @@ import {
 } from './contracts';
 import { IndividualRequestError, IndividualRequestRepository } from './request-repository';
 import { formatMessage, translate } from '$lib/i18n';
+import { requireParent } from '$lib/server/security/authorization';
 
 export const FUNDED_NACHHILFE_RATE_CENTS_PER_45_MIN = 3000;
 
@@ -19,7 +20,12 @@ export class IndividualRequestService implements CabinetReadModelContributor {
 	) {}
 
 	private requireParent(actor: AuthenticatedUser) {
-		if (actor.role !== 'parent' || !actor.emailVerified) {
+		try {
+			requireParent(actor);
+		} catch {
+			throw new IndividualRequestError('PARENT_REQUIRED');
+		}
+		if (!actor.emailVerified) {
 			throw new IndividualRequestError('PARENT_REQUIRED');
 		}
 	}

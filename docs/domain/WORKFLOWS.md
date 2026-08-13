@@ -212,8 +212,10 @@ eligible для удаления при `now >= uploaded_at + 14×24h` UTC и у
 | `accepted_by_parent` | Conditions changed; admin creates new version | `superseded` |
 
 После `sent` offer immutable. Новые условия означают новую version, старую
-принять нельзя; acceptance старой version не переносится. Acceptance и
-activation имеют разные idempotency keys. Activation атомарно:
+принять нельзя; acceptance старой version не переносится. Parent-side
+accept/decline требует current active role `parent`. Acceptance и activation
+имеют разные idempotency keys, а admin activation actor обязан отличаться от
+parent actor/owner даже после role promotion. Activation атомарно:
 
 - проверяет acceptance/hash/owner/current status;
 - фиксирует formation timestamp и обе стороны evidence;
@@ -309,10 +311,12 @@ Impressum/Kontakt.
 3. Admin может исправить/отменить item и первым действием approve рассылку.
 4. Notification outbox отправляет каждому только его item и private cabinet
    link; response deadline равен 14 календарным дням.
-5. `sent -> accepted_by_parent|declined_by_parent`; decline немедленно создаёт
-   admin notification/manual-contact task, timeout — overdue task.
+5. `sent -> accepted_by_parent|declined_by_parent` требует current active role
+   `parent`; decline немедленно создаёт admin notification/manual-contact task,
+   timeout — overdue task.
 6. `accepted_by_parent -> approved_by_admin` требует второго явного действия
-   admin по конкретному item; batch approval его не заменяет.
+   admin с другим user ID по конкретному item; batch approval и последующее
+   повышение роли ответившего parent его не заменяют.
 7. Final confirmation и apply повторно проверяют active account/enrollment,
    old price/mode, group count, price/rule version и отсутствие newer item;
    mismatch делает item `superseded` без price mutation.

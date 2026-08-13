@@ -186,6 +186,8 @@ export class AuthorizationDocumentRepository {
 		documentId: string;
 		quarantineKey: string;
 		validated: ValidatedUpload;
+		maxFilesPerAuthorization: number;
+		maxAuthorizationBytes: number;
 		idempotencyKey: string;
 		requestHash: string;
 		requestIdHeader: string;
@@ -234,7 +236,16 @@ export class AuthorizationDocumentRepository {
 					AND (? IS NULL OR EXISTS (SELECT 1 FROM storage_object_intents intent
 						WHERE intent.id = ? AND intent.status = 'staged'
 							AND intent.storage_class = 'quarantine'
-							AND intent.object_key = ?))`,
+							AND intent.object_key = ?))
+					AND (SELECT COUNT(*) FROM authorization_documents AS current
+						WHERE current.authorization_id = ? AND current.deleted_at IS NULL
+							AND current.replaced_by_document_id IS NULL
+							AND (? IS NULL OR current.id <> ?)) < ?
+					AND COALESCE((SELECT SUM(current.size_bytes)
+						FROM authorization_documents AS current
+						WHERE current.authorization_id = ? AND current.deleted_at IS NULL
+							AND current.replaced_by_document_id IS NULL
+							AND (? IS NULL OR current.id <> ?)), 0) + ? <= ?`,
 			params: [
 				input.documentId,
 				input.target.targetAuthorizationId,
@@ -256,6 +267,15 @@ export class AuthorizationDocumentRepository {
 				input.storageIntentId ?? null,
 				input.storageIntentId ?? null,
 				input.quarantineKey,
+				input.target.targetAuthorizationId,
+				input.target.replaceDocument?.id ?? null,
+				input.target.replaceDocument?.id ?? null,
+				input.maxFilesPerAuthorization,
+				input.target.targetAuthorizationId,
+				input.target.replaceDocument?.id ?? null,
+				input.target.replaceDocument?.id ?? null,
+				input.validated.sizeBytes,
+				input.maxAuthorizationBytes,
 			],
 		});
 		if (input.storageIntentId) {
@@ -361,7 +381,42 @@ export class AuthorizationDocumentRepository {
 				],
 			}
 		);
-		await this.db.batch(statements);
+		try {
+			// D1 batches are transactions. When the conditional insert loses a
+			// concurrent limit race, the assertion rows below fail closed and roll
+			// back every attempted document, intent-link, replacement, and audit row.
+			await this.db.batch(statements);
+		} catch (error) {
+			const limitExceeded = await this.configuredLimitExceeded(input).catch(() => false);
+			if (limitExceeded) {
+				throw new DocumentRepositoryError('DOCUMENT_AUTHORIZATION_LIMIT_REJECTED');
+			}
+			throw error;
+		}
+	}
+
+	private async configuredLimitExceeded(input: {
+		target: UploadTarget;
+		validated: ValidatedUpload;
+		maxFilesPerAuthorization: number;
+		maxAuthorizationBytes: number;
+	}): Promise<boolean> {
+		const totals = await this.db.first<{ count: number; bytes: number }>({
+			sql: `SELECT COUNT(*) AS count, COALESCE(SUM(current.size_bytes), 0) AS bytes
+				FROM authorization_documents AS current
+				WHERE current.authorization_id = ? AND current.deleted_at IS NULL
+					AND current.replaced_by_document_id IS NULL
+					AND (? IS NULL OR current.id <> ?)`,
+			params: [
+				input.target.targetAuthorizationId,
+				input.target.replaceDocument?.id ?? null,
+				input.target.replaceDocument?.id ?? null,
+			],
+		});
+		return (
+			(totals?.count ?? 0) + 1 > input.maxFilesPerAuthorization ||
+			(totals?.bytes ?? 0) + input.validated.sizeBytes > input.maxAuthorizationBytes
+		);
 	}
 
 	private internalDocument(documentId: string): Promise<InternalDocumentRow | null> {
@@ -372,7 +427,8 @@ export class AuthorizationDocumentRepository {
 				document.review_status, document.quarantine_delete_state
 			FROM authorization_documents AS document
 			JOIN users AS owner ON owner.id = document.user_id
-				AND owner.account_status = 'active'
+				AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0
 			JOIN funding_authorizations AS authorization ON authorization.id = document.authorization_id
 			WHERE document.id = ?`,
 			params: [documentId],
@@ -521,7 +577,8 @@ export class AuthorizationDocumentRepository {
 			JOIN users AS owner ON owner.id = request.user_id
 			WHERE document.id = ? AND document.user_id = ? AND request.user_id = ?
 				AND document.review_status = 'approved' AND document.archive_r2_key IS NOT NULL
-				AND document.deleted_at IS NULL AND owner.account_status = 'active'
+				AND document.deleted_at IS NULL AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL AND owner.account_status = 'active'
 				AND owner.is_blocked = 0
 				AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
 					WHERE archive.target_kind = 'authorization_document'
@@ -560,7 +617,8 @@ export class AuthorizationDocumentRepository {
 					WHERE document.id = ? AND document.user_id = ?
 						AND document.review_status = 'approved'
 						AND document.archive_r2_key = ? AND document.sha256 = ?
-						AND document.deleted_at IS NULL AND owner.account_status = 'active'
+						AND document.deleted_at IS NULL AND owner.role = 'parent'
+						AND owner.email_verified_at IS NOT NULL AND owner.account_status = 'active'
 						AND owner.is_blocked = 0
 						AND NOT EXISTS (SELECT 1 FROM legal_archive_records AS archive
 							WHERE archive.target_kind = 'authorization_document'
@@ -603,30 +661,41 @@ export class AuthorizationDocumentRepository {
 	}
 
 	async deleteByParent(input: {
+		routeRequestId: string;
 		documentId: string;
 		userId: string;
 		idempotencyKey: string;
 		requestId: string;
 		now: string;
 	}) {
-		const requestHash = await hashCanonical({ documentId: input.documentId, action: 'delete' });
+		const requestHash = await hashCanonical({
+			routeRequestId: input.routeRequestId,
+			documentId: input.documentId,
+			action: 'delete',
+		});
 		const prior = await this.db.first<{ request_hash_sha256: string }>({
-			sql: `SELECT request_hash_sha256 FROM request_parent_actions
-				WHERE user_id = ? AND idempotency_key = ?`,
+			sql: `SELECT action.request_hash_sha256 FROM request_parent_actions AS action
+				JOIN users AS owner ON owner.id = action.user_id
+				WHERE action.user_id = ? AND action.idempotency_key = ?
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 			params: [input.userId, input.idempotencyKey],
 		});
-		if (prior) {
-			if (prior.request_hash_sha256 !== requestHash) {
-				throw new DocumentRepositoryError('IDEMPOTENCY_KEY_REUSED');
-			}
-			return { replayed: true, document: await this.internalDocument(input.documentId) };
-		}
 		const document = await this.internalDocument(input.documentId);
 		if (
 			!document ||
 			document.user_id !== input.userId ||
-			document.review_status === 'approved'
+			document.request_id !== input.routeRequestId
 		) {
+			throw new DocumentRepositoryError('DOCUMENT_NOT_FOUND');
+		}
+		if (prior) {
+			if (prior.request_hash_sha256 !== requestHash) {
+				throw new DocumentRepositoryError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { replayed: true, document };
+		}
+		if (document.review_status === 'approved') {
 			throw new DocumentRepositoryError('DOCUMENT_DELETE_REJECTED');
 		}
 		const guard = this.mutationGuard.assertion({
@@ -643,17 +712,28 @@ export class AuthorizationDocumentRepository {
 						SET review_status = 'deleted', deleted_at = ?, updated_at = ?
 					WHERE id = ? AND user_id = ? AND review_status IN
 						('quarantined', 'clean', 'infected', 'rejected')
-						AND deleted_at IS NULL AND (${guard.sql})`,
-					params: [input.now, input.now, input.documentId, input.userId, ...guard.params],
+						AND deleted_at IS NULL AND (${guard.sql})
+						AND EXISTS (SELECT 1 FROM funding_authorizations AS authorization
+							WHERE authorization.id = authorization_documents.authorization_id
+								AND authorization.request_id = ?)
+						AND EXISTS (SELECT 1 FROM users AS owner WHERE owner.id = ?
+							AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+							AND owner.account_status = 'active' AND owner.is_blocked = 0)`,
+					params: [input.now, input.now, input.documentId, input.userId,
+						...guard.params, input.routeRequestId, input.userId],
 				},
 				{
 					sql: `INSERT INTO audit_events
 						(id, actor_user_id, actor_kind, action, target_kind, target_id,
 						 request_id, safe_diff_json, created_at)
 					SELECT ?, ?, 'user', 'authorization_document.deleted_by_parent',
-						'authorization_document', id, ?, '{"status":"deleted"}', ?
-					FROM authorization_documents WHERE id = ? AND user_id = ?
-						AND review_status = 'deleted' AND (${guard.sql})`,
+						'authorization_document', document.id, ?, '{"status":"deleted"}', ?
+					FROM authorization_documents AS document
+					WHERE document.id = ? AND document.user_id = ?
+						AND document.review_status = 'deleted' AND (${guard.sql})
+						AND EXISTS (SELECT 1 FROM funding_authorizations AS authorization
+							WHERE authorization.id = document.authorization_id
+								AND authorization.request_id = ?)`,
 					params: [
 						auditId,
 						input.userId,
@@ -662,6 +742,7 @@ export class AuthorizationDocumentRepository {
 						input.documentId,
 						input.userId,
 						...guard.params,
+						input.routeRequestId,
 					],
 				},
 				{
@@ -674,13 +755,13 @@ export class AuthorizationDocumentRepository {
 						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)`,
 					params: [
 						actionId,
-						document.request_id,
+						input.routeRequestId,
 						input.userId,
 						input.idempotencyKey,
 						requestHash,
 						auditId,
 						input.now,
-						document.request_id,
+						input.routeRequestId,
 						input.userId,
 						auditId,
 					],
@@ -690,8 +771,12 @@ export class AuthorizationDocumentRepository {
 						(id, document_id, action, actor_user_id, audit_event_id,
 						 assertion_passed, created_at)
 					VALUES (?, ?, 'deleted_by_parent', ?, ?, CASE WHEN
-						EXISTS (SELECT 1 FROM authorization_documents
-							WHERE id = ? AND user_id = ? AND review_status = 'deleted')
+						EXISTS (SELECT 1 FROM authorization_documents AS document
+							WHERE document.id = ? AND document.user_id = ?
+								AND document.review_status = 'deleted'
+								AND EXISTS (SELECT 1 FROM funding_authorizations AS authorization
+									WHERE authorization.id = document.authorization_id
+										AND authorization.request_id = ?))
 						AND EXISTS (SELECT 1 FROM request_parent_actions WHERE id = ?)
 						AND EXISTS (SELECT 1 FROM audit_events WHERE id = ?)
 					THEN 1 ELSE 0 END, ?)`,
@@ -702,6 +787,7 @@ export class AuthorizationDocumentRepository {
 						auditId,
 						input.documentId,
 						input.userId,
+						input.routeRequestId,
 						actionId,
 						auditId,
 						input.now,
@@ -711,8 +797,11 @@ export class AuthorizationDocumentRepository {
 			return { replayed: false, document };
 		} catch {
 			const replay = await this.db.first<{ request_hash_sha256: string }>({
-				sql: `SELECT request_hash_sha256 FROM request_parent_actions
-					WHERE user_id = ? AND idempotency_key = ?`,
+				sql: `SELECT action.request_hash_sha256 FROM request_parent_actions AS action
+					JOIN users AS owner ON owner.id = action.user_id
+					WHERE action.user_id = ? AND action.idempotency_key = ?
+						AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+						AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 				params: [input.userId, input.idempotencyKey],
 			});
 			if (replay?.request_hash_sha256 === requestHash) return { replayed: true, document };

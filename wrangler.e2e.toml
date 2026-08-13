@@ -1,0 +1,58 @@
+# Synthetic-only local runtime for authenticated Playwright tests.
+# No remote identifiers or reusable secrets belong in this file.
+
+#:schema node_modules/wrangler/config-schema.json
+name = "reg-allgemein-e2e"
+compatibility_date = "2026-08-12"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_ENV = "test"
+PORTAL_PUBLIC_ORIGIN = "http://127.0.0.1:4173"
+TURNSTILE_HOSTNAMES = "127.0.0.1,localhost"
+AUTH_PUBLIC_ENABLED = "true"
+EMAIL_PROVIDER = "fake"
+AUTH_RATE_LIMIT_MAX_ATTEMPTS = "50"
+EMAIL_MAX_ATTEMPTS = "5"
+OUTBOX_LEASE_SECONDS = "60"
+OUTBOX_RETRY_BASE_SECONDS = "60"
+OUTBOX_RETRY_MAX_SECONDS = "3600"
+TELEGRAM_PROVIDER = "disabled"
+TELEGRAM_MAX_ATTEMPTS = "5"
+TELEGRAM_BUSINESS_TIMEZONE = "Europe/Berlin"
+TELEGRAM_BUSINESS_HOURS = "Mo-Fr 09:00-17:00"
+PRIVACY_NOTICE_VERSION = "e2e-synthetic-notice-v1"
+DOCUMENT_UPLOAD_ENABLED = "false"
+DOCUMENT_MAX_FILE_BYTES = "10485760"
+DOCUMENT_MAX_FILES_PER_AUTHORIZATION = "5"
+DOCUMENT_MAX_AUTHORIZATION_BYTES = "26214400"
+DOCUMENT_UPLOAD_RATE_LIMIT_WINDOW_SECONDS = "60"
+DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS = "5"
+DOCUMENT_AV_ATTESTATION_TEXT_VERSION = "e2e-synthetic-av-v1"
+CONTRACT_SEND_ENABLED = "false"
+CONTRACT_RENDERER = "disabled"
+CONTRACT_PDF_MAX_HTML_BYTES = "2097152"
+CONTRACT_PDF_MAX_BYTES = "10485760"
+CONTRACT_MAX_RENDER_ATTEMPTS = "3"
+BROWSER_RUN_DAILY_BUDGET_MS = "60000"
+MEDIA_ONLINE_GRANT_ENABLED = "false"
+PUBLIC_CONTRACT_FUNCTIONS_ENABLED = "false"
+PRIVACY_EXPORT_TTL_SECONDS = "3600"
+SCHEDULED_JOBS_ENABLED = "false"
+SCHEDULED_OUTBOX_BATCH_LIMIT = "25"
+SCHEDULED_MAINTENANCE_BATCH_LIMIT = "50"
+SCHEDULED_LEASE_SECONDS = "300"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "reg-allgemein-e2e"
+database_id = "e2e-reg-allgemein"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "R2_ARCHIVE"
+bucket_name = "reg-allgemein-e2e-archive"
+
+[[r2_buckets]]
+binding = "R2_QUARANTINE"
+bucket_name = "reg-allgemein-e2e-quarantine"

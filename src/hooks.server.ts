@@ -34,6 +34,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 			requestId: event.locals.requestId,
 		});
 	}
+	if (access === 'parent' && event.locals.user?.role !== 'parent') {
+		throw error(403, {
+			code: 'FORBIDDEN',
+			message: translate('de', 'auth.invalidCredentials'),
+			requestId: event.locals.requestId,
+		});
+	}
 
 	return withSecurityHeaders(await resolve(event), {
 		requestId: event.locals.requestId,

@@ -215,7 +215,7 @@ export class AuthService {
 	async login(input: {
 		data: LoginInput;
 		requestSubject: string;
-	}): Promise<CreatedSession> {
+	}): Promise<CreatedSession & { role: AuthenticatedUser['role'] }> {
 		this.assertPublicEnabled();
 		const now = this.clock.now();
 		const emailNormalized = normalizeEmail(input.data.email);
@@ -240,7 +240,7 @@ export class AuthService {
 			now,
 		});
 		if (!session) throw new AuthFlowError('INVALID_CREDENTIALS');
-		return session;
+		return { ...session, role: user.role };
 	}
 
 	async requestPasswordReset(input: {

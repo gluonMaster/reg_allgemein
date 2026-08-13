@@ -7,7 +7,7 @@ import {
 } from '$lib/server/pricing/decisions';
 import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import { PricingService } from '$lib/server/pricing/pricing-service';
-import type { AdminActor } from '$lib/server/security/authorization';
+import { requireParent, type AdminActor } from '$lib/server/security/authorization';
 import { scopedHash } from '$lib/server/security/digest';
 import {
 	berlinCalendarDate,
@@ -320,18 +320,19 @@ export class PriceReviewService {
 		userAgent: string;
 		now?: string;
 	}) {
+		const actor = requireParent(input.actor);
 		const now = input.now ?? new Date().toISOString();
 		assertInstant(now);
 		const parsed = parentPriceResponseSchema.safeParse(input.payload);
 		if (!parsed.success) throw new PriceReviewServiceError('INVALID_PARENT_RESPONSE');
 		const requestHash = await hashCanonical(parsed.data);
 		const replay = await this.repository.parentResponseReplay(
-			input.actor.id,
+			actor.id,
 			parsed.data.idempotencyKey,
 			requestHash
 		);
 		if (replay) return replay;
-		let item = await this.repository.getParentItem(parsed.data.publicReference, input.actor.id);
+		let item = await this.repository.getParentItem(parsed.data.publicReference, actor.id);
 		if (!item) throw new PriceReviewServiceError('PRICE_REVIEW_ITEM_NOT_FOUND');
 		const today = berlinCalendarDate(now);
 		let evidenceStatus: 'applied' | 'stale' | 'late' = 'applied';
@@ -351,7 +352,7 @@ export class PriceReviewService {
 			}
 		}
 		return this.repository.recordParentResponse({
-			actor: input.actor,
+			actor,
 			item,
 			decision: parsed.data.decision,
 			providedItemHash: parsed.data.itemHash,

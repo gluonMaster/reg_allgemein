@@ -2,6 +2,20 @@
 import adapter from '@sveltejs/adapter-cloudflare';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
+const authenticatedE2e = process.env.KOLIBRI_E2E === '1';
+const platformProxy = authenticatedE2e
+	? {
+			configPath: 'wrangler.e2e.toml',
+			envFiles: ['.wrangler/e2e-runtime/runtime.env'],
+			persist: { path: '.wrangler/e2e-runtime/v3' },
+			remoteBindings: false,
+		}
+	: {
+			configPath: 'wrangler.local.toml',
+			persist: { path: '.wrangler/state/v3' },
+			remoteBindings: false,
+		};
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	// Consult https://svelte.dev/docs/kit/integrations
@@ -11,11 +25,7 @@ const config = {
 	kit: {
 		adapter: adapter({
 			config: 'wrangler.adapter.toml',
-			platformProxy: {
-				configPath: 'wrangler.local.toml',
-				persist: { path: '.wrangler/state/v3' },
-				remoteBindings: false,
-			},
+			platformProxy,
 		}),
 	},
 };

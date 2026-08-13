@@ -915,4 +915,40 @@ describe('stage 06 atomic family claim and parent cabinet', () => {
 			})
 		).toBe('rejected');
 	});
+
+	it('keeps cabinet writes fail-closed after a parent actor becomes stale', async () => {
+		const email = 'stale.cabinet.role@example.test';
+		await seedCurrentLegacySnapshot({ db: context.db, families: [] });
+		await register({ email, requestId: 'stale-cabinet-register' });
+		const actor = await verifyAndLogin(email, 'stale-cabinet');
+		expect((await cabinetService.load(actor)).profile.email).toBe(email);
+		expect(await cabinetService.createChild({
+			actor,
+			payload: {
+				fullName: 'Synthetic Child',
+				birthDate: '2018-01-02',
+				confirmDuplicate: false,
+			},
+			requestId: 'stale-cabinet-parent-create',
+		})).toBe('created');
+
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [currentTime, actor.id],
+		});
+		await expect(cabinetService.load(actor)).rejects.toThrow('Cabinet access denied');
+		expect(await cabinetService.createChild({
+			actor,
+			payload: {
+				fullName: 'Rejected After Promotion',
+				birthDate: '2019-02-03',
+				confirmDuplicate: false,
+			},
+			requestId: 'stale-cabinet-admin-create',
+		})).toBe('rejected');
+		expect(await db.first<{ total: number }>({
+			sql: `SELECT COUNT(*) AS total FROM children WHERE owner_user_id = ?`,
+			params: [actor.id],
+		})).toEqual({ total: 1 });
+	});
 });

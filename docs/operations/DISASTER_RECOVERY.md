@@ -2,6 +2,9 @@
 
 Статус документа: `blocked`. RPO, RTO, backup cadence/retention, R2 backup
 mechanism и full isolated restore rehearsal ещё не утверждены и не доказаны.
+Два отдельных private EU preview R2 bucket проверены, но это только isolation/
+placement evidence: production и restore-target buckets, backup mechanism и
+восстановление остаются недоказанными.
 
 Наличие export или provider backup само по себе не означает возможность
 восстановления. `passed` допустим только после полного D1/R2 restore в новую
@@ -46,14 +49,22 @@ non-production environment и критического smoke. Production restore
 
 | Назначение                   | Binding         | Restore target                     |
 | ---------------------------- | --------------- | ---------------------------------- |
-| Runtime database             | `DB`            | новая isolated non-production D1   |
+| Runtime database             | `DB`; current migrations `0001`–`0015` | новая isolated non-production D1   |
 | Retained/approved archive    | `R2_ARCHIVE`    | новый private EU archive bucket    |
 | Quarantine/transient objects | `R2_QUARANTINE` | новый private EU quarantine bucket |
 
-`R2_ARCHIVE`, `R2_QUARANTINE` и `0014_production_operations.sql` сверены с
-runtime и локальными migration/storage-intent тестами. Это не доказывает
-физическую изоляцию и EU jurisdiction удалённых buckets и не заменяет полный
-restore rehearsal; R2 backup/restore gate остаётся `blocked`.
+Полный append-only migration set `0001_foundation.sql`–
+`0015_worker_monitoring.sql`, `R2_ARCHIVE` и `R2_QUARANTINE` сверены с runtime и
+локальными migration/storage-intent тестами. Current preview имеет migrations
+`0001`–`0015`, pending 0, и физически разные private EU buckets. Это не доказывает
+production/restore-target placement и не заменяет полный restore rehearsal; R2
+backup/restore gate остаётся `blocked`.
+
+Initial preview migration evidence 2026-08-10 (`0001`–`0014`, 14/14, pending 0)
+сохраняется как историческая точка до monitoring migration. Append-only
+`0015_worker_monitoring.sql` применена 2026-08-11. Поэтому current backup/restore
+compatibility и rollback проверяются относительно `0001`–`0015`, а не прежнего
+набора из 14 migrations.
 
 ## 1. Классифицировать событие
 
@@ -199,9 +210,9 @@ npm run release:verify
 
 `npm run release:verify` проверяет typecheck, полный Vitest suite, Playwright,
 build, production dependency audit, документацию и artifact/secret/PII scan.
-Локальные проверки migration `0014`, job inventory и fail-closed config входят в
-suite, но полный release gate остаётся `blocked` при любой неуспешной команде и
-до remote restore smoke.
+Локальные проверки полного migration set `0001`–`0015`, job inventory и
+fail-closed config входят в suite, но полный release gate остаётся `blocked` при
+любой неуспешной команде и до remote restore smoke.
 
 **Ожидаемый безопасный результат:** schema/objects reconciled; synthetic register
 → cabinet → request/trial → contract → price review → message → privacy closure
@@ -237,9 +248,9 @@ D1/R2 не изменены; reason не содержит PII.
 **Проверка:** version ID, health, authorization, current migration compatibility,
 scheduled/provider behavior и post-rollback smoke.
 
-**Stop condition:** previous code не понимает current schema (включая
-`0014`), known-good ID неизвестен, rollback затронет wrong Worker или проблема в
-data/import.
+**Stop condition:** previous code не понимает current schema `0001`–`0015`,
+known-good ID неизвестен, rollback затронет wrong Worker или проблема в data/
+import.
 
 **Rollback/recovery:** не выполнять code rollback; deploy совместимый forward fix
 или перейти к restore decision. Applied migration не удалять.
@@ -258,9 +269,11 @@ scope известны; write/external paths contained; database/security owners
 - если damage нельзя безопасно исправить — восстановить D1/R2 в isolated env и
   запросить отдельное production restore approval.
 
-Stage-13 migration `0014_production_operations.sql` проходит локальные empty и
-representative populated `0013 → 0014` tests. Recovery compatibility всё равно
-не доказана без isolated backup/restore и code-rollback rehearsal.
+Весь set `0001`–`0015`, включая Stage-13 migrations
+`0014_production_operations.sql` и `0015_worker_monitoring.sql`, проходит local
+empty tests; representative populated upgrade проверяет `0013 → 0015`. Recovery
+compatibility всё равно не доказана без isolated backup/restore и code-rollback
+rehearsal.
 
 **Ожидаемый безопасный результат:** migration history остаётся append-only;
 schema/data compatibility доказана.
@@ -268,8 +281,10 @@ schema/data compatibility доказана.
 **Проверка:** empty + representative upgraded D1 tests, restore rehearsal и
 critical smoke.
 
-**Stop condition:** предложение отредактировать `0001`–`0014`, direct SQL hotfix
-без migration/audit, backup не восстанавливается или code/schema несовместимы.
+**Stop condition:** предложение отредактировать любую applied migration
+`0001`–`0015`, direct SQL hotfix без migration/audit, backup не восстанавливается
+или code/schema несовместимы. Исправление current schema начинается с новой
+append-only migration `0016` или выше.
 
 **Rollback/recovery:** оставить feature disabled; подготовить reviewed forward
 migration либо санкционированный restore.

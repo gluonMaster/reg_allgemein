@@ -1,13 +1,33 @@
 import type { RequestHandler } from './$types';
+import { error } from '@sveltejs/kit';
+import { translate } from '$lib/i18n';
+import { ContractServiceError } from '$lib/server/contracts/contract-service';
 import { requestContractRuntime } from '$lib/server/contracts/runtime';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 
 export const GET: RequestHandler = async (event) => {
-	const artifact = await requestContractRuntime(event).service.downloadArtifact({
-		actor: requireAuthenticated(event.locals.user),
-		artifactId: event.params.artifactId,
-		requestId: event.locals.requestId,
-	});
+	let artifact: Awaited<
+		ReturnType<ReturnType<typeof requestContractRuntime>['service']['downloadArtifact']>
+	>;
+	try {
+		artifact = await requestContractRuntime(event).service.downloadArtifact({
+			actor: requireParent(event.locals.user),
+			artifactId: event.params.artifactId,
+			requestId: event.locals.requestId,
+		});
+	} catch (caught) {
+		if (
+			caught instanceof ContractServiceError &&
+			caught.code === 'CONTRACT_ARTIFACT_NOT_FOUND'
+		) {
+			throw error(404, {
+				code: 'CONTRACT_ARTIFACT_NOT_FOUND',
+				message: translate('de', 'admin.notFound'),
+				requestId: event.locals.requestId,
+			});
+		}
+		throw caught;
+	}
 	return new Response(artifact.body, {
 		headers: {
 			'content-type': artifact.contentType,

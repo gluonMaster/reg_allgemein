@@ -340,14 +340,40 @@ Exit gate:
 выполняет production deploy, remote production migration, реальный PII import
 или внешнюю отправку без отдельного прямого поручения.
 
-Текущий статус: этап локально завершён и проверен, production readiness `blocked`.
-Traceability, hardening, migrations `0014`–`0015`, scheduler/operations,
-monitoring signal, bootstrap, release helpers и operator packet синхронизированы
-с automated и preview evidence. Preview Worker/D1/private EU R2/Cron/empty
-204|503 monitoring signal и independent HEAD alert delivery/recovery проверены;
-public desktop/mobile/keyboard browser smoke прошёл. Authenticated browser,
-provider/manual smoke, job-specific alerts, restore rehearsal и внешние release
-inputs отсутствуют.
+Текущий статус: fresh Ultra audit закрыл local traceability gate PR-A06
+2026-08-12, но production readiness остаётся `blocked`. Матрица проверена для
+91/91 normative MVP IDs и 166 acceptance bullets, найденные dual-control,
+configured-upload, privacy-handler и parent-route gaps исправлены; полный
+финальный local-only worktree `release:verify` прошёл за 619.5 s: check 0/0,
+Vitest 54 files/340 tests, Chromium 8 files/18 tests, build, production audit 0,
+docs 136 links/51 files + 82 commands и scan 500/500; отдельный полный
+`npm audit` вернул total 0. Focused contract atomicity/replay прошёл 6/6,
+полный contracts D1 suite 13/13, independent final re-review дал GO без
+HIGH/BLOCKER. Commit, содержащий эту ревизию, является новым локальным Stage-13
+candidate; его exact SHA определяется после commit через `git rev-parse HEAD`.
+Он ещё не прошёл отдельную clean-clone verification и не развёрнут: preview
+остаётся на `200268f39ece1d43c5e091dcb7db6569d41275af`.
+
+Preview Worker/D1/private EU R2/Cron/empty 204|503 monitoring signal и
+independent HEAD alert delivery/recovery проверены; public browser smoke прошёл.
+Tracked local Chromium harness прошёл 8 files/18 tests: access/session/CSRF;
+broad child/trial/price/message/privacy IDOR plus carrier-bound request/document/
+contract-end-attendance-media cases; individual request create→approved; exact catalog €46 and
+trial requested→confirmed→cancelled; support and structured absence through
+final admin answer plus email/Telegram outbox deltas; price €46→€50 through
+parent acceptance and distinct admin confirmation to `scheduled`. Browser
+contract accept/form/activate не заявляется: renderer/send намеренно disabled.
+Accessibility 4/4 требует пустые `violations` и `incomplete` для всех default
+axe rules и покрывает inline login-error semantics, 390px parent/admin и 640px
+200%-zoom-equivalent reflow.
+
+PR-A12/13/14 всё ещё `blocked`: отсутствуют register/verify/claim, funded
+Nachhilfe upload/document review, enabled contract lifecycle, price admin-send
+и scheduled apply; disabled upload mutation, оставшиеся enrollment/group-service
+и guessed/admin-purpose permission variants; literal/manual zoom,
+assistive-technology/glyph review и preview/provider authenticated evidence.
+Provider/manual smoke, job-specific alerts, restore rehearsal и внешние release
+inputs также отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
 Tracked packet этапа:
@@ -362,9 +388,10 @@ Tracked packet этапа:
 Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, migrations `0014`–`0015`,
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
-покрыты тестами. Environment-specific release gates остаются `blocked` до
+покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются
+`blocked` до полного browser/accessibility/security evidence,
 job/provider-specific alerts, оставшегося preview rehearsal, restore, approvals
-и остальных обязательных external evidence.
+и остальных обязательных external inputs.
 
 Exit gate:
 

@@ -79,6 +79,13 @@ MVP готов, когда:
   числе для R2 download. (`AUTH-08`, `REQ-07`)
 - Публичная регистрация не может создать admin; заблокированный admin также не
   проходит middleware. (`AUTH-09`)
+- Оба server-side пути `parent -> admin` (one-shot bootstrap и обычное
+  назначение существующим admin) атомарно отклоняют verified target с любым
+  retained parent workflow/business state: роль и sessions не меняются,
+  успешное role/bootstrap audit evidence не появляется. Verified target с
+  только пустой FamilyID allocation может пройти разрешённый bootstrap;
+  последующая fresh login ведёт parent в `/cabinet`, admin в `/admin`.
+  (`AUTH-09`, `ADMIN-02`)
 
 ## 3. Legacy claim
 
@@ -294,9 +301,10 @@ MVP готов, когда:
   выше cap 6 не меняют lookup и клиентских items не создают. (`PRICE-03`)
 - Первый admin approval разрешает только рассылку. Parent acceptance не меняет
   service price; response deadline равен 14 календарным дням, каждый accepted
-  item требует второго явного admin confirmation. Decline немедленно уведомляет
-  admin, timeout создаёт manual-contact task.
-  (`PRICE-03`)
+  item требует второго явного admin confirmation. Current admin не может дать
+  parent response, а actor final confirmation не совпадает с parent actor/owner,
+  включая повышение роли после response. Decline немедленно уведомляет admin,
+  timeout создаёт manual-contact task. (`AUTH-08`, `PRICE-03`)
 - Increase/decrease не вступает задним числом. После второго admin confirmation
   item планируется на первое число следующего календарного месяца в
   `Europe/Berlin`; до idempotent apply действует старая base price. Отдельный
@@ -326,6 +334,10 @@ MVP готов, когда:
   количеством сверх лимита отклоняется до сохранения metadata. ZIP, Office,
   SVG/XML, executable и encrypted/password-protected PDF также отклоняются.
   (`REQ-06`)
+- При configured maximum `1` два конкурентных допустимых upload не создают два
+  документа. Аналогично два конкурентных файла не обходят пониженный aggregate
+  byte ceiling: ровно допустимое подмножество фиксируется атомарно, а
+  отклонённый upload не получает domain link. (`REQ-06`, `REL-01`)
 - Несколько JPEG/PNG разрешены в пределах лимита; два повтора одной upload-
   операции не создают два документа.
 - Принятый upload хранится в private R2 под непредсказуемым ключом без public
@@ -401,7 +413,8 @@ MVP готов, когда:
   (`CONTRACT-11`)
 - Acceptance доступен только владельцу ребенка и только для актуального
   `sent` offer; `draft`, `expired`, `cancelled` и измененный hash отклоняются.
-  (`CONTRACT-05`, `CONTRACT-07`)
+  Current admin не может выполнить это parent-side действие, даже если тот же
+  user раньше был parent/owner. (`AUTH-08`, `CONTRACT-05`, `CONTRACT-07`)
 - Двойной клик/повтор запроса создает один acceptance log. (`CONTRACT-07`)
 - Acceptance log после успешного действия содержит timestamp, user, offer
   hash, acceptance-text version, user agent и IP в рамках retention policy;
@@ -409,7 +422,9 @@ MVP готов, когда:
   отклоняется. (`CONTRACT-06`)
 - Admin approval/activation без parent acceptance невозможна; две одновременные
   операции не создают два contract/enrollment/service engagement. Request
-  activation не меняет group occupancy. (`CONTRACT-08`, `CONTRACT-09`)
+  activation не меняет group occupancy. Admin actor, совпадающий с parent
+  actor/owner, отклоняется атомарно, включая сценарий parent acceptance → role
+  promotion → formation тем же user. (`AUTH-08`, `CONTRACT-08`, `CONTRACT-09`)
 - Первая offer series атомарно создаёт/связывает один draft operational record;
   superseding version переиспользует его. Cancel/decline/expiry последнего open
   offer не оставляет orphan draft, блокирующий новый offer.
@@ -646,8 +661,11 @@ MVP готов, когда:
   отдельного внешнего poller, проверенной доставки alert и owner; сам Worker не
   может доказать отсутствие собственного Cron. (`OBS-02`, `OPS-01`, `SEC-02`)
 - First-admin capability не имеет HTTP route и потребляется ровно один раз:
-  verified active parent повышается только при нуле active admin, sessions
-  отзываются, audit/assertion сохраняются, replay/race отклоняется. Upgrade с
+  verified active parent без retained parent workflow/business state повышается
+  только при нуле active admin, sessions отзываются, audit/assertion
+  сохраняются, replay/race отклоняется. Наличие child/claim/correction/trial/
+  request/enrollment/contract/price-review/message/privacy state отклоняет весь
+  batch без consume control или partial role/session/audit mutation. Upgrade с
   существующим active admin запечатывает capability в migration. (`AUTH-09`,
   `ADMIN-02`, `OPS-01`)
 - Acceptance IP хранится только как scoped pseudonymous hash. Текущая

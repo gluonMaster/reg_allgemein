@@ -4,11 +4,11 @@ import { translate } from '$lib/i18n';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
 import { privacyDeleteRequestSchema, privacyExportRequestSchema } from '$lib/server/privacy/contracts';
 import { requestPrivacyRuntime } from '$lib/server/privacy/runtime';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	const runtime = requestPrivacyRuntime(event);
 	return {
 		csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
@@ -26,7 +26,7 @@ async function verifiedForm(event: Parameters<Actions[string]>[0]) {
 		user: event.locals.user,
 		submittedToken: form.get('_csrf')?.toString(),
 	});
-	return { form, actor: requireAuthenticated(event.locals.user) };
+	return { form, actor: requireParent(event.locals.user) };
 }
 
 export const actions = {

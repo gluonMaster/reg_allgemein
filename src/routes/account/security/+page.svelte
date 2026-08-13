@@ -8,8 +8,17 @@
 
 <svelte:head><title>{translate('de', 'auth.security.title')}</title></svelte:head>
 <main class="auth-shell">
-	<nav class="auth-nav" aria-label={translate('de', 'cabinet.navigationLabel')}>
-		<a href="/cabinet">{translate('de', 'cabinet.link.cabinet')}</a>
+	<nav
+		class="auth-nav"
+		aria-label={translate(
+			'de',
+			data.role === 'admin' ? 'admin.navigationLabel' : 'cabinet.navigationLabel'
+		)}
+	>
+		<a href={data.homeHref}>{translate(
+			'de',
+			data.role === 'admin' ? 'admin.title' : 'cabinet.link.cabinet'
+		)}</a>
 	</nav>
 	<h1>{translate('de', 'auth.security.title')}</h1>
 	{#if form?.message}<p class="form-status" aria-live="polite">{form.message}</p>{/if}

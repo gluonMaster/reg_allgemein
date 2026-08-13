@@ -10,9 +10,14 @@ import {
 import { requireAuthenticated } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 
-export const load: PageServerLoad = ({ cookies }) => ({
-	csrfToken: cookies.get(CSRF_COOKIE_NAME) ?? '',
-});
+export const load: PageServerLoad = ({ cookies, locals }) => {
+	const actor = requireAuthenticated(locals.user);
+	return {
+		csrfToken: cookies.get(CSRF_COOKIE_NAME) ?? '',
+		homeHref: actor.role === 'admin' ? '/admin' : '/cabinet',
+		role: actor.role,
+	};
+};
 
 async function verifiedForm(event: Parameters<Actions[string]>[0]) {
 	const form = await event.request.formData();

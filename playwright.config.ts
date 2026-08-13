@@ -1,13 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const e2eOrigin = 'http://127.0.0.1:4173';
+
 export default defineConfig({
 	testDir: './tests/e2e',
+	globalTeardown: './tests/e2e/global-teardown.ts',
 	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),
-	retries: process.env.CI ? 1 : 0,
+	// The authenticated suite intentionally exercises revocation/blocking against a
+	// freshly seeded local D1. Retrying against that mutated state would be misleading.
+	retries: 0,
+	workers: 1,
 	reporter: 'list',
 	use: {
-		baseURL: 'http://127.0.0.1:5173',
+		baseURL: e2eOrigin,
 		trace: 'retain-on-failure',
 	},
 	projects: [
@@ -17,9 +23,9 @@ export default defineConfig({
 		},
 	],
 	webServer: {
-		command: 'npm run dev -- --host 127.0.0.1',
-		url: 'http://127.0.0.1:5173',
-		reuseExistingServer: !process.env.CI,
-		timeout: 60_000,
+		command: 'node scripts/run-e2e-server.js',
+		url: e2eOrigin,
+		reuseExistingServer: false,
+		timeout: 120_000,
 	},
 });

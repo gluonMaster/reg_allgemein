@@ -143,10 +143,13 @@ export class CabinetRepository {
 		excludeChildId?: string;
 	}): Promise<boolean> {
 		const row = await this.db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM children
-				WHERE owner_user_id = ? AND is_current = 1
-					AND full_name_normalized = ? AND birth_date = ?
-					AND (? IS NULL OR id <> ?)`,
+			sql: `SELECT COUNT(*) AS count FROM children AS child
+				JOIN users AS owner ON owner.id = child.owner_user_id
+				WHERE owner.id = ? AND owner.role = 'parent'
+					AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0
+					AND child.is_current = 1 AND child.full_name_normalized = ?
+					AND child.birth_date = ? AND (? IS NULL OR child.id <> ?)`,
 			params: [
 				input.userId,
 				input.fullNameNormalized,
@@ -223,11 +226,13 @@ export class CabinetRepository {
 		const fullNameNormalized = normalizePersonName(input.fullName);
 		const result = await this.db.batch([
 			{
-				sql: `UPDATE children SET source_full_name = ?, source_full_name_normalized = ?,
+					sql: `UPDATE children SET source_full_name = ?, source_full_name_normalized = ?,
 						source_birth_date = ?, full_name = ?, full_name_normalized = ?,
 						birth_date = ?, updated_at = ?
 					WHERE id = ? AND owner_user_id = ? AND origin = 'portal' AND is_current = 1
-						AND family_number_id = (SELECT family_number_id FROM users WHERE id = ?)`,
+						AND family_number_id = (SELECT family_number_id FROM users
+							WHERE id = ? AND role = 'parent' AND email_verified_at IS NOT NULL
+								AND account_status = 'active' AND is_blocked = 0)`,
 				params: [
 					input.fullName,
 					fullNameNormalized,
@@ -282,7 +287,9 @@ export class CabinetRepository {
 					SELECT ?, child.id, ?, ?, ?, ?, 'pending', NULL, NULL, NULL, ?, ?
 					FROM children AS child WHERE child.id = ? AND child.owner_user_id = ?
 						AND child.origin = 'legacy' AND child.is_current = 1
-						AND child.family_number_id = (SELECT family_number_id FROM users WHERE id = ?)`,
+						AND child.family_number_id = (SELECT family_number_id FROM users
+							WHERE id = ? AND role = 'parent' AND email_verified_at IS NOT NULL
+								AND account_status = 'active' AND is_blocked = 0)`,
 				params: [
 					input.id,
 					input.userId,

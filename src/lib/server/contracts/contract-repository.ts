@@ -369,6 +369,7 @@ export class ContractRepository {
 					ON authorization.request_id = request.id
 				WHERE request.id = ? AND authorization.id = ?
 					AND request.request_kind = 'nachhilfe' AND request.status = 'approved'
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
 					AND owner.account_status = 'active' AND owner.is_blocked = 0
 					AND authorization.status = 'approved'
 					AND authorization.kind = request.funding_kind
@@ -617,7 +618,8 @@ export class ContractRepository {
 					AND EXISTS (SELECT 1 FROM users owner JOIN children child
 						ON child.owner_user_id = owner.id AND child.family_number_id = owner.family_number_id
 						WHERE owner.id = ? AND child.id = ? AND owner.family_number_id = ?
-							AND owner.family_version = ? AND owner.account_status = 'active'
+							AND owner.family_version = ? AND owner.role = 'parent'
+							AND owner.email_verified_at IS NOT NULL AND owner.account_status = 'active'
 							AND owner.is_blocked = 0)`,
 				params: [
 					input.now,
@@ -1137,8 +1139,12 @@ export class ContractRepository {
 			text: input.text,
 		});
 		const prior = await this.db.first<{ request_hash_sha256: string; to_status: string }>({
-			sql: `SELECT request_hash_sha256, to_status FROM contract_parent_actions
-			WHERE user_id = ? AND idempotency_key = ?`,
+			sql: `SELECT action.request_hash_sha256, action.to_status
+			FROM contract_parent_actions action
+			JOIN users owner ON owner.id = action.user_id
+			WHERE action.user_id = ? AND action.idempotency_key = ?
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
 			params: [input.actor.id, input.idempotencyKey],
 		});
 		if (prior) {
@@ -1163,6 +1169,8 @@ export class ContractRepository {
 						AND EXISTS (SELECT 1 FROM users owner JOIN children child
 							ON child.owner_user_id = owner.id
 							WHERE owner.id = ? AND child.id = contract_offers.child_id
+								AND owner.role = 'parent'
+								AND owner.email_verified_at IS NOT NULL
 								AND owner.account_status = 'active' AND owner.is_blocked = 0
 								AND child.family_number_id = owner.family_number_id
 								AND owner.family_number_id = contract_offers.family_number_id_at_issue
@@ -1298,8 +1306,12 @@ export class ContractRepository {
 			return { status: toStatus, replayed: false };
 		} catch (error) {
 			const replay = await this.db.first<{ request_hash_sha256: string; to_status: string }>({
-				sql: `SELECT request_hash_sha256, to_status FROM contract_parent_actions
-				WHERE user_id = ? AND idempotency_key = ?`,
+				sql: `SELECT action.request_hash_sha256, action.to_status
+				FROM contract_parent_actions action
+				JOIN users owner ON owner.id = action.user_id
+				WHERE action.user_id = ? AND action.idempotency_key = ?
+					AND owner.role = 'parent' AND owner.account_status = 'active'
+					AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
 				params: [input.actor.id, input.idempotencyKey],
 			});
 			if (replay?.request_hash_sha256 === requestHash) {
@@ -1410,7 +1422,14 @@ export class ContractRepository {
 						effective_to, NULL, ? FROM contract_offers
 					WHERE id = ? AND status = 'accepted_by_parent' AND contract_hash = ?
 						AND expires_at > ? AND ${ACTIVE_ADMIN}
+						AND EXISTS (SELECT 1 FROM contract_acceptances acceptance
+							WHERE acceptance.id = ?
+								AND acceptance.contract_offer_id = contract_offers.id
+								AND acceptance.user_id = contract_offers.user_id
+								AND acceptance.contract_hash = contract_offers.contract_hash
+								AND acceptance.user_id <> ?)
 						AND EXISTS (SELECT 1 FROM users owner WHERE owner.id = user_id
+							AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
 							AND owner.account_status = 'active' AND owner.is_blocked = 0)
 						AND EXISTS (SELECT 1 FROM ${operationalTable} operation
 							WHERE operation.id = ? AND operation.status = 'contract_offered')
@@ -1425,6 +1444,8 @@ export class ContractRepository {
 						input.offer.id,
 						input.offer.contract_hash,
 						input.now,
+						input.admin.id,
+						acceptance.id,
 						input.admin.id,
 						operationalId,
 					],
@@ -1645,6 +1666,15 @@ export class ContractRepository {
 						AND EXISTS (SELECT 1 FROM contract_formation_certificates
 							WHERE id = ? AND source_hash = ?)
 						AND EXISTS (SELECT 1 FROM ${operationalTable} WHERE id = ? AND status = 'active')
+						AND EXISTS (SELECT 1 FROM contracts contract
+							JOIN contract_acceptances acceptance
+								ON acceptance.id = contract.parent_acceptance_id
+							JOIN users owner ON owner.id = contract.user_id
+							WHERE contract.id = ?
+								AND acceptance.user_id = owner.id
+								AND acceptance.user_id <> contract.formed_by_admin_user_id
+								AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+								AND owner.account_status = 'active' AND owner.is_blocked = 0)
 						AND EXISTS (SELECT 1 FROM contract_admin_actions WHERE id = ?)
 					THEN 1 ELSE 0 END, ?)`,
 					params: [
@@ -1657,6 +1687,7 @@ export class ContractRepository {
 						input.certificateId,
 						input.certificateSourceHash,
 						operationalId,
+						contractId,
 						actionId,
 						input.now,
 					],
@@ -1838,7 +1869,7 @@ export class ContractRepository {
 		});
 	}
 
-	loadOwnedContract(userId: string, contractId: string) {
+	loadOwnedContract(userId: string, contractId: string, offerId: string) {
 		return this.db.first<{
 			id: string;
 			contract_offer_id: string;
@@ -1857,9 +1888,47 @@ export class ContractRepository {
 			JOIN contract_offers offer ON offer.id = contract.contract_offer_id
 			JOIN contract_template_versions template ON template.id = offer.template_version_id
 			JOIN users owner ON owner.id = contract.user_id
-			WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
-				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
-			params: [contractId, userId],
+			WHERE contract.id = ? AND contract.user_id = ? AND contract.contract_offer_id = ?
+				AND contract.operational_status = 'active'
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
+			params: [contractId, userId, offerId],
+		});
+	}
+
+	loadOwnedEndRequestReplay(input: {
+		userId: string;
+		contractId: string;
+		offerId: string;
+		idempotencyKey: string;
+	}) {
+		return this.db.first<{
+			id: string;
+			request_hash: string;
+			status: string;
+			calculated_effective_on: string | null;
+		}>({
+			sql: `SELECT request.id, request.request_hash, request.status,
+				request.calculated_effective_on
+			FROM contract_end_requests request
+			JOIN contracts contract ON contract.id = request.contract_id
+			JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+			JOIN users owner ON owner.id = contract.user_id
+			WHERE request.idempotency_key = ? AND request.contract_id = ?
+				AND request.requested_by_user_id = ?
+				AND request.submission_channel = 'authenticated_portal'
+				AND contract.user_id = ? AND contract.contract_offer_id = ?
+				AND offer.user_id = contract.user_id
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+				AND EXISTS (SELECT 1 FROM contract_action_assertions assertion
+					WHERE assertion.scope = 'end_request'
+						AND assertion.target_id = contract.id
+						AND assertion.action_id = request.id
+						AND assertion.actor_user_id = ?
+						AND assertion.assertion_passed = 1)`,
+			params: [input.idempotencyKey, input.contractId, input.userId,
+				input.userId, input.offerId, input.userId],
 		});
 	}
 
@@ -1879,22 +1948,14 @@ export class ContractRepository {
 		requestId: string;
 		now: string;
 	}) {
-		const prior = await this.db.first<{
-			id: string;
-			requested_by_user_id: string | null;
-			request_hash: string;
-			status: string;
-			calculated_effective_on: string | null;
-		}>({
-			sql: `SELECT id, requested_by_user_id, request_hash, status, calculated_effective_on
-			FROM contract_end_requests WHERE idempotency_key = ?`,
-			params: [input.idempotencyKey],
+		const prior = await this.loadOwnedEndRequestReplay({
+			userId: input.actor.id,
+			contractId: input.contract.id,
+			offerId: input.contract.contract_offer_id,
+			idempotencyKey: input.idempotencyKey,
 		});
 		if (prior) {
-			if (
-				prior.requested_by_user_id !== input.actor.id ||
-				prior.request_hash !== input.requestHash
-			) {
+			if (prior.request_hash !== input.requestHash) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return {
@@ -1922,7 +1983,8 @@ export class ContractRepository {
 					NULL, NULL, NULL, NULL, NULL, ?, ? FROM contracts contract
 				JOIN users owner ON owner.id = contract.user_id
 				WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
-					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+					AND owner.role = 'parent' AND owner.account_status = 'active'
+					AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
 				params: [
 					endRequestId,
 					input.actor.id,
@@ -2100,6 +2162,23 @@ export class ContractRepository {
 				replayed: false,
 			};
 		} catch (error) {
+			const replay = await this.loadOwnedEndRequestReplay({
+				userId: input.actor.id,
+				contractId: input.contract.id,
+				offerId: input.contract.contract_offer_id,
+				idempotencyKey: input.idempotencyKey,
+			});
+			if (replay) {
+				if (replay.request_hash !== input.requestHash) {
+					throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+				}
+				return {
+					requestId: replay.id,
+					status: replay.status,
+					calculatedEffectiveOn: replay.calculated_effective_on,
+					replayed: true,
+				};
+			}
 			throw new ContractRepositoryError('CONTRACT_END_REQUEST_REJECTED', { cause: error });
 		}
 	}
@@ -2313,35 +2392,63 @@ export class ContractRepository {
 		return rows.results;
 	}
 
+	loadOwnedAttendanceNoticeReplay(input: {
+		userId: string;
+		contractId: string;
+		offerId: string;
+		idempotencyKey: string;
+	}) {
+		return this.db.first<{ id: string; notice_hash: string }>({
+			sql: `SELECT notice.id, notice.notice_hash
+			FROM service_attendance_notices notice
+			JOIN contracts contract ON contract.id = notice.contract_id
+			JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+			JOIN users owner ON owner.id = contract.user_id
+			WHERE notice.idempotency_key = ? AND notice.contract_id = ?
+				AND notice.requested_by_user_id = ?
+				AND notice.submission_channel = 'authenticated_portal'
+				AND notice.service_engagement_id = contract.service_engagement_id
+				AND contract.user_id = ? AND contract.contract_offer_id = ?
+				AND offer.user_id = contract.user_id AND offer.child_id = contract.child_id
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+				AND EXISTS (SELECT 1 FROM contract_action_assertions assertion
+					WHERE assertion.scope = 'attendance_notice'
+						AND assertion.target_id = contract.id
+						AND assertion.action_id = notice.id
+						AND assertion.actor_user_id = ?
+						AND assertion.assertion_passed = 1)`,
+			params: [input.idempotencyKey, input.contractId, input.userId,
+				input.userId, input.offerId, input.userId],
+		});
+	}
+
 	async recordAttendanceNotice(input: {
 		actor: AuthenticatedUser;
 		contractId: string;
+		offerId: string;
 		noticeTextVersion: string;
 		idempotencyKey: string;
 		noticeHash: string;
 		requestId: string;
 		now: string;
 	}) {
-		const prior = await this.db.first<{
-			id: string;
-			requested_by_user_id: string;
-			notice_hash: string;
-		}>({
-			sql: `SELECT id, requested_by_user_id, notice_hash FROM service_attendance_notices
-			WHERE idempotency_key = ?`,
-			params: [input.idempotencyKey],
+		const prior = await this.loadOwnedAttendanceNoticeReplay({
+			userId: input.actor.id,
+			contractId: input.contractId,
+			offerId: input.offerId,
+			idempotencyKey: input.idempotencyKey,
 		});
 		if (prior) {
-			if (
-				prior.requested_by_user_id !== input.actor.id ||
-				prior.notice_hash !== input.noticeHash
-			) {
+			if (prior.notice_hash !== input.noticeHash) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return { noticeId: prior.id, replayed: true };
 		}
 		const noticeId = crypto.randomUUID();
 		const taskId = crypto.randomUUID();
+		const eventId = crypto.randomUUID();
+		const outboxId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
 		try {
 			await this.db.batch([
@@ -2349,10 +2456,26 @@ export class ContractRepository {
 					sql: `INSERT INTO admin_review_tasks
 						(id, kind, source_kind, source_id, reason_code, safe_summary,
 						 status, assigned_to, resolution, created_at, updated_at, resolved_at)
-					VALUES (?, 'contract_attendance', 'service_attendance_notice', ?,
+					SELECT ?, 'contract_attendance', 'service_attendance_notice', ?,
 						'attendance_ceased', 'Attendance notice requires teacher notification',
-						'open', NULL, NULL, ?, ?, NULL)`,
-					params: [taskId, noticeId, input.now, input.now],
+						'open', NULL, NULL, ?, ?, NULL
+					FROM contracts contract
+					JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+					JOIN users owner ON owner.id = contract.user_id
+					JOIN service_engagements engagement
+						ON engagement.id = contract.service_engagement_id
+						AND engagement.contract_id = contract.id
+						AND engagement.user_id = contract.user_id
+						AND engagement.child_id = contract.child_id
+					WHERE contract.id = ? AND contract.user_id = ?
+						AND contract.contract_offer_id = ?
+						AND contract.operational_status = 'active'
+						AND offer.user_id = contract.user_id AND offer.child_id = contract.child_id
+						AND engagement.status IN ('active', 'funding_review')
+						AND owner.role = 'parent' AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
+					params: [taskId, noticeId, input.now, input.now,
+						input.contractId, input.actor.id, input.offerId],
 				},
 				{
 					sql: `INSERT INTO service_attendance_notices
@@ -2365,11 +2488,25 @@ export class ContractRepository {
 						 teacher_attested_at, created_at)
 					SELECT ?, contract.id, contract.service_engagement_id, ?, 'authenticated_portal',
 						?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ?
-					FROM contracts contract JOIN users owner ON owner.id = contract.user_id
-					JOIN service_engagements engagement ON engagement.id = contract.service_engagement_id
-					WHERE contract.id = ? AND contract.user_id = ? AND contract.operational_status = 'active'
-						AND owner.account_status = 'active' AND owner.is_blocked = 0
-						AND engagement.status IN ('active', 'funding_review')`,
+					FROM contracts contract
+					JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+					JOIN users owner ON owner.id = contract.user_id
+					JOIN service_engagements engagement
+						ON engagement.id = contract.service_engagement_id
+						AND engagement.contract_id = contract.id
+						AND engagement.user_id = contract.user_id
+						AND engagement.child_id = contract.child_id
+					WHERE contract.id = ? AND contract.user_id = ?
+						AND contract.contract_offer_id = ?
+						AND contract.operational_status = 'active'
+						AND offer.user_id = contract.user_id AND offer.child_id = contract.child_id
+						AND owner.role = 'parent' AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+						AND engagement.status IN ('active', 'funding_review')
+						AND EXISTS (SELECT 1 FROM admin_review_tasks task
+							WHERE task.id = ? AND task.kind = 'contract_attendance'
+								AND task.source_kind = 'service_attendance_notice'
+								AND task.source_id = ? AND task.status = 'open')`,
 					params: [
 						noticeId,
 						input.actor.id,
@@ -2383,14 +2520,25 @@ export class ContractRepository {
 						input.now,
 						input.contractId,
 						input.actor.id,
+						input.offerId,
+						taskId,
+						noticeId,
 					],
 				},
 				{
 					sql: `UPDATE service_engagements SET status = 'ended', attendance_ceased_at = ?,
-						attendance_notice_id = ?, updated_at = ? WHERE contract_id = ?
+						attendance_notice_id = ?, updated_at = ?
+						WHERE id = (SELECT contract.service_engagement_id FROM contracts contract
+							WHERE contract.id = ? AND contract.user_id = ?
+								AND contract.contract_offer_id = ?)
+						AND contract_id = ? AND user_id = ?
 						AND status IN ('active', 'funding_review')
-						AND EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
-					params: [input.now, noticeId, input.now, input.contractId, noticeId],
+						AND EXISTS (SELECT 1 FROM service_attendance_notices notice
+							WHERE notice.id = ? AND notice.contract_id = ?
+								AND notice.service_engagement_id = service_engagements.id)`,
+					params: [input.now, noticeId, input.now, input.contractId,
+						input.actor.id, input.offerId, input.contractId, input.actor.id,
+						noticeId, input.contractId],
 				},
 				{
 					sql: `INSERT INTO contract_events
@@ -2400,7 +2548,7 @@ export class ContractRepository {
 						contract.contract_offer_id, ?, ?, ?, ? FROM contracts contract
 					WHERE contract.id = ? AND EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
 					params: [
-						crypto.randomUUID(),
+						eventId,
 						input.now,
 						input.actor.id,
 						JSON.stringify({ noticeId }),
@@ -2416,7 +2564,7 @@ export class ContractRepository {
 					SELECT ?, 'attendance_ceased', 'service_attendance_notice', ?, ?, ?, 'pending', ?
 					WHERE EXISTS (SELECT 1 FROM service_attendance_notices WHERE id = ?)`,
 					params: [
-						crypto.randomUUID(),
+						outboxId,
 						noticeId,
 						JSON.stringify({ noticeId, confirmation: 'durable_medium_required' }),
 						`attendance-confirmation:${noticeId}`,
@@ -2440,33 +2588,161 @@ export class ContractRepository {
 						noticeId,
 					],
 				},
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'attendance_notice', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM service_attendance_notices notice
+							JOIN contracts contract ON contract.id = notice.contract_id
+							JOIN contract_offers offer ON offer.id = contract.contract_offer_id
+							JOIN users owner ON owner.id = contract.user_id
+							JOIN service_engagements engagement
+								ON engagement.id = notice.service_engagement_id
+							WHERE notice.id = ? AND notice.contract_id = ?
+								AND notice.requested_by_user_id = ?
+								AND notice.submission_channel = 'authenticated_portal'
+								AND notice.notice_text_version = ? AND notice.notice_hash = ?
+								AND notice.idempotency_key = ?
+								AND notice.teacher_notification_task_id = ?
+								AND contract.contract_offer_id = ?
+								AND contract.user_id = ? AND contract.operational_status = 'active'
+								AND offer.user_id = contract.user_id
+								AND offer.child_id = contract.child_id
+								AND owner.role = 'parent' AND owner.account_status = 'active'
+								AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+								AND engagement.id = contract.service_engagement_id
+								AND engagement.contract_id = contract.id
+								AND engagement.user_id = contract.user_id
+								AND engagement.child_id = contract.child_id
+								AND engagement.status = 'ended'
+								AND engagement.attendance_notice_id = notice.id
+								AND engagement.attendance_ceased_at = ?)
+						AND EXISTS (SELECT 1 FROM admin_review_tasks task
+							WHERE task.id = ? AND task.kind = 'contract_attendance'
+								AND task.source_kind = 'service_attendance_notice'
+								AND task.source_id = ? AND task.reason_code = 'attendance_ceased'
+								AND task.status = 'open')
+						AND EXISTS (SELECT 1 FROM contract_events event
+							WHERE event.id = ? AND event.contract_id = ?
+								AND event.event_type = 'attendance_ceased'
+								AND event.source_offer_id = ? AND event.actor_user_id = ?
+								AND event.dedupe_key = ?)
+						AND EXISTS (SELECT 1 FROM contract_outbox_events outbox
+							WHERE outbox.id = ? AND outbox.event_type = 'attendance_ceased'
+								AND outbox.source_kind = 'service_attendance_notice'
+								AND outbox.source_id = ? AND outbox.dedupe_key = ?
+								AND outbox.status IN ('pending', 'consumed'))
+						AND EXISTS (SELECT 1 FROM audit_events audit
+							WHERE audit.id = ? AND audit.actor_user_id = ?
+								AND audit.actor_kind = 'user'
+								AND audit.action = 'contract.attendance_ceased'
+								AND audit.target_kind = 'contract' AND audit.target_id = ?
+								AND audit.request_id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						crypto.randomUUID(), input.contractId, noticeId, input.actor.id, auditId,
+						noticeId, input.contractId, input.actor.id, input.noticeTextVersion,
+						input.noticeHash, input.idempotencyKey, taskId, input.offerId,
+						input.actor.id, input.now, taskId, noticeId, eventId, input.contractId,
+						input.offerId, input.actor.id, `attendance-ceased:${noticeId}`,
+						outboxId, noticeId, `attendance-confirmation:${noticeId}`,
+						auditId, input.actor.id, input.contractId, input.requestId, input.now,
+					],
+				},
 			]);
 			return { noticeId, replayed: false };
 		} catch (error) {
+			const replay = await this.loadOwnedAttendanceNoticeReplay({
+				userId: input.actor.id,
+				contractId: input.contractId,
+				offerId: input.offerId,
+				idempotencyKey: input.idempotencyKey,
+			});
+			if (replay) {
+				if (replay.notice_hash !== input.noticeHash) {
+					throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+				}
+				return { noticeId: replay.id, replayed: true };
+			}
 			throw new ContractRepositoryError('ATTENDANCE_NOTICE_REJECTED', { cause: error });
 		}
 	}
 
-	loadMediaDecisionContext(userId: string, childId: string, contactVersionId: string) {
+	loadMediaDecisionContext(
+		userId: string,
+		childId: string,
+		contactVersionId: string,
+		offerId: string
+	) {
 		return this.db.first<{
-			contact_id: string;
-			snapshot_hash: string;
-			approval_status: string;
-			compliance_assessment_status: string;
+			contact_id: string | null;
+			snapshot_hash: string | null;
+			approval_status: string | null;
+			compliance_assessment_status: string | null;
 		}>({
 			sql: `SELECT contact.id AS contact_id, contact.snapshot_hash,
 				contact.approval_status, contact.compliance_assessment_status
-			FROM children child JOIN users owner ON owner.id = child.owner_user_id
-			JOIN media_withdrawal_contact_versions contact ON contact.id = ?
-			WHERE child.id = ? AND child.owner_user_id = ?
+			FROM contract_offers offer
+			JOIN contract_template_versions template ON template.id = offer.template_version_id
+			JOIN children child ON child.id = offer.child_id
+				AND child.owner_user_id = offer.user_id
+			JOIN users owner ON owner.id = child.owner_user_id
+			LEFT JOIN media_withdrawal_contact_versions contact
+				ON contact.id = template.media_contact_version_id AND contact.id = ?
+			WHERE offer.id = ? AND offer.user_id = ? AND child.id = ?
 				AND child.family_number_id = owner.family_number_id
-				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
-			params: [contactVersionId, childId, userId],
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
+			params: [contactVersionId, offerId, userId, childId],
+		});
+	}
+
+	loadOwnedMediaDecisionReplay(input: {
+		userId: string;
+		offerId: string;
+		childId: string;
+		contactVersionId: string;
+		contactSnapshotHash: string;
+		idempotencyKey: string;
+	}) {
+		return this.db.first<{ id: string; evidence_hash: string; decision: string }>({
+			sql: `SELECT consent.id, consent.evidence_hash, consent.decision
+			FROM media_consents consent
+			JOIN contract_offers offer ON offer.id = consent.source_contract_offer_id
+			JOIN contract_template_versions template ON template.id = offer.template_version_id
+			JOIN children child ON child.id = consent.child_id AND child.id = offer.child_id
+			JOIN users owner ON owner.id = child.owner_user_id
+			JOIN media_withdrawal_contact_versions contact
+				ON contact.id = template.media_contact_version_id
+			WHERE consent.request_dedupe_key = ? AND consent.user_id = ?
+				AND consent.recorded_by_user_id = ? AND consent.decision_source = 'portal'
+				AND consent.source_contract_offer_id = ? AND offer.user_id = ?
+				AND consent.child_id = ? AND child.owner_user_id = offer.user_id
+				AND child.family_number_id = owner.family_number_id
+				AND consent.withdrawal_contact_version_id = ?
+				AND consent.withdrawal_contact_version_id = template.media_contact_version_id
+				AND consent.withdrawal_contact_snapshot_hash = ?
+				AND contact.snapshot_hash = ? AND contact.approval_status = 'approved'
+				AND (consent.decision <> 'granted'
+					OR contact.compliance_assessment_status = 'passed')
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+				AND EXISTS (SELECT 1 FROM contract_action_assertions assertion
+					WHERE assertion.scope = 'media_decision'
+						AND assertion.target_id = offer.id
+						AND assertion.action_id = consent.id
+						AND assertion.actor_user_id = ?
+						AND assertion.assertion_passed = 1)`,
+			params: [input.idempotencyKey, input.userId, input.userId, input.offerId,
+				input.userId, input.childId, input.contactVersionId,
+				input.contactSnapshotHash, input.contactSnapshotHash, input.userId],
 		});
 	}
 
 	async recordMediaDecision(input: {
 		actor: AuthenticatedUser;
+		offerId: string;
 		childId: string;
 		captureScopesJson: string;
 		publicationChannelsJson: string;
@@ -2479,12 +2755,16 @@ export class ContractRepository {
 		requestId: string;
 		now: string;
 	}) {
-		const prior = await this.db.first<{ id: string; user_id: string; evidence_hash: string }>({
-			sql: `SELECT id, user_id, evidence_hash FROM media_consents WHERE request_dedupe_key = ?`,
-			params: [input.idempotencyKey],
+		const prior = await this.loadOwnedMediaDecisionReplay({
+			userId: input.actor.id,
+			offerId: input.offerId,
+			childId: input.childId,
+			contactVersionId: input.contactVersionId,
+			contactSnapshotHash: input.contactSnapshotHash,
+			idempotencyKey: input.idempotencyKey,
 		});
 		if (prior) {
-			if (prior.user_id !== input.actor.id || prior.evidence_hash !== input.evidenceHash) {
+			if (prior.evidence_hash !== input.evidenceHash || prior.decision !== input.decision) {
 				throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return { consentId: prior.id, replayed: true };
@@ -2500,13 +2780,21 @@ export class ContractRepository {
 						 decision, decision_source, decided_at, received_at, effective_from,
 						 recorded_by_user_id, recorded_at, evidence_hash, request_dedupe_key,
 						 source_contract_offer_id, source_privacy_request_id, supersedes_consent_id, created_at)
-					SELECT ?, ?, child.id, ?, ?, ?, ?, ?, ?, 'portal', ?, ?, ?, ?, ?, ?, ?,
-						NULL, NULL, NULL, ? FROM children child
-					JOIN users owner ON owner.id = child.owner_user_id
-					JOIN media_withdrawal_contact_versions contact ON contact.id = ?
-					WHERE child.id = ? AND child.owner_user_id = ?
-						AND owner.account_status = 'active' AND owner.is_blocked = 0
-						AND contact.approval_status = 'approved' AND contact.snapshot_hash = ?`,
+				SELECT ?, ?, child.id, ?, ?, ?, ?, ?, ?, 'portal', ?, ?, ?, ?, ?, ?, ?,
+					offer.id, NULL, NULL, ? FROM contract_offers offer
+				JOIN contract_template_versions template ON template.id = offer.template_version_id
+					AND template.media_contact_version_id = ?
+				JOIN children child ON child.id = offer.child_id
+					AND child.owner_user_id = offer.user_id
+				JOIN users owner ON owner.id = child.owner_user_id
+				JOIN media_withdrawal_contact_versions contact
+					ON contact.id = template.media_contact_version_id
+					WHERE offer.id = ? AND offer.user_id = ? AND child.id = ?
+						AND child.family_number_id = owner.family_number_id
+						AND owner.role = 'parent' AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
+						AND contact.approval_status = 'approved' AND contact.snapshot_hash = ?
+						AND (? <> 'granted' OR contact.compliance_assessment_status = 'passed')`,
 					params: [
 						consentId,
 						input.actor.id,
@@ -2525,9 +2813,11 @@ export class ContractRepository {
 						input.idempotencyKey,
 						input.now,
 						input.contactVersionId,
-						input.childId,
+						input.offerId,
 						input.actor.id,
+						input.childId,
 						input.contactSnapshotHash,
+						input.decision,
 					],
 				},
 				{
@@ -2546,9 +2836,75 @@ export class ContractRepository {
 						consentId,
 					],
 				},
+				{
+					sql: `INSERT INTO contract_action_assertions
+						(id, scope, target_id, action_id, actor_user_id, audit_event_id,
+						 assertion_passed, created_at)
+					VALUES (?, 'media_decision', ?, ?, ?, ?, CASE WHEN
+						EXISTS (SELECT 1 FROM media_consents consent
+							JOIN contract_offers offer ON offer.id = consent.source_contract_offer_id
+							JOIN contract_template_versions template
+								ON template.id = offer.template_version_id
+							JOIN children child ON child.id = consent.child_id
+								AND child.id = offer.child_id
+							JOIN users owner ON owner.id = child.owner_user_id
+							JOIN media_withdrawal_contact_versions contact
+								ON contact.id = template.media_contact_version_id
+							WHERE consent.id = ? AND consent.user_id = ?
+								AND consent.child_id = ?
+								AND consent.capture_scopes_json = ?
+								AND consent.publication_channels_json = ?
+								AND consent.text_version = ?
+								AND consent.withdrawal_contact_version_id = ?
+								AND consent.withdrawal_contact_snapshot_hash = ?
+								AND consent.decision = ? AND consent.decision_source = 'portal'
+								AND consent.recorded_by_user_id = ?
+								AND consent.evidence_hash = ? AND consent.request_dedupe_key = ?
+								AND consent.source_contract_offer_id = ?
+								AND offer.id = ? AND offer.user_id = ? AND offer.child_id = ?
+								AND child.owner_user_id = offer.user_id
+								AND child.family_number_id = owner.family_number_id
+								AND template.media_contact_version_id = ?
+								AND contact.approval_status = 'approved'
+								AND contact.snapshot_hash = ?
+								AND (? <> 'granted'
+									OR contact.compliance_assessment_status = 'passed')
+								AND owner.role = 'parent' AND owner.account_status = 'active'
+								AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL)
+						AND EXISTS (SELECT 1 FROM audit_events audit
+							WHERE audit.id = ? AND audit.actor_user_id = ?
+								AND audit.actor_kind = 'user' AND audit.action = 'media.decision'
+								AND audit.target_kind = 'media_consent' AND audit.target_id = ?
+								AND audit.request_id = ?)
+					THEN 1 ELSE 0 END, ?)`,
+					params: [
+						crypto.randomUUID(), input.offerId, consentId, input.actor.id, auditId,
+						consentId, input.actor.id, input.childId, input.captureScopesJson,
+						input.publicationChannelsJson, input.textVersion, input.contactVersionId,
+						input.contactSnapshotHash, input.decision, input.actor.id,
+						input.evidenceHash, input.idempotencyKey, input.offerId,
+						input.offerId, input.actor.id, input.childId, input.contactVersionId,
+						input.contactSnapshotHash, input.decision, auditId, input.actor.id,
+						consentId, input.requestId, input.now,
+					],
+				},
 			]);
 			return { consentId, replayed: false };
 		} catch (error) {
+			const replay = await this.loadOwnedMediaDecisionReplay({
+				userId: input.actor.id,
+				offerId: input.offerId,
+				childId: input.childId,
+				contactVersionId: input.contactVersionId,
+				contactSnapshotHash: input.contactSnapshotHash,
+				idempotencyKey: input.idempotencyKey,
+			});
+			if (replay) {
+				if (replay.evidence_hash !== input.evidenceHash || replay.decision !== input.decision) {
+					throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
+				}
+				return { consentId: replay.id, replayed: true };
+			}
 			throw new ContractRepositoryError('MEDIA_DECISION_REJECTED', { cause: error });
 		}
 	}
@@ -2686,7 +3042,9 @@ export class ContractRepository {
 			JOIN users owner ON owner.id = offer.user_id
 			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
 			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
-			WHERE offer.user_id = ? AND owner.account_status = 'active' AND owner.is_blocked = 0
+			WHERE offer.user_id = ? AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0
 			ORDER BY offer.created_at DESC, offer.id DESC LIMIT 100`,
 			params: [userId],
 		});
@@ -2712,7 +3070,8 @@ export class ContractRepository {
 			JOIN contract_template_versions template ON template.id = offer.template_version_id
 			LEFT JOIN contracts contract ON contract.contract_offer_id = offer.id
 			WHERE offer.id = ? AND offer.user_id = ? AND owner.account_status = 'active'
-				AND owner.is_blocked = 0`,
+				AND owner.role = 'parent' AND owner.is_blocked = 0
+				AND owner.email_verified_at IS NOT NULL`,
 			params: [offerId, userId],
 		});
 		if (!offer) return null;
@@ -2750,7 +3109,8 @@ export class ContractRepository {
 			JOIN users owner ON owner.id = offer.user_id
 			JOIN children child ON child.id = offer.child_id AND child.owner_user_id = owner.id
 			WHERE artifact.id = ? AND offer.user_id = ?
-				AND owner.account_status = 'active' AND owner.is_blocked = 0
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
 				AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
 					WHERE archive.target_kind = 'contract_artifact'
 						AND archive.target_id = artifact.id)`,
@@ -2814,8 +3174,9 @@ export class ContractRepository {
 						AND child.owner_user_id = owner.id
 					WHERE artifact.id = ? AND offer.user_id = ?
 						AND artifact.private_r2_key = ? AND artifact.sha256 = ?
-						AND artifact.size_bytes = ? AND owner.account_status = 'active'
-						AND owner.is_blocked = 0
+						AND artifact.size_bytes = ? AND owner.role = 'parent'
+						AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
 						AND NOT EXISTS (SELECT 1 FROM legal_archive_records archive
 							WHERE archive.target_kind = 'contract_artifact'
 								AND archive.target_id = artifact.id)`,

@@ -36,7 +36,7 @@ test('renders the mobile German registration form and protects account routes', 
 	await expect(page.getByLabel(germanCatalog['auth.passwordLabel'])).toBeVisible();
 	await expect(
 		page.getByRole('button', { name: germanCatalog['auth.register.submit'] })
-	).toBeDisabled();
+	).toBeEnabled();
 
 	const protectedResponse = await page.goto('/account/security');
 	expect(protectedResponse?.status()).toBe(401);

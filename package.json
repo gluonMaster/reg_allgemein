@@ -33,6 +33,7 @@
 		"deploy": "npm run build && wrangler deploy"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.13.0",
 		"@cloudflare/workers-types": "^5.20260811.1",
 		"@playwright/test": "^1.61.1",
 		"@sveltejs/adapter-auto": "^6.1.0",

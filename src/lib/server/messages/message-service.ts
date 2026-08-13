@@ -2,7 +2,7 @@ import { formatMessage } from '$lib/i18n';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import type { MessagingRuntimeConfig } from '$lib/server/config/runtime';
 import type { CabinetReadModelContributor } from '$lib/server/cabinet/cabinet-service';
-import type { AdminActor } from '$lib/server/security/authorization';
+import { requireParent, type AdminActor } from '$lib/server/security/authorization';
 import { isCalendarDate } from '$lib/server/time/berlin';
 import { nextBusinessWindow } from '$lib/server/outbox/business-hours';
 import {
@@ -67,6 +67,7 @@ export class MessageService implements CabinetReadModelContributor {
 		requestId: string;
 		now?: string;
 	}) {
+		requireParent(input.actor);
 		const parsed = createThreadSchema.safeParse(input.payload);
 		if (!parsed.success || parsed.data.category === 'absence') {
 			throw new MessageServiceError('INVALID_SUPPORT_THREAD');
@@ -95,6 +96,7 @@ export class MessageService implements CabinetReadModelContributor {
 		requestId: string;
 		now?: string;
 	}) {
+		requireParent(input.actor);
 		const parsed = absenceSchema.safeParse(input.payload);
 		if (!parsed.success || !isCalendarDate(parsed.data.absenceDate)) {
 			throw new MessageServiceError('INVALID_ABSENCE');
@@ -129,6 +131,7 @@ export class MessageService implements CabinetReadModelContributor {
 		requestId: string;
 		now?: string;
 	}) {
+		requireParent(input.actor);
 		const parsed = parentMessageSchema.safeParse(input.payload);
 		if (!parsed.success) throw new MessageServiceError('INVALID_SUPPORT_MESSAGE');
 		const now = input.now ?? this.clock();
@@ -152,6 +155,7 @@ export class MessageService implements CabinetReadModelContributor {
 		requestId: string;
 		now?: string;
 	}) {
+		requireParent(input.actor);
 		const parsed = closeThreadSchema.safeParse(input.payload);
 		if (!parsed.success) throw new MessageServiceError('INVALID_SUPPORT_CLOSE');
 		const now = input.now ?? this.clock();

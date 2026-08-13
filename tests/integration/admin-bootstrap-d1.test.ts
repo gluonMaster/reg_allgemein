@@ -71,6 +71,28 @@ async function insertSession(context: TestD1Context, userId: string): Promise<vo
 		.run();
 }
 
+async function assignEmptyFamily(context: TestD1Context, userId: string): Promise<void> {
+	const allocationId = `family-${userId}`;
+	await context.db.batch([
+		context.db
+			.prepare(
+				`INSERT INTO family_number_allocations (
+					id, namespace, sequence_number, display_family_id, legacy_family_id,
+					owner_user_id, origin, status, assigned_at,
+					merged_into_family_number_id, created_at, updated_at
+				) VALUES (?, 'portal_2', 1, '2. 0001', NULL, ?, 'portal', 'assigned',
+					?, NULL, ?, ?)`
+			)
+			.bind(allocationId, userId, NOW, NOW, NOW),
+		context.db
+			.prepare(
+				`UPDATE users SET family_number_id = ?, family_assignment_status = 'assigned',
+					family_version = 1, updated_at = ? WHERE id = ?`
+			)
+			.bind(allocationId, NOW, userId),
+	]);
+}
+
 describe('stage 13 one-shot first-admin bootstrap', () => {
 	let contexts: TestD1Context[] = [];
 
@@ -94,6 +116,7 @@ describe('stage 13 one-shot first-admin bootstrap', () => {
 	it('promotes exactly one verified parent, revokes sessions and permanently consumes the control', async () => {
 		const { context, repository } = await setup();
 		await insertUser(context, { id: 'bootstrap-parent' });
+		await assignEmptyFamily(context, 'bootstrap-parent');
 		await insertSession(context, 'bootstrap-parent');
 
 		await repository.consume({

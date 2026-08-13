@@ -1,4 +1,5 @@
 import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
+import { NO_RETAINED_PARENT_STATE_SQL } from './admin-role-transition';
 
 export class AdminBootstrapError extends Error {
 	constructor(
@@ -35,6 +36,7 @@ export function buildAdminBootstrapStatements(input: AdminBootstrapInput): State
 				updated_at = ?
 			WHERE id = ? AND role = 'parent' AND account_status = 'active'
 				AND is_blocked = 0 AND email_verified_at IS NOT NULL
+				AND ${NO_RETAINED_PARENT_STATE_SQL}
 				AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin'
 					AND account_status = 'active' AND is_blocked = 0)
 				AND EXISTS (SELECT 1 FROM admin_bootstrap_control

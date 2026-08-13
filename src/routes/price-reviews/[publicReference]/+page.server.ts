@@ -6,12 +6,13 @@ import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
 import {
 	PRICE_REVIEW_ACCEPTANCE_TEXT,
 } from '$lib/server/price-reviews/contracts';
+import { PriceReviewServiceError } from '$lib/server/price-reviews/price-review-service';
 import { requestPriceReviewRuntime } from '$lib/server/price-reviews/runtime';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	const runtime = requestPriceReviewRuntime(event);
 	const item = await runtime.repository.getParentItem(event.params.publicReference, actor.id);
 	if (!item)
@@ -41,7 +42,7 @@ export const actions = {
 				user: event.locals.user,
 				submittedToken: form.get('_csrf')?.toString(),
 			});
-			const actor = requireAuthenticated(event.locals.user);
+			const actor = requireParent(event.locals.user);
 			await requestPriceReviewRuntime(event).service.respond({
 				actor,
 				payload: {
@@ -55,11 +56,17 @@ export const actions = {
 				userAgent: event.request.headers.get('user-agent') ?? 'unavailable',
 			});
 			return { success: true, message: translate('de', 'priceReviews.detail.responded') };
-		} catch {
-			return fail(409, {
+		} catch (caught) {
+			return fail(
+				caught instanceof PriceReviewServiceError &&
+					caught.code === 'PRICE_REVIEW_ITEM_NOT_FOUND'
+					? 404
+					: 409,
+				{
 				success: false,
 				message: translate('de', 'priceReviews.detail.rejected'),
-			});
+				}
+			);
 		}
 	},
 } satisfies Actions;

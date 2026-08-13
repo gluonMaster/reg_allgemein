@@ -2,16 +2,19 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { translate } from '$lib/i18n';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestSubject } from '$lib/server/auth/http';
 import { legacyClaimConfirmationSchema } from '$lib/server/cabinet/contracts';
 import { requestFamilyRuntime } from '$lib/server/family/runtime';
 
-export const load: PageServerLoad = ({ url, cookies }) => ({
-	token: url.searchParams.get('token') ?? '',
-	csrfToken: cookies.get(CSRF_COOKIE_NAME) ?? '',
-});
+export const load: PageServerLoad = (event) => {
+	requireParent(event.locals.user);
+	return {
+		token: event.url.searchParams.get('token') ?? '',
+		csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
+	};
+};
 
 export const actions = {
 	default: async (event) => {
@@ -30,7 +33,7 @@ export const actions = {
 				});
 			}
 			const confirmed = await requestFamilyRuntime(event).service.confirmLegacyClaim({
-				actor: requireAuthenticated(event.locals.user),
+				actor: requireParent(event.locals.user),
 				token: parsed.data.token,
 				requestId: event.locals.requestId,
 				requestSubject: requestSubject(event),

@@ -2,9 +2,10 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { translate } from '$lib/i18n';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestTrialRuntime } from '$lib/server/trials/runtime';
+import { TrialError } from '$lib/server/trials/trial-repository';
 import { berlinCalendarDate } from '$lib/server/time/berlin';
 
 function nextCalendarDate(now: string): string {
@@ -13,7 +14,7 @@ function nextCalendarDate(now: string): string {
 }
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	return {
 		csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
 		commandKey: crypto.randomUUID(),
@@ -32,7 +33,7 @@ export const actions = {
 				submittedToken: form.get('_csrf')?.toString(),
 			});
 			await requestTrialRuntime(event).service.submit({
-				actor: requireAuthenticated(event.locals.user),
+				actor: requireParent(event.locals.user),
 				payload: {
 					courseGroupId: event.params.courseId,
 					childId: form.get('childId'),
@@ -43,9 +44,11 @@ export const actions = {
 				requestId: event.locals.requestId,
 			});
 			return { success: true, message: translate('de', 'trial.submitted') };
-		} catch {
-			return fail(409, { success: false, message: translate('de', 'trial.rejected') });
+		} catch (caught) {
+			return fail(
+				caught instanceof TrialError && caught.code === 'TRIAL_CHILD_NOT_OWNED' ? 404 : 409,
+				{ success: false, message: translate('de', 'trial.rejected') }
+			);
 		}
 	},
 } satisfies Actions;
-

@@ -948,6 +948,7 @@ describe('stage 13 synthetic production-readiness lifecycle in one migrated D1',
 			await contracts.submitEndRequest({
 				actor: parent,
 				payload: {
+					offerId: offer.offerId,
 					contractId: formation.contractId,
 					kind: 'withdrawal',
 					requestedEffectiveOn: null,

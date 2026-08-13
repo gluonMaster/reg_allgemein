@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import type { RuntimeConfig } from '$lib/server/config/runtime';
 import { canonicalJson, hashCanonical } from '$lib/server/import/canonical';
-import type { AdminActor } from '$lib/server/security/authorization';
+import { requireParent, type AdminActor } from '$lib/server/security/authorization';
 import { sha256Bytes, scopedHash } from '$lib/server/security/digest';
 import { berlinCalendarDate, calendarMonthEnd } from '$lib/server/time/berlin';
 import {
@@ -582,13 +582,14 @@ export class ContractService {
 		requestSubject: string;
 		requestId: string;
 	}) {
+		const actor = requireParent(input.actor);
 		const parsed = contractParentDecisionSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('CONTRACT_DECISION_INVALID');
 		if (!this.config.contracts.sendEnabled)
 			throw new ContractServiceError('CONTRACT_SEND_DISABLED');
 		const now = this.now();
 		return this.repository.parentDecision({
-			actor: input.actor,
+			actor,
 			offerId: parsed.data.offerId,
 			expectedContractHash: parsed.data.expectedContractHash,
 			decision: parsed.data.decision,
@@ -775,11 +776,37 @@ export class ContractService {
 		payload: unknown;
 		requestId: string;
 	}) {
+		const actor = requireParent(input.actor);
 		const parsed = contractEndRequestSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('CONTRACT_END_REQUEST_INVALID');
+		const requestHash = await hashCanonical({
+			offerId: parsed.data.offerId,
+			contractId: parsed.data.contractId,
+			kind: parsed.data.kind,
+			requestedEffectiveOn: parsed.data.requestedEffectiveOn,
+			requestTextVersion: parsed.data.requestTextVersion,
+		});
+		const replay = await this.repository.loadOwnedEndRequestReplay({
+			userId: actor.id,
+			contractId: parsed.data.contractId,
+			offerId: parsed.data.offerId,
+			idempotencyKey: parsed.data.idempotencyKey,
+		});
+		if (replay) {
+			if (replay.request_hash !== requestHash) {
+				throw new ContractServiceError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return {
+				requestId: replay.id,
+				status: replay.status,
+				calculatedEffectiveOn: replay.calculated_effective_on,
+				replayed: true,
+			};
+		}
 		const contract = await this.repository.loadOwnedContract(
-			input.actor.id,
-			parsed.data.contractId
+			actor.id,
+			parsed.data.contractId,
+			parsed.data.offerId
 		);
 		if (!contract) throw new ContractServiceError('CONTRACT_NOT_FOUND');
 		if (
@@ -800,14 +827,8 @@ export class ContractService {
 				: parsed.data.kind === 'withdrawal'
 					? receivedOn
 					: parsed.data.requestedEffectiveOn;
-		const requestHash = await hashCanonical({
-			contractId: parsed.data.contractId,
-			kind: parsed.data.kind,
-			requestedEffectiveOn: parsed.data.requestedEffectiveOn,
-			requestTextVersion: parsed.data.requestTextVersion,
-		});
 		return this.repository.recordEndRequest({
-			actor: input.actor,
+			actor,
 			contract,
 			kind: parsed.data.kind,
 			requestedEffectiveOn: parsed.data.requestedEffectiveOn,
@@ -832,26 +853,42 @@ export class ContractService {
 		payload: unknown;
 		requestId: string;
 	}) {
+		const actor = requireParent(input.actor);
 		const parsed = attendanceNoticeSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('ATTENDANCE_NOTICE_INVALID');
+		const noticeHash = await hashCanonical({
+			offerId: parsed.data.offerId,
+			contractId: parsed.data.contractId,
+			noticeTextVersion: parsed.data.noticeTextVersion,
+		});
+		const replay = await this.repository.loadOwnedAttendanceNoticeReplay({
+			userId: actor.id,
+			contractId: parsed.data.contractId,
+			offerId: parsed.data.offerId,
+			idempotencyKey: parsed.data.idempotencyKey,
+		});
+		if (replay) {
+			if (replay.notice_hash !== noticeHash) {
+				throw new ContractServiceError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { noticeId: replay.id, replayed: true };
+		}
 		const contract = await this.repository.loadOwnedContract(
-			input.actor.id,
-			parsed.data.contractId
+			actor.id,
+			parsed.data.contractId,
+			parsed.data.offerId
 		);
+		if (!contract) throw new ContractServiceError('CONTRACT_NOT_FOUND');
 		if (
-			!contract ||
 			!contract.service_engagement_id ||
 			!['individual_hourly', 'nachhilfe_hourly'].includes(contract.contract_kind)
 		) {
 			throw new ContractServiceError('ATTENDANCE_NOTICE_NOT_APPLICABLE');
 		}
-		const noticeHash = await hashCanonical({
-			contractId: parsed.data.contractId,
-			noticeTextVersion: parsed.data.noticeTextVersion,
-		});
 		return this.repository.recordAttendanceNotice({
-			actor: input.actor,
+			actor,
 			contractId: parsed.data.contractId,
+			offerId: parsed.data.offerId,
 			noticeTextVersion: parsed.data.noticeTextVersion,
 			idempotencyKey: parsed.data.idempotencyKey,
 			noticeHash,
@@ -914,6 +951,7 @@ export class ContractService {
 		payload: unknown;
 		requestId: string;
 	}) {
+		const actor = requireParent(input.actor);
 		const parsed = mediaDecisionSchema.safeParse(input.payload);
 		if (!parsed.success) throw new ContractServiceError('MEDIA_DECISION_INVALID');
 		const captureScopes = [...new Set(parsed.data.captureScopes)].sort();
@@ -925,11 +963,17 @@ export class ContractService {
 			throw new ContractServiceError('MEDIA_DECISION_INVALID');
 		}
 		const context = await this.repository.loadMediaDecisionContext(
-			input.actor.id,
+			actor.id,
 			parsed.data.childId,
-			parsed.data.withdrawalContactVersionId
+			parsed.data.withdrawalContactVersionId,
+			parsed.data.offerId
 		);
-		if (!context || context.approval_status !== 'approved') {
+		if (!context) throw new ContractServiceError('MEDIA_DECISION_NOT_FOUND');
+		if (
+			!context.contact_id ||
+			!context.snapshot_hash ||
+			context.approval_status !== 'approved'
+		) {
 			throw new ContractServiceError('MEDIA_DECISION_CONTEXT_REJECTED');
 		}
 		if (
@@ -941,7 +985,8 @@ export class ContractService {
 		}
 		const now = this.now();
 		const evidence = {
-			userId: input.actor.id,
+			userId: actor.id,
+			offerId: parsed.data.offerId,
 			childId: parsed.data.childId,
 			captureScopes,
 			publicationChannels,
@@ -950,8 +995,24 @@ export class ContractService {
 			withdrawalContactVersionId: context.contact_id,
 			withdrawalContactSnapshotHash: context.snapshot_hash,
 		};
+		const evidenceHash = await hashCanonical(evidence);
+		const replay = await this.repository.loadOwnedMediaDecisionReplay({
+			userId: actor.id,
+			offerId: parsed.data.offerId,
+			childId: parsed.data.childId,
+			contactVersionId: context.contact_id,
+			contactSnapshotHash: context.snapshot_hash,
+			idempotencyKey: parsed.data.idempotencyKey,
+		});
+		if (replay) {
+			if (replay.evidence_hash !== evidenceHash || replay.decision !== parsed.data.decision) {
+				throw new ContractServiceError('IDEMPOTENCY_KEY_REUSED');
+			}
+			return { consentId: replay.id, replayed: true };
+		}
 		return this.repository.recordMediaDecision({
-			actor: input.actor,
+			actor,
+			offerId: parsed.data.offerId,
 			childId: parsed.data.childId,
 			captureScopesJson: canonicalJson(captureScopes),
 			publicationChannelsJson: canonicalJson(publicationChannels),
@@ -960,7 +1021,7 @@ export class ContractService {
 			contactSnapshotHash: context.snapshot_hash,
 			decision: parsed.data.decision,
 			idempotencyKey: parsed.data.idempotencyKey,
-			evidenceHash: await hashCanonical(evidence),
+			evidenceHash,
 			requestId: input.requestId,
 			now,
 		});
@@ -1002,7 +1063,8 @@ export class ContractService {
 	}
 
 	async loadOwnerOffer(actor: AuthenticatedUser, offerId: string) {
-		const offer = await this.repository.loadOwnerOfferDetail(actor.id, offerId);
+		const parent = requireParent(actor);
+		const offer = await this.repository.loadOwnerOfferDetail(parent.id, offerId);
 		if (!offer) throw new ContractServiceError('CONTRACT_NOT_FOUND');
 		return {
 			id: offer.id,
@@ -1033,8 +1095,9 @@ export class ContractService {
 		artifactId: string;
 		requestId: string;
 	}) {
+		const actor = requireParent(input.actor);
 		const artifact = await this.repository.loadArtifactForOwner(
-			input.actor.id,
+			actor.id,
 			input.artifactId
 		);
 		if (!artifact) throw new ContractServiceError('CONTRACT_ARTIFACT_NOT_FOUND');
@@ -1048,7 +1111,7 @@ export class ContractService {
 		}
 		await this.repository.authorizeAndAuditOwnerArtifactRead({
 			artifactId: artifact.id,
-			ownerUserId: input.actor.id,
+			ownerUserId: actor.id,
 			expectedStorageKey: artifact.private_r2_key,
 			expectedSha256: artifact.sha256,
 			expectedSizeBytes: artifact.size_bytes,

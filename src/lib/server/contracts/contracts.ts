@@ -209,6 +209,7 @@ export const contractFormationSchema = z
 
 export const contractEndRequestSchema = z
 	.object({
+		offerId: z.string().trim().min(1).max(200),
 		contractId: z.string().uuid(),
 		kind: z.enum([
 			'withdrawal',
@@ -224,6 +225,7 @@ export const contractEndRequestSchema = z
 
 export const mediaDecisionSchema = z
 	.object({
+		offerId: z.string().trim().min(1).max(200),
 		childId: z.string().min(1),
 		captureScopes: z.array(z.enum(['photo', 'video'])).min(1).max(2),
 		publicationChannels: z
@@ -239,6 +241,7 @@ export const mediaDecisionSchema = z
 
 export const attendanceNoticeSchema = z
 	.object({
+		offerId: z.string().trim().min(1).max(200),
 		contractId: z.string().uuid(),
 		noticeTextVersion: z.string().trim().min(1).max(200),
 		idempotencyKey: z.string().trim().min(8).max(200),

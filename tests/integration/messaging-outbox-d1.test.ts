@@ -223,6 +223,25 @@ describe('stage 11 messages and common outbox in D1', () => {
 			requestId: 'support-create', now,
 		});
 		await expect(messages.appendParentMessage({
+			actor: foreignParent,
+			payload: {
+				publicReference: created.publicReference,
+				message: 'Synthetic foreign append',
+				idempotencyKey: 'support-foreign-append-1',
+			},
+			requestId: 'support-foreign-append',
+			now,
+		})).rejects.toMatchObject({ code: 'SUPPORT_THREAD_NOT_FOUND' });
+		await expect(messages.closeAsParent({
+			actor: foreignParent,
+			payload: {
+				publicReference: created.publicReference,
+				idempotencyKey: 'support-foreign-close-1',
+			},
+			requestId: 'support-foreign-close',
+			now,
+		})).rejects.toMatchObject({ code: 'SUPPORT_THREAD_NOT_FOUND' });
+		await expect(messages.appendParentMessage({
 			actor: parent, payload: { publicReference: created.publicReference,
 				message: 'Zu früh', idempotencyKey: 'support-early-1' },
 			requestId: 'support-early', now,
@@ -350,5 +369,44 @@ describe('stage 11 messages and common outbox in D1', () => {
 		expect(safeRows).toHaveLength(1);
 		expect(JSON.stringify(safeRows[0])).not.toContain('@example.test');
 		expect(JSON.stringify(safeRows[0])).not.toContain('payload_json');
+	});
+
+	it('rejects a stale parent actor after the authoritative role becomes admin', async () => {
+		const payload = {
+			category: 'technical',
+			subject: 'Synthetic stale-role check',
+			message: 'Synthetic message body',
+			idempotencyKey: 'stale-role-message-create',
+		};
+		const created = await messages.createThread({
+			actor: parent,
+			payload,
+			requestId: 'stale-role-message-parent',
+			now,
+		});
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now, parent.id],
+		});
+		try {
+			await expect(messages.createThread({
+				actor: parent,
+				payload,
+				requestId: 'stale-role-message-admin',
+				now,
+			})).rejects.toMatchObject({ code: 'SUPPORT_THREAD_CREATE_REJECTED' });
+			expect(await repository.listOwnerThreads(parent.id)).toEqual([]);
+			expect(await db.first<{ total: number }>({
+				sql: `SELECT COUNT(*) AS total FROM support_actions
+					WHERE actor_user_id = ? AND idempotency_key = ?`,
+				params: [parent.id, payload.idempotencyKey],
+			})).toEqual({ total: 1 });
+			expect(created.replayed).toBe(false);
+		} finally {
+			await db.run({
+				sql: `UPDATE users SET role = 'parent', updated_at = ? WHERE id = ?`,
+				params: [now, parent.id],
+			});
+		}
 	});
 });

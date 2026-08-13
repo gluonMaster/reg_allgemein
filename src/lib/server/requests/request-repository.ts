@@ -49,6 +49,13 @@ interface RequestRow {
 	child_name: string;
 }
 
+interface PriorRequestAction {
+	request_id: string;
+	action: 'save' | 'submit' | 'cancel' | 'delete_document';
+	request_hash_sha256: string;
+	to_status: string;
+}
+
 function requestPayload(input: RequestCreateInput | RequestSaveInput) {
 	return {
 		childId: input.childId,
@@ -85,8 +92,12 @@ export class IndividualRequestRepository {
 
 	private async priorCreate(userId: string, key: string) {
 		return this.db.first<{ id: string; create_request_hash_sha256: string }>({
-			sql: `SELECT id, create_request_hash_sha256 FROM individual_requests
-				WHERE user_id = ? AND create_idempotency_key = ?`,
+			sql: `SELECT request.id, request.create_request_hash_sha256
+				FROM individual_requests AS request
+				JOIN users AS owner ON owner.id = request.user_id
+				WHERE request.user_id = ? AND request.create_idempotency_key = ?
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 			params: [userId, key],
 		});
 	}
@@ -337,9 +348,12 @@ export class IndividualRequestRepository {
 					WHERE authorization.request_id = request.id AND authorization.status = 'approved'
 					LIMIT 1) AS valid_until
 			FROM individual_requests AS request
+			JOIN users AS owner ON owner.id = request.user_id
 			JOIN children AS child ON child.id = request.child_id
 				AND child.owner_user_id = request.user_id
-			WHERE request.user_id = ?
+			WHERE request.user_id = ? AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0
 			ORDER BY request.created_at DESC, request.id DESC LIMIT 100`,
 			params: [userId],
 		});
@@ -347,11 +361,35 @@ export class IndividualRequestRepository {
 	}
 
 	private async priorAction(userId: string, key: string) {
-		return this.db.first<{ request_id: string; request_hash_sha256: string; to_status: string }>({
-			sql: `SELECT request_id, request_hash_sha256, to_status
-				FROM request_parent_actions WHERE user_id = ? AND idempotency_key = ?`,
+		return this.db.first<PriorRequestAction>({
+			sql: `SELECT action.request_id, action.action, action.request_hash_sha256,
+				action.to_status
+				FROM request_parent_actions AS action
+				JOIN users AS owner ON owner.id = action.user_id
+				WHERE action.user_id = ? AND action.idempotency_key = ?
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 			params: [userId, key],
 		});
+	}
+
+	private async replayOwnerAction(input: {
+		userId: string;
+		requestId: string;
+		idempotencyKey: string;
+		requestHash: string;
+		action: 'save' | 'submit' | 'cancel';
+	}) {
+		const prior = await this.priorAction(input.userId, input.idempotencyKey);
+		if (!prior) return null;
+		if (
+			prior.request_id !== input.requestId ||
+			prior.action !== input.action ||
+			prior.request_hash_sha256 !== input.requestHash
+		) {
+			throw new IndividualRequestError('IDEMPOTENCY_KEY_REUSED');
+		}
+		return { status: prior.to_status as IndividualRequestStatus, replayed: true as const };
 	}
 
 	private async mutateOwnerRequest(input: {
@@ -369,13 +407,8 @@ export class IndividualRequestRepository {
 		guardSql?: string;
 		guardParams?: readonly unknown[];
 	}) {
-		const prior = await this.priorAction(input.userId, input.idempotencyKey);
-		if (prior) {
-			if (prior.request_hash_sha256 !== input.requestHash) {
-				throw new IndividualRequestError('IDEMPOTENCY_KEY_REUSED');
-			}
-			return { status: prior.to_status as IndividualRequestStatus, replayed: true };
-		}
+		const prior = await this.replayOwnerAction(input);
+		if (prior) return prior;
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
 		const assertionId = crypto.randomUUID();
@@ -390,19 +423,26 @@ export class IndividualRequestRepository {
 						 request_id, safe_diff_json, created_at)
 					SELECT ?, ?, 'user', ?, 'individual_request', id, ?, ?, ?
 					FROM individual_requests WHERE id = ? AND user_id = ?
-						AND version = ? AND status = ? AND (${guardSql})`,
+						AND version = ? AND status = ? AND (${guardSql})
+						AND EXISTS (SELECT 1 FROM users AS owner WHERE owner.id = ?
+							AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+							AND owner.account_status = 'active' AND owner.is_blocked = 0)`,
 					params: [
 						auditId,
 						input.userId,
 						`individual_request.${input.action}`,
 						input.requestIdHeader,
-						JSON.stringify({ status: input.toStatus, version: input.expectedVersion + 1 }),
+						JSON.stringify({
+							status: input.toStatus,
+							version: input.expectedVersion + 1,
+						}),
 						input.now,
 						input.requestId,
 						input.userId,
 						input.expectedVersion + 1,
 						input.toStatus,
 						...guardParams,
+						input.userId,
 					],
 				},
 				{
@@ -454,11 +494,9 @@ export class IndividualRequestRepository {
 				},
 			]);
 			return { status: input.toStatus, replayed: false };
-		} catch (error) {
-			const replay = await this.priorAction(input.userId, input.idempotencyKey);
-			if (replay?.request_hash_sha256 === input.requestHash) {
-				return { status: replay.to_status as IndividualRequestStatus, replayed: true };
-			}
+		} catch {
+			const replay = await this.replayOwnerAction(input);
+			if (replay) return replay;
 			throw new IndividualRequestError('REQUEST_MUTATION_REJECTED');
 		}
 	}
@@ -471,10 +509,22 @@ export class IndividualRequestRepository {
 	}) {
 		const current = await this.ownedRequest(input.userId, input.payload.requestId);
 		if (!current) throw new IndividualRequestError('REQUEST_NOT_FOUND');
+		const payload = requestPayload(input.payload);
+		const requestHash = await hashCanonical({
+			...payload,
+			version: input.payload.expectedVersion,
+		});
+		const prior = await this.replayOwnerAction({
+			userId: input.userId,
+			requestId: input.payload.requestId,
+			idempotencyKey: input.payload.idempotencyKey,
+			requestHash,
+			action: 'save',
+		});
+		if (prior) return prior;
 		if (!['draft', 'needs_documents', 'needs_info'].includes(current.status)) {
 			throw new IndividualRequestError('REQUEST_NOT_EDITABLE');
 		}
-		const payload = requestPayload(input.payload);
 		if (
 			payload.childId !== current.child_id ||
 			payload.requestKind !== current.request_kind ||
@@ -482,7 +532,6 @@ export class IndividualRequestRepository {
 		) {
 			throw new IndividualRequestError('REQUEST_IDENTITY_IMMUTABLE');
 		}
-		const requestHash = await hashCanonical({ ...payload, version: input.payload.expectedVersion });
 		return this.mutateOwnerRequest({
 			userId: input.userId,
 			requestId: input.payload.requestId,
@@ -528,6 +577,19 @@ export class IndividualRequestRepository {
 	}) {
 		const current = await this.ownedRequest(input.userId, input.requestId);
 		if (!current) throw new IndividualRequestError('REQUEST_NOT_FOUND');
+		const requestHash = await hashCanonical({
+			requestId: input.requestId,
+			expectedVersion: input.expectedVersion,
+			action: 'submit',
+		});
+		const prior = await this.replayOwnerAction({
+			userId: input.userId,
+			requestId: input.requestId,
+			idempotencyKey: input.idempotencyKey,
+			requestHash,
+			action: 'submit',
+		});
+		if (prior) return prior;
 		if (!['draft', 'needs_documents', 'needs_info'].includes(current.status)) {
 			throw new IndividualRequestError('REQUEST_SUBMISSION_REJECTED');
 		}
@@ -546,11 +608,6 @@ export class IndividualRequestRepository {
 			current.request_kind === 'nachhilfe' && document?.present !== 1
 				? 'needs_documents'
 				: 'pending_admin_review';
-		const requestHash = await hashCanonical({
-			requestId: input.requestId,
-			expectedVersion: input.expectedVersion,
-			action: 'submit',
-		});
 		return this.mutateOwnerRequest({
 			userId: input.userId,
 			requestId: input.requestId,
@@ -600,14 +657,25 @@ export class IndividualRequestRepository {
 	}) {
 		const current = await this.ownedRequest(input.userId, input.requestId);
 		if (!current) throw new IndividualRequestError('REQUEST_NOT_FOUND');
-		if (['cancelled', 'rejected'].includes(current.status)) {
-			throw new IndividualRequestError('REQUEST_CANCELLATION_REJECTED');
-		}
-		const guard = this.mutationGuard.assertion({ requestId: input.requestId, operation: 'cancel' });
 		const requestHash = await hashCanonical({
 			requestId: input.requestId,
 			expectedVersion: input.expectedVersion,
 			action: 'cancel',
+		});
+		const prior = await this.replayOwnerAction({
+			userId: input.userId,
+			requestId: input.requestId,
+			idempotencyKey: input.idempotencyKey,
+			requestHash,
+			action: 'cancel',
+		});
+		if (prior) return prior;
+		if (['cancelled', 'rejected'].includes(current.status)) {
+			throw new IndividualRequestError('REQUEST_CANCELLATION_REJECTED');
+		}
+		const guard = this.mutationGuard.assertion({
+			requestId: input.requestId,
+			operation: 'cancel',
 		});
 		return this.mutateOwnerRequest({
 			userId: input.userId,

@@ -2,6 +2,7 @@ import type { AuthRuntimeConfig } from '$lib/server/config/runtime';
 import type { AuthRateLimiter } from '$lib/server/security/rate-limit';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { deriveOpaqueAuthToken, hashAuthToken } from '$lib/server/auth/tokens';
+import { requireParent } from '$lib/server/security/authorization';
 import { FamilyRepository } from './family-repository';
 
 export interface FamilyClock {
@@ -29,6 +30,7 @@ export class FamilyService {
 		actor: AuthenticatedUser | NonNullable<App.Locals['user']>;
 		requestSubject: string;
 	}): Promise<boolean> {
+		requireParent(input.actor);
 		const now = this.clock.now();
 		await this.rateLimiter.consume('legacy-claim-request', input.actor.id, now);
 		const candidate = await this.repository.findClaimCandidate(input.actor.id);
@@ -63,6 +65,7 @@ export class FamilyService {
 		requestId: string;
 		requestSubject: string;
 	}): Promise<boolean> {
+		requireParent(input.actor);
 		const now = this.clock.now();
 		await this.rateLimiter.consume('legacy-claim-confirm', input.actor.id, now);
 		const context = await this.repository.findClaimToken(

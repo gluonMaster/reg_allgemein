@@ -4,6 +4,7 @@ import { CatalogRepository } from '$lib/server/catalog/catalog-repository';
 import type { CatalogAvailability } from '$lib/server/catalog/catalog-service';
 import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import { berlinCalendarDate } from '$lib/server/time/berlin';
+import { requireParent } from '$lib/server/security/authorization';
 import { trialParentCancellationSchema, trialSubmissionSchema } from './contracts';
 import { TrialError, TrialRepository } from './trial-repository';
 
@@ -16,7 +17,11 @@ export class TrialService implements CabinetReadModelContributor {
 	) {}
 
 	async loadSubmissionPage(actor: AuthenticatedUser, courseGroupId: string) {
-		if (actor.role !== 'parent') throw new TrialError('PARENT_REQUIRED');
+		try {
+			requireParent(actor);
+		} catch {
+			throw new TrialError('PARENT_REQUIRED');
+		}
 		const course = await this.catalog.loadPublishedCourse(courseGroupId);
 		if (!course || (course.lesson_kind !== 'group' && course.lesson_kind !== 'dance_group')) {
 			throw new TrialError('TRIAL_NOT_ALLOWED_FOR_LESSON_KIND');
@@ -48,7 +53,11 @@ export class TrialService implements CabinetReadModelContributor {
 		payload: unknown;
 		requestId: string;
 	}) {
-		if (input.actor.role !== 'parent') throw new TrialError('PARENT_REQUIRED');
+		try {
+			requireParent(input.actor);
+		} catch {
+			throw new TrialError('PARENT_REQUIRED');
+		}
 		const parsed = trialSubmissionSchema.safeParse(input.payload);
 		if (!parsed.success) throw new TrialError('INVALID_TRIAL_REQUEST');
 		const now = this.now();
@@ -91,7 +100,11 @@ export class TrialService implements CabinetReadModelContributor {
 	}
 
 	async cancel(input: { actor: AuthenticatedUser; payload: unknown; requestId: string }) {
-		if (input.actor.role !== 'parent') throw new TrialError('PARENT_REQUIRED');
+		try {
+			requireParent(input.actor);
+		} catch {
+			throw new TrialError('PARENT_REQUIRED');
+		}
 		const parsed = trialParentCancellationSchema.safeParse(input.payload);
 		if (!parsed.success) throw new TrialError('INVALID_TRIAL_CANCELLATION');
 		return this.repository.cancelByParent({
@@ -116,4 +129,3 @@ export class TrialService implements CabinetReadModelContributor {
 		};
 	}
 }
-

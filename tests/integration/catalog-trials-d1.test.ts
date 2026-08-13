@@ -301,7 +301,7 @@ describe('stage 07 catalog and trial workflow in D1', () => {
 		expect(await new OccupancyRepository(db).activeChildrenCount('course-full', '2026-07-20')).toBe(before);
 		await expect(adminMutations.transitionTrial({ actor: adminActor, trialId: full.id, action: 'confirm', sessionId: 'session-course-full', confirmedDate: '2026-07-22', reason: 'Capacity checked', idempotencyKey: 'confirm-full-key', requestId: 'confirm-full', currentDate: '2026-07-17', now })).rejects.toThrow();
 		await expect(trialService.submit({ actor: parentActor, payload: { courseGroupId: 'course-full', childId: 'child-trial', sessionId: 'session-course-full', requestedDate: '2026-07-21', idempotencyKey: 'full-duplicate-key' }, requestId: 'duplicate' })).rejects.toMatchObject({ code: 'DUPLICATE_OPEN_TRIAL' });
-		await expect(trialService.cancel({ actor: { ...parentActor, id: 'foreign-parent' }, payload: { trialId: full.id, idempotencyKey: 'foreign-cancel-key' }, requestId: 'foreign-cancel' })).rejects.toMatchObject({ code: 'TRIAL_CANCELLATION_REJECTED' });
+		await expect(trialService.cancel({ actor: { ...parentActor, id: 'foreign-parent' }, payload: { trialId: full.id, idempotencyKey: 'foreign-cancel-key' }, requestId: 'foreign-cancel' })).rejects.toMatchObject({ code: 'TRIAL_NOT_FOUND' });
 		await trialService.cancel({ actor: parentActor, payload: { trialId: full.id, idempotencyKey: 'cancel-full-key' }, requestId: 'cancel-full' });
 		await expect(adminMutations.transitionTrial({ actor: adminActor, trialId: full.id, action: 'confirm', sessionId: 'session-course-full', confirmedDate: '2026-07-22', reason: 'Cancelled trial stays terminal', idempotencyKey: 'confirm-cancelled-key', requestId: 'confirm-cancelled', currentDate: '2026-07-17', now })).rejects.toThrow();
 		const unknown = await trialService.submit({ actor: parentActor, payload: { courseGroupId: 'course-unknown', childId: 'child-trial', sessionId: 'session-course-unknown', requestedDate: '2026-07-23', idempotencyKey: 'unknown-request-key' }, requestId: 'unknown' });
@@ -311,6 +311,51 @@ describe('stage 07 catalog and trial workflow in D1', () => {
 		expect(await context.db.prepare(`SELECT COUNT(*) AS count FROM email_outbox
 			WHERE source_id = ? AND template_or_category = 'trial.rejected'`)
 			.bind(unknown.id).first()).toEqual({ count: 1 });
+	});
+
+	it('rejects stale parent repository access after the authoritative role becomes admin', async () => {
+		const payload = {
+			courseGroupId: 'course-available',
+			childId: 'child-trial',
+			sessionId: 'session-course-available',
+			requestedDate: '2026-07-25',
+			idempotencyKey: 'stale-role-trial',
+		};
+		const created = await trialService.submit({
+			actor: parentActor,
+			payload,
+			requestId: 'stale-role-trial-parent',
+		});
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now, parentActor.id],
+		});
+		try {
+			expect(await trials.listOwnerTrials(parentActor.id)).toEqual([]);
+			await expect(trials.createRequested({
+				id: crypto.randomUUID(),
+				userId: parentActor.id,
+				childId: payload.childId,
+				courseGroupId: payload.courseGroupId,
+				sessionId: payload.sessionId,
+				requestedDate: payload.requestedDate,
+				availability: 'available',
+				idempotencyKey: payload.idempotencyKey,
+				requestId: 'stale-role-trial-admin',
+				now,
+			})).rejects.toBeDefined();
+			expect(await db.first<{ total: number }>({
+				sql: `SELECT COUNT(*) AS total FROM trial_bookings
+					WHERE user_id = ? AND idempotency_key = ?`,
+				params: [parentActor.id, payload.idempotencyKey],
+			})).toEqual({ total: 1 });
+			expect(created.replayed).toBe(false);
+		} finally {
+			await db.run({
+				sql: `UPDATE users SET role = 'parent', updated_at = ? WHERE id = ?`,
+				params: [now, parentActor.id],
+			});
+		}
 	});
 
 	it('serializes submit/confirm, enforces terminal transitions and leaves enrollment/occupancy untouched', async () => {

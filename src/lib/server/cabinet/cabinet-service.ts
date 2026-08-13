@@ -1,6 +1,7 @@
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { cleanDisplayText, normalizePersonName } from '$lib/server/auth/normalization';
 import { CabinetPricingService } from '$lib/server/pricing/cabinet-pricing';
+import { requireParent } from '$lib/server/security/authorization';
 import { CabinetRepository } from './cabinet-repository';
 import { childCorrectionSchema, childMutationSchema } from './contracts';
 
@@ -78,6 +79,7 @@ export class CabinetService {
 	async load(
 		actor: AuthenticatedUser | NonNullable<App.Locals['user']>
 	): Promise<CabinetReadModel> {
+		requireParent(actor);
 		const profile = await this.repository.loadProfile(actor.id);
 		if (!profile) throw new CabinetAccessError();
 		const asOf = this.now().slice(0, 10);
@@ -154,6 +156,7 @@ export class CabinetService {
 		payload: unknown;
 		requestId: string;
 	}): Promise<'created' | 'duplicate' | 'rejected'> {
+		requireParent(input.actor);
 		const parsed = childMutationSchema.safeParse(input.payload);
 		if (!parsed.success || parsed.data.childId) return 'rejected';
 		const fullName = cleanDisplayText(parsed.data.fullName);
@@ -182,6 +185,7 @@ export class CabinetService {
 		payload: unknown;
 		requestId: string;
 	}): Promise<'updated' | 'duplicate' | 'rejected'> {
+		requireParent(input.actor);
 		const parsed = childMutationSchema.safeParse(input.payload);
 		if (!parsed.success || !parsed.data.childId) return 'rejected';
 		const fullName = cleanDisplayText(parsed.data.fullName);
@@ -210,6 +214,7 @@ export class CabinetService {
 		payload: unknown;
 		requestId: string;
 	}): Promise<boolean> {
+		requireParent(input.actor);
 		const parsed = childCorrectionSchema.safeParse(input.payload);
 		if (!parsed.success) return false;
 		return this.repository.requestLegacyChildCorrection({

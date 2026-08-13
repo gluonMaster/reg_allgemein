@@ -117,9 +117,16 @@ provider и operational release gates сохраняются. Актуально
   имеют конфигурируемое ограничение частоты и нейтральные сообщения об ошибках.
 - **AUTH-08.** Каждый серверный запрос к ребенку, заявке, документу, договору,
   enrollment, service engagement или thread заново проверяет владельца либо
-  роль администратора.
+  роль администратора. В contract/price dual-control действие стороны parent
+  дополнительно требует текущую роль `parent`: владение объектом или сохранённое
+  до повышения роли evidence не превращает current admin в parent-сторону.
 - **AUTH-09.** Заблокированный пользователь не может продолжать старую сессию;
-  повышение роли не принимается из данных клиента.
+  повышение роли не принимается из данных клиента. Переход `parent -> admin`
+  отклоняется атомарно, пока target сохраняет parent-side business/workflow
+  state (включая детей, claim/correction, trial/request, enrollment/contract,
+  price-review, message или privacy workflow). Первый bootstrap может повысить
+  только verified active parent без такого состояния; одна лишь пустая
+  зарезервированная FamilyID/регистрационная запись не считается business state.
 
 ## 5. Legacy claim и дети
 
@@ -262,9 +269,11 @@ provider и operational release gates сохраняются. Актуально
 - **REQ-06.** Сервер проверяет расширение, MIME, сигнатуру файла, размер и число
   вложений. Допустимы PDF, JPEG и PNG. Default limits: 10 MiB на файл, максимум
   5 файлов и 25 MiB на authorization; лимиты можно только уменьшить обычной
-  конфигурацией, а повышение требует пересмотра риска. ZIP, Office, SVG/XML,
-  executable и encrypted/password-protected files запрещены. Лимиты и форматы
-  сообщаются до upload.
+  конфигурацией, а повышение требует пересмотра риска. Пониженные configured
+  ceilings по count и aggregate bytes проверяются атомарно в момент D1-записи и
+  не обходятся конкурентными uploads. ZIP, Office, SVG/XML, executable и
+  encrypted/password-protected files запрещены. Лимиты и форматы сообщаются до
+  upload.
 - **REQ-07.** Просмотр/скачивание доступно только владельцу соответствующей
   заявки и администратору через короткоживущий контролируемый ответ, но parent
   получает файл только в `approved` safe state. До clean attestation quarantine
@@ -304,7 +313,9 @@ provider и operational release gates сохраняются. Актуально
   `accepted_by_parent`, `declined_by_parent`, `approved_by_admin`, `cancelled`,
   `expired`, `superseded`.
 - **CONTRACT-05.** Принять можно только актуальный `sent` offer до истечения,
-  только владельцу указанного ребенка, явным действием с acceptance text.
+  только current active parent-владельцу указанного ребенка, явным действием с
+  acceptance text. Роль admin не удовлетворяет parent-side acceptance, даже
+  если тот же user исторически владел offer.
 - **CONTRACT-06.** Acceptance log неизменяемо фиксирует timestamp, user, hash,
   версию текста, user agent и IP с учетом политики хранения.
 - **CONTRACT-07.** Повтор принятия с тем же idempotency key возвращает прежний
@@ -314,6 +325,8 @@ provider и operational release gates сохраняются. Актуально
   формирует contract над той же immutable offer version, атомарно проверяет
   актуальную цену/вместимость, активирует group enrollment либо individual/
   Nachhilfe service engagement и записывает formation/activation/audit events.
+  Admin actor обязан быть другой principal, чем parent actor/owner offer;
+  последующее повышение роли parent не создаёт вторую сторону.
 - **CONTRACT-09.** Для одного child/course не может существовать более одного
   пересекающегося active group enrollment; для одного approved request — более
   одного active service engagement. Повторная активация не создаёт дубль, а
@@ -381,8 +394,9 @@ provider и operational release gates сохраняются. Актуально
   privacy request.
 - **CONTRACT-16.** Parent acceptance фиксирует действие над конкретной версией,
   но само по себе договор не заключает. Договор считается заключённым в момент
-  последующего admin approval той же неизменяемой version; обе стороны и оба
-  timestamp входят в evidence. Исходный offer PDF после send не переписывается.
+  последующего admin approval той же неизменяемой version другим user; обе
+  различные стороны и оба timestamp входят в evidence. Исходный offer PDF после
+  send не переписывается.
   После formation один раз создаётся отдельный immutable formation certificate
   PDF с contract/offer number, сторонами/ролями, parent/admin timestamps,
   offer PDF hash, formation source/evidence hash и ссылкой на исходную version.
@@ -469,8 +483,11 @@ provider и operational release gates сохраняются. Актуально
   клиентский item.
   Новая цена применяется к каждому enrollment отдельно
   после approval рассылки admin, parent acceptance и второго admin confirmation;
-  parent имеет 14 календарных дней на ответ. Decline/timeout создаёт admin
-  notification/manual-contact task, старая base price продолжает действовать.
+  parent-side response требует current role `parent`, а actor второго admin
+  confirmation не может совпадать с parent actor/owner item. Повышение роли
+  после parent response не создаёт вторую сторону. Parent имеет 14 календарных
+  дней на ответ. Decline/timeout создаёт admin notification/manual-contact task,
+  старая base price продолжает действовать.
   Accepted item после второго admin confirmation применяется с первого числа
   следующего календарного месяца, без retroactive apply; отдельный PDF-addendum
   не создаётся. Однозначно claimed legacy service с известной/подтверждённой
@@ -510,6 +527,9 @@ provider и operational release gates сохраняются. Актуально
 - **ADMIN-02.** Изменение ролей, связей семьи, классификации, цены, вместимости,
   статуса, договора, документа или outbox фиксируется в audit log с actor,
   действием, target, временем и безопасным diff без секретов/содержимого файла.
+  Назначение admin дополнительно применяет server-side transition guard из
+  `AUTH-09`; rejected переход не меняет роль/сессии и не создаёт успешное audit
+  evidence.
 - **ADMIN-03.** Опасные повторные действия защищены idempotency и подтверждением;
   списки имеют поиск/фильтр и не выгружают PII без явной необходимости.
 

@@ -1,13 +1,33 @@
 import type { RequestHandler } from './$types';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { error } from '@sveltejs/kit';
+import { translate } from '$lib/i18n';
+import { DocumentServiceError } from '$lib/server/documents/document-service';
+import { requireParent } from '$lib/server/security/authorization';
 import { requestRequestsRuntime } from '$lib/server/requests/runtime';
 
 export const GET: RequestHandler = async (event) => {
-	const result = await requestRequestsRuntime(event).documentService.parentApprovedDownload({
-		actor: requireAuthenticated(event.locals.user),
-		documentId: event.params.documentId,
-		requestId: event.locals.requestId,
-	});
+	const actor = requireParent(event.locals.user);
+	let result: Awaited<
+		ReturnType<
+			ReturnType<typeof requestRequestsRuntime>['documentService']['parentApprovedDownload']
+		>
+	>;
+	try {
+		result = await requestRequestsRuntime(event).documentService.parentApprovedDownload({
+			actor,
+			documentId: event.params.documentId,
+			requestId: event.locals.requestId,
+		});
+	} catch (caught) {
+		if (caught instanceof DocumentServiceError && caught.code === 'DOCUMENT_NOT_FOUND') {
+			throw error(404, {
+				code: 'DOCUMENT_NOT_FOUND',
+				message: translate('de', 'admin.notFound'),
+				requestId: event.locals.requestId,
+			});
+		}
+		throw caught;
+	}
 	return new Response(result.body, {
 		headers: {
 			'content-type': 'application/octet-stream',

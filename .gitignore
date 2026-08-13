@@ -52,7 +52,7 @@ KindElternDaten*
 # Generated import/export artifacts.
 tmp/
 out/
-exports/
+/exports/
 imports/*.json
 imports/*.sql
 *.sqlite

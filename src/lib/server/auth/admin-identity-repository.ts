@@ -1,5 +1,6 @@
 import { DatabaseBoundary } from '$lib/server/db/database';
 import type { AdminActor } from '$lib/server/security/authorization';
+import { NO_RETAINED_PARENT_STATE_SQL } from './admin-role-transition';
 
 /**
  * Server-only role assignment boundary. There is intentionally no public route
@@ -24,6 +25,8 @@ export class AdminIdentityRepository {
 				sql: `UPDATE users SET role = 'admin', session_version = session_version + 1,
 						updated_at = ?
 					WHERE id = ? AND role = 'parent' AND account_status = 'active'
+						AND is_blocked = 0 AND email_verified_at IS NOT NULL
+						AND ${NO_RETAINED_PARENT_STATE_SQL}
 						AND EXISTS (
 							SELECT 1 FROM users actor
 							WHERE actor.id = ? AND actor.role = 'admin'

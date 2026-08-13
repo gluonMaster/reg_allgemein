@@ -44,7 +44,8 @@ export class FamilyRepository {
 				JOIN academic_periods AS period ON period.id = version.academic_period_id
 				JOIN import_runs AS run ON run.id = attempt.legacy_import_run_id
 				WHERE attempt.user_id = ? AND attempt.status IN ('candidate', 'proof_sent')
-					AND user.email_verified_at IS NOT NULL AND user.account_status = 'active'
+					AND user.role = 'parent' AND user.email_verified_at IS NOT NULL
+					AND user.account_status = 'active'
 					AND user.is_blocked = 0 AND user.family_number_id = attempt.from_family_number_id
 					AND user.family_version = attempt.family_version
 					AND current_family.namespace = 'portal_2' AND current_family.status = 'assigned'
@@ -99,6 +100,7 @@ export class FamilyRepository {
 						AND candidate.family_version = ?
 						AND user.family_number_id = candidate.from_family_number_id
 						AND user.family_version = candidate.family_version
+						AND user.role = 'parent' AND user.email_verified_at IS NOT NULL
 						AND user.account_status = 'active' AND user.is_blocked = 0
 						AND email.id = ? AND email.is_current = 1
 						AND email.email_normalized = ?
@@ -201,9 +203,13 @@ export class FamilyRepository {
 
 	async claimAlreadyApplied(tokenId: string, userId: string): Promise<boolean> {
 		const row = await this.db.first<{ applied: number }>({
-			sql: `SELECT COUNT(*) AS applied FROM family_reassignments
-				WHERE source = 'legacy_email_token' AND idempotency_key = ?
-					AND user_id = ? AND status = 'applied'`,
+			sql: `SELECT COUNT(*) AS applied FROM family_reassignments AS reassignment
+				JOIN users AS owner ON owner.id = reassignment.user_id
+				WHERE reassignment.source = 'legacy_email_token'
+					AND reassignment.idempotency_key = ? AND reassignment.user_id = ?
+					AND reassignment.status = 'applied' AND owner.role = 'parent'
+					AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 			params: [`token:${tokenId}`, userId],
 		});
 		return row?.applied === 1;
@@ -228,8 +234,9 @@ export class FamilyRepository {
 						AND legacy_family_id = ? AND family_version = ?
 						AND used_at IS NULL AND expires_at > ?
 						AND EXISTS (
-							SELECT 1 FROM users WHERE id = ? AND account_status = 'active'
-								AND is_blocked = 0 AND email_verified_at IS NOT NULL
+							SELECT 1 FROM users WHERE id = ? AND role = 'parent'
+								AND account_status = 'active' AND is_blocked = 0
+								AND email_verified_at IS NOT NULL
 								AND family_number_id = ? AND family_version = ?
 						)
 						AND EXISTS (
@@ -548,18 +555,25 @@ export class FamilyRepository {
 	}): Promise<void> {
 		await this.db.batch([
 			{
-				sql: `INSERT OR IGNORE INTO admin_review_tasks
-					(id, kind, source_kind, source_id, reason_code, safe_summary,
-					 status, assigned_to, resolution, created_at, updated_at, resolved_at)
-					VALUES (?, 'family_claim_conflict', 'legacy_family', ?,
-						'legacy_email_claim_race', 'Legacy email claim requires review.',
-						'open', NULL, NULL, ?, ?, NULL)`,
-				params: [crypto.randomUUID(), input.context.legacy_family_id, input.now, input.now],
-			},
-			{
-				sql: `UPDATE family_link_attempts SET status = 'conflict', updated_at = ?
-					WHERE id = ? AND status IN ('candidate', 'proof_sent')`,
-				params: [input.now, input.context.attempt_id],
+					sql: `INSERT OR IGNORE INTO admin_review_tasks
+						(id, kind, source_kind, source_id, reason_code, safe_summary,
+						 status, assigned_to, resolution, created_at, updated_at, resolved_at)
+						SELECT ?, 'family_claim_conflict', 'legacy_family', ?,
+							'legacy_email_claim_race', 'Legacy email claim requires review.',
+							'open', NULL, NULL, ?, ?, NULL
+						WHERE EXISTS (SELECT 1 FROM users WHERE id = ? AND role = 'parent'
+							AND email_verified_at IS NOT NULL AND account_status = 'active'
+							AND is_blocked = 0)`,
+					params: [crypto.randomUUID(), input.context.legacy_family_id, input.now,
+						input.now, input.context.user_id],
+				},
+				{
+					sql: `UPDATE family_link_attempts SET status = 'conflict', updated_at = ?
+						WHERE id = ? AND status IN ('candidate', 'proof_sent')
+							AND EXISTS (SELECT 1 FROM users WHERE id = ? AND role = 'parent'
+								AND email_verified_at IS NOT NULL AND account_status = 'active'
+								AND is_blocked = 0)`,
+					params: [input.now, input.context.attempt_id, input.context.user_id],
 			},
 		]);
 	}

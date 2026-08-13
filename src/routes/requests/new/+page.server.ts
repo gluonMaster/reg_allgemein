@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestRequestsRuntime } from '$lib/server/requests/runtime';
 import { translate } from '$lib/i18n';
@@ -15,7 +15,7 @@ function locations(value: FormDataEntryValue | null) {
 }
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	return {
 		csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '',
 		commandKey: crypto.randomUUID(),
@@ -35,7 +35,7 @@ export const actions = {
 			});
 			const kind = requestKind(form.get('requestKind')?.toString() ?? null);
 			const result = await requestRequestsRuntime(event).requestService.createDraft({
-				actor: requireAuthenticated(event.locals.user),
+				actor: requireParent(event.locals.user),
 				payload: {
 					childId: form.get('childId'),
 					requestKind: kind,

@@ -37,8 +37,10 @@ const admin = requireAdmin({
 	sessionVersion: 1,
 	csrfHash: 'csrf',
 });
-
-async function importPrices(repository: ImportRepository, period: AcademicPeriodRow): Promise<string> {
+async function importPrices(
+	repository: ImportRepository,
+	period: AcademicPeriodRow
+): Promise<string> {
 	const workbook = createSyntheticPriceWorkbook({
 		rows: Array.from({ length: 6 }, (_, index) => ({
 			key: 'Kunst',
@@ -102,7 +104,8 @@ async function seedScenario(db: DatabaseBoundary) {
 			WHERE price_version_id = ? ORDER BY children_count`,
 		params: [version.id],
 	});
-	const rule = (count: number) => rules.results.find((candidate) => candidate.children_count === count)!;
+	const rule = (count: number) =>
+		rules.results.find((candidate) => candidate.children_count === count)!;
 	await db.batch([
 		{
 			sql: `INSERT INTO course_groups
@@ -144,8 +147,15 @@ async function seedScenario(db: DatabaseBoundary) {
 					 owner_user_id, origin, status, assigned_at, merged_into_family_number_id,
 					 created_at, updated_at)
 				VALUES (?, 'portal_2', ?, ?, NULL, ?, 'portal', 'assigned', ?, NULL, ?, ?)`,
-				params: [familyId, 10_000 + index, `2. ${10_000 + index}`, userId,
-					now(1), now(1), now(1)],
+				params: [
+					familyId,
+					10_000 + index,
+					`2. ${10_000 + index}`,
+					userId,
+					now(1),
+					now(1),
+					now(1),
+				],
 			},
 			{
 				sql: `INSERT INTO users
@@ -155,8 +165,18 @@ async function seedScenario(db: DatabaseBoundary) {
 					 privacy_notice_version, privacy_accepted_at, created_at, updated_at)
 				VALUES (?, ?, ?, 'unused', ?, 'parent', 'Parent', ?, 'parent', ?, ?,
 					'assigned', 1, 'test-v1', ?, ?, ?)`,
-				params: [userId, `${userId}@example.test`, `${userId}@example.test`, now(1),
-					String(index), String(index), familyId, now(1), now(1), now(1)],
+				params: [
+					userId,
+					`${userId}@example.test`,
+					`${userId}@example.test`,
+					now(1),
+					String(index),
+					String(index),
+					familyId,
+					now(1),
+					now(1),
+					now(1),
+				],
 			},
 			{
 				sql: `INSERT INTO children
@@ -166,8 +186,19 @@ async function seedScenario(db: DatabaseBoundary) {
 					 birth_date, last_seen_run_id, is_current, created_at, updated_at)
 				VALUES (?, ?, NULL, ?, 'portal', ?, ?, ?, '2015-01-01', NULL, NULL, ?, ?,
 					'2015-01-01', ?, 1, ?, ?)`,
-				params: [childId, userId, familyId, childId, `Child ${index}`, `child ${index}`,
-					`Child ${index}`, `child ${index}`, importRunId, now(1), now(1)],
+				params: [
+					childId,
+					userId,
+					familyId,
+					childId,
+					`Child ${index}`,
+					`child ${index}`,
+					`Child ${index}`,
+					`child ${index}`,
+					importRunId,
+					now(1),
+					now(1),
+				],
 			},
 		]);
 		const currentRule = index === 6 ? rule(6) : rule(5);
@@ -182,8 +213,15 @@ async function seedScenario(db: DatabaseBoundary) {
 				'2026-08-01', NULL, ?, 'excel_yearly', 'rule_derived', '2026-08-01',
 				'portal', ?, ?, ?, ?, ?, 1)`,
 			params: [
-				`price-enrollment-${index}`, userId, childId, currentRule.yearly_price_cents,
-				now(1), now(1), currentRule.yearly_price_cents, version.id, currentRule.id,
+				`price-enrollment-${index}`,
+				userId,
+				childId,
+				currentRule.yearly_price_cents,
+				now(1),
+				now(1),
+				currentRule.yearly_price_cents,
+				version.id,
+				currentRule.id,
 			],
 		});
 	}
@@ -233,15 +271,26 @@ async function seedLegacyTargets(
 		VALUES ('legacy-representation-portal', 'price-parent-3', 'price-child-3',
 			'course-legacy-review', NULL, 'group', 'active', 'group_yearly', '2026-08-01',
 			NULL, ?, 'excel_yearly', 'rule_derived', '2026-08-01', 'portal', ?, ?, ?, ?, ?, 1)`,
-		params: [fixture.rule5.yearly_price_cents, now(1), now(1),
-			fixture.rule5.yearly_price_cents, fixture.versionId, fixture.rule5.id],
+		params: [
+			fixture.rule5.yearly_price_cents,
+			now(1),
+			now(1),
+			fixture.rule5.yearly_price_cents,
+			fixture.versionId,
+			fixture.rule5.id,
+		],
 	});
 	const targets = [
 		{ suffix: 'known', user: 1, planned: 5000, needsReview: 0, represented: null },
 		{ suffix: 'unknown', user: 2, planned: null, needsReview: 0, represented: null },
 		{ suffix: 'conflict', user: 5, planned: 5000, needsReview: 1, represented: null },
-		{ suffix: 'represented', user: 3, planned: 5000, needsReview: 0,
-			represented: 'legacy-representation-portal' },
+		{
+			suffix: 'represented',
+			user: 3,
+			planned: 5000,
+			needsReview: 0,
+			represented: 'legacy-representation-portal',
+		},
 	] as const;
 	for (const [index, target] of targets.entries()) {
 		const legacyFamilyId = `legacy-review-family-${target.suffix}`;
@@ -254,8 +303,15 @@ async function seedLegacyTargets(
 					(id, source_namespace, source_family_id, family_number_id, numbering_status,
 					 claimed_by_user_id, claimed_at, continuity_status, created_at, updated_at)
 				VALUES (?, 'legacy_1', ?, ?, 'valid', ?, ?, 'stable', ?, ?)`,
-				params: [legacyFamilyId, `legacy-review-${target.suffix}`, familyNumberId,
-					`price-parent-${target.user}`, now(1), now(1), now(1)],
+				params: [
+					legacyFamilyId,
+					`legacy-review-${target.suffix}`,
+					familyNumberId,
+					`price-parent-${target.user}`,
+					now(1),
+					now(1),
+					now(1),
+				],
 			},
 			{
 				sql: `INSERT INTO legacy_source_rows
@@ -263,9 +319,20 @@ async function seedLegacyTargets(
 					 legacy_family_id, child_id, import_run_id, source_hash, source_values_json,
 					 last_seen_run_id, is_current, retired_at, created_at, updated_at)
 				VALUES (?, 'legacy_1', ?, ?, NULL, ?, ?, ?, ?, '{}', ?, 1, NULL, ?, ?)`,
-				params: [sourceRowId, fixture.periodId, 20_000 + index, legacyFamilyId,
-					childId, fixture.importRunId, String(index + 1).repeat(64).slice(0, 64),
-					fixture.importRunId, now(1), now(1)],
+				params: [
+					sourceRowId,
+					fixture.periodId,
+					20_000 + index,
+					legacyFamilyId,
+					childId,
+					fixture.importRunId,
+					String(index + 1)
+						.repeat(64)
+						.slice(0, 64),
+					fixture.importRunId,
+					now(1),
+					now(1),
+				],
 			},
 		]);
 		await db.run({
@@ -279,9 +346,20 @@ async function seedLegacyTargets(
 			VALUES (?, ?, ?, ?, ?, 'main_next', ?, 'Legacy Kunst', 'legacy kunst',
 				'course-legacy-review', 90, 'verified', 'J', 'group', 'yearly', 'yearly',
 				'rule_derived', ?, ?, 1, ?, ?, 1, ?, ?)`,
-			params: [`legacy-review-${target.suffix}`, sourceRowId, legacyFamilyId, childId,
-				fixture.periodId, `legacy-review-record-${target.suffix}`, target.planned,
-				target.needsReview, target.represented, fixture.importRunId, now(1), now(1)],
+			params: [
+				`legacy-review-${target.suffix}`,
+				sourceRowId,
+				legacyFamilyId,
+				childId,
+				fixture.periodId,
+				`legacy-review-record-${target.suffix}`,
+				target.planned,
+				target.needsReview,
+				target.represented,
+				fixture.importRunId,
+				now(1),
+				now(1),
+			],
 		});
 	}
 
@@ -323,8 +401,14 @@ async function seedLegacyTargets(
 			VALUES ('legacy-review-row-unclaimed', 'legacy_1', ?, 20010, NULL,
 				'legacy-review-family-unclaimed', 'legacy-review-child-unclaimed', ?, ?, '{}',
 				?, 1, NULL, ?, ?)`,
-			params: [fixture.periodId, fixture.importRunId, 'f'.repeat(64), fixture.importRunId,
-				now(1), now(1)],
+			params: [
+				fixture.periodId,
+				fixture.importRunId,
+				'f'.repeat(64),
+				fixture.importRunId,
+				now(1),
+				now(1),
+			],
 		},
 		{
 			sql: `INSERT INTO legacy_enrollments
@@ -543,6 +627,7 @@ describe('stage 10 controlled price reviews in D1', () => {
 			now: '2026-05-01T11:00:00.000Z',
 		});
 		const item = (await repository.listParentItems('price-parent-1'))[0];
+		expect(item.courseName).toBe('Kunst Review');
 		await service.respond({
 			actor: parentActor(1),
 			payload: {
@@ -608,6 +693,166 @@ describe('stage 10 controlled price reviews in D1', () => {
 		});
 	}, 45_000);
 
+	it('requires a current parent role and keeps parent evidence distinct from final admin confirmation', async () => {
+		context = await createMigratedTestD1();
+		const db = new DatabaseBoundary(context.db);
+		await seedScenario(db);
+		const occupancy = new OccupancyRepository(db);
+		const repository = new PriceReviewRepository(db);
+		const service = new PriceReviewService(
+			repository,
+			new PricingService(new PricingRepository(db), occupancy, pricingConfig),
+			occupancy,
+			{ portalPublicOrigin: 'https://portal.example.test' }
+		);
+		const comparison = await service.createAdminComparison({
+			admin,
+			payload: {
+				courseGroupId: 'course-price-review',
+				effectiveOn: '2026-08-01',
+				reason: 'Synthetic role and dual-control verification',
+				confirmation: 'confirmed',
+				idempotencyKey: 'price-role-comparison-1',
+			},
+			requestId: 'price-role-comparison',
+			now: now(2),
+		});
+		await service.approveBatch({
+			admin,
+			payload: {
+				batchId: comparison.batchId,
+				reason: 'Synthetic role-gate items reviewed',
+				confirmation: 'confirmed',
+				idempotencyKey: 'price-role-approval-1',
+			},
+			requestId: 'price-role-approval',
+			now: now(3),
+		});
+		await service.dispatchBatch({
+			admin,
+			payload: {
+				batchId: comparison.batchId,
+				confirmation: 'confirmed',
+				idempotencyKey: 'price-role-dispatch-1',
+			},
+			requestId: 'price-role-dispatch',
+			now: now(3),
+		});
+		const item = (await repository.listParentItems('price-parent-1'))[0];
+		const promotedParent = requireAdmin({ ...parentActor(1), role: 'admin' });
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now(4), promotedParent.id],
+		});
+		const responsePayload = {
+			publicReference: item.publicReference,
+			itemHash: item.itemHash,
+			decision: 'accept' as const,
+			idempotencyKey: 'price-role-response-current-admin',
+		};
+		await expect(
+			service.respond({
+				actor: promotedParent,
+				payload: responsePayload,
+				requestId: 'price-role-response-current-admin',
+				requestSubject: '192.0.2.120',
+				userAgent: 'vitest',
+				now: now(4),
+			})
+		).rejects.toMatchObject({ code: 'FORBIDDEN' });
+		await expect(
+			service.respond({
+				actor: parentActor(1),
+				payload: {
+					...responsePayload,
+					idempotencyKey: 'price-role-response-stale-session',
+				},
+				requestId: 'price-role-response-stale-session',
+				requestSubject: '192.0.2.121',
+				userAgent: 'vitest',
+				now: now(4),
+			})
+		).rejects.toMatchObject({ code: 'PRICE_REVIEW_ITEM_NOT_FOUND' });
+		expect((await repository.getItemById(item.id))?.status).toBe('sent');
+
+		await db.run({
+			sql: `UPDATE users SET role = 'parent', email_verified_at = NULL, updated_at = ?
+			WHERE id = ?`,
+			params: [now(4), promotedParent.id],
+		});
+		expect(await repository.getParentItem(item.publicReference, promotedParent.id)).toBeNull();
+		await expect(
+			service.respond({
+				actor: parentActor(1),
+				payload: {
+					publicReference: item.publicReference,
+					itemHash: item.itemHash,
+					decision: 'accept',
+					idempotencyKey: 'price-role-response-unverified',
+				},
+				requestId: 'price-role-response-unverified',
+				requestSubject: '192.0.2.123',
+				userAgent: 'vitest',
+				now: now(4),
+			})
+		).rejects.toMatchObject({ code: 'PRICE_REVIEW_ITEM_NOT_FOUND' });
+		await db.run({
+			sql: `UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ?`,
+			params: [now(4), now(4), promotedParent.id],
+		});
+		await service.respond({
+			actor: parentActor(1),
+			payload: {
+				publicReference: item.publicReference,
+				itemHash: item.itemHash,
+				decision: 'accept',
+				idempotencyKey: 'price-dual-control-parent-response',
+			},
+			requestId: 'price-dual-control-parent-response',
+			requestSubject: '192.0.2.122',
+			userAgent: 'vitest',
+			now: now(5),
+		});
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now(6), promotedParent.id],
+		});
+		await expect(
+			service.finalConfirm({
+				admin,
+				payload: {
+					itemId: item.id,
+					reason: 'Item owner role changed before final confirmation',
+					confirmation: 'confirmed',
+					idempotencyKey: 'price-dual-control-owner-no-longer-parent',
+				},
+				requestId: 'price-dual-control-owner-no-longer-parent',
+				now: now(6),
+			})
+		).rejects.toMatchObject({ code: 'PRICE_REVIEW_FINAL_CONFIRMATION_REJECTED' });
+		await expect(
+			service.finalConfirm({
+				admin: promotedParent,
+				payload: {
+					itemId: item.id,
+					reason: 'Attempted confirmation after role promotion',
+					confirmation: 'confirmed',
+					idempotencyKey: 'price-dual-control-same-identity',
+				},
+				requestId: 'price-dual-control-same-identity',
+				now: now(6),
+			})
+		).rejects.toMatchObject({ code: 'PRICE_REVIEW_FINAL_CONFIRMATION_REJECTED' });
+		expect((await repository.getItemById(item.id))?.status).toBe('accepted_by_parent');
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_review_admin_actions
+				WHERE action = 'final_confirmation' AND target_id = ?`,
+				params: [item.id],
+			})
+		).toEqual({ count: 0 });
+	}, 45_000);
+
 	it('deduplicates 5-to-6 review, separates approvals, revalidates and applies exactly once', async () => {
 		context = await createMigratedTestD1();
 		const db = new DatabaseBoundary(context.db);
@@ -649,62 +894,99 @@ describe('stage 10 controlled price reviews in D1', () => {
 		const items = await repository.listBatchItems(batchId);
 		expect(items).toHaveLength(5);
 		expect(items.every((item) => item.status === 'draft')).toBe(true);
-		expect(items.every((item) => item.oldPriceCents === fixture.rule5.yearly_price_cents)).toBe(true);
-		expect(items.every((item) => item.newFinalPriceCents === fixture.rule6.yearly_price_cents)).toBe(true);
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
-		})).toEqual({ count: 0 });
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM email_outbox
+		expect(items.every((item) => item.oldPriceCents === fixture.rule5.yearly_price_cents)).toBe(
+			true
+		);
+		expect(
+			items.every((item) => item.newFinalPriceCents === fixture.rule6.yearly_price_cents)
+		).toBe(true);
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
+			})
+		).toEqual({ count: 0 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM email_outbox
 			WHERE template_or_category = 'price_review.item_available'`,
-		})).toEqual({ count: 0 });
-		await expect(service.dispatchBatch({
-			admin,
-			payload: { batchId, confirmation: 'confirmed',
-				idempotencyKey: 'dispatch-before-approval-1' },
-			requestId: 'request-early-dispatch',
-			now: now(1),
-		})).rejects.toThrowError(/PRICE_REVIEW_DISPATCH_REJECTED/);
+			})
+		).toEqual({ count: 0 });
+		await expect(
+			service.dispatchBatch({
+				admin,
+				payload: {
+					batchId,
+					confirmation: 'confirmed',
+					idempotencyKey: 'dispatch-before-approval-1',
+				},
+				requestId: 'request-early-dispatch',
+				now: now(1),
+			})
+		).rejects.toThrowError(/PRICE_REVIEW_DISPATCH_REJECTED/);
 
 		await service.approveBatch({
 			admin,
-			payload: { batchId, reason: 'Calculated items reviewed', confirmation: 'confirmed',
-				idempotencyKey: 'approve-review-batch-1' },
+			payload: {
+				batchId,
+				reason: 'Calculated items reviewed',
+				confirmation: 'confirmed',
+				idempotencyKey: 'approve-review-batch-1',
+			},
 			requestId: 'request-approve-review',
 			now: now(2),
 		});
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
-		})).toEqual({ count: 0 });
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM email_outbox
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
+			})
+		).toEqual({ count: 0 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM email_outbox
 			WHERE template_or_category = 'price_review.item_available'`,
-		})).toEqual({ count: 0 });
+			})
+		).toEqual({ count: 0 });
 
 		const dispatch = await service.dispatchBatch({
 			admin,
-			payload: { batchId, confirmation: 'confirmed', idempotencyKey: 'dispatch-review-batch-1' },
+			payload: {
+				batchId,
+				confirmation: 'confirmed',
+				idempotencyKey: 'dispatch-review-batch-1',
+			},
 			requestId: 'request-dispatch-review',
 			now: now(3),
 		});
 		expect(dispatch).toEqual({ replayed: false, sent: 5 });
-		expect(await service.dispatchBatch({
-			admin,
-			payload: { batchId, confirmation: 'confirmed', idempotencyKey: 'dispatch-review-batch-1' },
-			requestId: 'request-dispatch-review-replay',
-			now: now(3),
-		})).toEqual({ replayed: true, sent: 5 });
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM email_outbox
+		expect(
+			await service.dispatchBatch({
+				admin,
+				payload: {
+					batchId,
+					confirmation: 'confirmed',
+					idempotencyKey: 'dispatch-review-batch-1',
+				},
+				requestId: 'request-dispatch-review-replay',
+				now: now(3),
+			})
+		).toEqual({ replayed: true, sent: 5 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM email_outbox
 			WHERE template_or_category = 'price_review.item_available'`,
-		})).toEqual({ count: 5 });
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events
+			})
+		).toEqual({ count: 5 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events
 			WHERE event_type = 'item_available' AND status = 'consumed'`,
-		})).toEqual({ count: 5 });
+			})
+		).toEqual({ count: 5 });
 		const emailProvider = new FakeEmailProvider();
 		const emailWorker = new EmailOutboxWorker(
-			new OutboxRepository(db), emailProvider, undefined,
+			new OutboxRepository(db),
+			emailProvider,
+			undefined,
 			{ portalPublicOrigin: 'https://portal.example.test' },
 			{ leaseSeconds: 30, retryBaseSeconds: 60, retryMaxSeconds: 300 },
 			'price-review-email-worker'
@@ -717,61 +999,93 @@ describe('stage 10 controlled price reviews in D1', () => {
 		const delivery = await db.first<{ cabinet_url: string }>({
 			sql: `SELECT cabinet_url FROM price_review_deliveries ORDER BY created_at LIMIT 1`,
 		});
-		expect(delivery?.cabinet_url).toMatch(/^https:\/\/portal\.example\.test\/price-reviews\/[0-9a-f-]+$/u);
+		expect(delivery?.cabinet_url).toMatch(
+			/^https:\/\/portal\.example\.test\/price-reviews\/[0-9a-f-]+$/u
+		);
 		expect(delivery?.cabinet_url).not.toContain(items[0].id);
 		expect(delivery?.cabinet_url).not.toContain('price-parent');
 		expect((await repository.getItemById(items[0].id))?.responseDeadline).toBe('2026-08-17');
-		await expect(db.run({
-			sql: `UPDATE price_review_items SET old_price_cents = 1 WHERE id = ?`,
-			params: [items[0].id],
-		})).rejects.toThrowError(/sent price review snapshot is immutable/);
+		await expect(
+			db.run({
+				sql: `UPDATE price_review_items SET old_price_cents = 1 WHERE id = ?`,
+				params: [items[0].id],
+			})
+		).rejects.toThrowError(/sent price review snapshot is immutable/);
 
 		const item = (await repository.listParentItems('price-parent-1'))[0];
-		await expect(service.respond({
-			actor: parentActor(2),
-			payload: { publicReference: item.publicReference, itemHash: item.itemHash,
-				decision: 'accept', idempotencyKey: 'foreign-parent-response-1' },
-			requestId: 'request-foreign-parent',
-			requestSubject: '198.51.100.20',
-			userAgent: 'test',
-			now: now(4),
-		})).rejects.toThrowError(/PRICE_REVIEW_ITEM_NOT_FOUND/);
+		await expect(
+			service.respond({
+				actor: parentActor(2),
+				payload: {
+					publicReference: item.publicReference,
+					itemHash: item.itemHash,
+					decision: 'accept',
+					idempotencyKey: 'foreign-parent-response-1',
+				},
+				requestId: 'request-foreign-parent',
+				requestSubject: '198.51.100.20',
+				userAgent: 'test',
+				now: now(4),
+			})
+		).rejects.toThrowError(/PRICE_REVIEW_ITEM_NOT_FOUND/);
 		const accepted = await service.respond({
 			actor: parentActor(1),
-			payload: { publicReference: item.publicReference, itemHash: item.itemHash,
-				decision: 'accept', idempotencyKey: 'parent-price-acceptance-1' },
+			payload: {
+				publicReference: item.publicReference,
+				itemHash: item.itemHash,
+				decision: 'accept',
+				idempotencyKey: 'parent-price-acceptance-1',
+			},
 			requestId: 'request-parent-accept',
 			requestSubject: '198.51.100.10',
 			userAgent: 'stage-10-test',
 			now: now(4),
 		});
 		expect(accepted).toEqual({ status: 'accepted_by_parent', replayed: false });
-		expect(await service.respond({
-			actor: parentActor(1),
-			payload: { publicReference: item.publicReference, itemHash: item.itemHash,
-				decision: 'accept', idempotencyKey: 'parent-price-acceptance-1' },
-			requestId: 'request-parent-accept-replay',
-			requestSubject: '198.51.100.10',
-			userAgent: 'stage-10-test',
-			now: now(4),
-		})).toEqual({ status: 'accepted_by_parent', replayed: true });
+		expect(
+			await service.respond({
+				actor: parentActor(1),
+				payload: {
+					publicReference: item.publicReference,
+					itemHash: item.itemHash,
+					decision: 'accept',
+					idempotencyKey: 'parent-price-acceptance-1',
+				},
+				requestId: 'request-parent-accept-replay',
+				requestSubject: '198.51.100.10',
+				userAgent: 'stage-10-test',
+				now: now(4),
+			})
+		).toEqual({ status: 'accepted_by_parent', replayed: true });
 		const declinedItem = (await repository.listParentItems('price-parent-2'))[0];
-		expect(await service.respond({
-			actor: parentActor(2),
-			payload: { publicReference: declinedItem.publicReference, itemHash: declinedItem.itemHash,
-				decision: 'decline', idempotencyKey: 'parent-price-decline-2' },
-			requestId: 'request-parent-decline',
-			requestSubject: '198.51.100.12',
-			userAgent: 'stage-10-test',
-			now: now(4),
-		})).toEqual({ status: 'declined_by_parent', replayed: false });
-		await expect(service.finalConfirm({
-			admin,
-			payload: { itemId: declinedItem.id, reason: 'Must remain declined',
-				confirmation: 'confirmed', idempotencyKey: 'declined-final-confirmation' },
-			requestId: 'request-declined-final',
-			now: now(5),
-		})).rejects.toThrowError(/PRICE_REVIEW_ITEM_NOT_ACCEPTED/);
+		expect(
+			await service.respond({
+				actor: parentActor(2),
+				payload: {
+					publicReference: declinedItem.publicReference,
+					itemHash: declinedItem.itemHash,
+					decision: 'decline',
+					idempotencyKey: 'parent-price-decline-2',
+				},
+				requestId: 'request-parent-decline',
+				requestSubject: '198.51.100.12',
+				userAgent: 'stage-10-test',
+				now: now(4),
+			})
+		).toEqual({ status: 'declined_by_parent', replayed: false });
+		await expect(
+			service.finalConfirm({
+				admin,
+				payload: {
+					itemId: declinedItem.id,
+					reason: 'Must remain declined',
+					confirmation: 'confirmed',
+					idempotencyKey: 'declined-final-confirmation',
+				},
+				requestId: 'request-declined-final',
+				now: now(5),
+			})
+		).rejects.toThrowError(/PRICE_REVIEW_ITEM_NOT_ACCEPTED/);
 
 		const closedOwnerItem = (await repository.listParentItems('price-parent-4'))[0];
 		await db.run({
@@ -779,62 +1093,113 @@ describe('stage 10 controlled price reviews in D1', () => {
 				WHERE id = 'price-parent-4'`,
 			params: [now(5)],
 		});
-		await expect(service.respond({
-			actor: parentActor(4),
-			payload: { publicReference: closedOwnerItem.publicReference,
-				itemHash: closedOwnerItem.itemHash, decision: 'accept',
-				idempotencyKey: 'closed-parent-response-4' },
-			requestId: 'request-closed-parent',
-			requestSubject: '198.51.100.14',
-			userAgent: 'stage-10-test',
-			now: now(5),
-		})).rejects.toThrowError(/PRICE_REVIEW_PARENT_RESPONSE_REJECTED/);
-		expect((await repository.getItemById(closedOwnerItem.id))?.status).toBe('superseded');
+		await expect(
+			service.respond({
+				actor: parentActor(4),
+				payload: {
+					publicReference: closedOwnerItem.publicReference,
+					itemHash: closedOwnerItem.itemHash,
+					decision: 'accept',
+					idempotencyKey: 'closed-parent-response-4',
+				},
+				requestId: 'request-closed-parent',
+				requestSubject: '198.51.100.14',
+				userAgent: 'stage-10-test',
+				now: now(5),
+			})
+		).rejects.toThrowError(/PRICE_REVIEW_ITEM_NOT_FOUND/);
+		expect((await repository.getItemById(closedOwnerItem.id))?.status).toBe('sent');
 
 		await service.finalConfirm({
 			admin,
-			payload: { itemId: item.id, reason: 'Parent acceptance checked',
-				confirmation: 'confirmed', idempotencyKey: 'final-price-confirmation-1' },
+			payload: {
+				itemId: item.id,
+				reason: 'Parent acceptance checked',
+				confirmation: 'confirmed',
+				idempotencyKey: 'final-price-confirmation-1',
+			},
 			requestId: 'request-final-confirm',
 			now: now(20),
 		});
-		expect(await service.finalConfirm({
-			admin,
-			payload: { itemId: item.id, reason: 'Parent acceptance checked',
-				confirmation: 'confirmed', idempotencyKey: 'final-price-confirmation-1' },
-			requestId: 'request-final-confirm-replay',
-			now: now(21),
-		})).toEqual({ replayed: true });
+		expect(
+			await service.finalConfirm({
+				admin,
+				payload: {
+					itemId: item.id,
+					reason: 'Parent acceptance checked',
+					confirmation: 'confirmed',
+					idempotencyKey: 'final-price-confirmation-1',
+				},
+				requestId: 'request-final-confirm-replay',
+				now: now(21),
+			})
+		).toEqual({ replayed: true });
 		expect((await repository.getItemById(item.id))?.scheduledFor).toBe('2026-09-01');
-		expect(await service.runScheduledMaintenance(now(31))).toMatchObject({ applied: 0, overdue: 2 });
+		const scheduledItem = (await repository.getItemById(item.id))!;
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [now(22), 'price-parent-1'],
+		});
+		await expect(
+			repository.applyScheduledItem({
+				item: scheduledItem,
+				evidenceHash: 'd'.repeat(64),
+				now: '2026-09-01T00:01:00.000Z',
+			})
+		).rejects.toMatchObject({ code: 'PRICE_REVIEW_APPLY_REJECTED' });
+		expect((await repository.getItemById(item.id))?.status).toBe('scheduled');
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_change_apply_events
+				WHERE price_review_item_id = ?`,
+				params: [item.id],
+			})
+		).toEqual({ count: 0 });
+		await db.run({
+			sql: `UPDATE users SET role = 'parent', updated_at = ? WHERE id = ?`,
+			params: [now(22), 'price-parent-1'],
+		});
+		expect(await service.runScheduledMaintenance(now(31))).toMatchObject({
+			applied: 0,
+			overdue: 3,
+		});
 		const overdueItem = (await repository.listParentItems('price-parent-3'))[0];
-		expect(await service.respond({
-			actor: parentActor(3),
-			payload: { publicReference: overdueItem.publicReference, itemHash: overdueItem.itemHash,
-				decision: 'accept', idempotencyKey: 'late-parent-response-3' },
-			requestId: 'request-late-parent',
-			requestSubject: '198.51.100.13',
-			userAgent: 'stage-10-test',
-			now: now(31),
-		})).toEqual({ status: 'response_overdue', replayed: false });
-		expect(await service.revalidateItem((await repository.getItemById(item.id))!, '2026-09-01'))
-			.toEqual({ current: true, reason: 'CURRENT' });
+		expect(
+			await service.respond({
+				actor: parentActor(3),
+				payload: {
+					publicReference: overdueItem.publicReference,
+					itemHash: overdueItem.itemHash,
+					decision: 'accept',
+					idempotencyKey: 'late-parent-response-3',
+				},
+				requestId: 'request-late-parent',
+				requestSubject: '198.51.100.13',
+				userAgent: 'stage-10-test',
+				now: now(31),
+			})
+		).toEqual({ status: 'response_overdue', replayed: false });
+		expect(
+			await service.revalidateItem((await repository.getItemById(item.id))!, '2026-09-01')
+		).toEqual({ current: true, reason: 'CURRENT' });
 		const applied = await service.runScheduledMaintenance('2026-09-01T00:30:00.000Z');
 		expect(applied.applied).toBe(1);
 		expect((await service.runScheduledMaintenance('2026-09-01T02:00:00.000Z')).applied).toBe(0);
-		expect(await db.first<{
-			current_price_cents: number;
-			current_price_rule_id: string;
-			price_assignment_version: number;
-			apply_count: number;
-		}>({
-			sql: `SELECT enrollment.current_price_cents, enrollment.current_price_rule_id,
+		expect(
+			await db.first<{
+				current_price_cents: number;
+				current_price_rule_id: string;
+				price_assignment_version: number;
+				apply_count: number;
+			}>({
+				sql: `SELECT enrollment.current_price_cents, enrollment.current_price_rule_id,
 				enrollment.price_assignment_version,
 				(SELECT COUNT(*) FROM price_change_apply_events
 				 WHERE price_review_item_id = ?) AS apply_count
 			FROM enrollments AS enrollment WHERE enrollment.id = 'price-enrollment-1'`,
-			params: [item.id],
-		})).toEqual({
+				params: [item.id],
+			})
+		).toEqual({
 			current_price_cents: fixture.rule6.yearly_price_cents,
 			current_price_rule_id: fixture.rule6.id,
 			price_assignment_version: 2,
@@ -856,9 +1221,11 @@ describe('stage 10 controlled price reviews in D1', () => {
 		});
 
 		expect(await occupancy.activeChildrenCount('course-legacy-review', '2026-08-01')).toBe(5);
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM price_review_triggers`,
-		})).toEqual({ count: 0 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_review_triggers`,
+			})
+		).toEqual({ count: 0 });
 		const comparison = await service.createAdminComparison({
 			admin,
 			payload: {
@@ -887,24 +1254,38 @@ describe('stage 10 controlled price reviews in D1', () => {
 
 		await service.approveBatch({
 			admin,
-			payload: { batchId: comparison.batchId, reason: 'Legacy projections reviewed',
-				confirmation: 'confirmed', idempotencyKey: 'legacy-batch-approval-1' },
+			payload: {
+				batchId: comparison.batchId,
+				reason: 'Legacy projections reviewed',
+				confirmation: 'confirmed',
+				idempotencyKey: 'legacy-batch-approval-1',
+			},
 			requestId: 'request-legacy-approval',
 			now: now(3),
 		});
-		expect(await service.dispatchBatch({
-			admin,
-			payload: { batchId: comparison.batchId, confirmation: 'confirmed',
-				idempotencyKey: 'legacy-batch-dispatch-1' },
-			requestId: 'request-legacy-dispatch',
-			now: now(4),
-		})).toEqual({ replayed: false, sent: 1 });
-		const known = (await repository.listParentItems('price-parent-1'))
-			.find((item) => item.targetId === 'legacy-review-known')!;
+		expect(
+			await service.dispatchBatch({
+				admin,
+				payload: {
+					batchId: comparison.batchId,
+					confirmation: 'confirmed',
+					idempotencyKey: 'legacy-batch-dispatch-1',
+				},
+				requestId: 'request-legacy-dispatch',
+				now: now(4),
+			})
+		).toEqual({ replayed: false, sent: 1 });
+		const known = (await repository.listParentItems('price-parent-1')).find(
+			(item) => item.targetId === 'legacy-review-known'
+		)!;
 		await service.respond({
 			actor: parentActor(1),
-			payload: { publicReference: known.publicReference, itemHash: known.itemHash,
-				decision: 'accept', idempotencyKey: 'legacy-parent-acceptance-1' },
+			payload: {
+				publicReference: known.publicReference,
+				itemHash: known.itemHash,
+				decision: 'accept',
+				idempotencyKey: 'legacy-parent-acceptance-1',
+			},
 			requestId: 'request-legacy-accept',
 			requestSubject: '203.0.113.10',
 			userAgent: 'stage-10-test',
@@ -912,20 +1293,25 @@ describe('stage 10 controlled price reviews in D1', () => {
 		});
 		await service.finalConfirm({
 			admin,
-			payload: { itemId: known.id, reason: 'Claim and price evidence checked',
-				confirmation: 'confirmed', idempotencyKey: 'legacy-final-confirmation-1' },
+			payload: {
+				itemId: known.id,
+				reason: 'Claim and price evidence checked',
+				confirmation: 'confirmed',
+				idempotencyKey: 'legacy-final-confirmation-1',
+			},
 			requestId: 'request-legacy-final',
 			now: now(20),
 		});
 		expect((await service.runScheduledMaintenance('2026-09-01T01:00:00.000Z')).applied).toBe(1);
-		expect(await db.first<{
-			planned_price_cents: number;
-			source_hash: string;
-			assignment_count: number;
-			contract_count: number;
-			artifact_count: number;
-		}>({
-			sql: `SELECT legacy.planned_price_cents, source.source_hash,
+		expect(
+			await db.first<{
+				planned_price_cents: number;
+				source_hash: string;
+				assignment_count: number;
+				contract_count: number;
+				artifact_count: number;
+			}>({
+				sql: `SELECT legacy.planned_price_cents, source.source_hash,
 				(SELECT COUNT(*) FROM legacy_service_price_assignments
 				 WHERE legacy_enrollment_id = legacy.id) AS assignment_count,
 				(SELECT COUNT(*) FROM contracts) AS contract_count,
@@ -933,7 +1319,8 @@ describe('stage 10 controlled price reviews in D1', () => {
 			FROM legacy_enrollments legacy
 			JOIN legacy_source_rows source ON source.id = legacy.legacy_source_row_id
 			WHERE legacy.id = 'legacy-review-known'`,
-		})).toEqual({
+			})
+		).toEqual({
 			planned_price_cents: 5000,
 			source_hash: '1'.repeat(64),
 			assignment_count: 1,
@@ -956,23 +1343,34 @@ describe('stage 10 controlled price reviews in D1', () => {
 			sql: `UPDATE enrollments SET current_base_price_cents = ?, current_price_cents = ?,
 				current_price_version_id = ?, current_price_rule_id = ?, updated_at = ?
 			WHERE course_group_id = 'course-price-review'`,
-			params: [fixture.rule6.yearly_price_cents, fixture.rule6.yearly_price_cents,
-				fixture.versionId, fixture.rule6.id, now(2)],
+			params: [
+				fixture.rule6.yearly_price_cents,
+				fixture.rule6.yearly_price_cents,
+				fixture.versionId,
+				fixture.rule6.id,
+				now(2),
+			],
 		});
 
 		const empty = await service.createAdminComparison({
 			admin,
-			payload: { courseGroupId: 'course-price-review', effectiveOn: '2026-08-01',
-				reason: 'Explicit unchanged comparison', confirmation: 'confirmed',
-				idempotencyKey: 'unchanged-price-comparison-1' },
+			payload: {
+				courseGroupId: 'course-price-review',
+				effectiveOn: '2026-08-01',
+				reason: 'Explicit unchanged comparison',
+				confirmation: 'confirmed',
+				idempotencyKey: 'unchanged-price-comparison-1',
+			},
 			requestId: 'request-unchanged-comparison',
 			now: now(2),
 		});
 		expect(await repository.listBatchItems(empty.batchId)).toEqual([]);
-		expect(await db.first<{ status: string }>({
-			sql: `SELECT status FROM price_review_batches WHERE id = ?`,
-			params: [empty.batchId],
-		})).toEqual({ status: 'completed' });
+		expect(
+			await db.first<{ status: string }>({
+				sql: `SELECT status FROM price_review_batches WHERE id = ?`,
+				params: [empty.batchId],
+			})
+		).toEqual({ status: 'completed' });
 
 		const capped = await service.createOccupancyTrigger({
 			courseGroupId: 'course-price-review',
@@ -987,9 +1385,11 @@ describe('stage 10 controlled price reviews in D1', () => {
 		});
 		const cappedBatchId = await service.processTrigger(capped.id, now(3));
 		expect(await repository.listBatchItems(cappedBatchId)).toEqual([]);
-		expect(await db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
-		})).toEqual({ count: 0 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM price_review_outbox_events`,
+			})
+		).toEqual({ count: 0 });
 		const activationMarker = await service.createOccupancyTrigger({
 			courseGroupId: 'course-price-review',
 			sourceKind: 'contract_activation',
@@ -1015,14 +1415,18 @@ describe('stage 10 controlled price reviews in D1', () => {
 			requestId: 'request-manual-maintenance',
 			now: now(31),
 		});
-		expect(maintenance).toMatchObject({ replayed: false,
-			result: { reconciled: 1, processedTriggers: 1 } });
-		expect(await service.runManualMaintenance({
-			admin,
-			payload: { confirmation: 'confirmed', idempotencyKey: 'manual-maintenance-run-1' },
-			requestId: 'request-manual-maintenance-replay',
-			now: now(31),
-		})).toEqual({ replayed: true });
+		expect(maintenance).toMatchObject({
+			replayed: false,
+			result: { reconciled: 1, processedTriggers: 1 },
+		});
+		expect(
+			await service.runManualMaintenance({
+				admin,
+				payload: { confirmation: 'confirmed', idempotencyKey: 'manual-maintenance-run-1' },
+				requestId: 'request-manual-maintenance-replay',
+				now: now(31),
+			})
+		).toEqual({ replayed: true });
 		const futureTrigger = await repository.getTriggerByDedupe(
 			'enrollment:price-enrollment-6:active_until:2026-09-10:v1'
 		);
@@ -1031,15 +1435,22 @@ describe('stage 10 controlled price reviews in D1', () => {
 		expect(futureItems).toHaveLength(5);
 		await service.approveBatch({
 			admin,
-			payload: { batchId: futureBatchId, reason: 'Future expiry reviewed',
-				confirmation: 'confirmed', idempotencyKey: 'future-expiry-approval-1' },
+			payload: {
+				batchId: futureBatchId,
+				reason: 'Future expiry reviewed',
+				confirmation: 'confirmed',
+				idempotencyKey: 'future-expiry-approval-1',
+			},
 			requestId: 'request-future-approval',
 			now: now(31),
 		});
 		await service.dispatchBatch({
 			admin,
-			payload: { batchId: futureBatchId, confirmation: 'confirmed',
-				idempotencyKey: 'future-expiry-dispatch-1' },
+			payload: {
+				batchId: futureBatchId,
+				confirmation: 'confirmed',
+				idempotencyKey: 'future-expiry-dispatch-1',
+			},
 			requestId: 'request-future-dispatch',
 			now: now(31),
 		});
@@ -1049,23 +1460,35 @@ describe('stage 10 controlled price reviews in D1', () => {
 				WHERE id = 'price-enrollment-1'`,
 			params: ['2026-09-01T08:00:00.000Z'],
 		});
-		expect(await service.respond({
-			actor: parentActor(1),
-			payload: { publicReference: stale.publicReference, itemHash: stale.itemHash,
-				decision: 'accept', idempotencyKey: 'stale-parent-response-1' },
-			requestId: 'request-stale-parent',
-			requestSubject: '203.0.113.11',
-			userAgent: 'stage-10-test',
-			now: '2026-09-01T08:01:00.000Z',
-		})).toEqual({ status: 'superseded', replayed: false });
-		expect(await db.first<{ evidence_status: string; acceptances: number; scheduler_actions: number }>({
-			sql: `SELECT action.evidence_status,
+		expect(
+			await service.respond({
+				actor: parentActor(1),
+				payload: {
+					publicReference: stale.publicReference,
+					itemHash: stale.itemHash,
+					decision: 'accept',
+					idempotencyKey: 'stale-parent-response-1',
+				},
+				requestId: 'request-stale-parent',
+				requestSubject: '203.0.113.11',
+				userAgent: 'stage-10-test',
+				now: '2026-09-01T08:01:00.000Z',
+			})
+		).toEqual({ status: 'superseded', replayed: false });
+		expect(
+			await db.first<{
+				evidence_status: string;
+				acceptances: number;
+				scheduler_actions: number;
+			}>({
+				sql: `SELECT action.evidence_status,
 				(SELECT COUNT(*) FROM price_change_acceptances
 				 WHERE price_review_item_id = action.price_review_item_id) AS acceptances,
 				(SELECT COUNT(*) FROM price_review_admin_actions
 				 WHERE action = 'manual_scheduler_run') AS scheduler_actions
 			FROM price_review_parent_actions action
 			WHERE action.idempotency_key = 'stale-parent-response-1'`,
-		})).toEqual({ evidence_status: 'stale', acceptances: 0, scheduler_actions: 1 });
+			})
+		).toEqual({ evidence_status: 'stale', acceptances: 0, scheduler_actions: 1 });
 	}, 40_000);
 });

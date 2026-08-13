@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { translate } from '$lib/i18n';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestMessageRuntime } from '$lib/server/messages/runtime';
 
@@ -13,11 +13,11 @@ async function verifiedForm(event: Parameters<Actions[string]>[0]) {
 		user: event.locals.user,
 		submittedToken: form.get('_csrf')?.toString(),
 	});
-	return { form, actor: requireAuthenticated(event.locals.user) };
+	return { form, actor: requireParent(event.locals.user) };
 }
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	const runtime = requestMessageRuntime(event);
 	const [threads, absenceEnrollments] = await Promise.all([
 		runtime.repository.listOwnerThreads(actor.id),
@@ -77,4 +77,3 @@ export const actions = {
 		}
 	},
 } satisfies Actions;
-

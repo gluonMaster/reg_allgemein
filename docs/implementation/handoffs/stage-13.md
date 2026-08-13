@@ -7,10 +7,11 @@ Production readiness: **`blocked` / NO-GO**
 Stage 13 реализует технический hardening и operator packet, но не даёт права на
 production actions. Preview D1/R2 provision/migration и fail-closed Worker
 evidence, включая automatic Cron delivery/freshness, уже получены;
-provider/Browser smoke и remote manual-run/failure evidence, backup/restore
-rehearsal, legal/privacy approvals, RPO/RTO и отдельное deploy поручение остаются
-release blockers. Независимый UptimeRobot alert delivery/recovery rehearsal
-пройден 2026-08-11.
+authenticated/provider/remote Browser и manual-run/failure evidence,
+backup/restore rehearsal, legal/privacy approvals, RPO/RTO и отдельное deploy
+поручение остаются release blockers. Независимый UptimeRobot alert
+delivery/recovery rehearsal пройден 2026-08-11; public browser и PR-A15
+stored-log remediation проверены 2026-08-12.
 
 ## Baseline
 
@@ -38,6 +39,9 @@ release blockers. Независимый UptimeRobot alert delivery/recovery reh
 - Добавлена append-only migration `0014_production_operations.sql`:
   scheduled-run ledger, storage write-ahead intents, one-shot admin bootstrap,
   cleanup leases и bounded pseudonymous-IP minimization.
+- Позднее добавлена отдельная append-only migration
+  `0015_worker_monitoring.sql` для PII-free error buckets и health/freshness
+  monitoring; `0014` не изменялась.
 - Архив и quarantine используют разные `R2_ARCHIVE`/`R2_QUARANTINE` bindings и
   namespace router; runtime отвергает один binding object для обеих ролей. Все
   новые R2 writes регистрируют intent до `put`; orphan cleanup имеет grace, lease
@@ -69,14 +73,14 @@ release blockers. Независимый UptimeRobot alert delivery/recovery reh
 
 | Область     | Evidence                                                                                     | Остаточный gate                                             |
 | ----------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Empty D1    | local test + preview remote `0001`–`0014` apply/schema parity passed                         | production migration и isolated restore                     |
-| Upgraded D1 | populated `0013 → 0014` upgrade passed 1/1; migration file 2/2 с selector-rejection test     | isolated backup/restore + rollback rehearsal                |
+| Empty D1    | initial local/preview `0001`–`0014` parity passed; `0015` later applied, current pending 0    | production migration и isolated restore                     |
+| Upgraded D1 | populated `0013 → 0015` upgrade + selector-rejection coverage passed                         | isolated backup/restore + rollback rehearsal                |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                             | production resources/policy и isolated restore              |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed | remote manual/dedupe/failure rehearsal                       |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
 | Imports     | local allowlist/dry-run/promote/rollback tests remain                                        | authorized current source and remote audited path           |
 
-Applied migrations `0001`–`0014` нельзя переписывать. Recovery после применённой
+Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
 разрешённый restore.
 
@@ -414,8 +418,138 @@ release:verify` завершился с exit code 0.
   подтверждает отсутствие `console.error` для 404 и один PII-safe structured
   record для 500. Полный локальный release-контур прошёл: check 0 diagnostics,
   46 files/269 tests, Playwright 3/3, build, production audit 0, docs checks и
-  release scan 476/476. PR-A15 остаётся `blocked` до commit, immutable clean-clone
-  verify, отдельного preview deploy permission и remote recheck corrected version.
+  release scan 476/476.
+- По отдельному разрешению создан commit
+  `200268f39ece1d43c5e091dcb7db6569d41275af` (`fix: suppress expected 4xx error
+  logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 и полный
+  `release:verify` за 266.2 s: check 0 diagnostics, 46 files/269 tests,
+  Playwright 3/3, build, production audit 0, docs checks и release scan 412/412;
+  clone остался чистым. На этой промежуточной точке PR-A15 оставался `blocked`
+  только на remote части до отдельного preview deploy permission и stored-log
+  recheck corrected version.
+- По отдельному разрешению exact `200268f` развёрнут без миграций в существующий
+  preview Worker как version `sha256:f4cd52e14dbd` на 100%.
+  Config SHA-256 остался
+  `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`, D1
+  pending migrations 0, оба Cron сохранены. Wrangler dry-run до upload прочитал
+  69 assets и подтвердил прежние bindings/feature flags.
+- Post-deploy smoke 2026-08-12 11:30:56Z–11:31:07Z: health HEAD — empty 204 с
+  `no-store`/`noindex,nofollow`; intentional missing route — 404; home, catalog,
+  register/login/forgot/resend и favicon — 200. Новый live tail был подключён до
+  повторных exact probes и увидел оба request ID на version `62b3cac4…`: 404 и
+  204 с outcome `ok`; во всём bounded capture `UNEXPECTED_SERVER_ERROR` не было.
+  Первая из этих post-fix tail попыток была корректно отклонена локальным
+  Wrangler из-за `--sampling-rate 1` (разрешённое значение должно быть меньше
+  1), затем повтор без sampling flag прошёл; это не Worker/runtime fault.
+- Владелец предоставил bounded stored Workers Logs export после deploy: 163 730
+  bytes, SHA-256
+  `c2c138919b7b9366502158735f43146dc0b1ca26001a1116e0fa8cb1efcdc87a`, interval
+  2026-08-12 11:12:16Z–11:42:33Z. Все 60 records — `cf-worker-event`, outcomes
+  `ok`, truncation 0; 26 fetch и 34 scheduled. Exact 404 probe в 11:36:33.537Z
+  имеет GET/404/outcome `ok`, а exact health probe в 11:36:33.868Z —
+  HEAD/204/outcome `ok`; оба относятся к version `62b3cac4…`.
+- В stored export нет custom application log records и нет
+  `UNEXPECTED_SERVER_ERROR`; следовательно ordinary 404 больше не создаёт
+  ложный structured server error. Raw export содержит platform request metadata,
+  остаётся вне Git и не копируется в evidence. Совместно с unit regression,
+  immutable clean-clone verification, предыдущим PII-safe stored-log review и
+  current live-tail result это переводит PR-A15 в `passed` 2026-08-12.
+
+### Fresh Ultra PR-A06 audit и local authenticated E2E
+
+- Fresh repository-wide Ultra audit 2026-08-12 проверил 91/91 нормативных MVP
+  IDs и все 166 acceptance bullets. Для 37 bullets без embedded requirement ID
+  заведены stable matrix IDs; implementation и automated-test paths сверены с
+  текущим code/spec, а environment gaps отделены от local trace status.
+- Audit выявил HIGH defects в dual-role/dual-control переходе parent→admin и
+  configured upload concurrency/ambiguous-commit обработке, а также скрытые из
+  deploy source privacy-download handlers и неполные parent role-route
+  boundaries. Исправления покрыты точными unit/integration negative,
+  atomicity/concurrency и safe-404 tests. Независимый финальный re-review не
+  нашёл оставшихся HIGH/BLOCKER implementation/coverage discrepancies.
+- Полный текущий dirty-worktree `npm run release:verify` прошёл за 487.3 s:
+  check 0 errors/warnings, Vitest 53 files/327 tests, local Chromium 2 files/8
+  tests, build, production audit 0, docs 136 links/51 files + 82 executable
+  commands и release scan 492/492.
+- Initial PR-A06 Chromium baseline дал пять authenticated и три foundation
+  cases: role-aware redirects, parent ownership/request cross-user failure,
+  role-route separation, tampered/revoked sessions, admin block и 390px
+  keyboard/no-overflow path. Это историческая точка 8/8 до post-audit expansion,
+  которая зафиксирована следующим разделом.
+- Поэтому PR-A06 переведён в `passed`, а PR-A12/13/14 остаются `blocked` с
+  уточнённым residual scope. Этот результат относится к проверенному
+  незакоммиченному worktree: immutable HEAD всё ещё
+  `200268f39ece1d43c5e091dcb7db6569d41275af`; новый immutable release candidate
+  без отдельного разрешения не создавался.
+
+### Intermediate post-PR-A06 local browser expansion
+
+- Новый local-only Chromium run прошёл 13/13: шесть authenticated
+  access/session/CSRF/IDOR cases, три accessibility cases, один individual
+  request lifecycle и три foundation cases. Individual request прошёл полный
+  browser путь create→submit→admin approve→parent approved 1/1.
+- Cross-parent matrix проверяет child/request, document download/delete,
+  contract detail/artifact, price response, message append/close и
+  privacy export. Foreign reads/mutations дают безопасный результат, а
+  owner-visible state остаётся неизменным; typed safe-404 regression и focused
+  documents D1 suite 16/16 также прошли.
+- Axe 3/3 выполнен без отключения default rules на public registration,
+  authenticated parent cabinet и admin detail. Наблюдаемые raw results:
+  `violations=[]`, `incomplete=[]`; German structure/labels и visible keyboard
+  focus также проверены.
+- Полный uninterrupted `npm run release:verify` после расширения прошёл за
+  353.3 s: check 0 errors/warnings, Vitest 53 files/327 tests, Playwright 4
+  files/13 tests, build, production audit 0, docs 136 links/51 files + 82
+  commands и scan 494/494. Отдельный полный `npm audit` вернул 0.
+- Harness cleanup подтверждён: `.wrangler/e2e-runtime/runtime.env` отсутствует,
+  а pre-existing `.wrangler/state` не менялся (latest timestamp
+  `2026-08-12T11:14:19Z`). Независимый read-only re-review не нашёл
+  HIGH/BLOCKER. Evidence остаётся локальным и относится к незакоммиченному
+  worktree; remote resources не использовались и не менялись.
+
+### Final local PR-A12/13/14 expansion
+
+- Финальный isolated Chromium run прошёл 8 files/18 tests: шесть authenticated
+  access/session/CSRF/IDOR, четыре accessibility, три foundation и по одному
+  lifecycle для individual request, catalog/trial, support, structured absence
+  и price review. Request прошёл draft→submit→admin approve→parent approved;
+  catalog показал exact €46, trial прошёл requested→admin confirmed→parent
+  cancelled; support и absence сохранили final admin reply, parent reread и по
+  одному pending email/Telegram outbox delta; price item €46→€50 прошёл exact
+  parent acceptance и distinct admin confirmation до `scheduled`, сохранив €46
+  как текущую цену до effective date.
+- Browser contract accept/form/activate не заявляется: `CONTRACT_RENDERER` и
+  `CONTRACT_SEND_ENABLED` намеренно disabled. Browser contract evidence
+  ограничено foreign detail/artifact и carrier-bound active end/attendance/media
+  denial без owner-state mutation.
+- IDOR matrix теперь включает missing/wrong/valid CSRF; request save/submit/
+  cancel; document download/delete и mismatched request carrier; trial create/
+  cancel; contract detail/artifact/end/attendance/media и mismatched offer
+  carrier; price response; message append/close; privacy artifact и forged
+  subject fields, которые остаются self-scoped. Direct route tests различают
+  safe 404 и owned validation/state 409; rendered SvelteKit form transport
+  проверяется по semantic denial и неизменному owner state.
+- Contract atomicity/replay focused selection прошла 6/6, полный contracts D1
+  suite 13/13: exact statutory withdrawal replay после terminal state требует
+  current owner, matching contract/offer/hash и passed assertion; eligibility
+  race полностью откатывает attendance/media evidence; concurrent identical
+  attendance/media/end оставляет одну asserted chain. Independent final
+  re-review дал GO без HIGH/BLOCKER.
+- Accessibility 4/4 выполняет все default-enabled axe rules и проваливается при
+  любой записи в `violations` или `incomplete`; проверены inline login error
+  association/announcement/focus, 390px parent/admin no-overflow и deterministic
+  640px 200%-zoom-equivalent registration reflow. Literal/manual zoom,
+  assistive-technology и manual glyph/font review остаются обязательными.
+- Финальный `npm run release:verify` прошёл за 619.5 s: check 0/0, Vitest 54
+  files/340 tests, Playwright 8 files/18 tests, build, production audit 0, docs
+  136 links/51 files + 82 commands и scan 500/500. Отдельный полный `npm audit`
+  вернул total 0. Port 4173 свободен, `.wrangler/e2e-runtime/runtime.env`
+  отсутствует, pre-existing `.wrangler/state` не менялся.
+- Commit, содержащий эту ревизию, создаёт новый local Stage-13 candidate; exact
+  SHA нужно получить после commit через `git rev-parse HEAD` и проверить в clean
+  clone. Deployed preview остаётся на `200268f39ece1d43c5e091dcb7db6569d41275af`.
+  Deploy, migrations, provider sends, feature enablement и другие remote
+  mutations не выполнялись.
 
 ## Release gates
 
@@ -423,17 +557,19 @@ release:verify` завершился с exit code 0.
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `blocked`          | immutable candidate verified; final independent review/remaining remote evidence incomplete | release + independent reviewer |
-| Dependency security               | `passed`           | immutable `63995f8`: clean install, full audit 0, full release verification | dependency/security owner |
+| Local implementation/traceability | `passed`           | PR-A06 Ultra audit: 91/91 MVP IDs, 166 acceptance bullets/37 stable untagged mappings, full worktree verify; no HIGH/BLOCKER on final re-review. Local candidate commit prepared; exact-SHA clean-clone verification is next | Codex Ultra independent reviewer, 2026-08-12; release operator |
+| Dependency security               | `passed`           | immutable `200268f`: clean install, full audit 0, full release verification | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
 | Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
 | Telegram                          | `feature_disabled` | approved adapter/DPA absent                                                   | provider/privacy owner         |
-| Upload                            | `feature_disabled` | remote R2/scanner/training/legal evidence absent                              | storage/security/legal owner   |
+| Upload                            | `feature_disabled` | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent | storage/security/legal owner   |
 | Contract/statutory/media          | `feature_disabled` | production renderer/templates/legal assessment absent                         | contract/legal/privacy owners  |
 | Backup/restore/RPO/RTO            | `blocked`          | inputs/mechanism/isolated rehearsal absent                                    | data/backup/operations owners  |
-| Accessibility/browser             | `blocked`          | deployed public desktop/mobile/keyboard passed; authenticated/axe/manual glyph evidence absent | UX/accessibility owner         |
+| Synthetic browser lifecycle       | `blocked`          | local Chromium 8 files/18 tests covers request, catalog/trial, support, structured absence and price review through `scheduled`; Browser contract accept/form/activate is not claimed. Register/verify/claim, funded upload/document review, enabled contract lifecycle, price admin-send/apply and preview/provider auth remain | product/release owner          |
+| Accessibility/browser             | `blocked`          | public preview smoke plus local strict accessibility 4/4: all default axe rules, empty `violations`/`incomplete`, inline-error semantics, 390px parent/admin and 640px zoom-equivalent reflow passed; literal/manual zoom, assistive-technology, glyph/font and remote auth review absent | UX/accessibility owner         |
+| Permission/IDOR/browser           | `blocked`          | local authenticated 6/6 plus trial branches, exact route tests and focused D1 cover request/document/trial/contract-end-attendance-media/price/message/privacy with carrier-bound safe 404, owned 409, unchanged owner state and atomic rollback/replay; enabled contract decision, disabled upload, remaining enrollment/group-service and guessed/admin-purpose variants plus preview remain | security owner                 |
 | Legal/privacy/provider            | `blocked`          | external approvals absent                                                     | authorized owners              |
 | Production deploy                 | `blocked`          | NO-GO + direct approval absent                                                | authorized release owner       |
 | Official-site links               | `blocked`          | exact surfaces/old values/separate permission absent                          | authorized site owner          |
@@ -456,20 +592,27 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. После отдельного разрешения закоммитить logging remediation, проверить exact
-   SHA в clean clone, затем запросить отдельное preview deploy permission и
-   подтвердить, что probe/ordinary 404 больше не создаёт
-   `UNEXPECTED_SERVER_ERROR`, а health/Cron остаются healthy.
-2. Поддерживать созданный independent uptime monitor для `/_health/operations`
-   и периодически повторять delivery test; затем по отдельным разрешениям
-   продолжить preview smoke: authenticated browser/accessibility, real-token
-   Turnstile и synthetic email delivery/reply smoke.
-3. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
+1. Продолжить безопасный local PR-A12 scope только для оставшихся lifecycles:
+   register/verify/claim, funded Nachhilfe upload/document review, enabled
+   contract accept/form/activate, price admin-send и scheduled apply; preview/
+   provider authenticated rehearsal требует отдельного разрешения.
+2. Для PR-A13 провести literal/manual zoom, assistive-technology и glyph/font
+   review. Для PR-A14 закрыть disabled-upload mutation, оставшиеся
+   enrollment/group-service и guessed/admin-purpose variants; preview matrix
+   также требует отдельного разрешения.
+3. На exact SHA commit, содержащего эту ревизию, выполнить clean-clone
+   `npm ci`, full audit и полный `npm run release:verify`; только после этого
+   переносить local evidence на immutable-candidate gate. Push/deploy остаются
+   отдельными явно разрешаемыми действиями.
+4. Поддерживать independent uptime monitor для `/_health/operations` и
+   периодически повторять delivery test; real-token Turnstile, synthetic email
+   delivery/reply и другие provider sends требуют отдельных разрешений.
+5. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
    restore + rollback/roll-forward drill.
-4. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.
-5. Провести full non-production bootstrap/runbook execution с approved preview
+6. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.
+7. Провести full non-production bootstrap/runbook execution с approved preview
    resources; локальный content cold-read уже пройден.
-6. Только после отсутствия `blocked` запросить отдельные production и site-link
+8. Только после отсутствия `blocked` запросить отдельные production и site-link
    поручения.
 
 ## Session checkpoint 2026-08-12
@@ -487,21 +630,64 @@ release:verify` завершился с exit code 0.
   сначала сверить tracked handoff, `git status`, current version и pending
   migrations; production, DNS/CMS, feature enablement и application sends
   требуют отдельных прямых поручений.
-- Post-deploy сверка этой сессии: HEAD `5a982ee`, preview config SHA-256
+- Post-deploy сверка этой сессии: HEAD `200268f`, preview config SHA-256
   `d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`,
-  Worker version `sha256:73d63af740da` на 100%, D1 pending
+  Worker version `sha256:f4cd52e14dbd` на 100%, D1 pending
   migrations 0; post-deploy HEAD вернул empty 204 с обязательными headers.
-- Immutable browser-fix candidate независимо проверен в clean clone: `npm ci`,
-  full audit 0 и полный `release:verify` passed. Public deployed browser smoke
-  также passed; authenticated/provider/manual/restore evidence остаётся.
-- Следующий remote preview smoke или production/site action требует нового
-  прямого поручения соответствующего scope.
+- Immutable logging-remediation candidate независимо проверен в clean clone:
+  `npm ci`, full audit 0 и полный `release:verify` passed. Public deployed HTTP
+  и bounded live-log smoke также passed; bounded stored-log confirmation
+  получено, PR-A15 закрыт. Первый local authenticated subset прошёл 8/8 и затем
+  до intermediate Chromium checkpoint 13/13; финальный local harness прошёл 8
+  files/18 tests. Остаточные enabled lifecycles, remote authenticated,
+  provider/manual и restore evidence остаются.
+- Следующая remote mutation или production/site action требует нового прямого
+  поручения соответствующего scope; stored-log review является read-only.
+
+### Результат новой Ultra-сессии
+
+- PR-A06 repository-wide audit выполнен и закрыт 2026-08-12. Matrix теперь
+  является проверенным текущим source of trace claims, а не очередью на будущий
+  audit; local trace gate не наследует статусы remote/provider/legal/restore
+  gates.
+- Следующими реально разблокированными локальными gates стали PR-A12/13/14.
+  Изолированный Chromium harness теперь прошёл 8 files/18 tests с пятью
+  lifecycle specs, strict accessibility 4/4 и carrier-bound cross-parent IDOR;
+  Browser contract accept/form/activate не заявляется. Focused contract
+  atomicity/replay прошёл 6/6, full contracts 13/13, independent re-review дал
+  GO без HIGH/BLOCKER. Ledger намеренно сохраняет gates в `blocked` на точных
+  residual lifecycles, manual accessibility, variants и preview evidence выше.
+- Во время audit/development не выполнялись deploy, migrations, provider sends,
+  feature enablement или создание remote resources. Commit также не выполнялся
+  и по-прежнему требует отдельного прямого разрешения.
+- Следующая remote mutation или production/site action требует нового прямого
+  поручения exact scope. Историю preview PR-D06/PR-A15 не нужно повторять без
+  нового основания; сначала сверять current version, pending migrations и этот
+  ledger.
 
 ## Итог worktree
 
-- HEAD: `5a982ee48c3ea262d1851a4ce966a9f88d67ecee fix: add portal metadata and
-  favicon` поверх `63995f8 chore: remediate release tooling advisories`.
-- Dependency remediation и browser fix закоммичены и проверены на exact SHA;
-  текущие незакоммиченные изменения включают post-deploy/log-review evidence,
-  4xx logging remediation, regression и runbook/checklist synchronization.
+- HEAD: `200268f39ece1d43c5e091dcb7db6569d41275af fix: suppress expected 4xx error
+  logs` поверх `5a982ee fix: add portal metadata and favicon` и `63995f8 chore:
+  remediate release tooling advisories`.
+- Logging remediation закоммичен и проверен в clean clone на exact SHA. Текущий
+  незакоммиченный worktree теперь включает PR-A06 security/concurrency/route
+  fixes, deployable privacy handlers, expanded authenticated/lifecycle/axe/IDOR
+  E2E harness, canonical spec/test/operations updates и readiness evidence. Его
+  newest local `release:verify` прошёл за 619.5 s: 54 files/340 Vitest,
+  8 files/18 Playwright, build, audits 0, docs 136/51 + 82 commands и scan
+  500/500. Port 4173 свободен, runtime secret отсутствует, `.wrangler/state` не
+  менялся. Commit, содержащий эту ревизию, является новым local candidate, но
+  до exact-SHA clean-clone verification не является release-ready и не должен
+  deploy-иться.
+- `docs/prompts/stage-13-continue-deployment.md` обновлён как ignored local
+  accelerator для новой Ultra-сессии и не должен добавляться в Git.
+- Final read-only preview recheck `2026-08-12T17:14–17:16Z` подтвердил version
+  `sha256:f4cd52e14dbd` на 100%, D1 migrations `0001`–`0015`
+  pending 0, оба configured private R2 bucket в EEUR и empty HEAD+GET 204 для
+  `/_health/operations`. Wrangler 4.120.1 не имеет безопасной read-only команды
+  списка remote Cron triggers, поэтому trigger deploy не вызывался: оба schedule
+  остаются в preview config, а их prior remote delivery evidence сохраняется.
+  Secret values, R2 objects и deployment metadata с author identity не читались;
+  remote mutation не выполнялась.
 - Production/CMS/official-site actions не выполнялись.

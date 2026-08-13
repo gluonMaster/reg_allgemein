@@ -2,16 +2,17 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { translate } from '$lib/i18n';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestSubject } from '$lib/server/auth/http';
 import { requestCabinetRuntime } from '$lib/server/cabinet/runtime';
 import { requestFamilyRuntime } from '$lib/server/family/runtime';
 import { requestTrialRuntime } from '$lib/server/trials/runtime';
+import { TrialError } from '$lib/server/trials/trial-repository';
 import { requestPriceReviewRuntime } from '$lib/server/price-reviews/runtime';
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	const [cabinet, priceReviews] = await Promise.all([
 		requestCabinetRuntime(event).service.load(actor),
 		requestPriceReviewRuntime(event).repository.listParentItems(actor.id),
@@ -30,7 +31,7 @@ async function verifiedForm(event: Parameters<Actions[string]>[0]) {
 		user: event.locals.user,
 		submittedToken: form.get('_csrf')?.toString(),
 	});
-	return { form, actor: requireAuthenticated(event.locals.user) };
+	return { form, actor: requireParent(event.locals.user) };
 }
 
 function childPayload(form: FormData, includeId: boolean) {
@@ -150,11 +151,14 @@ export const actions = {
 				requestId: event.locals.requestId,
 			});
 			return { success: true, message: translate('de', 'cabinet.trials.cancelled') };
-		} catch {
-			return fail(409, {
+		} catch (caught) {
+			return fail(
+				caught instanceof TrialError && caught.code === 'TRIAL_NOT_FOUND' ? 404 : 409,
+				{
 				success: false,
 				message: translate('de', 'cabinet.trials.cancelFailed'),
-			});
+				}
+			);
 		}
 	},
 } satisfies Actions;

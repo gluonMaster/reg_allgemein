@@ -68,7 +68,10 @@ export class MessageRepository {
 	async listOwnerThreads(userId: string): Promise<SupportThreadSummary[]> {
 		const rows = await this.db.all<ThreadRow>({
 			sql: `${this.threadSelect()}
-			WHERE thread.user_id = ?
+			WHERE thread.user_id = ? AND EXISTS (
+				SELECT 1 FROM users owner WHERE owner.id = thread.user_id
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0)
 			ORDER BY thread.updated_at DESC, thread.id DESC LIMIT 100`,
 			params: [userId],
 		});
@@ -118,7 +121,10 @@ export class MessageRepository {
 
 	async getOwnerThread(publicReference: string, userId: string): Promise<SupportThreadDetail | null> {
 		const row = await this.db.first<ThreadRow>({
-			sql: `${this.threadSelect()} WHERE thread.public_reference = ? AND thread.user_id = ?`,
+			sql: `${this.threadSelect()} WHERE thread.public_reference = ? AND thread.user_id = ?
+				AND EXISTS (SELECT 1 FROM users owner WHERE owner.id = thread.user_id
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0)`,
 			params: [publicReference, userId],
 		});
 		return row ? { ...mapThread(row), userId: row.user_id, messages: await this.messages(row.id) } : null;
@@ -170,11 +176,20 @@ export class MessageRepository {
 		}));
 	}
 
-	private async replay(actorId: string, idempotencyKey: string, requestHash: string) {
+	private async replay(
+		actorId: string,
+		idempotencyKey: string,
+		requestHash: string,
+		actorKind: 'parent' | 'admin'
+	) {
 		const row = await this.db.first<{ request_hash_sha256: string; result_ref: string }>({
-			sql: `SELECT request_hash_sha256, result_ref FROM support_actions
-			WHERE actor_user_id = ? AND idempotency_key = ?`,
-			params: [actorId, idempotencyKey],
+			sql: `SELECT action.request_hash_sha256, action.result_ref
+			FROM support_actions AS action
+			JOIN users AS actor ON actor.id = action.actor_user_id
+			WHERE action.actor_user_id = ? AND action.idempotency_key = ?
+				AND actor.role = ? AND actor.account_status = 'active'
+				AND actor.is_blocked = 0 AND actor.email_verified_at IS NOT NULL`,
+			params: [actorId, idempotencyKey, actorKind],
 		});
 		if (!row) return null;
 		if (row.request_hash_sha256 !== requestHash) {
@@ -202,7 +217,7 @@ export class MessageRepository {
 			subject: input.subject,
 			body: input.body,
 		});
-		const prior = await this.replay(input.userId, input.idempotencyKey, requestHash);
+		const prior = await this.replay(input.userId, input.idempotencyKey, requestHash, 'parent');
 		if (prior) return { publicReference: prior, replayed: true };
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
@@ -256,7 +271,7 @@ export class MessageRepository {
 			]);
 			return { publicReference: input.publicReference, replayed: false };
 		} catch (error) {
-			const replay = await this.replay(input.userId, input.idempotencyKey, requestHash);
+			const replay = await this.replay(input.userId, input.idempotencyKey, requestHash, 'parent');
 			if (replay) return { publicReference: replay, replayed: true };
 			throw new MessageRepositoryError('SUPPORT_THREAD_CREATE_REJECTED', { cause: error });
 		}
@@ -287,7 +302,7 @@ export class MessageRepository {
 			reason: input.reason,
 			body: input.body,
 		});
-		const prior = await this.replay(input.userId, input.idempotencyKey, requestHash);
+		const prior = await this.replay(input.userId, input.idempotencyKey, requestHash, 'parent');
 		if (prior) return { publicReference: prior, replayed: true };
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
@@ -367,7 +382,7 @@ export class MessageRepository {
 			]);
 			return { publicReference: input.publicReference, replayed: false };
 		} catch (error) {
-			const replay = await this.replay(input.userId, input.idempotencyKey, requestHash);
+			const replay = await this.replay(input.userId, input.idempotencyKey, requestHash, 'parent');
 			if (replay) return { publicReference: replay, replayed: true };
 			throw new MessageRepositoryError('ABSENCE_CREATE_REJECTED', { cause: error });
 		}
@@ -385,7 +400,9 @@ export class MessageRepository {
 		now: string;
 	}): Promise<{ replayed: boolean }> {
 		const requestHash = await hashCanonical({ publicReference: input.publicReference, body: input.body });
-		if (await this.replay(input.userId, input.idempotencyKey, requestHash)) return { replayed: true };
+		if (await this.replay(input.userId, input.idempotencyKey, requestHash, 'parent')) {
+			return { replayed: true };
+		}
 		const thread = await this.getOwnerThread(input.publicReference, input.userId);
 		if (!thread) throw new MessageRepositoryError('SUPPORT_THREAD_NOT_FOUND');
 		const actionId = crypto.randomUUID();
@@ -434,7 +451,9 @@ export class MessageRepository {
 			]);
 			return { replayed: false };
 		} catch (error) {
-			if (await this.replay(input.userId, input.idempotencyKey, requestHash)) return { replayed: true };
+			if (await this.replay(input.userId, input.idempotencyKey, requestHash, 'parent')) {
+				return { replayed: true };
+			}
 			throw new MessageRepositoryError('SUPPORT_MESSAGE_REJECTED', { cause: error });
 		}
 	}
@@ -455,7 +474,9 @@ export class MessageRepository {
 			body: input.body,
 			outcome: input.outcome,
 		});
-		if (await this.replay(input.admin.id, input.idempotencyKey, requestHash)) return { replayed: true };
+		if (await this.replay(input.admin.id, input.idempotencyKey, requestHash, 'admin')) {
+			return { replayed: true };
+		}
 		const thread = await this.getAdminThread(input.publicReference);
 		if (!thread) throw new MessageRepositoryError('SUPPORT_THREAD_NOT_FOUND');
 		const actionId = crypto.randomUUID();
@@ -514,7 +535,9 @@ export class MessageRepository {
 			]);
 			return { replayed: false };
 		} catch (error) {
-			if (await this.replay(input.admin.id, input.idempotencyKey, requestHash)) return { replayed: true };
+			if (await this.replay(input.admin.id, input.idempotencyKey, requestHash, 'admin')) {
+				return { replayed: true };
+			}
 			throw new MessageRepositoryError('ADMIN_REPLY_REJECTED', { cause: error });
 		}
 	}
@@ -528,7 +551,9 @@ export class MessageRepository {
 		now: string;
 	}): Promise<{ replayed: boolean }> {
 		const requestHash = await hashCanonical({ publicReference: input.publicReference, action: 'close' });
-		if (await this.replay(input.actorId, input.idempotencyKey, requestHash)) return { replayed: true };
+		if (await this.replay(input.actorId, input.idempotencyKey, requestHash, input.actorKind)) {
+			return { replayed: true };
+		}
 		const thread = input.actorKind === 'parent'
 			? await this.getOwnerThread(input.publicReference, input.actorId)
 			: await this.getAdminThread(input.publicReference);
@@ -538,6 +563,7 @@ export class MessageRepository {
 		const actorGuard = input.actorKind === 'admin'
 			? ACTIVE_ADMIN
 			: `EXISTS (SELECT 1 FROM users owner WHERE owner.id = ? AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL
 				AND owner.account_status = 'active' AND owner.is_blocked = 0)`;
 		try {
 			await this.db.batch([
@@ -574,7 +600,9 @@ export class MessageRepository {
 			]);
 			return { replayed: false };
 		} catch (error) {
-			if (await this.replay(input.actorId, input.idempotencyKey, requestHash)) return { replayed: true };
+			if (await this.replay(input.actorId, input.idempotencyKey, requestHash, input.actorKind)) {
+				return { replayed: true };
+			}
 			throw new MessageRepositoryError('SUPPORT_CLOSE_REJECTED', { cause: error });
 		}
 	}

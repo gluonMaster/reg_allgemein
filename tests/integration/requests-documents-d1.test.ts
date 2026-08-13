@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
+import { ContractDocumentMutationGuard } from '$lib/server/contracts/boundaries';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import { AuthorizationDocumentRepository } from '$lib/server/documents/document-repository';
 import { AuthorizationDocumentService } from '$lib/server/documents/document-service';
@@ -11,6 +12,7 @@ import { IndividualRequestRepository } from '$lib/server/requests/request-reposi
 import { IndividualRequestService } from '$lib/server/requests/request-service';
 import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
 import { PrivacyService } from '$lib/server/privacy/privacy-service';
+import { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
 const initialNow = '2026-07-17T10:00:00.000Z';
@@ -38,8 +40,12 @@ const admin = requireAdmin({ id: 'admin-request', role: 'admin', emailVerified: 
 class MemoryStore implements PrivateDocumentStore {
 	readonly values = new Map<string, Uint8Array>();
 	readonly deletes: string[] = [];
+	beforePut?: (key: string) => Promise<void>;
 	beforeGet?: (key: string) => Promise<void>;
-	async put(key: string, body: Uint8Array) { this.values.set(key, Uint8Array.from(body)); }
+	async put(key: string, body: Uint8Array) {
+		await this.beforePut?.(key);
+		this.values.set(key, Uint8Array.from(body));
+	}
 	async get(key: string) {
 		const value = this.values.get(key);
 		if (!value) return null;
@@ -53,6 +59,37 @@ class MemoryStore implements PrivateDocumentStore {
 function pdfFile(suffix = '') {
 	const body = new TextEncoder().encode(`%PDF-1.7\n${suffix}\n%%EOF`);
 	return { name: 'proof.pdf', type: 'application/pdf', size: body.byteLength, arrayBuffer: async () => body.buffer };
+}
+
+function exactSizePdfFile(size: number, suffix: string) {
+	const prefix = new TextEncoder().encode(`%PDF-1.7\n${suffix}\n`);
+	const trailer = new TextEncoder().encode('%%EOF');
+	if (prefix.byteLength + trailer.byteLength > size) {
+		throw new Error('Synthetic PDF size is too small.');
+	}
+	const body = new Uint8Array(size);
+	body.fill(0x20);
+	body.set(prefix);
+	body.set(trailer, size - trailer.byteLength);
+	return {
+		name: 'proof.pdf',
+		type: 'application/pdf',
+		size: body.byteLength,
+		arrayBuffer: async () => body.buffer,
+	};
+}
+
+function createBarrier(parties: number): () => Promise<void> {
+	let arrived = 0;
+	let release!: () => void;
+	const ready = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	return async () => {
+		arrived += 1;
+		if (arrived === parties) release();
+		await ready;
+	};
 }
 
 async function seedIdentity(db: DatabaseBoundary) {
@@ -152,6 +189,36 @@ describe('stage 08 request and private document workflow in D1', () => {
 		return requests.loadOwnerRequest(parent, created.requestId);
 	}
 
+	async function createIndividual(key: string) {
+		const created = await requests.createDraft({
+			actor: parent,
+			requestId: `req-${key}`,
+			payload: {
+				childId: 'child-request',
+				requestKind: 'individual',
+				fundingKind: 'self_pay',
+				subjects: 'Deutsch',
+				description: 'Ausgang',
+				preferredDays: ['TU'],
+				preferredTimeWindows: [],
+				preferredFormat: 'online',
+				preferredLocations: [],
+				idempotencyKey: `create-${key}`,
+			},
+		});
+		return requests.loadOwnerRequest(parent, created.requestId);
+	}
+
+	function contractGuardedDocuments() {
+		return new AuthorizationDocumentService(
+			new AuthorizationDocumentRepository(db, new ContractDocumentMutationGuard()),
+			store,
+			documentConfig,
+			{ consume: async () => undefined },
+			() => clock
+		);
+	}
+
 	async function prepareDownloadedDocument(key: string) {
 		const request = await createNachhilfe(key);
 		const authorizationId = request.authorizations[0].id;
@@ -233,6 +300,54 @@ describe('stage 08 request and private document workflow in D1', () => {
 		} })).rejects.toBeDefined();
 		const request = await createNachhilfe('owner-scope');
 		await expect(requests.loadOwnerRequest(foreignParent, request.id)).rejects.toMatchObject({ code: 'REQUEST_NOT_FOUND' });
+		await expect(requests.submit({
+			actor: foreignParent,
+			payload: {
+				requestId: request.id,
+				expectedVersion: request.version,
+				idempotencyKey: 'foreign-request-submit-key',
+			},
+			requestId: 'foreign-request-submit',
+		})).rejects.toMatchObject({ code: 'REQUEST_NOT_FOUND' });
+		const uploaded = await documents.upload({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				authorizationId: request.authorizations[0].id,
+				idempotencyKey: 'owner-scope-upload-key',
+			},
+			file: pdfFile('owner-scope'),
+			requestSubject: 'owner-scope-subject',
+			requestId: 'owner-scope-upload',
+		});
+		const carrierRequest = await createNachhilfe('owner-scope-carrier');
+		const guardedDocuments = contractGuardedDocuments();
+		await expect(guardedDocuments.deleteByParent({
+			actor: parent,
+			payload: {
+				requestId: carrierRequest.id,
+				documentId: uploaded.documentId,
+				idempotencyKey: 'mismatched-document-carrier-key',
+			},
+			requestId: 'mismatched-document-carrier',
+		})).rejects.toMatchObject({ code: 'DOCUMENT_NOT_FOUND' });
+		expect(await db.first<{ review_status: string }>({
+			sql: `SELECT review_status FROM authorization_documents WHERE id = ?`,
+			params: [uploaded.documentId],
+		})).toEqual({ review_status: 'quarantined' });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM audit_events WHERE request_id = ?`,
+			params: ['mismatched-document-carrier'],
+		})).toEqual({ count: 0 });
+		await expect(guardedDocuments.deleteByParent({
+			actor: foreignParent,
+			payload: {
+				requestId: request.id,
+				documentId: uploaded.documentId,
+				idempotencyKey: 'foreign-document-delete-key',
+			},
+			requestId: 'foreign-document-delete',
+		})).rejects.toMatchObject({ code: 'DOCUMENT_NOT_FOUND' });
 	});
 
 	it('requires a document on submit and treats repeated submission keys idempotently', async () => {
@@ -244,6 +359,194 @@ describe('stage 08 request and private document workflow in D1', () => {
 		expect(await db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM email_outbox
 			WHERE source_id = ? AND template_or_category = 'request.needs_info'`, params: [request.id] }))
 			.toEqual({ count: 1 });
+	});
+
+	it('replays an exact individual submit after pending admin review without leaking across owners', async () => {
+		const request = await createIndividual('submit-pending-replay');
+		const payload = {
+			requestId: request.id,
+			expectedVersion: request.version,
+			idempotencyKey: 'submit-pending-replay',
+		};
+
+		expect(
+			await requests.submit({
+				actor: parent,
+				payload,
+				requestId: 'submit-pending-replay-first',
+			})
+		).toEqual({ status: 'pending_admin_review', replayed: false });
+		await expect(
+			requests.submit({
+				actor: foreignParent,
+				payload,
+				requestId: 'submit-pending-replay-foreign',
+			})
+		).rejects.toMatchObject({ code: 'REQUEST_NOT_FOUND' });
+		await expect(
+			requests.submit({
+				actor: parent,
+				payload: { ...payload, idempotencyKey: 'submit-pending-new-key' },
+				requestId: 'submit-pending-replay-new-key',
+			})
+		).rejects.toMatchObject({ code: 'REQUEST_SUBMISSION_REJECTED' });
+		expect(
+			await requests.submit({
+				actor: parent,
+				payload,
+				requestId: 'submit-pending-replay-second',
+			})
+		).toEqual({ status: 'pending_admin_review', replayed: true });
+
+		expect(
+			await db.first<{ status: string; version: number }>({
+				sql: `SELECT status, version FROM individual_requests WHERE id = ?`,
+				params: [request.id],
+			})
+		).toEqual({ status: 'pending_admin_review', version: 2 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM request_parent_actions
+				WHERE request_id = ? AND action = 'submit'`,
+				params: [request.id],
+			})
+		).toEqual({ count: 1 });
+	});
+
+	it('replays an exact cancellation after cancelled and rejects a changed command hash first', async () => {
+		const request = await createIndividual('cancel-replay');
+		const payload = {
+			requestId: request.id,
+			expectedVersion: request.version,
+			idempotencyKey: 'cancel-exact-replay',
+		};
+
+		expect(
+			await requests.cancel({
+				actor: parent,
+				payload,
+				requestId: 'cancel-exact-replay-first',
+			})
+		).toEqual({ status: 'cancelled', replayed: false });
+		await expect(
+			requests.cancel({
+				actor: parent,
+				payload: { ...payload, expectedVersion: request.version + 1 },
+				requestId: 'cancel-exact-replay-changed',
+			})
+		).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+		await expect(
+			requests.cancel({
+				actor: parent,
+				payload: { ...payload, idempotencyKey: 'cancel-new-key-after-terminal' },
+				requestId: 'cancel-exact-replay-new-key',
+			})
+		).rejects.toMatchObject({ code: 'REQUEST_CANCELLATION_REJECTED' });
+		expect(
+			await requests.cancel({
+				actor: parent,
+				payload,
+				requestId: 'cancel-exact-replay-second',
+			})
+		).toEqual({ status: 'cancelled', replayed: true });
+
+		expect(
+			await db.first<{ status: string; version: number }>({
+				sql: `SELECT status, version FROM individual_requests WHERE id = ?`,
+				params: [request.id],
+			})
+		).toEqual({ status: 'cancelled', version: 2 });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM request_parent_actions
+				WHERE request_id = ? AND action = 'cancel'`,
+				params: [request.id],
+			})
+		).toEqual({ count: 1 });
+	});
+
+	it('replays an exact save after submit and binds the key to its route request', async () => {
+		const request = await createIndividual('save-after-submit');
+		const otherRequest = await createIndividual('save-other-carrier');
+		const savePayload = {
+			requestId: request.id,
+			expectedVersion: request.version,
+			childId: 'child-request',
+			requestKind: 'individual' as const,
+			fundingKind: 'self_pay' as const,
+			subjects: 'Deutsch Intensiv',
+			description: 'Nachmittag',
+			preferredDays: ['TU'],
+			preferredTimeWindows: [],
+			preferredFormat: 'online' as const,
+			preferredLocations: ['Online'],
+			idempotencyKey: 'save-after-submit-replay',
+		};
+
+		expect(
+			await requests.save({
+				actor: parent,
+				payload: savePayload,
+				requestId: 'save-after-submit-first',
+			})
+		).toEqual({ status: 'draft', replayed: false });
+		const saved = await requests.loadOwnerRequest(parent, request.id);
+		expect(
+			await requests.submit({
+				actor: parent,
+				payload: {
+					requestId: request.id,
+					expectedVersion: saved.version,
+					idempotencyKey: 'submit-after-save',
+				},
+				requestId: 'submit-after-save',
+			})
+		).toEqual({ status: 'pending_admin_review', replayed: false });
+		await expect(
+			requests.save({
+				actor: parent,
+				payload: { ...savePayload, idempotencyKey: 'save-after-submit-new-key' },
+				requestId: 'save-after-submit-new-key',
+			})
+		).rejects.toMatchObject({ code: 'REQUEST_NOT_EDITABLE' });
+		expect(
+			await requests.save({
+				actor: parent,
+				payload: savePayload,
+				requestId: 'save-after-submit-second',
+			})
+		).toEqual({ status: 'draft', replayed: true });
+		await expect(
+			requests.save({
+				actor: parent,
+				payload: {
+					...savePayload,
+					requestId: otherRequest.id,
+					expectedVersion: otherRequest.version,
+				},
+				requestId: 'save-other-carrier',
+			})
+		).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+
+		expect(
+			await db.first<{ status: string; version: number; subjects_raw: string }>({
+				sql: `SELECT status, version, subjects_raw FROM individual_requests WHERE id = ?`,
+				params: [request.id],
+			})
+		).toEqual({ status: 'pending_admin_review', version: 3, subjects_raw: 'Deutsch Intensiv' });
+		expect(
+			await db.first<{ status: string; version: number; subjects_raw: string }>({
+				sql: `SELECT status, version, subjects_raw FROM individual_requests WHERE id = ?`,
+				params: [otherRequest.id],
+			})
+		).toEqual({ status: 'draft', version: 1, subjects_raw: 'Deutsch' });
+		expect(
+			await db.first<{ count: number }>({
+				sql: `SELECT COUNT(*) AS count FROM request_parent_actions
+				WHERE request_id = ? AND action = 'save'`,
+				params: [request.id],
+			})
+		).toEqual({ count: 1 });
 	});
 
 	it('removes a closed owner document from the ordinary admin queue', async () => {
@@ -340,7 +643,9 @@ describe('stage 08 request and private document workflow in D1', () => {
 			params: [request.id] })).toEqual({ count: 2 });
 		await expect(adminRepository.assertEligibleForOffer({ requestId: request.id, plannedFrom: '2026-08-01', plannedUntilInclusive: '2026-08-31' })).resolves.toBeUndefined();
 		await expect(adminRepository.assertEligibleForOffer({ requestId: request.id, plannedFrom: '2026-08-31', plannedUntilInclusive: '2026-09-01' })).rejects.toMatchObject({ code: 'FUNDING_NOT_ELIGIBLE' });
-		await expect(documents.parentApprovedDownload({ actor: foreignParent, documentId: uploaded.documentId, requestId: 'foreign-download' })).rejects.toBeDefined();
+		await expect(documents.parentApprovedDownload({ actor: foreignParent,
+			documentId: uploaded.documentId, requestId: 'foreign-download' }))
+			.rejects.toMatchObject({ code: 'DOCUMENT_NOT_FOUND' });
 		await expect(documents.parentApprovedDownload({ actor: parent, documentId: uploaded.documentId, requestId: 'owner-download' })).resolves.toMatchObject({ filename: expect.stringMatching(/^document-/u) });
 		store.beforeGet = async () => {
 			store.beforeGet = undefined;
@@ -572,13 +877,477 @@ describe('stage 08 request and private document workflow in D1', () => {
 		const request = await createNachhilfe('cleanup'); const authorizationId = request.authorizations[0].id;
 		const uploaded = await documents.upload({ actor: parent, payload: { requestId: request.id, authorizationId, idempotencyKey: 'upload-cleanup' }, file: pdfFile('cleanup'), requestSubject: 'cleanup-subject', requestId: 'upload-cleanup' });
 		const key = (await db.first<{ quarantine_r2_key: string }>({ sql: `SELECT quarantine_r2_key FROM authorization_documents WHERE id = ?`, params: [uploaded.documentId] }))!.quarantine_r2_key;
-		await documents.deleteByParent({ actor: parent, payload: { documentId: uploaded.documentId, idempotencyKey: 'parent-delete-cleanup' }, requestId: 'parent-delete' });
+		await contractGuardedDocuments().deleteByParent({ actor: parent, payload: { requestId: request.id, documentId: uploaded.documentId, idempotencyKey: 'parent-delete-cleanup' }, requestId: 'parent-delete' });
 		expect(store.values.has(key)).toBe(true);
 		expect((await documents.cleanupExpired('2026-07-31T09:59:59.999Z')).deleted).toBe(0);
 		expect(store.values.has(key)).toBe(true);
 		expect((await documents.cleanupExpired('2026-07-31T10:00:00.000Z')).deleted).toBe(1);
 		expect(store.values.has(key)).toBe(false);
 		expect((await documents.cleanupExpired('2026-08-01T10:00:00.000Z')).deleted).toBe(0);
+	});
+
+	it('rejects stale parent request and document access after role promotion', async () => {
+		const request = await createNachhilfe('stale-parent-role');
+		const uploaded = await documents.upload({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				authorizationId: request.authorizations[0].id,
+				idempotencyKey: 'stale-parent-role-upload',
+			},
+			file: pdfFile('stale-parent-role'),
+			requestSubject: 'stale-parent-role',
+			requestId: 'stale-parent-role-upload',
+		});
+		await db.run({
+			sql: `UPDATE users SET role = 'admin', updated_at = ? WHERE id = ?`,
+			params: [clock, parent.id],
+		});
+
+		await expect(requests.loadOwnerRequest(parent, request.id))
+			.rejects.toMatchObject({ code: 'REQUEST_NOT_FOUND' });
+		await expect(documents.deleteByParent({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				documentId: uploaded.documentId,
+				idempotencyKey: 'stale-parent-role-delete',
+			},
+			requestId: 'stale-parent-role-delete',
+		})).rejects.toMatchObject({ code: 'DOCUMENT_NOT_FOUND' });
+		expect(await db.first<{ review_status: string }>({
+			sql: `SELECT review_status FROM authorization_documents WHERE id = ?`,
+			params: [uploaded.documentId],
+		})).toEqual({ review_status: 'quarantined' });
+	});
+
+	it('atomically enforces a configured one-file limit across concurrent uploads', async () => {
+		const request = await createNachhilfe('concurrent-count-limit');
+		const authorizationId = request.authorizations[0].id;
+		const storageIntents = new StorageIntentRepository(db);
+		const concurrentStore = new MemoryStore();
+		concurrentStore.beforePut = createBarrier(2);
+		const limited = new AuthorizationDocumentService(
+			documentRepository,
+			concurrentStore,
+			{ ...documentConfig, maxFilesPerAuthorization: 1 },
+			{ consume: async () => undefined },
+			() => clock,
+			storageIntents
+		);
+
+		const results = await Promise.allSettled([
+			limited.upload({
+				actor: parent,
+				payload: {
+					requestId: request.id,
+					authorizationId,
+					idempotencyKey: 'concurrent-count-one',
+				},
+				file: pdfFile('concurrent-count-one'),
+				requestSubject: 'concurrent-count',
+				requestId: 'concurrent-count-one',
+			}),
+			limited.upload({
+				actor: parent,
+				payload: {
+					requestId: request.id,
+					authorizationId,
+					idempotencyKey: 'concurrent-count-two',
+				},
+				file: pdfFile('concurrent-count-two'),
+				requestSubject: 'concurrent-count',
+				requestId: 'concurrent-count-two',
+			}),
+		]);
+
+		const fulfilled = results.filter((result) => result.status === 'fulfilled');
+		const rejected = results.filter((result) => result.status === 'rejected');
+		expect(fulfilled).toHaveLength(1);
+		expect(rejected).toHaveLength(1);
+		expect(rejected[0]).toMatchObject({
+			status: 'rejected',
+			reason: { code: 'DOCUMENT_AUTHORIZATION_LIMIT_REJECTED' },
+		});
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM authorization_documents
+				WHERE authorization_id = ? AND deleted_at IS NULL
+					AND replaced_by_document_id IS NULL`,
+			params: [authorizationId],
+		})).toEqual({ count: 1 });
+		expect((await db.all<{ status: string; count: number }>({
+			sql: `SELECT status, COUNT(*) AS count FROM storage_object_intents
+				WHERE object_kind = 'authorization_document_upload'
+				GROUP BY status ORDER BY status`,
+		})).results).toEqual([
+			{ status: 'linked', count: 1 },
+			{ status: 'staged', count: 1 },
+		]);
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM storage_intent_link_assertions
+				WHERE target_kind = 'authorization_document'`,
+		})).toEqual({ count: 1 });
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM audit_events
+				WHERE action = 'authorization_document.uploaded'
+					AND request_id IN ('concurrent-count-one', 'concurrent-count-two')`,
+		})).toEqual({ count: 1 });
+		expect(concurrentStore.values.size).toBe(2);
+		expect(concurrentStore.deletes).toEqual([]);
+		expect(await storageIntents.claimCleanup({
+			now: '2026-07-17T10:14:59.999Z',
+			stagedBefore: '2026-07-17T09:59:59.999Z',
+			leaseOwner: 'concurrent-count-too-early',
+			leaseUntil: '2026-07-17T10:19:59.999Z',
+			limit: 10,
+		})).toEqual([]);
+		const countCleanupNow = '2026-07-17T10:15:00.000Z';
+		expect(await storageIntents.reconcileLinked(countCleanupNow, 10)).toBe(0);
+		const countClaimed = await storageIntents.claimCleanup({
+			now: countCleanupNow,
+			stagedBefore: clock,
+			leaseOwner: 'concurrent-count-cleanup',
+			leaseUntil: '2026-07-17T10:20:00.000Z',
+			limit: 10,
+		});
+		expect(countClaimed).toHaveLength(1);
+		await concurrentStore.delete(countClaimed[0].object_key);
+		expect(await storageIntents.completeDelete(
+			countClaimed[0].id,
+			'concurrent-count-cleanup',
+			countCleanupNow
+		)).toBe(true);
+		expect(concurrentStore.values.size).toBe(1);
+		expect((await db.all<{ status: string; count: number }>({
+			sql: `SELECT status, COUNT(*) AS count FROM storage_object_intents
+				WHERE object_kind = 'authorization_document_upload'
+				GROUP BY status ORDER BY status`,
+		})).results).toEqual([
+			{ status: 'deleted', count: 1 },
+			{ status: 'linked', count: 1 },
+		]);
+	});
+
+	it('atomically enforces the exact configured aggregate-byte boundary', async () => {
+		const request = await createNachhilfe('concurrent-byte-limit');
+		const authorizationId = request.authorizations[0].id;
+		const exactLimitBytes = 64;
+		const storageIntents = new StorageIntentRepository(db);
+		const concurrentStore = new MemoryStore();
+		concurrentStore.beforePut = createBarrier(2);
+		const limited = new AuthorizationDocumentService(
+			documentRepository,
+			concurrentStore,
+			{ ...documentConfig, maxAuthorizationBytes: exactLimitBytes },
+			{ consume: async () => undefined },
+			() => clock,
+			storageIntents
+		);
+
+		const results = await Promise.allSettled([
+			limited.upload({
+				actor: parent,
+				payload: {
+					requestId: request.id,
+					authorizationId,
+					idempotencyKey: 'concurrent-bytes-one',
+				},
+				file: exactSizePdfFile(exactLimitBytes, 'one'),
+				requestSubject: 'concurrent-bytes',
+				requestId: 'concurrent-bytes-one',
+			}),
+			limited.upload({
+				actor: parent,
+				payload: {
+					requestId: request.id,
+					authorizationId,
+					idempotencyKey: 'concurrent-bytes-two',
+				},
+				file: exactSizePdfFile(exactLimitBytes, 'two'),
+				requestSubject: 'concurrent-bytes',
+				requestId: 'concurrent-bytes-two',
+			}),
+		]);
+
+		const fulfilled = results.filter((result) => result.status === 'fulfilled');
+		const rejected = results.filter((result) => result.status === 'rejected');
+		expect(fulfilled).toHaveLength(1);
+		expect(rejected).toHaveLength(1);
+		expect(rejected[0]).toMatchObject({
+			status: 'rejected',
+			reason: { code: 'DOCUMENT_AUTHORIZATION_LIMIT_REJECTED' },
+		});
+		expect(await db.first<{ count: number; bytes: number }>({
+			sql: `SELECT COUNT(*) AS count, COALESCE(SUM(size_bytes), 0) AS bytes
+				FROM authorization_documents WHERE authorization_id = ?
+					AND deleted_at IS NULL AND replaced_by_document_id IS NULL`,
+			params: [authorizationId],
+		})).toEqual({ count: 1, bytes: exactLimitBytes });
+		expect((await db.all<{ status: string; count: number }>({
+			sql: `SELECT status, COUNT(*) AS count FROM storage_object_intents
+				WHERE object_kind = 'authorization_document_upload'
+				GROUP BY status ORDER BY status`,
+		})).results).toEqual([
+			{ status: 'linked', count: 1 },
+			{ status: 'staged', count: 1 },
+		]);
+		expect(concurrentStore.values.size).toBe(2);
+		expect(concurrentStore.deletes).toEqual([]);
+		const byteCleanupNow = '2026-07-17T10:15:00.000Z';
+		expect(await storageIntents.reconcileLinked(byteCleanupNow, 10)).toBe(0);
+		const byteClaimed = await storageIntents.claimCleanup({
+			now: byteCleanupNow,
+			stagedBefore: clock,
+			leaseOwner: 'concurrent-bytes-cleanup',
+			leaseUntil: '2026-07-17T10:20:00.000Z',
+			limit: 10,
+		});
+		expect(byteClaimed).toHaveLength(1);
+		await concurrentStore.delete(byteClaimed[0].object_key);
+		expect(await storageIntents.completeDelete(
+			byteClaimed[0].id,
+			'concurrent-bytes-cleanup',
+			byteCleanupNow
+		)).toBe(true);
+		expect(concurrentStore.values.size).toBe(1);
+	});
+
+	it('returns an exact committed replay even when the configured count limit is exhausted', async () => {
+		const request = await createNachhilfe('limit-exhausted-replay');
+		const authorizationId = request.authorizations[0].id;
+		const replayStore = new MemoryStore();
+		const storageIntents = new StorageIntentRepository(db);
+		const limited = new AuthorizationDocumentService(
+			documentRepository,
+			replayStore,
+			{ ...documentConfig, maxFilesPerAuthorization: 1 },
+			{ consume: async () => undefined },
+			() => clock,
+			storageIntents
+		);
+		const payload = {
+			requestId: request.id,
+			authorizationId,
+			idempotencyKey: 'limit-exhausted-replay',
+		};
+		const uploadFile = pdfFile('limit-exhausted-replay');
+
+		const first = await limited.upload({
+			actor: parent,
+			payload,
+			file: uploadFile,
+			requestSubject: 'limit-exhausted-replay',
+			requestId: 'limit-exhausted-replay-first',
+		});
+		expect(await documentRepository.loadUploadTarget({
+			userId: parent.id,
+			requestId: request.id,
+			authorizationId,
+		})).toMatchObject({ currentCount: 1 });
+
+		await expect(limited.upload({
+			actor: parent,
+			payload,
+			file: uploadFile,
+			requestSubject: 'limit-exhausted-replay',
+			requestId: 'limit-exhausted-replay-second',
+		})).resolves.toEqual({ documentId: first.documentId, replayed: true });
+		expect(replayStore.values.size).toBe(1);
+		expect(await db.first<{ count: number }>({
+			sql: `SELECT COUNT(*) AS count FROM authorization_documents
+				WHERE authorization_id = ?`,
+			params: [authorizationId],
+		})).toEqual({ count: 1 });
+	});
+
+	it('keeps the committed object and linked intent after an ambiguous D1 response', async () => {
+		const request = await createNachhilfe('ambiguous-upload-commit');
+		const authorizationId = request.authorizations[0].id;
+		const storageIntents = new StorageIntentRepository(db);
+		class AmbiguousCommitRepository extends AuthorizationDocumentRepository {
+			override async persistUpload(
+				input: Parameters<AuthorizationDocumentRepository['persistUpload']>[0]
+			) {
+				await super.persistUpload(input);
+				throw new Error('synthetic ambiguous D1 response after commit');
+			}
+		}
+		const ambiguousRepository = new AmbiguousCommitRepository(db);
+		const ambiguousStore = new MemoryStore();
+		const ambiguousDocuments = new AuthorizationDocumentService(
+			ambiguousRepository,
+			ambiguousStore,
+			documentConfig,
+			{ consume: async () => undefined },
+			() => clock,
+			storageIntents
+		);
+
+		const result = await ambiguousDocuments.upload({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				authorizationId,
+				idempotencyKey: 'ambiguous-upload-commit',
+			},
+			file: pdfFile('ambiguous-upload-commit'),
+			requestSubject: 'ambiguous-upload-commit',
+			requestId: 'ambiguous-upload-commit',
+		});
+
+		expect(result).toMatchObject({ replayed: true });
+		expect(await db.first<{ status: string; object_key: string }>({
+			sql: `SELECT intent.status, intent.object_key FROM storage_object_intents intent
+				JOIN authorization_documents document
+					ON document.quarantine_r2_key = intent.object_key
+				WHERE document.id = ?`,
+			params: [result.documentId],
+		})).toMatchObject({ status: 'linked' });
+		expect(ambiguousStore.values.size).toBe(1);
+		expect(ambiguousStore.deletes).toEqual([]);
+	});
+
+	it('preserves a committed object and linked intent when the replay verification read fails', async () => {
+		const request = await createNachhilfe('ambiguous-upload-replay-read');
+		const authorizationId = request.authorizations[0].id;
+		const storageIntents = new StorageIntentRepository(db);
+		class AmbiguousCommitAndReplayRepository extends AuthorizationDocumentRepository {
+			private replayReads = 0;
+
+			override async findUploadReplay(userId: string, idempotencyKey: string) {
+				this.replayReads += 1;
+				if (this.replayReads === 2) {
+					throw new Error('synthetic transient replay verification failure');
+				}
+				return super.findUploadReplay(userId, idempotencyKey);
+			}
+
+			override async persistUpload(
+				input: Parameters<AuthorizationDocumentRepository['persistUpload']>[0]
+			) {
+				await super.persistUpload(input);
+				throw new Error('synthetic ambiguous D1 response after commit');
+			}
+		}
+		const repository = new AmbiguousCommitAndReplayRepository(db);
+		const committedStore = new MemoryStore();
+		const service = new AuthorizationDocumentService(
+			repository,
+			committedStore,
+			{ ...documentConfig, maxFilesPerAuthorization: 1 },
+			{ consume: async () => undefined },
+			() => clock,
+			storageIntents
+		);
+		const payload = {
+			requestId: request.id,
+			authorizationId,
+			idempotencyKey: 'ambiguous-upload-replay-read',
+		};
+		const uploadFile = pdfFile('ambiguous-upload-replay-read');
+
+		await expect(service.upload({
+			actor: parent,
+			payload,
+			file: uploadFile,
+			requestSubject: 'ambiguous-upload-replay-read',
+			requestId: 'ambiguous-upload-replay-read',
+		})).rejects.toThrow('synthetic ambiguous D1 response after commit');
+		const committed = await db.first<{ id: string; quarantine_r2_key: string }>( {
+			sql: `SELECT id, quarantine_r2_key FROM authorization_documents
+				WHERE authorization_id = ?`,
+			params: [authorizationId],
+		});
+		expect(committed).not.toBeNull();
+		expect(await db.first<{ status: string }>({
+			sql: `SELECT status FROM storage_object_intents WHERE object_key = ?`,
+			params: [committed!.quarantine_r2_key],
+		})).toEqual({ status: 'linked' });
+		expect(committedStore.values.has(committed!.quarantine_r2_key)).toBe(true);
+		expect(committedStore.deletes).toEqual([]);
+
+		await expect(service.upload({
+			actor: parent,
+			payload,
+			file: uploadFile,
+			requestSubject: 'ambiguous-upload-replay-read',
+			requestId: 'ambiguous-upload-replay-retry',
+		})).resolves.toEqual({ documentId: committed!.id, replayed: true });
+		expect(committedStore.values.size).toBe(1);
+	});
+
+	it('cleans a confirmed uncommitted upload only through the staged-intent grace and lease', async () => {
+		const request = await createNachhilfe('confirmed-upload-absence');
+		const authorizationId = request.authorizations[0].id;
+		const storageIntents = new StorageIntentRepository(db);
+		class ConfirmedFailureRepository extends AuthorizationDocumentRepository {
+			override async persistUpload(
+				_input: Parameters<AuthorizationDocumentRepository['persistUpload']>[0]
+			) {
+				throw new Error('synthetic confirmed uncommitted upload');
+			}
+		}
+		const orphanStore = new MemoryStore();
+		const service = new AuthorizationDocumentService(
+			new ConfirmedFailureRepository(db),
+			orphanStore,
+			documentConfig,
+			{ consume: async () => undefined },
+			() => clock,
+			storageIntents
+		);
+
+		await expect(service.upload({
+			actor: parent,
+			payload: {
+				requestId: request.id,
+				authorizationId,
+				idempotencyKey: 'confirmed-upload-absence',
+			},
+			file: pdfFile('confirmed-upload-absence'),
+			requestSubject: 'confirmed-upload-absence',
+			requestId: 'confirmed-upload-absence',
+		})).rejects.toThrow('synthetic confirmed uncommitted upload');
+		const intent = await db.first<{ id: string; object_key: string; status: string }>({
+			sql: `SELECT id, object_key, status FROM storage_object_intents
+				WHERE object_kind = 'authorization_document_upload'`,
+		});
+		expect(intent).toMatchObject({ status: 'staged' });
+		expect(orphanStore.values.has(intent!.object_key)).toBe(true);
+		expect(orphanStore.deletes).toEqual([]);
+		expect(await storageIntents.claimCleanup({
+			now: '2026-07-17T10:14:59.999Z',
+			stagedBefore: '2026-07-17T09:59:59.999Z',
+			leaseOwner: 'upload-cleanup-too-early',
+			leaseUntil: '2026-07-17T10:19:59.999Z',
+			limit: 10,
+		})).toEqual([]);
+
+		const cleanupNow = '2026-07-17T10:15:00.000Z';
+		expect(await storageIntents.reconcileLinked(cleanupNow, 10)).toBe(0);
+		const claimed = await storageIntents.claimCleanup({
+			now: cleanupNow,
+			stagedBefore: clock,
+			leaseOwner: 'upload-cleanup-owner',
+			leaseUntil: '2026-07-17T10:20:00.000Z',
+			limit: 10,
+		});
+		expect(claimed).toEqual([{
+			id: intent!.id,
+			storage_class: 'quarantine',
+			object_key: intent!.object_key,
+		}]);
+		await orphanStore.delete(intent!.object_key);
+		expect(await storageIntents.completeDelete(
+			intent!.id,
+			'upload-cleanup-owner',
+			cleanupNow
+		)).toBe(true);
+		expect(orphanStore.values.has(intent!.object_key)).toBe(false);
+		expect(await db.first<{ status: string }>({
+			sql: `SELECT status FROM storage_object_intents WHERE id = ?`,
+			params: [intent!.id],
+		})).toEqual({ status: 'deleted' });
 	});
 
 	it('enforces configured count, rate-limit, and fail-closed storage boundaries', async () => {

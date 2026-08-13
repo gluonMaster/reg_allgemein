@@ -201,8 +201,11 @@ Collision блокирует production send. `offer_number` остаётся о
 
 `accepted_by_parent` означает зафиксированное действие родителя над конкретным
 offer hash, но ещё не образует договор. Договор формируется только когда
-уполномоченный admin затем подтверждает ту же immutable version; formation
-transaction сохраняет обе стороны evidence и timestamps.
+уполномоченный admin с другим user ID затем подтверждает ту же immutable
+version; formation transaction сохраняет обе различные стороны evidence и
+timestamps. Parent-side accept/decline требует current active role `parent`, а
+последующее повышение роли не позволяет той же principal предоставить сторону
+Verein.
 
 Исходный offer PDF создаётся до acceptance и после отправки не переписывается.
 Он вместе с parent/admin action records образует проверяемый evidence bundle.

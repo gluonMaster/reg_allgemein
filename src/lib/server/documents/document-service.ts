@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from '$lib/server/auth/session';
-import type { AdminActor } from '$lib/server/security/authorization';
+import { requireParent, type AdminActor } from '$lib/server/security/authorization';
 import type { DocumentRuntimeConfig } from '$lib/server/config/runtime';
 import { hashCanonical } from '$lib/server/import/canonical';
 import {
@@ -46,7 +46,12 @@ export class AuthorizationDocumentService {
 	) {}
 
 	private requireParent(actor: AuthenticatedUser) {
-		if (actor.role !== 'parent' || !actor.emailVerified) {
+		try {
+			requireParent(actor);
+		} catch {
+			throw new DocumentServiceError('PARENT_REQUIRED');
+		}
+		if (!actor.emailVerified) {
 			throw new DocumentServiceError('PARENT_REQUIRED');
 		}
 	}
@@ -77,20 +82,6 @@ export class AuthorizationDocumentService {
 			replaceDocumentId: parsed.data.replaceDocumentId,
 		});
 		const validated = await validateUpload(input.file, this.config);
-		const replacesInSameAuthorization =
-			target.replaceDocument &&
-			target.targetAuthorizationId === target.replaceDocument.authorizationId;
-		const effectiveCount = target.currentCount - (replacesInSameAuthorization ? 1 : 0);
-		const effectiveBytes =
-			target.currentBytes -
-			(replacesInSameAuthorization ? (target.replaceDocument?.sizeBytes ?? 0) : 0);
-		if (
-			effectiveCount + 1 > this.config.maxFilesPerAuthorization ||
-			effectiveBytes + validated.sizeBytes > this.config.maxAuthorizationBytes
-		) {
-			throw new DocumentServiceError('DOCUMENT_AUTHORIZATION_LIMIT_REJECTED');
-		}
-
 		const requestHash = await hashCanonical({
 			requestId: parsed.data.requestId,
 			authorizationId: parsed.data.authorizationId,
@@ -108,6 +99,20 @@ export class AuthorizationDocumentService {
 				throw new DocumentServiceError('IDEMPOTENCY_KEY_REUSED');
 			}
 			return { documentId: prior.id, replayed: true };
+		}
+
+		const replacesInSameAuthorization =
+			target.replaceDocument &&
+			target.targetAuthorizationId === target.replaceDocument.authorizationId;
+		const effectiveCount = target.currentCount - (replacesInSameAuthorization ? 1 : 0);
+		const effectiveBytes =
+			target.currentBytes -
+			(replacesInSameAuthorization ? (target.replaceDocument?.sizeBytes ?? 0) : 0);
+		if (
+			effectiveCount + 1 > this.config.maxFilesPerAuthorization ||
+			effectiveBytes + validated.sizeBytes > this.config.maxAuthorizationBytes
+		) {
+			throw new DocumentServiceError('DOCUMENT_AUTHORIZATION_LIMIT_REJECTED');
 		}
 
 		const documentId = crypto.randomUUID();
@@ -131,6 +136,8 @@ export class AuthorizationDocumentService {
 				documentId,
 				quarantineKey,
 				validated,
+				maxFilesPerAuthorization: this.config.maxFilesPerAuthorization,
+				maxAuthorizationBytes: this.config.maxAuthorizationBytes,
 				idempotencyKey: parsed.data.idempotencyKey,
 				requestHash,
 				requestIdHeader: input.requestId,
@@ -139,18 +146,38 @@ export class AuthorizationDocumentService {
 				storageIntentId,
 			});
 		} catch (error) {
-			const replay = await this.repository.findUploadReplay(
-				input.actor.id,
-				parsed.data.idempotencyKey
-			);
+			let replay: Awaited<ReturnType<AuthorizationDocumentRepository['findUploadReplay']>>;
+			try {
+				replay = await this.repository.findUploadReplay(
+					input.actor.id,
+					parsed.data.idempotencyKey
+				);
+			} catch {
+				// The persist may already have committed. A transient verification read
+				// cannot authorize deleting the object or advancing its staged intent;
+				// the storage reconciler will resolve the authoritative reference later.
+				throw error;
+			}
 			if (replay?.upload_request_hash_sha256 === requestHash) {
 				return { documentId: replay.id, replayed: true };
 			}
-			await this.store.delete(quarantineKey).catch(() => undefined);
-			if (storageIntentId) {
-				await this.storageIntents
-					?.markDeletePending(storageIntentId, this.now())
-					.catch(() => undefined);
+			if (replay) {
+				if (!storageIntentId) {
+					await this.store.delete(quarantineKey).catch(() => undefined);
+				}
+				throw new DocumentServiceError('IDEMPOTENCY_KEY_REUSED');
+			}
+			if (!storageIntentId) {
+				// Legacy/test construction without the mandatory production write-ahead
+				// intent has no reconciler path. The successful replay read above is the
+				// minimum proof required before best-effort cleanup.
+				await this.store.delete(quarantineKey).catch(() => undefined);
+			}
+			if (
+				error instanceof DocumentRepositoryError &&
+				error.code === 'DOCUMENT_AUTHORIZATION_LIMIT_REJECTED'
+			) {
+				throw new DocumentServiceError(error.code);
 			}
 			throw error;
 		}
@@ -163,13 +190,25 @@ export class AuthorizationDocumentService {
 		const parsed = documentDeleteCommandSchema.safeParse(input.payload);
 		if (!parsed.success) throw new DocumentServiceError('INVALID_DOCUMENT_DELETE');
 		const now = this.now();
-		const result = await this.repository.deleteByParent({
-			documentId: parsed.data.documentId,
-			userId: input.actor.id,
-			idempotencyKey: parsed.data.idempotencyKey,
-			requestId: input.requestId,
-			now,
-		});
+		let result: Awaited<ReturnType<AuthorizationDocumentRepository['deleteByParent']>>;
+		try {
+			result = await this.repository.deleteByParent({
+				routeRequestId: parsed.data.requestId,
+				documentId: parsed.data.documentId,
+				userId: input.actor.id,
+				idempotencyKey: parsed.data.idempotencyKey,
+				requestId: input.requestId,
+				now,
+			});
+		} catch (caught) {
+			if (
+				caught instanceof DocumentRepositoryError &&
+				caught.code === 'DOCUMENT_NOT_FOUND'
+			) {
+				throw new DocumentServiceError('DOCUMENT_NOT_FOUND');
+			}
+			throw caught;
+		}
 		// Parent deletion removes access immediately; physical quarantine cleanup still
 		// waits for the immutable upload TTL and is never accelerated by this action.
 		return result;
@@ -215,10 +254,23 @@ export class AuthorizationDocumentService {
 		requestId: string;
 	}) {
 		this.requireParent(input.actor);
-		const document = await this.repository.loadParentApprovedDownload(
-			input.actor.id,
-			input.documentId
-		);
+		let document: Awaited<
+			ReturnType<AuthorizationDocumentRepository['loadParentApprovedDownload']>
+		>;
+		try {
+			document = await this.repository.loadParentApprovedDownload(
+				input.actor.id,
+				input.documentId
+			);
+		} catch (caught) {
+			if (
+				caught instanceof DocumentRepositoryError &&
+				caught.code === 'DOCUMENT_DOWNLOAD_REJECTED'
+			) {
+				throw new DocumentServiceError('DOCUMENT_NOT_FOUND');
+			}
+			throw caught;
+		}
 		if (!document.archive_r2_key) throw new DocumentServiceError('DOCUMENT_BODY_UNAVAILABLE');
 		const object = await this.store.get(document.archive_r2_key);
 		if (!object || object.size !== document.size_bytes) {

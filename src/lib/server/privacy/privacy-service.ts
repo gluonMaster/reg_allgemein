@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import type { PrivacyRuntimeConfig } from '$lib/server/config/runtime';
 import { canonicalJson } from '$lib/server/import/canonical';
-import type { AdminActor } from '$lib/server/security/authorization';
+import { requireParent, type AdminActor } from '$lib/server/security/authorization';
 import { sha256Bytes } from '$lib/server/security/digest';
 import { PrivacyRepository, PrivacyRepositoryError } from './privacy-repository';
 import type { PrivacyArtifactStore } from './storage';
@@ -25,7 +25,11 @@ export class PrivacyService {
 	) {}
 
 	async dryRunDeletion(actor: AuthenticatedUser) {
-		if (actor.role !== 'parent') throw new PrivacyServiceError('PRIVACY_PARENT_REQUIRED');
+		try {
+			requireParent(actor);
+		} catch {
+			throw new PrivacyServiceError('PRIVACY_PARENT_REQUIRED');
+		}
 		await this.repository.assertSubjectAccess(actor, actor.id);
 		return this.repository.deletionInventory(actor.id);
 	}

@@ -2,19 +2,20 @@ import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { translate } from '$lib/i18n';
 import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
-import { requireAuthenticated } from '$lib/server/security/authorization';
+import { requireParent } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
+import { MessageRepositoryError } from '$lib/server/messages/message-repository';
 import { requestMessageRuntime } from '$lib/server/messages/runtime';
 
 async function verifiedForm(event: Parameters<Actions[string]>[0]) {
 	const form = await event.request.formData();
 	await requireCsrf({ cookies: event.cookies, user: event.locals.user,
 		submittedToken: form.get('_csrf')?.toString() });
-	return { form, actor: requireAuthenticated(event.locals.user) };
+	return { form, actor: requireParent(event.locals.user) };
 }
 
 export const load: PageServerLoad = async (event) => {
-	const actor = requireAuthenticated(event.locals.user);
+	const actor = requireParent(event.locals.user);
 	const thread = await requestMessageRuntime(event).repository.getOwnerThread(
 		event.params.publicReference,
 		actor.id
@@ -36,7 +37,15 @@ export const actions = {
 					message: form.get('message'), idempotencyKey: form.get('idempotencyKey') },
 				requestId: event.locals.requestId });
 			return { success: true, message: translate('de', 'messages.updated') };
-		} catch { return fail(409, { success: false, message: translate('de', 'messages.failed') }); }
+		} catch (caught) {
+			return fail(
+				caught instanceof MessageRepositoryError &&
+					caught.code === 'SUPPORT_THREAD_NOT_FOUND'
+					? 404
+					: 409,
+				{ success: false, message: translate('de', 'messages.failed') }
+			);
+		}
 	},
 	close: async (event) => {
 		try {
@@ -45,6 +54,14 @@ export const actions = {
 				payload: { publicReference: event.params.publicReference,
 					idempotencyKey: form.get('idempotencyKey') }, requestId: event.locals.requestId });
 			return { success: true, message: translate('de', 'messages.closed') };
-		} catch { return fail(409, { success: false, message: translate('de', 'messages.failed') }); }
+		} catch (caught) {
+			return fail(
+				caught instanceof MessageRepositoryError &&
+					caught.code === 'SUPPORT_THREAD_NOT_FOUND'
+					? 404
+					: 409,
+				{ success: false, message: translate('de', 'messages.failed') }
+			);
+		}
 	},
 } satisfies Actions;

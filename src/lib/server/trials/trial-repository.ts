@@ -69,8 +69,11 @@ export class TrialRepository {
 			requestedDate: input.requestedDate,
 		});
 		const prior = await this.db.first<{ id: string; request_hash_sha256: string }>({
-			sql: `SELECT id, request_hash_sha256 FROM trial_bookings
-				WHERE user_id = ? AND idempotency_key = ?`,
+			sql: `SELECT trial.id, trial.request_hash_sha256 FROM trial_bookings AS trial
+				JOIN users AS owner ON owner.id = trial.user_id
+				WHERE trial.user_id = ? AND trial.idempotency_key = ?
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 			params: [input.userId, input.idempotencyKey],
 		});
 		if (prior) {
@@ -150,8 +153,11 @@ export class TrialRepository {
 			return { id: input.id, replayed: false };
 		} catch (error) {
 			const replay = await this.db.first<{ id: string; request_hash_sha256: string }>({
-				sql: `SELECT id, request_hash_sha256 FROM trial_bookings
-					WHERE user_id = ? AND idempotency_key = ?`,
+				sql: `SELECT trial.id, trial.request_hash_sha256 FROM trial_bookings AS trial
+					JOIN users AS owner ON owner.id = trial.user_id
+					WHERE trial.user_id = ? AND trial.idempotency_key = ?
+						AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+						AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 				params: [input.userId, input.idempotencyKey],
 			});
 			if (replay?.request_hash_sha256 === requestHash) return { id: replay.id, replayed: true };
@@ -174,13 +180,28 @@ export class TrialRepository {
 	}): Promise<{ id: string; replayed: boolean }> {
 		const requestHash = await hashCanonical({ trialId: input.trialId, action: 'cancel' });
 		const prior = await this.db.first<{ id: string; request_hash_sha256: string }>({
-			sql: `SELECT id, request_hash_sha256 FROM trial_parent_actions
-				WHERE user_id = ? AND idempotency_key = ?`,
+			sql: `SELECT action.id, action.request_hash_sha256 FROM trial_parent_actions AS action
+				JOIN users AS owner ON owner.id = action.user_id
+				WHERE action.user_id = ? AND action.idempotency_key = ?
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+					AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 			params: [input.userId, input.idempotencyKey],
 		});
 		if (prior) {
 			if (prior.request_hash_sha256 !== requestHash) throw new TrialError('IDEMPOTENCY_KEY_REUSED');
 			return { id: input.trialId, replayed: true };
+		}
+		const owned = await this.db.first<{ status: TrialStatus }>({
+			sql: `SELECT trial.status FROM trial_bookings AS trial
+			JOIN users AS owner ON owner.id = trial.user_id
+			WHERE trial.id = ? AND trial.user_id = ?
+				AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0`,
+			params: [input.trialId, input.userId],
+		});
+		if (!owned) throw new TrialError('TRIAL_NOT_FOUND');
+		if (!['requested', 'confirmed'].includes(owned.status)) {
+			throw new TrialError('TRIAL_CANCELLATION_REJECTED');
 		}
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
@@ -195,6 +216,7 @@ export class TrialRepository {
 					FROM trial_bookings AS trial JOIN users AS owner ON owner.id = trial.user_id
 					WHERE trial.id = ? AND trial.user_id = ?
 						AND trial.status IN ('requested', 'confirmed')
+						AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
 						AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 					params: [
 						actionId,
@@ -257,8 +279,11 @@ export class TrialRepository {
 			return { id: input.trialId, replayed: false };
 		} catch (error) {
 			const replay = await this.db.first<{ request_hash_sha256: string }>({
-				sql: `SELECT request_hash_sha256 FROM trial_parent_actions
-					WHERE user_id = ? AND idempotency_key = ?`,
+				sql: `SELECT action.request_hash_sha256 FROM trial_parent_actions AS action
+					JOIN users AS owner ON owner.id = action.user_id
+					WHERE action.user_id = ? AND action.idempotency_key = ?
+						AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+						AND owner.account_status = 'active' AND owner.is_blocked = 0`,
 				params: [input.userId, input.idempotencyKey],
 			});
 			if (replay?.request_hash_sha256 === requestHash) return { id: input.trialId, replayed: true };
@@ -278,9 +303,12 @@ export class TrialRepository {
 			sql: `SELECT trial.id, trial.status, trial.requested_date, trial.confirmed_date,
 				course.display_name AS course_name, child.full_name AS child_name
 			FROM trial_bookings AS trial
+			JOIN users AS owner ON owner.id = trial.user_id
 			JOIN children AS child ON child.id = trial.child_id AND child.owner_user_id = trial.user_id
 			JOIN course_groups AS course ON course.id = trial.course_group_id
-			WHERE trial.user_id = ?
+			WHERE trial.user_id = ? AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0
 			ORDER BY trial.created_at DESC, trial.id DESC LIMIT 100`,
 			params: [userId],
 		});

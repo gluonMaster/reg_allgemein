@@ -16,7 +16,14 @@ export const actions = {
 			password: form.get('password'),
 		});
 		if (!parsed.success) {
-			return fail(400, { success: false, message: translate('de', 'auth.invalidCredentials') });
+			const invalidFields = (['email', 'password'] as const).filter((field) =>
+				parsed.error.issues.some((issue) => issue.path[0] === field)
+			);
+			return fail(400, {
+				success: false,
+				message: translate('de', 'auth.invalidCredentials'),
+				invalidFields: invalidFields.length > 0 ? invalidFields : ['email', 'password'],
+			});
 		}
 
 		let runtime: ReturnType<typeof requestAuthRuntime>;
@@ -29,13 +36,20 @@ export const actions = {
 			});
 		} catch (error) {
 			const result = translatedPublicAuthError(error);
-			return fail(result.status, { success: false, message: result.message });
+			return fail(result.status, {
+				success: false,
+				message: result.message,
+				invalidFields:
+					result.messageKey === 'auth.invalidCredentials'
+						? (['email', 'password'] as const)
+						: undefined,
+			});
 		}
 		setSessionCookies({
 			cookies: event.cookies,
 			session,
 			environment: runtime.config.appEnvironment,
 		});
-		throw redirect(303, '/cabinet');
+		throw redirect(303, session.role === 'admin' ? '/admin' : '/cabinet');
 	},
 } satisfies Actions;

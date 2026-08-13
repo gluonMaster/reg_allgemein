@@ -11,10 +11,16 @@ export class AuthorizationError extends Error {
 }
 
 declare const adminActorBrand: unique symbol;
+declare const parentActorBrand: unique symbol;
 
 export type AdminActor = AuthenticatedUser & {
 	role: 'admin';
 	readonly [adminActorBrand]: true;
+};
+
+export type ParentActor = AuthenticatedUser & {
+	role: 'parent';
+	readonly [parentActorBrand]: true;
 };
 
 export function requireAuthenticated(
@@ -24,12 +30,18 @@ export function requireAuthenticated(
 	return user;
 }
 
-export function requireAdmin(
-	user: AuthenticatedUser | App.Locals['user'] | undefined
-): AdminActor {
+export function requireAdmin(user: AuthenticatedUser | App.Locals['user'] | undefined): AdminActor {
 	const authenticated = requireAuthenticated(user);
 	if (authenticated.role !== 'admin') throw new AuthorizationError('FORBIDDEN');
 	return authenticated as AdminActor;
+}
+
+export function requireParent(
+	user: AuthenticatedUser | App.Locals['user'] | undefined
+): ParentActor {
+	const authenticated = requireAuthenticated(user);
+	if (authenticated.role !== 'parent') throw new AuthorizationError('FORBIDDEN');
+	return authenticated as ParentActor;
 }
 
 export function requireObjectOwner(input: {

@@ -16,7 +16,10 @@ const OPEN_ITEM_STATUSES =
 	"'draft','notification_approved','sent','accepted_by_parent','approved_by_admin','scheduled'";
 
 export class PriceReviewRepositoryError extends Error {
-	constructor(readonly code: string, options?: { cause?: unknown }) {
+	constructor(
+		readonly code: string,
+		options?: { cause?: unknown }
+	) {
 		super(code, options);
 		this.name = 'PriceReviewRepositoryError';
 	}
@@ -156,9 +159,17 @@ function auditStatement(input: {
 			(id, actor_user_id, actor_kind, action, target_kind, target_id,
 			 request_id, safe_diff_json, ip_retention_value, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
-		params: [input.id, input.actorUserId, input.actorUserId ? 'user' : 'system',
-			input.action, input.targetKind, input.targetId, input.requestId,
-			JSON.stringify(input.safeDiff), input.now],
+		params: [
+			input.id,
+			input.actorUserId,
+			input.actorUserId ? 'user' : 'system',
+			input.action,
+			input.targetKind,
+			input.targetId,
+			input.requestId,
+			JSON.stringify(input.safeDiff),
+			input.now,
+		],
 	};
 }
 
@@ -173,23 +184,35 @@ function targetAssertion(
 				WHERE enrollment.id = ? AND enrollment.user_id = ?
 					AND enrollment.status = 'active' AND enrollment.active_from <= ?
 					AND (enrollment.active_until IS NULL OR ? < enrollment.active_until)
+					AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
 					AND owner.account_status = 'active' AND owner.is_blocked = 0
 					AND enrollment.current_base_price_cents IS ?
 					AND enrollment.current_price_cents IS ?
 					AND enrollment.price_source IS ? AND enrollment.price_mode IS ?
 					AND enrollment.current_price_version_id IS ?
 					AND enrollment.current_price_rule_id IS ?)`,
-			params: [item.targetId, item.userId, asOf, asOf, item.oldBasePriceCents,
-				item.oldPriceCents, item.oldPriceSource, item.oldPriceMode,
-				item.oldPriceVersionId, item.oldPriceRuleId],
+			params: [
+				item.targetId,
+				item.userId,
+				asOf,
+				asOf,
+				item.oldBasePriceCents,
+				item.oldPriceCents,
+				item.oldPriceSource,
+				item.oldPriceMode,
+				item.oldPriceVersionId,
+				item.oldPriceRuleId,
+			],
 		};
 	}
 	return {
 		sql: `EXISTS (SELECT 1 FROM legacy_enrollments legacy
 			JOIN children child ON child.id = legacy.child_id
 			JOIN users owner ON owner.id = child.owner_user_id
-			WHERE legacy.id = ? AND owner.id = ? AND owner.account_status = 'active'
-				AND owner.is_blocked = 0 AND legacy.is_current = 1
+			WHERE legacy.id = ? AND owner.id = ? AND owner.role = 'parent'
+				AND owner.email_verified_at IS NOT NULL
+				AND owner.account_status = 'active' AND owner.is_blocked = 0
+				AND legacy.is_current = 1
 				AND legacy.is_active_for_occupancy = 1
 				AND legacy.represented_by_enrollment_id IS NULL
 				AND legacy.needs_admin_review = 0
@@ -219,11 +242,22 @@ function targetAssertion(
 						AND assignment.status = 'active' AND assignment.effective_from <= ?
 						AND (assignment.effective_until IS NULL OR ? < assignment.effective_until)
 					ORDER BY assignment.effective_from DESC LIMIT 1), legacy.price_mode) IS ?)`,
-		params: [item.targetId, item.userId,
-			asOf, asOf, item.oldBasePriceCents,
-			asOf, asOf, item.oldPriceCents,
-			asOf, asOf, item.oldPriceSource,
-			asOf, asOf, item.oldPriceMode],
+		params: [
+			item.targetId,
+			item.userId,
+			asOf,
+			asOf,
+			item.oldBasePriceCents,
+			asOf,
+			asOf,
+			item.oldPriceCents,
+			asOf,
+			asOf,
+			item.oldPriceSource,
+			asOf,
+			asOf,
+			item.oldPriceMode,
+		],
 	};
 }
 
@@ -257,12 +291,24 @@ export class PriceReviewRepository {
 				 created_by_user_id, created_at, processed_at, updated_at)
 			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?, NULL, ?
 			WHERE EXISTS (SELECT 1 FROM course_groups WHERE id = ?)`,
-			params: [id, input.courseGroupId, input.sourceKind, input.sourceRef,
-				input.reasonCode, input.effectiveOn, input.oldActiveCount,
-				input.newActiveCount, input.oldLookupChildrenCount,
-				input.newLookupChildrenCount, input.requestedPriceVersionId,
-				input.dedupeKey, input.createdByUserId ?? null, input.now, input.now,
-				input.courseGroupId],
+			params: [
+				id,
+				input.courseGroupId,
+				input.sourceKind,
+				input.sourceRef,
+				input.reasonCode,
+				input.effectiveOn,
+				input.oldActiveCount,
+				input.newActiveCount,
+				input.oldLookupChildrenCount,
+				input.newLookupChildrenCount,
+				input.requestedPriceVersionId,
+				input.dedupeKey,
+				input.createdByUserId ?? null,
+				input.now,
+				input.now,
+				input.courseGroupId,
+			],
 		});
 		const result = await this.getTriggerByDedupe(input.dedupeKey);
 		if (!result) throw new PriceReviewRepositoryError('PRICE_REVIEW_TRIGGER_REJECTED');
@@ -339,8 +385,12 @@ export class PriceReviewRepository {
 					AND batch_id IN (
 					SELECT id FROM price_review_batches WHERE course_group_id = ?
 				)`,
-				params: [input.now, Number(input.supersedeOpenItems), input.batchId,
-					input.trigger.courseGroupId],
+				params: [
+					input.now,
+					Number(input.supersedeOpenItems),
+					input.batchId,
+					input.trigger.courseGroupId,
+				],
 			},
 			{
 				sql: `INSERT OR IGNORE INTO price_review_batches
@@ -351,13 +401,25 @@ export class PriceReviewRepository {
 					 notification_approved_at, notification_approved_by,
 					 created_at, updated_at, completed_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)`,
-				params: [input.batchId, input.trigger.courseGroupId, input.trigger.reasonCode,
-					input.trigger.oldActiveCount, input.activeCount,
-					input.trigger.oldLookupChildrenCount, input.lookupChildrenCount,
-					input.priceVersionId, input.trigger.effectiveOn, input.trigger.effectiveOn,
-					input.calculationSnapshotJson, input.calculationSnapshotHash,
-					input.batchDedupeKey, initialStatus, input.now, input.now,
-					initialStatus === 'completed' ? input.now : null],
+				params: [
+					input.batchId,
+					input.trigger.courseGroupId,
+					input.trigger.reasonCode,
+					input.trigger.oldActiveCount,
+					input.activeCount,
+					input.trigger.oldLookupChildrenCount,
+					input.lookupChildrenCount,
+					input.priceVersionId,
+					input.trigger.effectiveOn,
+					input.trigger.effectiveOn,
+					input.calculationSnapshotJson,
+					input.calculationSnapshotHash,
+					input.batchDedupeKey,
+					initialStatus,
+					input.now,
+					input.now,
+					initialStatus === 'completed' ? input.now : null,
+				],
 			},
 			{
 				sql: `INSERT OR IGNORE INTO price_review_trigger_batches
@@ -366,7 +428,9 @@ export class PriceReviewRepository {
 			},
 		];
 		for (const item of input.items) {
-			const manualTaskId = item.manualContactRequired ? `price-review-manual:${item.id}` : null;
+			const manualTaskId = item.manualContactRequired
+				? `price-review-manual:${item.id}`
+				: null;
 			if (manualTaskId) {
 				statements.push({
 					sql: `INSERT OR IGNORE INTO admin_review_tasks
@@ -374,8 +438,14 @@ export class PriceReviewRepository {
 						 status, assigned_to, resolution, created_at, updated_at, resolved_at)
 					VALUES (?, 'price_review_manual_contact', 'price_review_item', ?, ?, ?,
 						'open', NULL, NULL, ?, ?, NULL)`,
-					params: [manualTaskId, item.id, item.decisionCode,
-						JSON.stringify({ decisionCode: item.decisionCode }), input.now, input.now],
+					params: [
+						manualTaskId,
+						item.id,
+						item.decisionCode,
+						JSON.stringify({ decisionCode: item.decisionCode }),
+						input.now,
+						input.now,
+					],
 				});
 			}
 			statements.push({
@@ -395,19 +465,40 @@ export class PriceReviewRepository {
 				VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
 					?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, ?, NULL,
 					NULL, NULL, ?, ?)`,
-				params: [item.id, input.batchId, item.publicReference,
+				params: [
+					item.id,
+					input.batchId,
+					item.publicReference,
 					item.targetKind === 'enrollment' ? item.targetId : null,
 					item.targetKind === 'legacy_enrollment' ? item.targetId : null,
-					item.userId, item.oldBasePriceCents, item.oldPriceCents,
-					item.newBasePriceCents, item.newFinalPriceCents, item.oldPriceSource,
-					item.newPriceSource, item.oldPriceMode, item.newPriceMode,
-					item.oldPriceVersionId, item.newPriceVersionId, item.oldPriceRuleId,
-					item.newPriceRuleId, item.targetStateHash, item.expectedActiveCount,
-					item.expectedLookupChildrenCount, item.effectiveOn, item.decisionCode,
-					item.decisionJson, item.termsSnapshotJson, item.itemHash,
-					'price-review-acceptance-de-v1', item.dedupeKey,
+					item.userId,
+					item.oldBasePriceCents,
+					item.oldPriceCents,
+					item.newBasePriceCents,
+					item.newFinalPriceCents,
+					item.oldPriceSource,
+					item.newPriceSource,
+					item.oldPriceMode,
+					item.newPriceMode,
+					item.oldPriceVersionId,
+					item.newPriceVersionId,
+					item.oldPriceRuleId,
+					item.newPriceRuleId,
+					item.targetStateHash,
+					item.expectedActiveCount,
+					item.expectedLookupChildrenCount,
+					item.effectiveOn,
+					item.decisionCode,
+					item.decisionJson,
+					item.termsSnapshotJson,
+					item.itemHash,
+					'price-review-acceptance-de-v1',
+					item.dedupeKey,
 					item.manualContactRequired ? 'manual_contact_required' : 'draft',
-					manualTaskId, input.now, input.now],
+					manualTaskId,
+					input.now,
+					input.now,
+				],
 			});
 		}
 		statements.push(
@@ -435,8 +526,12 @@ export class PriceReviewRepository {
 				targetKind: 'price_review_batch',
 				targetId: input.batchId,
 				requestId: input.trigger.id,
-				safeDiff: { courseGroupId: input.trigger.courseGroupId,
-					itemCount: input.items.length, sendableCount, activeCount: input.activeCount },
+				safeDiff: {
+					courseGroupId: input.trigger.courseGroupId,
+					itemCount: input.items.length,
+					sendableCount,
+					activeCount: input.activeCount,
+				},
 				now: input.now,
 			}),
 			{
@@ -444,8 +539,14 @@ export class PriceReviewRepository {
 				WHERE id = ? AND status IN ('pending', 'processing')
 					AND EXISTS (SELECT 1 FROM price_review_trigger_batches
 						WHERE trigger_id = ? AND batch_id = ?)`,
-				params: [input.items.length > 0 ? 'processed' : 'no_change', input.now,
-					input.now, input.trigger.id, input.trigger.id, input.batchId],
+				params: [
+					input.items.length > 0 ? 'processed' : 'no_change',
+					input.now,
+					input.now,
+					input.trigger.id,
+					input.trigger.id,
+					input.batchId,
+				],
 			},
 			{
 				sql: `INSERT INTO price_review_action_assertions
@@ -456,8 +557,16 @@ export class PriceReviewRepository {
 						WHERE trigger_id = ? AND batch_id = ?)
 					AND (SELECT COUNT(*) FROM price_review_items WHERE batch_id = ?) = ?
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), input.trigger.id, input.batchId,
-					input.trigger.id, input.batchId, input.batchId, input.items.length, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.trigger.id,
+					input.batchId,
+					input.trigger.id,
+					input.batchId,
+					input.batchId,
+					input.items.length,
+					input.now,
+				],
 			}
 		);
 		try {
@@ -466,7 +575,9 @@ export class PriceReviewRepository {
 		} catch (error) {
 			const replay = await this.batchIdForTrigger(input.trigger.id);
 			if (replay) return replay;
-			throw new PriceReviewRepositoryError('PRICE_REVIEW_CALCULATION_REJECTED', { cause: error });
+			throw new PriceReviewRepositoryError('PRICE_REVIEW_CALCULATION_REJECTED', {
+				cause: error,
+			});
 		}
 	}
 
@@ -478,9 +589,16 @@ export class PriceReviewRepository {
 		return row ? itemFromRow(row) : null;
 	}
 
-	async getParentItem(publicReference: string, userId: string): Promise<StoredPriceReviewItem | null> {
+	async getParentItem(
+		publicReference: string,
+		userId: string
+	): Promise<StoredPriceReviewItem | null> {
 		const row = await this.db.first<ItemRow>({
-			sql: `${ITEM_SELECT} WHERE item.public_reference = ? AND item.user_id = ?`,
+			sql: `${ITEM_SELECT}
+			JOIN users AS owner ON owner.id = item.user_id
+			WHERE item.public_reference = ? AND item.user_id = ?
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
 			params: [publicReference, userId],
 		});
 		return row ? itemFromRow(row) : null;
@@ -501,35 +619,53 @@ export class PriceReviewRepository {
 		return rows.results.map(itemFromRow);
 	}
 
-	async listParentItems(userId: string): Promise<Array<StoredPriceReviewItem & { courseName: string }>> {
+	async listParentItems(
+		userId: string
+	): Promise<Array<StoredPriceReviewItem & { courseName: string }>> {
 		const rows = await this.db.all<ItemRow & { course_name: string }>({
-			sql: `${ITEM_SELECT}
+			sql: `SELECT item.*, batch.course_group_id AS batch_course_group_id,
+				batch.created_at AS batch_created_at, course.display_name AS course_name
+			FROM price_review_items AS item
+			JOIN price_review_batches AS batch ON batch.id = item.batch_id
 			JOIN course_groups AS course ON course.id = batch.course_group_id
+			JOIN users AS owner ON owner.id = item.user_id
 			WHERE item.user_id = ? AND item.status NOT IN ('draft', 'notification_approved')
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL
 			ORDER BY item.created_at DESC`,
 			params: [userId],
 		});
 		return rows.results.map((row) => ({ ...itemFromRow(row), courseName: row.course_name }));
 	}
 
-	async listAdminBatches(): Promise<Array<{
-		id: string;
-		courseGroupId: string;
-		courseName: string;
-		reasonCode: string;
-		oldActiveCount: number;
-		newActiveCount: number;
-		priceVersionId: string | null;
-		effectiveOn: string;
-		status: string;
-		itemCount: number;
-		manualCount: number;
-		createdAt: string;
-	}>> {
+	async listAdminBatches(): Promise<
+		Array<{
+			id: string;
+			courseGroupId: string;
+			courseName: string;
+			reasonCode: string;
+			oldActiveCount: number;
+			newActiveCount: number;
+			priceVersionId: string | null;
+			effectiveOn: string;
+			status: string;
+			itemCount: number;
+			manualCount: number;
+			createdAt: string;
+		}>
+	> {
 		const rows = await this.db.all<{
-			id: string; course_group_id: string; course_name: string; reason_code: string;
-			old_active_count: number; new_active_count: number; price_version_id: string | null;
-			effective_on: string; status: string; item_count: number; manual_count: number;
+			id: string;
+			course_group_id: string;
+			course_name: string;
+			reason_code: string;
+			old_active_count: number;
+			new_active_count: number;
+			price_version_id: string | null;
+			effective_on: string;
+			status: string;
+			item_count: number;
+			manual_count: number;
 			created_at: string;
 		}>({
 			sql: `SELECT batch.id, batch.course_group_id, course.display_name AS course_name,
@@ -551,12 +687,20 @@ export class PriceReviewRepository {
 						AND archive.target_id = batch.id)
 			GROUP BY batch.id ORDER BY batch.created_at DESC LIMIT 200`,
 		});
-		return rows.results.map((row) => ({ id: row.id, courseGroupId: row.course_group_id,
-			courseName: row.course_name, reasonCode: row.reason_code,
-			oldActiveCount: row.old_active_count, newActiveCount: row.new_active_count,
-			priceVersionId: row.price_version_id, effectiveOn: row.effective_on,
-			status: row.status, itemCount: row.item_count, manualCount: row.manual_count ?? 0,
-			createdAt: row.created_at }));
+		return rows.results.map((row) => ({
+			id: row.id,
+			courseGroupId: row.course_group_id,
+			courseName: row.course_name,
+			reasonCode: row.reason_code,
+			oldActiveCount: row.old_active_count,
+			newActiveCount: row.new_active_count,
+			priceVersionId: row.price_version_id,
+			effectiveOn: row.effective_on,
+			status: row.status,
+			itemCount: row.item_count,
+			manualCount: row.manual_count ?? 0,
+			createdAt: row.created_at,
+		}));
 	}
 
 	async listComparableCourses(): Promise<Array<{ id: string; name: string }>> {
@@ -578,7 +722,11 @@ export class PriceReviewRepository {
 		now: string;
 	}): Promise<{ replayed: boolean }> {
 		const requestHash = await hashCanonical({ batchId: input.batchId, reason: input.reason });
-		const replay = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
+		const replay = await this.adminActionReplay(
+			input.admin.id,
+			input.idempotencyKey,
+			requestHash
+		);
 		if (replay) return { replayed: true };
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
@@ -591,8 +739,14 @@ export class PriceReviewRepository {
 						AND ${ACTIVE_ADMIN}
 						AND EXISTS (SELECT 1 FROM price_review_items
 							WHERE batch_id = ? AND status = 'draft')`,
-					params: [input.now, input.admin.id, input.now, input.batchId,
-						input.admin.id, input.batchId],
+					params: [
+						input.now,
+						input.admin.id,
+						input.now,
+						input.batchId,
+						input.admin.id,
+						input.batchId,
+					],
 				},
 				{
 					sql: `UPDATE price_review_items SET status = 'notification_approved', updated_at = ?
@@ -601,10 +755,16 @@ export class PriceReviewRepository {
 							WHERE id = ? AND status = 'notifications_approved')`,
 					params: [input.now, input.batchId, input.batchId],
 				},
-				auditStatement({ id: auditId, actorUserId: input.admin.id,
-					action: 'price_review.notifications.approved', targetKind: 'price_review_batch',
-					targetId: input.batchId, requestId: input.requestId,
-					safeDiff: { status: 'notifications_approved', hasReason: true }, now: input.now }),
+				auditStatement({
+					id: auditId,
+					actorUserId: input.admin.id,
+					action: 'price_review.notifications.approved',
+					targetKind: 'price_review_batch',
+					targetId: input.batchId,
+					requestId: input.requestId,
+					safeDiff: { status: 'notifications_approved', hasReason: true },
+					now: input.now,
+				}),
 				{
 					sql: `INSERT INTO price_review_admin_actions
 						(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -612,8 +772,17 @@ export class PriceReviewRepository {
 					SELECT ?, 'notification_approval', 'batch', ?, ?, ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM price_review_batches
 						WHERE id = ? AND status = 'notifications_approved')`,
-					params: [actionId, input.batchId, input.admin.id, input.idempotencyKey,
-						requestHash, input.batchId, auditId, input.now, input.batchId],
+					params: [
+						actionId,
+						input.batchId,
+						input.admin.id,
+						input.idempotencyKey,
+						requestHash,
+						input.batchId,
+						auditId,
+						input.now,
+						input.batchId,
+					],
 				},
 				{
 					sql: `INSERT INTO price_review_action_assertions
@@ -623,15 +792,27 @@ export class PriceReviewRepository {
 						AND EXISTS (SELECT 1 FROM price_review_items
 							WHERE batch_id = ? AND status = 'notification_approved')
 					THEN 1 ELSE 0 END, ?)`,
-					params: [crypto.randomUUID(), input.batchId, actionId, actionId,
-						input.batchId, input.now],
+					params: [
+						crypto.randomUUID(),
+						input.batchId,
+						actionId,
+						actionId,
+						input.batchId,
+						input.now,
+					],
 				},
 			]);
 			return { replayed: false };
 		} catch (error) {
-			const after = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
+			const after = await this.adminActionReplay(
+				input.admin.id,
+				input.idempotencyKey,
+				requestHash
+			);
 			if (after) return { replayed: true };
-			throw new PriceReviewRepositoryError('PRICE_REVIEW_BATCH_APPROVAL_REJECTED', { cause: error });
+			throw new PriceReviewRepositoryError('PRICE_REVIEW_BATCH_APPROVAL_REJECTED', {
+				cause: error,
+			});
 		}
 	}
 
@@ -643,19 +824,34 @@ export class PriceReviewRepository {
 		requestId: string;
 		now: string;
 	}): Promise<{ replayed: boolean }> {
-		const requestHash = await hashCanonical({ triggerId: input.triggerId, reason: input.reason });
-		const replay = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
+		const requestHash = await hashCanonical({
+			triggerId: input.triggerId,
+			reason: input.reason,
+		});
+		const replay = await this.adminActionReplay(
+			input.admin.id,
+			input.idempotencyKey,
+			requestHash
+		);
 		if (replay) return { replayed: true };
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
 		try {
 			await this.db.batch([
-				auditStatement({ id: auditId, actorUserId: input.admin.id,
+				auditStatement({
+					id: auditId,
+					actorUserId: input.admin.id,
 					action: 'price_review.admin_comparison.requested',
-					targetKind: 'price_review_trigger', targetId: input.triggerId,
+					targetKind: 'price_review_trigger',
+					targetId: input.triggerId,
 					requestId: input.requestId,
-					safeDiff: { status: 'requested', reasonCode: 'admin_price_comparison', hasReason: true },
-					now: input.now }),
+					safeDiff: {
+						status: 'requested',
+						reasonCode: 'admin_price_comparison',
+						hasReason: true,
+					},
+					now: input.now,
+				}),
 				{
 					sql: `INSERT INTO price_review_admin_actions
 						(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -663,9 +859,18 @@ export class PriceReviewRepository {
 					SELECT ?, 'admin_price_comparison', 'trigger', ?, ?, ?, ?, ?, ?, ?
 					WHERE ${ACTIVE_ADMIN}
 						AND EXISTS (SELECT 1 FROM price_review_triggers WHERE id = ?)`,
-					params: [actionId, input.triggerId, input.admin.id, input.idempotencyKey,
-						requestHash, input.triggerId, auditId, input.now, input.admin.id,
-						input.triggerId],
+					params: [
+						actionId,
+						input.triggerId,
+						input.admin.id,
+						input.idempotencyKey,
+						requestHash,
+						input.triggerId,
+						auditId,
+						input.now,
+						input.admin.id,
+						input.triggerId,
+					],
 				},
 				{
 					sql: `INSERT INTO price_review_action_assertions
@@ -678,23 +883,38 @@ export class PriceReviewRepository {
 			]);
 			return { replayed: false };
 		} catch (error) {
-			const after = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
+			const after = await this.adminActionReplay(
+				input.admin.id,
+				input.idempotencyKey,
+				requestHash
+			);
 			if (after) return { replayed: true };
-			throw new PriceReviewRepositoryError('PRICE_REVIEW_COMPARISON_REJECTED', { cause: error });
+			throw new PriceReviewRepositoryError('PRICE_REVIEW_COMPARISON_REJECTED', {
+				cause: error,
+			});
 		}
 	}
 
 	async dispatchBatch(input: {
 		admin: AdminActor;
 		batchId: string;
-		items: ReadonlyArray<{ item: StoredPriceReviewItem; cabinetUrl: string; responseDeadline: string }>;
+		items: ReadonlyArray<{
+			item: StoredPriceReviewItem;
+			cabinetUrl: string;
+			responseDeadline: string;
+		}>;
 		idempotencyKey: string;
 		requestId: string;
 		now: string;
 	}): Promise<{ replayed: boolean; sent: number }> {
 		const requestHash = await hashCanonical({ batchId: input.batchId });
-		const replay = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
-		if (replay) return { replayed: true, sent: await this.deliveryCountForBatch(input.batchId) };
+		const replay = await this.adminActionReplay(
+			input.admin.id,
+			input.idempotencyKey,
+			requestHash
+		);
+		if (replay)
+			return { replayed: true, sent: await this.deliveryCountForBatch(input.batchId) };
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
 		const statements: StatementSpec[] = [];
@@ -710,9 +930,18 @@ export class PriceReviewRepository {
 						?, ?, 'pending', ? FROM price_review_items
 					WHERE id = ? AND batch_id = ? AND status = 'notification_approved'
 						AND user_id IS NOT NULL`,
-					params: [outboxId, JSON.stringify({ templateKey: 'price_review.item_available',
-						cabinetUrl, responseDeadline }), `price-review-item:${item.id}:v1`,
-						input.now, item.id, input.batchId],
+					params: [
+						outboxId,
+						JSON.stringify({
+							templateKey: 'price_review.item_available',
+							cabinetUrl,
+							responseDeadline,
+						}),
+						`price-review-item:${item.id}:v1`,
+						input.now,
+						item.id,
+						input.batchId,
+					],
 				},
 				{
 					sql: `INSERT OR IGNORE INTO price_review_deliveries
@@ -722,16 +951,30 @@ export class PriceReviewRepository {
 					SELECT ?, item.id, ?, 'fake_email', item.user_id, ?, 'queued', ?, ?, ?
 					FROM price_review_items item WHERE item.id = ?
 						AND EXISTS (SELECT 1 FROM price_review_outbox_events WHERE id = ?)`,
-					params: [deliveryId, outboxId, cabinetUrl, `fake-email:${item.id}:v1`,
-						input.now, input.now, item.id, outboxId],
+					params: [
+						deliveryId,
+						outboxId,
+						cabinetUrl,
+						`fake-email:${item.id}:v1`,
+						input.now,
+						input.now,
+						item.id,
+						outboxId,
+					],
 				},
 				{
 					sql: `UPDATE price_review_items SET status = 'sent', sent_at = ?,
 						response_deadline = ?, updated_at = ?
 					WHERE id = ? AND batch_id = ? AND status = 'notification_approved'
 						AND EXISTS (SELECT 1 FROM price_review_deliveries WHERE id = ?)`,
-					params: [input.now, responseDeadline, input.now, item.id, input.batchId,
-						deliveryId],
+					params: [
+						input.now,
+						responseDeadline,
+						input.now,
+						item.id,
+						input.batchId,
+						deliveryId,
+					],
 				}
 			);
 		}
@@ -739,14 +982,24 @@ export class PriceReviewRepository {
 			{
 				sql: `UPDATE price_review_batches SET status = ?, updated_at = ?, completed_at = ?
 				WHERE id = ? AND status = 'notifications_approved' AND ${ACTIVE_ADMIN}`,
-				params: [input.items.length > 0 ? 'awaiting_responses' : 'completed',
-					input.now, input.items.length > 0 ? null : input.now, input.batchId,
-					input.admin.id],
+				params: [
+					input.items.length > 0 ? 'awaiting_responses' : 'completed',
+					input.now,
+					input.items.length > 0 ? null : input.now,
+					input.batchId,
+					input.admin.id,
+				],
 			},
-			auditStatement({ id: auditId, actorUserId: input.admin.id,
-				action: 'price_review.notifications.dispatched', targetKind: 'price_review_batch',
-				targetId: input.batchId, requestId: input.requestId,
-				safeDiff: { queuedCount: input.items.length }, now: input.now }),
+			auditStatement({
+				id: auditId,
+				actorUserId: input.admin.id,
+				action: 'price_review.notifications.dispatched',
+				targetKind: 'price_review_batch',
+				targetId: input.batchId,
+				requestId: input.requestId,
+				safeDiff: { queuedCount: input.items.length },
+				now: input.now,
+			}),
 			{
 				sql: `INSERT INTO price_review_admin_actions
 					(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -754,8 +1007,17 @@ export class PriceReviewRepository {
 				SELECT ?, 'notification_dispatch', 'batch', ?, ?, ?, ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM price_review_batches
 					WHERE id = ? AND status IN ('awaiting_responses', 'completed'))`,
-				params: [actionId, input.batchId, input.admin.id, input.idempotencyKey,
-					requestHash, input.batchId, auditId, input.now, input.batchId],
+				params: [
+					actionId,
+					input.batchId,
+					input.admin.id,
+					input.idempotencyKey,
+					requestHash,
+					input.batchId,
+					auditId,
+					input.now,
+					input.batchId,
+				],
 			},
 			{
 				sql: `INSERT INTO price_review_action_assertions
@@ -765,17 +1027,31 @@ export class PriceReviewRepository {
 					AND (SELECT COUNT(*) FROM price_review_items
 						WHERE batch_id = ? AND status = 'sent') >= ?
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), input.batchId, actionId, actionId,
-					input.batchId, input.items.length, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.batchId,
+					actionId,
+					actionId,
+					input.batchId,
+					input.items.length,
+					input.now,
+				],
 			}
 		);
 		try {
 			await this.db.batch(statements);
 			return { replayed: false, sent: input.items.length };
 		} catch (error) {
-			const after = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
-			if (after) return { replayed: true, sent: await this.deliveryCountForBatch(input.batchId) };
-			throw new PriceReviewRepositoryError('PRICE_REVIEW_DISPATCH_REJECTED', { cause: error });
+			const after = await this.adminActionReplay(
+				input.admin.id,
+				input.idempotencyKey,
+				requestHash
+			);
+			if (after)
+				return { replayed: true, sent: await this.deliveryCountForBatch(input.batchId) };
+			throw new PriceReviewRepositoryError('PRICE_REVIEW_DISPATCH_REJECTED', {
+				cause: error,
+			});
 		}
 	}
 
@@ -803,12 +1079,14 @@ export class PriceReviewRepository {
 		const actionId = crypto.randomUUID();
 		const auditId = crypto.randomUUID();
 		const target = targetAssertion(input.item, input.item.effectiveOn);
-		const resultingStatus = input.evidenceStatus === 'applied'
-			? input.decision === 'accept' ? 'accepted_by_parent' : 'declined_by_parent'
-			: input.item.status;
-		const taskKind = input.decision === 'accept'
-			? 'price_review_parent_accepted'
-			: 'price_review_declined';
+		const resultingStatus =
+			input.evidenceStatus === 'applied'
+				? input.decision === 'accept'
+					? 'accepted_by_parent'
+					: 'declined_by_parent'
+				: input.item.status;
+		const taskKind =
+			input.decision === 'accept' ? 'price_review_parent_accepted' : 'price_review_declined';
 		const taskId = `price-review-task:${taskKind}:${input.item.id}`;
 		const statements: StatementSpec[] = [];
 		if (input.evidenceStatus === 'applied') {
@@ -816,7 +1094,8 @@ export class PriceReviewRepository {
 				sql: `UPDATE price_review_items SET status = ?, responded_at = ?, updated_at = ?
 				WHERE id = ? AND user_id = ? AND status = 'sent' AND item_hash = ?
 					AND EXISTS (SELECT 1 FROM users owner WHERE owner.id = ?
-						AND owner.account_status = 'active' AND owner.is_blocked = 0)
+						AND owner.role = 'parent' AND owner.account_status = 'active'
+						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL)
 					AND ${target.sql}
 					AND NOT EXISTS (SELECT 1 FROM price_review_items newer
 						WHERE newer.id <> price_review_items.id
@@ -827,8 +1106,16 @@ export class PriceReviewRepository {
 							AND (newer.created_at > price_review_items.created_at
 								OR (newer.created_at = price_review_items.created_at
 									AND newer.version > price_review_items.version)))`,
-				params: [resultingStatus, input.now, input.now, input.item.id, input.actor.id,
-					input.item.itemHash, input.actor.id, ...target.params],
+				params: [
+					resultingStatus,
+					input.now,
+					input.now,
+					input.item.id,
+					input.actor.id,
+					input.item.itemHash,
+					input.actor.id,
+					...target.params,
+				],
 			});
 		}
 		statements.push({
@@ -838,14 +1125,30 @@ export class PriceReviewRepository {
 				 user_agent, ip_retention_value, ip_expires_at, created_at)
 			SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 			WHERE EXISTS (SELECT 1 FROM users owner WHERE owner.id = ?
-				AND owner.account_status = 'active' AND owner.is_blocked = 0)
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL)
 				AND EXISTS (SELECT 1 FROM price_review_items item WHERE item.id = ?
 					AND item.user_id = ? AND (? <> 'applied' OR item.status = ?))`,
-			params: [actionId, input.item.id, input.actor.id, input.decision,
-				input.providedItemHash, input.requestHash, input.idempotencyKey,
-				input.evidenceStatus, resultingStatus, input.userAgent,
-				input.ipRetentionValue, input.ipExpiresAt, input.now, input.actor.id,
-				input.item.id, input.actor.id, input.evidenceStatus, resultingStatus],
+			params: [
+				actionId,
+				input.item.id,
+				input.actor.id,
+				input.decision,
+				input.providedItemHash,
+				input.requestHash,
+				input.idempotencyKey,
+				input.evidenceStatus,
+				resultingStatus,
+				input.userAgent,
+				input.ipRetentionValue,
+				input.ipExpiresAt,
+				input.now,
+				input.actor.id,
+				input.item.id,
+				input.actor.id,
+				input.evidenceStatus,
+				resultingStatus,
+			],
 		});
 		if (input.evidenceStatus === 'applied' && input.decision === 'accept') {
 			statements.push({
@@ -855,10 +1158,21 @@ export class PriceReviewRepository {
 					 item_hash, idempotency_key, parent_action_id)
 				SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM price_review_parent_actions WHERE id = ?)`,
-				params: [crypto.randomUUID(), input.item.id, input.actor.id, input.now,
-					input.ipRetentionValue, input.ipExpiresAt, input.userAgent,
-					input.acceptanceText, input.item.acceptanceTextVersion,
-					input.item.itemHash, input.idempotencyKey, actionId, actionId],
+				params: [
+					crypto.randomUUID(),
+					input.item.id,
+					input.actor.id,
+					input.now,
+					input.ipRetentionValue,
+					input.ipExpiresAt,
+					input.userAgent,
+					input.acceptanceText,
+					input.item.acceptanceTextVersion,
+					input.item.itemHash,
+					input.idempotencyKey,
+					actionId,
+					actionId,
+				],
 			});
 		}
 		if (input.evidenceStatus === 'applied') {
@@ -869,9 +1183,16 @@ export class PriceReviewRepository {
 						 status, assigned_to, resolution, created_at, updated_at, resolved_at)
 					SELECT ?, ?, 'price_review_item', ?, ?, ?, 'open', NULL, NULL, ?, ?, NULL
 					WHERE EXISTS (SELECT 1 FROM price_review_parent_actions WHERE id = ?)`,
-					params: [taskId, taskKind, input.item.id,
+					params: [
+						taskId,
+						taskKind,
+						input.item.id,
 						input.decision === 'accept' ? 'PARENT_ACCEPTED' : 'PARENT_DECLINED',
-						JSON.stringify({ decision: input.decision }), input.now, input.now, actionId],
+						JSON.stringify({ decision: input.decision }),
+						input.now,
+						input.now,
+						actionId,
+					],
 				},
 				{
 					sql: `INSERT OR IGNORE INTO price_review_outbox_events
@@ -879,21 +1200,29 @@ export class PriceReviewRepository {
 						 recipient_user_id, payload_json, dedupe_key, status, created_at)
 					SELECT ?, ?, 'price_review_item', ?, 'admin', NULL, ?, ?, 'pending', ?
 					WHERE EXISTS (SELECT 1 FROM price_review_parent_actions WHERE id = ?)`,
-					params: [`price-review-admin-outbox:${input.decision}:${input.item.id}`,
+					params: [
+						`price-review-admin-outbox:${input.decision}:${input.item.id}`,
 						input.decision === 'accept' ? 'parent_accepted' : 'parent_declined',
-						input.item.id, JSON.stringify({ itemId: input.item.id,
-							decision: input.decision }),
+						input.item.id,
+						JSON.stringify({ itemId: input.item.id, decision: input.decision }),
 						`price-review-admin:${input.decision}:${input.item.id}`,
-						input.now, actionId],
+						input.now,
+						actionId,
+					],
 				}
 			);
 		}
 		statements.push(
-			auditStatement({ id: auditId, actorUserId: input.actor.id,
+			auditStatement({
+				id: auditId,
+				actorUserId: input.actor.id,
 				action: `price_review.parent.${input.decision}.${input.evidenceStatus}`,
-				targetKind: 'price_review_item', targetId: input.item.id,
-				requestId: input.requestId, safeDiff: { evidenceStatus: input.evidenceStatus },
-				now: input.now }),
+				targetKind: 'price_review_item',
+				targetId: input.item.id,
+				requestId: input.requestId,
+				safeDiff: { evidenceStatus: input.evidenceStatus },
+				now: input.now,
+			}),
 			{
 				sql: `INSERT INTO price_review_action_assertions
 					(id, scope, target_id, action_id, assertion_passed, created_at)
@@ -904,9 +1233,19 @@ export class PriceReviewRepository {
 					AND (? <> 'accept' OR ? <> 'applied' OR EXISTS (
 						SELECT 1 FROM price_change_acceptances WHERE parent_action_id = ?))
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), `${input.item.id}:${input.actor.id}:${input.idempotencyKey}`,
-					actionId, actionId, input.evidenceStatus, input.item.id, resultingStatus,
-					input.decision, input.evidenceStatus, actionId, input.now],
+				params: [
+					crypto.randomUUID(),
+					`${input.item.id}:${input.actor.id}:${input.idempotencyKey}`,
+					actionId,
+					actionId,
+					input.evidenceStatus,
+					input.item.id,
+					resultingStatus,
+					input.decision,
+					input.evidenceStatus,
+					actionId,
+					input.now,
+				],
 			}
 		);
 		if (input.evidenceStatus === 'applied' && input.decision === 'decline') {
@@ -916,15 +1255,15 @@ export class PriceReviewRepository {
 			await this.db.batch(statements);
 			return { status: resultingStatus, replayed: false };
 		} catch (error) {
-			const after = await this.db.first<{ request_hash_sha256: string; resulting_status: string }>({
-				sql: `SELECT request_hash_sha256, resulting_status FROM price_review_parent_actions
-				WHERE user_id = ? AND idempotency_key = ?`,
-				params: [input.actor.id, input.idempotencyKey],
+			const after = await this.parentResponseReplay(
+				input.actor.id,
+				input.idempotencyKey,
+				input.requestHash
+			);
+			if (after) return after;
+			throw new PriceReviewRepositoryError('PRICE_REVIEW_PARENT_RESPONSE_REJECTED', {
+				cause: error,
 			});
-			if (after?.request_hash_sha256 === input.requestHash) {
-				return { status: after.resulting_status, replayed: true };
-			}
-			throw new PriceReviewRepositoryError('PRICE_REVIEW_PARENT_RESPONSE_REJECTED', { cause: error });
 		}
 	}
 
@@ -933,9 +1272,16 @@ export class PriceReviewRepository {
 		idempotencyKey: string,
 		requestHash: string
 	): Promise<{ status: string; replayed: true } | null> {
-		const prior = await this.db.first<{ request_hash_sha256: string; resulting_status: string }>({
-			sql: `SELECT request_hash_sha256, resulting_status FROM price_review_parent_actions
-			WHERE user_id = ? AND idempotency_key = ?`,
+		const prior = await this.db.first<{
+			request_hash_sha256: string;
+			resulting_status: string;
+		}>({
+			sql: `SELECT action.request_hash_sha256, action.resulting_status
+			FROM price_review_parent_actions action
+			JOIN users owner ON owner.id = action.user_id
+			WHERE action.user_id = ? AND action.idempotency_key = ?
+				AND owner.role = 'parent' AND owner.account_status = 'active'
+				AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
 			params: [userId, idempotencyKey],
 		});
 		if (!prior) return null;
@@ -955,7 +1301,11 @@ export class PriceReviewRepository {
 		now: string;
 	}): Promise<{ replayed: boolean }> {
 		const requestHash = await hashCanonical({ itemId: input.item.id, reason: input.reason });
-		const replay = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
+		const replay = await this.adminActionReplay(
+			input.admin.id,
+			input.idempotencyKey,
+			requestHash
+		);
 		if (replay) return { replayed: true };
 		const target = targetAssertion(input.item, input.scheduledFor);
 		const actionId = crypto.randomUUID();
@@ -967,10 +1317,15 @@ export class PriceReviewRepository {
 						final_admin_confirmed_at = ?, final_admin_confirmed_by = ?,
 						final_admin_confirmation_reason = ?, scheduled_for = ?, updated_at = ?
 					WHERE id = ? AND status = 'accepted_by_parent' AND ${ACTIVE_ADMIN}
-						AND ${target.sql}
-						AND EXISTS (SELECT 1 FROM price_change_acceptances acceptance
-							WHERE acceptance.price_review_item_id = price_review_items.id
-								AND acceptance.item_hash = price_review_items.item_hash)
+					AND ${target.sql}
+					AND EXISTS (SELECT 1 FROM price_change_acceptances acceptance
+						JOIN users owner ON owner.id = price_review_items.user_id
+						WHERE acceptance.price_review_item_id = price_review_items.id
+							AND acceptance.item_hash = price_review_items.item_hash
+							AND acceptance.user_id = price_review_items.user_id
+							AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+							AND owner.account_status = 'active' AND owner.is_blocked = 0
+							AND acceptance.user_id <> ?)
 						AND EXISTS (SELECT 1 FROM price_versions version
 							WHERE version.id = price_review_items.new_price_version_id
 								AND version.is_active = 1)
@@ -987,14 +1342,32 @@ export class PriceReviewRepository {
 								AND (newer.created_at > price_review_items.created_at
 									OR (newer.created_at = price_review_items.created_at
 										AND newer.version > price_review_items.version)))`,
-					params: [input.now, input.admin.id, input.reason, input.scheduledFor,
-						input.now, input.item.id, input.admin.id, ...target.params],
+					params: [
+						input.now,
+						input.admin.id,
+						input.reason,
+						input.scheduledFor,
+						input.now,
+						input.item.id,
+						input.admin.id,
+						...target.params,
+						input.admin.id,
+					],
 				},
-				auditStatement({ id: auditId, actorUserId: input.admin.id,
-					action: 'price_review.item.finally_confirmed', targetKind: 'price_review_item',
-					targetId: input.item.id, requestId: input.requestId,
-					safeDiff: { status: 'scheduled', scheduledFor: input.scheduledFor, hasReason: true },
-					now: input.now }),
+				auditStatement({
+					id: auditId,
+					actorUserId: input.admin.id,
+					action: 'price_review.item.finally_confirmed',
+					targetKind: 'price_review_item',
+					targetId: input.item.id,
+					requestId: input.requestId,
+					safeDiff: {
+						status: 'scheduled',
+						scheduledFor: input.scheduledFor,
+						hasReason: true,
+					},
+					now: input.now,
+				}),
 				{
 					sql: `INSERT INTO price_review_admin_actions
 						(id, action, target_kind, target_id, actor_user_id, idempotency_key,
@@ -1002,9 +1375,18 @@ export class PriceReviewRepository {
 					SELECT ?, 'final_confirmation', 'item', ?, ?, ?, ?, ?, ?, ?
 					WHERE EXISTS (SELECT 1 FROM price_review_items
 						WHERE id = ? AND status = 'scheduled' AND scheduled_for = ?)`,
-					params: [actionId, input.item.id, input.admin.id, input.idempotencyKey,
-						requestHash, input.item.id, auditId, input.now, input.item.id,
-						input.scheduledFor],
+					params: [
+						actionId,
+						input.item.id,
+						input.admin.id,
+						input.idempotencyKey,
+						requestHash,
+						input.item.id,
+						auditId,
+						input.now,
+						input.item.id,
+						input.scheduledFor,
+					],
 				},
 				{
 					sql: `UPDATE admin_review_tasks SET status = 'resolved', resolution = ?,
@@ -1013,8 +1395,13 @@ export class PriceReviewRepository {
 						AND source_kind = 'price_review_item' AND source_id = ?
 						AND status IN ('open', 'in_progress')
 						AND EXISTS (SELECT 1 FROM price_review_admin_actions WHERE id = ?)`,
-					params: ['FINAL_ADMIN_CONFIRMATION_RECORDED', input.now, input.now,
-						input.item.id, actionId],
+					params: [
+						'FINAL_ADMIN_CONFIRMATION_RECORDED',
+						input.now,
+						input.now,
+						input.item.id,
+						actionId,
+					],
 				},
 				{
 					sql: `INSERT INTO price_review_action_assertions
@@ -1023,15 +1410,35 @@ export class PriceReviewRepository {
 						EXISTS (SELECT 1 FROM price_review_admin_actions WHERE id = ?)
 						AND EXISTS (SELECT 1 FROM price_review_items item
 							WHERE item.id = ? AND item.status = 'scheduled'
-								AND item.final_admin_confirmed_by = ?)
+								AND item.final_admin_confirmed_by = ?
+								AND EXISTS (SELECT 1 FROM price_change_acceptances acceptance
+									JOIN users owner ON owner.id = item.user_id
+									WHERE acceptance.price_review_item_id = item.id
+										AND acceptance.item_hash = item.item_hash
+										AND acceptance.user_id = item.user_id
+										AND acceptance.user_id <> item.final_admin_confirmed_by
+										AND owner.role = 'parent'
+										AND owner.email_verified_at IS NOT NULL
+										AND owner.account_status = 'active' AND owner.is_blocked = 0))
 					THEN 1 ELSE 0 END, ?)`,
-					params: [crypto.randomUUID(), input.item.id, actionId, actionId,
-						input.item.id, input.admin.id, input.now],
+					params: [
+						crypto.randomUUID(),
+						input.item.id,
+						actionId,
+						actionId,
+						input.item.id,
+						input.admin.id,
+						input.now,
+					],
 				},
 			]);
 			return { replayed: false };
 		} catch (error) {
-			const after = await this.adminActionReplay(input.admin.id, input.idempotencyKey, requestHash);
+			const after = await this.adminActionReplay(
+				input.admin.id,
+				input.idempotencyKey,
+				requestHash
+			);
 			if (after) return { replayed: true };
 			throw new PriceReviewRepositoryError('PRICE_REVIEW_FINAL_CONFIRMATION_REJECTED', {
 				cause: error,
@@ -1039,7 +1446,11 @@ export class PriceReviewRepository {
 		}
 	}
 
-	async supersedeItem(item: StoredPriceReviewItem, reasonCode: string, now: string): Promise<boolean> {
+	async supersedeItem(
+		item: StoredPriceReviewItem,
+		reasonCode: string,
+		now: string
+	): Promise<boolean> {
 		const taskId = `price-review-task:price_review_stale:${item.id}:${reasonCode}`;
 		const auditId = crypto.randomUUID();
 		try {
@@ -1057,18 +1468,33 @@ export class PriceReviewRepository {
 						'open', NULL, NULL, ?, ?, NULL
 					WHERE EXISTS (SELECT 1 FROM price_review_items
 						WHERE id = ? AND status = 'superseded')`,
-					params: [taskId, item.id, reasonCode, JSON.stringify({ reasonCode }),
-						now, now, item.id],
+					params: [
+						taskId,
+						item.id,
+						reasonCode,
+						JSON.stringify({ reasonCode }),
+						now,
+						now,
+						item.id,
+					],
 				},
-				auditStatement({ id: auditId, actorUserId: null,
-					action: 'price_review.item.superseded', targetKind: 'price_review_item',
-					targetId: item.id, requestId: `price-review-stale:${item.id}`,
-					safeDiff: { reasonCode }, now }),
+				auditStatement({
+					id: auditId,
+					actorUserId: null,
+					action: 'price_review.item.superseded',
+					targetKind: 'price_review_item',
+					targetId: item.id,
+					requestId: `price-review-stale:${item.id}`,
+					safeDiff: { reasonCode },
+					now,
+				}),
 				this.completeBatchIfTerminalStatement(item.batchId, now),
 			]);
 			return (results[0].meta.changes ?? 0) === 1;
 		} catch (error) {
-			throw new PriceReviewRepositoryError('PRICE_REVIEW_SUPERSEDE_REJECTED', { cause: error });
+			throw new PriceReviewRepositoryError('PRICE_REVIEW_SUPERSEDE_REJECTED', {
+				cause: error,
+			});
 		}
 	}
 
@@ -1081,7 +1507,11 @@ export class PriceReviewRepository {
 		return rows.results.map(itemFromRow);
 	}
 
-	async markResponseOverdue(item: StoredPriceReviewItem, today: string, now: string): Promise<boolean> {
+	async markResponseOverdue(
+		item: StoredPriceReviewItem,
+		today: string,
+		now: string
+	): Promise<boolean> {
 		const taskId = `price-review-task:price_review_overdue:${item.id}`;
 		const auditId = crypto.randomUUID();
 		try {
@@ -1099,8 +1529,14 @@ export class PriceReviewRepository {
 						'RESPONSE_DEADLINE_PASSED', ?, 'open', NULL, NULL, ?, ?, NULL
 					WHERE EXISTS (SELECT 1 FROM price_review_items
 						WHERE id = ? AND status = 'response_overdue')`,
-					params: [taskId, item.id,
-						JSON.stringify({ responseDeadline: item.responseDeadline }), now, now, item.id],
+					params: [
+						taskId,
+						item.id,
+						JSON.stringify({ responseDeadline: item.responseDeadline }),
+						now,
+						now,
+						item.id,
+					],
 				},
 				{
 					sql: `INSERT OR IGNORE INTO price_review_outbox_events
@@ -1109,14 +1545,25 @@ export class PriceReviewRepository {
 					SELECT ?, 'response_overdue', 'price_review_item', ?, 'admin', NULL,
 						?, ?, 'pending', ? WHERE EXISTS (SELECT 1 FROM price_review_items
 							WHERE id = ? AND status = 'response_overdue')`,
-					params: [`price-review-admin-outbox:overdue:${item.id}`, item.id,
-						JSON.stringify({ itemId: item.id }), `price-review-admin:overdue:${item.id}`,
-						now, item.id],
+					params: [
+						`price-review-admin-outbox:overdue:${item.id}`,
+						item.id,
+						JSON.stringify({ itemId: item.id }),
+						`price-review-admin:overdue:${item.id}`,
+						now,
+						item.id,
+					],
 				},
-				auditStatement({ id: auditId, actorUserId: null,
-					action: 'price_review.item.response_overdue', targetKind: 'price_review_item',
-					targetId: item.id, requestId: `price-review-timeout:${item.id}`,
-					safeDiff: { responseDeadline: item.responseDeadline }, now }),
+				auditStatement({
+					id: auditId,
+					actorUserId: null,
+					action: 'price_review.item.response_overdue',
+					targetKind: 'price_review_item',
+					targetId: item.id,
+					requestId: `price-review-timeout:${item.id}`,
+					safeDiff: { responseDeadline: item.responseDeadline },
+					now,
+				}),
 				{
 					sql: `INSERT INTO price_review_action_assertions
 						(id, scope, target_id, action_id, assertion_passed, created_at)
@@ -1166,11 +1613,16 @@ export class PriceReviewRepository {
 						WHERE item.id = ? AND item.status = 'scheduled'
 							AND item.scheduled_for = ?
 							AND EXISTS (SELECT 1 FROM price_change_acceptances acceptance
+								JOIN users owner ON owner.id = item.user_id
+								JOIN price_review_admin_actions action
+									ON action.action = 'final_confirmation'
+									AND action.target_kind = 'item' AND action.target_id = item.id
 								WHERE acceptance.price_review_item_id = item.id
-									AND acceptance.item_hash = item.item_hash)
-							AND EXISTS (SELECT 1 FROM price_review_admin_actions action
-								WHERE action.action = 'final_confirmation'
-									AND action.target_kind = 'item' AND action.target_id = item.id)
+									AND acceptance.item_hash = item.item_hash
+									AND acceptance.user_id = item.user_id
+									AND owner.role = 'parent' AND owner.email_verified_at IS NOT NULL
+									AND owner.account_status = 'active' AND owner.is_blocked = 0
+									AND action.actor_user_id <> acceptance.user_id)
 							AND EXISTS (SELECT 1 FROM price_versions version
 								WHERE version.id = item.new_price_version_id AND version.is_active = 1)
 							AND EXISTS (SELECT 1 FROM price_rules rule
@@ -1188,13 +1640,25 @@ export class PriceReviewRepository {
 											AND newer.version > item.version))))
 					AND ${target.sql}
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), input.item.id, input.item.id,
-					input.item.scheduledFor, ...target.params, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.item.id,
+					input.item.id,
+					input.item.scheduledFor,
+					...target.params,
+					input.now,
+				],
 			},
-			auditStatement({ id: auditId, actorUserId: null,
-				action: 'price_review.item.applied', targetKind: 'price_review_item',
-				targetId: input.item.id, requestId: `price-review-apply:${input.item.id}`,
-				safeDiff: { effectiveFrom: input.item.scheduledFor }, now: input.now }),
+			auditStatement({
+				id: auditId,
+				actorUserId: null,
+				action: 'price_review.item.applied',
+				targetKind: 'price_review_item',
+				targetId: input.item.id,
+				requestId: `price-review-apply:${input.item.id}`,
+				safeDiff: { effectiveFrom: input.item.scheduledFor },
+				now: input.now,
+			}),
 		];
 		if (input.item.targetKind === 'enrollment') {
 			statements.push({
@@ -1211,11 +1675,21 @@ export class PriceReviewRepository {
 					updated_at = ?
 				WHERE id = ? AND EXISTS (SELECT 1 FROM price_review_action_assertions
 					WHERE scope = 'apply_guard' AND target_id = ?)`,
-				params: [input.item.newBasePriceCents, input.item.newFinalPriceCents,
-					input.item.newPriceSource, input.item.newPriceMode,
-					input.item.newPriceVersionId, input.item.newPriceRuleId,
-					input.item.scheduledFor, input.item.newPriceMode, input.item.newPriceMode,
-					input.item.newPriceMode, input.now, input.item.targetId, input.item.id],
+				params: [
+					input.item.newBasePriceCents,
+					input.item.newFinalPriceCents,
+					input.item.newPriceSource,
+					input.item.newPriceMode,
+					input.item.newPriceVersionId,
+					input.item.newPriceRuleId,
+					input.item.scheduledFor,
+					input.item.newPriceMode,
+					input.item.newPriceMode,
+					input.item.newPriceMode,
+					input.now,
+					input.item.targetId,
+					input.item.id,
+				],
 			});
 		} else {
 			statements.push({
@@ -1237,13 +1711,26 @@ export class PriceReviewRepository {
 			FROM price_review_items WHERE id = ? AND status = 'scheduled'
 				AND EXISTS (SELECT 1 FROM price_review_action_assertions
 					WHERE scope = 'apply_guard' AND target_id = ?)`,
-			params: [applyEventId, input.item.targetKind, input.item.targetId,
-				input.item.oldBasePriceCents, input.item.oldPriceCents,
-				input.item.newBasePriceCents, input.item.newFinalPriceCents,
-				input.item.newPriceSource, input.item.newPriceMode,
-				input.item.newPriceVersionId, input.item.newPriceRuleId,
-				input.item.scheduledFor, input.evidenceHash, input.now, auditId,
-				input.now, input.item.id, input.item.id],
+			params: [
+				applyEventId,
+				input.item.targetKind,
+				input.item.targetId,
+				input.item.oldBasePriceCents,
+				input.item.oldPriceCents,
+				input.item.newBasePriceCents,
+				input.item.newFinalPriceCents,
+				input.item.newPriceSource,
+				input.item.newPriceMode,
+				input.item.newPriceVersionId,
+				input.item.newPriceRuleId,
+				input.item.scheduledFor,
+				input.evidenceHash,
+				input.now,
+				auditId,
+				input.now,
+				input.item.id,
+				input.item.id,
+			],
 		});
 		if (input.item.targetKind === 'legacy_enrollment') {
 			statements.push({
@@ -1254,11 +1741,22 @@ export class PriceReviewRepository {
 					 applied_by_event_id, created_at, updated_at)
 				SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'active', ?, ?, ?
 				WHERE EXISTS (SELECT 1 FROM price_change_apply_events WHERE id = ?)`,
-				params: [crypto.randomUUID(), input.item.targetId, input.item.id,
-					input.item.newBasePriceCents, input.item.newFinalPriceCents,
-					input.item.newPriceSource, input.item.newPriceMode,
-					input.item.newPriceVersionId, input.item.newPriceRuleId,
-					input.item.scheduledFor, applyEventId, input.now, input.now, applyEventId],
+				params: [
+					crypto.randomUUID(),
+					input.item.targetId,
+					input.item.id,
+					input.item.newBasePriceCents,
+					input.item.newFinalPriceCents,
+					input.item.newPriceSource,
+					input.item.newPriceMode,
+					input.item.newPriceVersionId,
+					input.item.newPriceRuleId,
+					input.item.scheduledFor,
+					applyEventId,
+					input.now,
+					input.now,
+					applyEventId,
+				],
 			});
 		}
 		statements.push(
@@ -1276,10 +1774,16 @@ export class PriceReviewRepository {
 				SELECT ?, 'item_applied', 'price_review_item', id, 'parent', user_id,
 					?, ?, 'pending', ? FROM price_review_items
 				WHERE id = ? AND status = 'applied' AND user_id IS NOT NULL`,
-				params: [`price-review-parent-outbox:applied:${input.item.id}`,
-					JSON.stringify({ publicReference: input.item.publicReference,
-						effectiveFrom: input.item.scheduledFor }),
-					`price-review-parent:applied:${input.item.id}`, input.now, input.item.id],
+				params: [
+					`price-review-parent-outbox:applied:${input.item.id}`,
+					JSON.stringify({
+						publicReference: input.item.publicReference,
+						effectiveFrom: input.item.scheduledFor,
+					}),
+					`price-review-parent:applied:${input.item.id}`,
+					input.now,
+					input.item.id,
+				],
 			},
 			{
 				sql: `INSERT INTO price_review_action_assertions
@@ -1292,8 +1796,16 @@ export class PriceReviewRepository {
 						SELECT 1 FROM legacy_service_price_assignments
 						WHERE price_review_item_id = ? AND status = 'active'))
 				THEN 1 ELSE 0 END, ?)`,
-				params: [crypto.randomUUID(), input.item.id, input.item.id, applyEventId,
-					input.item.id, input.item.targetKind, input.item.id, input.now],
+				params: [
+					crypto.randomUUID(),
+					input.item.id,
+					input.item.id,
+					applyEventId,
+					input.item.id,
+					input.item.targetKind,
+					input.item.id,
+					input.now,
+				],
 			},
 			this.completeBatchIfTerminalStatement(input.item.batchId, input.now)
 		);
@@ -1342,8 +1854,17 @@ export class PriceReviewRepository {
 						 request_hash_sha256, result_ref, audit_event_id, created_at)
 					SELECT ?, 'manual_scheduler_run', 'scheduler', ?, ?, ?, ?, ?, ?, ?
 					WHERE ${ACTIVE_ADMIN}`,
-					params: [actionId, targetId, input.admin.id, input.idempotencyKey,
-						requestHash, targetId, auditId, input.now, input.admin.id],
+					params: [
+						actionId,
+						targetId,
+						input.admin.id,
+						input.idempotencyKey,
+						requestHash,
+						targetId,
+						auditId,
+						input.now,
+						input.admin.id,
+					],
 				},
 				{
 					sql: `INSERT INTO price_review_action_assertions
@@ -1387,12 +1908,14 @@ export class PriceReviewRepository {
 		lastScannedAt: string,
 		today: string,
 		limit = 100
-	): Promise<Array<{
-		enrollmentId: string;
-		courseGroupId: string;
-		boundaryKind: 'activation' | 'expiry';
-		effectiveOn: string;
-	}>> {
+	): Promise<
+		Array<{
+			enrollmentId: string;
+			courseGroupId: string;
+			boundaryKind: 'activation' | 'expiry';
+			effectiveOn: string;
+		}>
+	> {
 		const rows = await this.db.all<{
 			enrollment_id: string;
 			course_group_id: string;
@@ -1419,12 +1942,18 @@ export class PriceReviewRepository {
 			ORDER BY effective_on, enrollment_id LIMIT ?`,
 			params: [lastScannedAt, today, lastScannedAt, today, limit],
 		});
-		return rows.results.map((row) => ({ enrollmentId: row.enrollment_id,
-			courseGroupId: row.course_group_id, boundaryKind: row.boundary_kind,
-			effectiveOn: row.effective_on }));
+		return rows.results.map((row) => ({
+			enrollmentId: row.enrollment_id,
+			courseGroupId: row.course_group_id,
+			boundaryKind: row.boundary_kind,
+			effectiveOn: row.effective_on,
+		}));
 	}
 
-	async activePriceVersionForCourse(courseGroupId: string, effectiveOn: string): Promise<string | null> {
+	async activePriceVersionForCourse(
+		courseGroupId: string,
+		effectiveOn: string
+	): Promise<string | null> {
 		const row = await this.db.first<{ id: string }>({
 			sql: `SELECT version.id FROM course_groups course
 			JOIN price_versions version ON version.academic_period_id = course.academic_period_id
