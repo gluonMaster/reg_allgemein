@@ -21,6 +21,25 @@ const packageNames = new Set([
 	...Object.keys(packageJson.devDependencies ?? {}),
 ]);
 const allowedNpxCommands = new Set(['playwright', 'tsx', 'vitest', 'wrangler']);
+const allowedProtectedLocalConfigs = new Set([
+	'wrangler.toml',
+	'wrangler.preview.toml',
+	'wrangler.production.toml',
+]);
+
+function isAllowedProtectedLocalConfig(candidate: string): boolean {
+	const normalized = candidate.replaceAll('\\', '/').replace(/^\.\//, '');
+	if (!allowedProtectedLocalConfigs.has(normalized)) return false;
+	try {
+		execFileSync('git', ['check-ignore', '--quiet', '--', normalized], {
+			cwd: repositoryRoot,
+			stdio: 'ignore',
+		});
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 function markdownFiles(): string[] {
 	return execFileSync(
@@ -50,8 +69,11 @@ function commandLines(markdown: string): Array<{ line: number; text: string }> {
 	for (const [index, line] of lines.entries()) {
 		const opening = line.match(/^\s{0,3}(`{3,}|~{3,})\s*([\w-]*)/);
 		if (opening) {
-			if (fenceMarker && opening[1][0] === fenceMarker[0]
-				&& opening[1].length >= fenceMarker.length) {
+			if (
+				fenceMarker &&
+				opening[1][0] === fenceMarker[0] &&
+				opening[1].length >= fenceMarker.length
+			) {
 				executableFence = false;
 				fenceMarker = '';
 			} else if (!fenceMarker) {
@@ -75,8 +97,11 @@ function validateCommand(file: string, line: number, text: string): CommandProbl
 	}
 	for (const match of text.matchAll(/\bnpx\s+([A-Za-z0-9@/_-]+)/g)) {
 		const command = match[1].replace(/^@[^/]+\//, '');
-		if (!allowedNpxCommands.has(command)
-			&& !packageNames.has(match[1]) && !packageNames.has(command)) {
+		if (
+			!allowedNpxCommands.has(command) &&
+			!packageNames.has(match[1]) &&
+			!packageNames.has(command)
+		) {
 			problems.push({ file, line, rule: 'untracked-npx-command', target: match[1] });
 		}
 	}
@@ -88,7 +113,11 @@ function validateCommand(file: string, line: number, text: string): CommandProbl
 	}
 	for (const match of text.matchAll(/--config\s+([^\s"']+)/g)) {
 		const candidate = match[1].replace(/[;,]$/, '');
-		if (!isPlaceholder(candidate) && !existsSync(resolve(repositoryRoot, candidate))) {
+		if (
+			!isPlaceholder(candidate) &&
+			!existsSync(resolve(repositoryRoot, candidate)) &&
+			!isAllowedProtectedLocalConfig(candidate)
+		) {
 			problems.push({ file, line, rule: 'missing-config-file', target: candidate });
 		}
 	}
@@ -103,7 +132,10 @@ function validateCommand(file: string, line: number, text: string): CommandProbl
 	requireFlags(/\bwrangler\s+r2\s+bucket\s+create\b/, ['--jurisdiction eu', '--config']);
 	if (file === 'docs/operations/PRODUCTION_DEPLOYMENT.md') {
 		requireFlags(/\bnpm\s+run\s+import:schedule(?::local)?\b/, [
-			'--academic-period', '--action', '--source', '--html',
+			'--academic-period',
+			'--action',
+			'--source',
+			'--html',
 		]);
 	}
 	if (/\bwrangler\s+d1\b/.test(text) && text.includes('--remote')) {
@@ -125,11 +157,15 @@ for (const file of markdownFiles()) {
 }
 
 for (const problem of problems) {
-	console.error(`${sanitized(problem.file)}:${problem.line} ${problem.rule} ${sanitized(problem.target)}`);
+	console.error(
+		`${sanitized(problem.file)}:${problem.line} ${problem.rule} ${sanitized(problem.target)}`
+	);
 }
 if (problems.length > 0) {
 	console.error(`Documentation command check failed: ${problems.length} problem(s).`);
 	process.exitCode = 1;
 } else {
-	console.log(`Documentation command check passed: ${checkedCommands} executable command line(s).`);
+	console.log(
+		`Documentation command check passed: ${checkedCommands} executable command line(s).`
+	);
 }
