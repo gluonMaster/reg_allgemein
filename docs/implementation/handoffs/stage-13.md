@@ -27,8 +27,10 @@ stored-log remediation проверены 2026-08-12.
   [PRODUCTION_READINESS.md](../../operations/PRODUCTION_READINESS.md).
 - Clean baseline for the Access/Telegram readiness expansion:
   `c5712d06af217129f0344864b69ddda962c29d19`. It predates the required
-  implementation below and is not the resulting release candidate; new exact
-  candidate SHA and clean-clone evidence are pending.
+  implementation below and is not the resulting release candidate. The
+  authorized candidate is `e7c94f8e7d33ca95cde123652223bd4c99108945` plus
+  clean-clone documentation-check fix
+  `8f247e5f02ef24482d2ff438d2e1e437b82caf7c`.
 - Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
   Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
@@ -565,7 +567,8 @@ release:verify` завершился с exit code 0.
 
 - User-directed continuation established `c5712d06af217129f0344864b69ddda962c29d19`
   as the clean baseline. It does not contain the complete required work below;
-  therefore a new immutable candidate and exact-SHA clean-clone verification are
+  the new immutable candidate lineage through `8f247e5` now exists and passed
+  exact-SHA clean-clone verification. Independent exact-SHA review remains
   pending. Existing deployed preview remains `200268f` / `62b3cac4…`.
 - Current Access source was previously inspected only through the non-executing
   allowlisted parser: sanitized result 1703 rows, 21/21 required fields,
@@ -644,8 +647,13 @@ release:verify` завершился с exit code 0.
   0 errors/warnings; Vitest 63 files / 471 tests; Chromium 18/18; production
   build; `npm audit --omit=dev` with 0 vulnerabilities; documentation 143
   links in 51 files plus 105 executable commands; release scan 522/522; and
-  `git diff --check`. This is strong local evidence only and does not satisfy
-  PR-A16 immutable exact-SHA, clean-clone or independent-review requirements.
+  `git diff --check`. This mutable result was strong local evidence only; the
+  subsequent clean-clone result below supersedes it for the exact-SHA checks.
+- Exact-SHA clean clone of `8f247e5` subsequently passed `npm ci` and the full
+  `npm run release:verify` in 563.9 s: check 0/0, Vitest 63 files / 471 tests,
+  Chromium 18/18, build, production audit 0, documentation 143 links in 51
+  files plus 105 commands and fresh-clone scan 458/458. PR-A16 now remains
+  blocked only for its independent exact-SHA traceability/security verdict.
 - These new rows remain `blocked` after local implementation until an immutable
   candidate and exact target-pinned preview evidence exist. Legal/provider approvals, restore/RPO/RTO,
   production resources/origin, remaining browser/manual gates and explicit
@@ -657,7 +665,7 @@ release:verify` завершился с exit code 0.
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `passed` for prior audited scope; resulting candidate `blocked` | PR-A06 Ultra audit covered the then-current 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings with no prior HIGH/BLOCKER. The current local matrix maps 99/99 IDs and 175 bullets, but is not independent release evidence. `c5712d0` is the new-work baseline; PR-A16 requires a new immutable Access/Telegram candidate, independent re-review and clean-clone verification | Codex Ultra independent reviewer, 2026-08-12; release operator |
+| Local implementation/traceability | `passed` for prior audited scope; resulting candidate `blocked` | PR-A06 Ultra audit covered the then-current 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings with no prior HIGH/BLOCKER. Candidate lineage through `8f247e5` maps 99/99 IDs and 175 bullets and passed exact-SHA clean-clone verification; PR-A16 remains blocked only for independent exact-SHA traceability/security re-review | Codex Ultra independent reviewer, 2026-08-12; release operator |
 | Dependency security               | `passed`           | immutable `200268f`: clean install, full audit 0, full release verification | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
@@ -698,13 +706,13 @@ release:verify` завершился с exit code 0.
 ## Следующие действия
 
 1. Fresh full mutable-worktree verification local scope PR-B12–PR-B16 и
-   PR-F12–PR-F15 уже пройдена. До остальных deployment gates зафиксировать
-   отдельно разрешённый immutable candidate, выполнить independent exact-SHA
-   review и clean-clone verification для migrations `0016`–`0018`, built-in
-   synthetic preview source boundary, exact-target reviewed
-   import/count/recovery workflow, Telegram Bot API/delivery
-   certainty/operator actions и sanitized tests. Не выполнять remote
-   stage/promote/restore, secret/config mutation или send.
+   PR-F12–PR-F15, authorized immutable candidate и exact-SHA clean-clone
+   verification уже пройдены. До остальных deployment gates выполнить
+   independent exact-SHA review для migrations `0016`–`0018`, built-in
+   synthetic preview source boundary, exact-target reviewed import/count/recovery
+   workflow, Telegram Bot API/delivery certainty/operator actions и sanitized
+   tests. Не выполнять remote stage/promote/restore, secret/config mutation или
+   send.
 2. После local verification отдельно запросить exact-scope permissions для
    synthetic/no-PII preview import lifecycle/first-import restore и single
    synthetic Telegram delivery/unknown operator smoke. Current PII source не
