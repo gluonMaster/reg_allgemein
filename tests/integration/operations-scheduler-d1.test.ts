@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import { runScheduledEvent, runScheduledJobs } from '$lib/server/operations/scheduler';
+import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
 const FIXED_NOW = '2026-07-22T12:00:00.000Z';
@@ -160,6 +161,121 @@ describe('stage 13 operations scheduler in D1', () => {
 					WHERE status = 'feature_disabled'`,
 			})
 		).toEqual({ count: 7 });
+	});
+
+	it('reconciles a stale Telegram dispatch and raises an alert while sends are disabled', async () => {
+		const outbox = new OutboxRepository(db);
+		const startedAt = '2026-07-22T11:58:00.000Z';
+		await db.run({
+			sql: `INSERT INTO telegram_outbox
+				(id, source_kind, source_id, template_or_category, destination_ref,
+				 locale, payload_json, dedupe_key, not_before, status, attempts,
+				 max_attempts, created_at, updated_at)
+			VALUES ('scheduler-telegram-unknown', 'fixture', 'scheduler-source',
+				'bureau.support', 'bureau', 'de', '{}', 'scheduler-telegram-unknown',
+				?, 'pending', 0, 3, ?, ?)`,
+			params: [startedAt, startedAt, startedAt],
+		});
+		expect(await outbox.claimTelegram({
+			now: startedAt, leaseOwner: 'crashed-worker',
+			leaseUntil: '2026-07-22T11:59:00.000Z',
+		})).toMatchObject({ id: 'scheduler-telegram-unknown' });
+		expect(await outbox.startTelegramDispatch({
+			id: 'scheduler-telegram-unknown', leaseOwner: 'crashed-worker',
+			deliveryReference: 'TG-ABCDEF123456', now: startedAt,
+		})).toEqual({ attemptId: expect.any(String) });
+
+		const reconcileConfig = loadRuntimeConfig({
+			APP_ENV: 'test',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal.example.test',
+			DB: context.db,
+			SCHEDULED_JOBS_ENABLED: 'true',
+		});
+		const result = await runScheduledJobs(reconcileConfig, {
+			triggerKind: 'scheduled',
+			dedupeKey: 'disabled-provider-unknown-reconciliation',
+			jobNames: ['telegram_outbox'],
+			now: FIXED_NOW,
+		});
+		expect(result).toEqual([
+			expect.objectContaining({
+				jobName: 'telegram_outbox', status: 'failed',
+				errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
+			}),
+		]);
+		expect(await db.first<{ status: string; last_error_code: string }>({
+			sql: `SELECT status, last_error_code FROM telegram_outbox
+				WHERE id = 'scheduler-telegram-unknown'`,
+		})).toEqual({
+			status: 'delivery_unknown', last_error_code: 'TELEGRAM_DELIVERY_UNKNOWN',
+		});
+		const run = await db.first<{ safe_result_json: string }>({
+			sql: `SELECT safe_result_json FROM scheduled_job_runs
+				WHERE job_name = 'telegram_outbox'`,
+		});
+		expect(JSON.parse(run!.safe_result_json)).toMatchObject({
+			reason: 'provider_disabled', deliveryUnknown: 1,
+			reconciledDeliveryUnknown: 1, unresolvedDeliveryUnknown: 1, terminalDead: 0,
+		});
+		const repeated = await runScheduledJobs(reconcileConfig, {
+			triggerKind: 'scheduled',
+			dedupeKey: 'disabled-provider-unknown-still-open',
+			jobNames: ['telegram_outbox'],
+			now: '2026-07-22T12:01:00.000Z',
+		});
+		expect(repeated).toEqual([
+			expect.objectContaining({
+				jobName: 'telegram_outbox', status: 'failed',
+				errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
+			}),
+		]);
+		const latest = await db.first<{ safe_result_json: string }>({
+			sql: `SELECT safe_result_json FROM scheduled_job_runs
+				WHERE dedupe_key = 'scheduled:disabled-provider-unknown-still-open'`,
+		});
+		expect(JSON.parse(latest!.safe_result_json)).toMatchObject({
+			deliveryUnknown: 1, reconciledDeliveryUnknown: 0,
+			unresolvedDeliveryUnknown: 1, terminalDead: 0,
+		});
+	});
+
+	it('keeps a terminal Telegram failure alerting while sends are disabled', async () => {
+		const outbox = new OutboxRepository(db);
+		const startedAt = '2026-07-22T11:59:00.000Z';
+		await db.run({
+			sql: `INSERT INTO telegram_outbox
+				(id, source_kind, source_id, template_or_category, destination_ref,
+				 locale, payload_json, dedupe_key, not_before, status, attempts,
+				 max_attempts, created_at, updated_at)
+			VALUES ('scheduler-telegram-dead', 'fixture', 'scheduler-dead-source',
+				'bureau.support', 'bureau', 'de', '{}', 'scheduler-telegram-dead', ?,
+				'pending', 0, 3, ?, ?)`,
+			params: [startedAt, startedAt, startedAt],
+		});
+		expect(await outbox.claimTelegram({
+			now: startedAt, leaseOwner: 'scheduler-dead-worker',
+			leaseUntil: '2026-07-22T11:59:30.000Z',
+		})).toMatchObject({ id: 'scheduler-telegram-dead' });
+		expect(await outbox.markTelegramFailed({
+			id: 'scheduler-telegram-dead', leaseOwner: 'scheduler-dead-worker',
+			errorCode: 'TELEGRAM_REQUEST_REJECTED', permanent: true,
+			nextAttemptAt: '2026-07-22T12:00:01.000Z',
+			now: '2026-07-22T11:59:01.000Z',
+		})).toBe('dead');
+		const deadConfig = loadRuntimeConfig({
+			APP_ENV: 'test', PORTAL_PUBLIC_ORIGIN: 'https://portal.example.test',
+			DB: context.db, SCHEDULED_JOBS_ENABLED: 'true',
+		});
+		const result = await runScheduledJobs(deadConfig, {
+			triggerKind: 'scheduled', dedupeKey: 'disabled-provider-dead-backlog',
+			jobNames: ['telegram_outbox'], now: FIXED_NOW,
+		});
+		expect(result).toEqual([
+			expect.objectContaining({
+				jobName: 'telegram_outbox', status: 'failed',
+				errorCode: 'TELEGRAM_OUTBOX_DEAD',
+			}),
+		]);
 	});
 
 	it('isolates a failed manual audit and leaves no run stuck in running', async () => {

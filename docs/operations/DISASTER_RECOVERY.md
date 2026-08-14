@@ -1,10 +1,17 @@
 # Аварийное восстановление
 
+Ревизия: 2026-08-14.
+
 Статус документа: `blocked`. RPO, RTO, backup cadence/retention, R2 backup
 mechanism и full isolated restore rehearsal ещё не утверждены и не доказаны.
 Два отдельных private EU preview R2 bucket проверены, но это только isolation/
 placement evidence: production и restore-target buckets, backup mechanism и
 восстановление остаются недоказанными.
+Target-pinned remote legacy import boundary реализован и локально протестирован,
+но remote rehearsal/restore evidence отсутствует. Для первого promote нет
+previous published version, поэтому обычный import-version rollback не является
+recovery: до mutation нужен проверенный recovery bookmark/pre-import D1 backup и
+isolated restore к состоянию без current legacy snapshot.
 
 Наличие export или provider backup само по себе не означает возможность
 восстановления. `passed` допустим только после полного D1/R2 restore в новую
@@ -40,6 +47,7 @@ non-production environment и критического smoke. Production restore
 | Restore D1                          | отдельная пустая non-production D1              | `blocked`           |
 | Restore R2                          | отдельные private EU archive/quarantine buckets | `blocked`           |
 | Production restore approval         | отдельное прямое поручение                      | `blocked`           |
+| Legacy pre-import recovery point     | exact target/time/hash before first remote stage/promote; не создан/не проверен | `blocked` |
 
 Эти значения нельзя заменять отраслевыми defaults или оценкой агента.
 
@@ -49,7 +57,7 @@ non-production environment и критического smoke. Production restore
 
 | Назначение                   | Binding         | Restore target                     |
 | ---------------------------- | --------------- | ---------------------------------- |
-| Runtime database             | `DB`; current migrations `0001`–`0015` | новая isolated non-production D1   |
+| Runtime database             | `DB`; deployed preview `0001`–`0015`, local unapplied candidate `0016`–`0018` | новая isolated non-production D1 |
 | Retained/approved archive    | `R2_ARCHIVE`    | новый private EU archive bucket    |
 | Quarantine/transient objects | `R2_QUARANTINE` | новый private EU quarantine bucket |
 
@@ -59,6 +67,12 @@ non-production environment и критического smoke. Production restore
 `0001`–`0015`, pending 0, и физически разные private EU buckets. Это не доказывает
 production/restore-target placement и не заменяет полный restore rehearsal; R2
 backup/restore gate остаётся `blocked`.
+
+Candidate migrations `0016_legacy_import_release_control.sql`,
+`0017_telegram_delivery_certainty.sql` и
+`0018_legacy_import_release_hardening.sql` проходят только local empty/upgrade
+tests. Они не применены в preview/production и не меняют приведённый deployed
+inventory до отдельно разрешённого apply.
 
 Initial preview migration evidence 2026-08-10 (`0001`–`0014`, 14/14, pending 0)
 сохраняется как историческая точка до monitoring migration. Append-only
@@ -99,6 +113,18 @@ version/time, containment owner и предполагаемую процедур
 **Prerequisites:** exact target D1/config проверены двумя людьми; protected output
 directory находится вне repository/cloud sync; достаточно encrypted capacity;
 получено backup approval.
+
+Перед remote legacy import recovery point создаётся до первого `stage`; после
+stage/review и isolated restore он связывается с exact plan/review перед
+`promote` защищённым artifact через
+`import:legacy:recovery-evidence:remote` из
+[IMPORT_PIPELINE.md](IMPORT_PIPELINE.md). Команда не создаёт backup и не
+выполняет restore. Recovery record additionally binds
+academic period, private Access/PlusBText source hashes, approved contract
+versions, no-write plan digest and target D1 UUID. Ни один source path/row не
+попадает в checklist. Provider Time Travel bookmark можно использовать только
+если его точное восстановление в новую isolated D1 отрепетировано; наличие
+bookmark само по себе не заменяет export/restore evidence.
 
 **Команды:**
 
@@ -210,14 +236,16 @@ npm run release:verify
 
 `npm run release:verify` проверяет typecheck, полный Vitest suite, Playwright,
 build, production dependency audit, документацию и artifact/secret/PII scan.
-Локальные проверки полного migration set `0001`–`0015`, job inventory и
+Локальные проверки candidate migration set `0001`–`0018`, job inventory и
 fail-closed config входят в suite, но полный release gate остаётся `blocked` при
 любой неуспешной команде и до remote restore smoke.
 
 **Ожидаемый безопасный результат:** schema/objects reconciled; synthetic register
 → cabinet → request/trial → contract → price review → message → privacy closure
 работает либо конкретный path честно `feature_disabled`; cross-user доступ
-отклоняется; logs redacted.
+отклоняется; logs redacted. Для legacy-import restore synthetic/no-PII safe counts,
+current bundle/dependency hashes and 0/1/multiple lookup agree with the recovery
+point. Email/Telegram providers stay disabled; restore never sends a message.
 
 **Проверка:** sanitized evidence включает backup hash, restore environment,
 commit/tool versions, safe counts, smoke result и duration для сравнения с
@@ -225,6 +253,8 @@ commit/tool versions, safe counts, smoke result и duration для сравне�
 
 **Stop condition:** full E2E отсутствует, любой mandatory path failed, runtime
 provider реально отправляет сообщение, restore duration/RPO невозможно оценить.
+Любой `telegram_outbox.delivery_unknown` остаётся preserved terminal evidence и
+не может быть auto-retried во время restore verification.
 
 **Rollback/recovery:** production не менять; обновить runbook/tooling и повторить
 rehearsal с новым restore target.
@@ -248,7 +278,8 @@ D1/R2 не изменены; reason не содержит PII.
 **Проверка:** version ID, health, authorization, current migration compatibility,
 scheduled/provider behavior и post-rollback smoke.
 
-**Stop condition:** previous code не понимает current schema `0001`–`0015`,
+**Stop condition:** previous code не понимает exact target schema (deployed
+preview сейчас `0001`–`0015`; local candidate после будущего apply — `0001`–`0018`),
 known-good ID неизвестен, rollback затронет wrong Worker или проблема в data/
 import.
 
@@ -269,11 +300,11 @@ scope известны; write/external paths contained; database/security owners
 - если damage нельзя безопасно исправить — восстановить D1/R2 в isolated env и
   запросить отдельное production restore approval.
 
-Весь set `0001`–`0015`, включая Stage-13 migrations
-`0014_production_operations.sql` и `0015_worker_monitoring.sql`, проходит local
-empty tests; representative populated upgrade проверяет `0013 → 0015`. Recovery
-compatibility всё равно не доказана без isolated backup/restore и code-rollback
-rehearsal.
+Весь local candidate set `0001`–`0018`, включая deployed Stage-13 migrations
+`0014`–`0015` и unapplied `0016`–`0018`, проходит local empty tests;
+representative populated upgrade применяет весь suffix после `0013`. Recovery
+compatibility всё равно не доказана без отдельно разрешённого remote apply,
+isolated backup/restore и code-rollback rehearsal.
 
 **Ожидаемый безопасный результат:** migration history остаётся append-only;
 schema/data compatibility доказана.
@@ -283,8 +314,9 @@ critical smoke.
 
 **Stop condition:** предложение отредактировать любую applied migration
 `0001`–`0015`, direct SQL hotfix без migration/audit, backup не восстанавливается
-или code/schema несовместимы. Исправление current schema начинается с новой
-append-only migration `0016` или выше.
+или code/schema несовместимы. Локальные append-only candidates `0016`–`0018`
+не применены в deployed preview и не считаются remote evidence; следующее
+исправление после реально применённого набора всегда получает новый номер.
 
 **Rollback/recovery:** оставить feature disabled; подготовить reviewed forward
 migration либо санкционированный restore.
@@ -294,8 +326,17 @@ migration либо санкционированный restore.
 Это не D1 restore: immutable import history остаётся, current promoted pointer
 возвращается на доказанную version.
 
+Это описание применимо только когда предыдущая compatible published version
+существует. Первый promote в пустую D1 не имеет rollback target; текущий local
+repository возвращает `LEGACY_RELEASE_ROLLBACK_TARGET_MISSING`. Реализованный
+local candidate remote boundary нельзя подменять direct SQL, удалением import rows или
+объявлением первого snapshot «неоткатываемым».
+
 **Prerequisites:** source kind/academic period/target version подтверждены по safe
-status; dependency graph совместим; registration disabled; action approved.
+status; dependency graph совместим; registration disabled; action approved;
+exact environment/config/D1 UUID and original approved plan digest revalidated.
+Для first promote вместо target version обязателен verified recovery bookmark/
+pre-import backup и уже пройденный isolated restore к no-current state.
 
 **Точная команда (local rehearsal):**
 
@@ -309,11 +350,30 @@ runs/snapshots не удалены; dependent current state согласован
 **Проверка:** `npm run import:status:local -- --limit <SAFE_LIMIT>`, 0/1/multiple
 lookup и unavailable/stale fail-closed smoke.
 
-**Stop condition:** target version неизвестна/incompatible, output содержит PII,
-remote command отсутствует, rollback выделяет namespace `2` при lookup failure.
+Обязательный remote decision drill разделяет:
 
-**Rollback/recovery:** production не менять. Remote import rollback path сейчас
-`blocked`; нужен implemented/audited command и rehearsal.
+1. `rollback` — atomic switch к previous compatible published bundle;
+2. `roll-forward` — reviewed successor Access+PlusBText bundle;
+3. `first-import restore` — восстановление exact pre-import D1 recovery point в
+   isolated target, safe integrity/lookup checks и только затем отдельное
+   production restore решение;
+4. `no-current transition` — допустим только если отдельно реализован,
+   аудируем, оставляет registration fail-closed и rehearsed; сейчас отсутствует.
+
+Rollback/roll-forward обязаны оперировать одним review-bound legacy bundle:
+нельзя сделать current новый Access с другой незапланированной PlusBText version
+или переключить только половину dependency graph.
+
+**Stop condition:** target version неизвестна/incompatible, output содержит PII,
+remote command/target pinning отсутствует, first import не имеет verified restore
+path, plan/source hash changed, partial Access/PlusBText switch, rollback выделяет
+namespace `2` при lookup failure.
+
+**Rollback/recovery:** production не менять. Remote import rollback/roll-forward
+boundary реализована локально, но first-import restore сейчас `blocked`; нужны
+authorized built-in synthetic/no-PII preview rehearsal, exact protected recovery
+artifact и separate production restore permission. Production transitions в
+candidate fail closed до такого remote transaction evidence.
 
 ## 10. Emergency feature disable
 

@@ -258,24 +258,108 @@ export async function renderEmailTemplate(input: {
 	}
 }
 
-export function renderTelegramTemplate(input: {
+export async function telegramDeliveryReference(dedupeKey: string): Promise<string> {
+	const digest = new Uint8Array(
+		await crypto.subtle.digest('SHA-256', new TextEncoder().encode(dedupeKey))
+	);
+	const prefix = [...digest.slice(0, 6)]
+		.map((value) => value.toString(16).padStart(2, '0'))
+		.join('')
+		.toUpperCase();
+	return `TG-${prefix}`;
+}
+
+const TELEGRAM_OPAQUE_REFERENCE =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+const TELEGRAM_SUPPORT_CATEGORIES = new Set([
+	'absence', 'technical', 'contract', 'payment', 'schedule', 'nachhilfe', 'other',
+]);
+
+function exactPayloadKeys(data: Record<string, unknown>): void {
+	const keys = Object.keys(data).sort();
+	if (keys.join('\u0000') !== ['adminPath', 'category', 'receivedAt', 'reference'].join('\u0000')) {
+		throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+	}
+}
+
+function telegramUtcInstant(data: Record<string, unknown>): string {
+	const receivedAt = requiredString(data, 'receivedAt');
+	if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(receivedAt)
+		|| Number.isNaN(Date.parse(receivedAt))
+		|| new Date(receivedAt).toISOString() !== receivedAt) {
+		throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+	}
+	return receivedAt;
+}
+
+function telegramOpaqueReference(data: Record<string, unknown>): string {
+	const reference = requiredString(data, 'reference');
+	if (!TELEGRAM_OPAQUE_REFERENCE.test(reference)) {
+		throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+	}
+	return reference;
+}
+
+function minimizedTelegramPayload(
+	row: TelegramOutboxRow,
+	data: Record<string, unknown>
+): { category: string; reference: string; receivedAt: string; adminPath: string } {
+	exactPayloadKeys(data);
+	if (row.destination_ref !== 'bureau' || row.locale !== 'de') {
+		throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+	}
+	const reference = telegramOpaqueReference(data);
+	const receivedAt = telegramUtcInstant(data);
+	const category = requiredString(data, 'category');
+	const adminPath = requiredString(data, 'adminPath');
+	switch (row.template_or_category as TelegramTemplateId) {
+		case 'bureau.support':
+			if (!['support_thread', 'absence_report', 'support_message'].includes(row.source_kind)
+				|| !TELEGRAM_OPAQUE_REFERENCE.test(row.source_id)
+				|| !TELEGRAM_SUPPORT_CATEGORIES.has(category)
+				|| adminPath !== `/admin/messages/${reference}`) {
+				throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+			}
+			break;
+		case 'bureau.contract_signal':
+			if (row.source_kind !== 'contract_offer' || row.source_id !== reference
+				|| category !== 'contract' || adminPath !== '/admin/contracts') {
+				throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+			}
+			break;
+		case 'bureau.price_review_signal':
+			if (row.source_kind !== 'price_review_item' || row.source_id !== reference
+				|| category !== 'price_review' || adminPath !== '/admin/price-reviews') {
+				throw new OutboxTemplateError('TELEGRAM_PAYLOAD_NOT_MINIMIZED');
+			}
+			break;
+		default:
+			throw new OutboxTemplateError('TELEGRAM_TEMPLATE_UNSUPPORTED');
+	}
+	return { category, reference, receivedAt, adminPath };
+}
+
+export async function renderTelegramTemplate(input: {
 	row: TelegramOutboxRow;
 	config: Pick<RuntimeConfig, 'portalPublicOrigin'>;
 	chatId: string | undefined;
-}): TelegramMessage {
+}): Promise<TelegramMessage> {
 	if (!input.chatId) throw new OutboxTemplateError('TELEGRAM_DESTINATION_UNAVAILABLE');
 	if (!TELEGRAM_TEMPLATE_IDS.includes(input.row.template_or_category as TelegramTemplateId)) {
 		throw new OutboxTemplateError('TELEGRAM_TEMPLATE_UNSUPPORTED');
 	}
 	const data = payload(input.row.payload_json);
+	const minimized = minimizedTelegramPayload(input.row, data);
+	const deliveryReference = await telegramDeliveryReference(input.row.dedupe_key);
 	return {
 		chatId: input.chatId,
+		deliveryReference,
 		text: formatMessage(input.row.locale, 'telegram.bureau.notification', {
-			category: requiredString(data, 'category'),
-			reference: requiredString(data, 'reference'),
-			receivedAt: requiredString(data, 'receivedAt'),
-			link: buildPortalUrl(input.config, requiredString(data, 'adminPath')).toString(),
+			category: minimized.category,
+			reference: minimized.reference,
+			receivedAt: minimized.receivedAt,
+			link: buildPortalUrl(input.config, minimized.adminPath).toString(),
+			deliveryReference,
 		}),
 	};
 }
-

@@ -2,6 +2,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import { ResendEmailProvider } from '$lib/server/email/resend';
+import { TelegramBotApiProvider } from '$lib/server/telegram/bot-api';
 import {
 	DisabledEmailProvider,
 	DisabledTelegramProvider,
@@ -29,11 +30,20 @@ export function createOutboxRuntime(
 		overrides.telegramProvider ??
 		(config.messaging.telegramProvider === 'fake'
 			? new FakeTelegramProvider()
-			: new DisabledTelegramProvider());
+			: config.messaging.telegramProvider === 'bot_api'
+				? createTelegramBotApiProvider(config)
+				: new DisabledTelegramProvider());
 	const timing = {
 		leaseSeconds: config.messaging.leaseSeconds,
 		retryBaseSeconds: config.messaging.retryBaseSeconds,
 		retryMaxSeconds: config.messaging.retryMaxSeconds,
+	};
+	const telegramTiming = {
+		...timing,
+		maxAttempts: config.messaging.telegramMaxAttempts,
+		...(typeof config.messaging.telegramActivationAt === 'string'
+			? { activationAt: config.messaging.telegramActivationAt }
+			: {}),
 	};
 	return {
 		repository,
@@ -52,7 +62,7 @@ export function createOutboxRuntime(
 			config.messaging.telegramChatId,
 			config,
 			config.messaging.telegramSchedule,
-			timing
+			telegramTiming
 		),
 	};
 }
@@ -66,6 +76,20 @@ function createResendEmailProvider(config: RuntimeConfig): ResendEmailProvider {
 		apiKey: resendApiKey,
 		from: emailFrom,
 		replyTo: emailReplyTo,
+	});
+}
+
+function createTelegramBotApiProvider(config: RuntimeConfig): TelegramBotApiProvider {
+	const { telegramBotToken, telegramChatId, telegramChatType, telegramBotApiTimeoutMs } =
+		config.messaging;
+	if (!telegramBotToken || !telegramChatId || !telegramChatType) {
+		throw new Error('Validated Telegram Bot API configuration is incomplete.');
+	}
+	return new TelegramBotApiProvider({
+		token: telegramBotToken,
+		chatId: telegramChatId,
+		chatType: telegramChatType,
+		timeoutMs: telegramBotApiTimeoutMs,
 	});
 }
 

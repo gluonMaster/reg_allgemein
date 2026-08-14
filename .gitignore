@@ -53,6 +53,10 @@ KindElternDaten*
 tmp/
 out/
 /exports/
+# Protected Telegram preview target/deployment evidence; contains infrastructure
+# identifiers and keyed destination/bot bindings. Never track or publish.
+/imports/telegram-preview-target.json
+/imports/telegram-preview-deployment-evidence.json
 imports/*.json
 imports/*.sql
 *.sqlite

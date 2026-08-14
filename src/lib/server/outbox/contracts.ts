@@ -1,5 +1,19 @@
 export type OutboxChannel = 'email' | 'telegram';
-export type OutboxStatus = 'pending' | 'processing' | 'retry' | 'sent' | 'dead' | 'cancelled';
+export type OutboxStatus =
+	| 'pending'
+	| 'processing'
+	| 'retry'
+	| 'sent'
+	| 'dead'
+	| 'cancelled'
+	| 'delivery_unknown';
+export type AdminOutboxStatus = OutboxStatus;
+export type TelegramDeliveryState =
+	| 'not_started'
+	| 'dispatch_started'
+	| 'not_delivered'
+	| 'delivered'
+	| 'delivery_unknown';
 
 export interface EmailOutboxRow {
 	id: string;
@@ -39,6 +53,11 @@ export interface OutboxClaimInput {
 	leaseUntil: string;
 }
 
+export interface TelegramOutboxClaimInput extends OutboxClaimInput {
+	maxAttempts?: number;
+	activationAt?: string;
+}
+
 export interface OutboxFailureInput {
 	id: string;
 	leaseOwner: string;
@@ -48,7 +67,7 @@ export interface OutboxFailureInput {
 	now: string;
 }
 
-export interface OutboxStore {
+export interface EmailOutboxStore {
 	cancelInvalidEmailRows(now: string): Promise<number>;
 	claimEmail(input: OutboxClaimInput): Promise<EmailOutboxRow | null>;
 	markEmailSent(input: {
@@ -58,7 +77,13 @@ export interface OutboxStore {
 		now: string;
 	}): Promise<boolean>;
 	markEmailFailed(input: OutboxFailureInput): Promise<'retry' | 'dead' | 'lost_lease'>;
-	claimTelegram(input: OutboxClaimInput): Promise<TelegramOutboxRow | null>;
+}
+
+export interface TelegramOutboxStore {
+	claimTelegram(input: TelegramOutboxClaimInput): Promise<TelegramOutboxRow | null>;
+	reconcileStaleTelegramDispatches(now: string): Promise<number>;
+	countUnresolvedTelegramDeliveries(): Promise<number>;
+	countTerminalTelegramFailures(): Promise<number>;
 	deferTelegram(input: {
 		id: string;
 		leaseOwner: string;
@@ -68,11 +93,31 @@ export interface OutboxStore {
 	markTelegramSent(input: {
 		id: string;
 		leaseOwner: string;
+		attemptId: string;
 		providerRequestId: string;
 		now: string;
-	}): Promise<boolean>;
+	}): Promise<'sent' | 'delivery_unknown'>;
+	startTelegramDispatch(input: {
+		id: string;
+		leaseOwner: string;
+		deliveryReference: string;
+		now: string;
+	}): Promise<{ attemptId: string } | null>;
+	markTelegramNotDelivered(input: OutboxFailureInput & {
+		attemptId: string;
+		destinationCooldownUntil?: string;
+	}): Promise<'retry' | 'dead' | 'lost_lease'>;
 	markTelegramFailed(input: OutboxFailureInput): Promise<'retry' | 'dead' | 'lost_lease'>;
+	markTelegramUnknown(input: {
+		id: string;
+		leaseOwner: string;
+		attemptId: string;
+		errorCode: string;
+		now: string;
+	}): Promise<'delivery_unknown' | 'lost_lease'>;
 }
+
+export interface OutboxStore extends EmailOutboxStore, TelegramOutboxStore {}
 
 export interface AdminOutboxRow {
 	channel: OutboxChannel;
@@ -80,7 +125,7 @@ export interface AdminOutboxRow {
 	sourceKind: string;
 	sourceId: string;
 	templateOrCategory: string;
-	status: OutboxStatus;
+	status: AdminOutboxStatus;
 	attempts: number;
 	maxAttempts: number;
 	notBefore: string;
@@ -90,5 +135,9 @@ export interface AdminOutboxRow {
 	sentAt: string | null;
 	createdAt: string;
 	updatedAt: string;
+	deliveryState?: TelegramDeliveryState;
+	deliveryReference?: string;
+	deliveryAttemptId?: string;
+	deliveryAttemptNo?: number;
+	deliveryStartedAt?: string;
 }
-

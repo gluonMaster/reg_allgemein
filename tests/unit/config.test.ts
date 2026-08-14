@@ -22,6 +22,19 @@ const previewTurnstile = {
 	TURNSTILE_SECRET_KEY: 'test-secret-key',
 	TURNSTILE_HOSTNAMES: 'portal-preview.example.org',
 } as const;
+const telegramBotToken = `123456:${'A'.repeat(30)}`;
+const telegramChatId = '-1001234567890';
+const telegramActivationAt = '2026-08-13T12:00:00.000Z';
+
+function expectRuntimeIssue(env: Partial<App.Platform['env']>, expectedIssue: string): void {
+	try {
+		loadRuntimeConfig(env);
+		throw new Error('Expected runtime configuration to fail.');
+	} catch (error) {
+		expect(error).toBeInstanceOf(RuntimeConfigError);
+		expect((error as RuntimeConfigError).issues).toContain(expectedIssue);
+	}
+}
 
 describe('runtime configuration', () => {
 	it('rejects one R2 binding object reused for archive and quarantine', () => {
@@ -98,6 +111,165 @@ describe('runtime configuration', () => {
 				OUTBOX_RETRY_MAX_SECONDS: '600',
 			})
 		).toThrow(RuntimeConfigError);
+	});
+
+	it('loads a production-shaped Telegram Bot API configuration with bounded dispatch', () => {
+		const config = loadRuntimeConfig({
+			APP_ENV: 'production',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			TURNSTILE_SITE_KEY: 'test-site-key',
+			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			TURNSTILE_HOSTNAMES: 'portal.example.org',
+			SCHEDULED_JOBS_ENABLED: 'true',
+			...officialLinks,
+			TELEGRAM_PROVIDER: 'bot_api',
+			TELEGRAM_BOT_TOKEN: telegramBotToken,
+			TELEGRAM_CHAT_ID: telegramChatId,
+			TELEGRAM_CHAT_TYPE: 'channel',
+			TELEGRAM_BOT_API_TIMEOUT_MS: '10000',
+			TELEGRAM_ACTIVATION_AT: telegramActivationAt,
+			OUTBOX_LEASE_SECONDS: '60',
+		});
+
+		expect(config.messaging).toMatchObject({
+			telegramProvider: 'bot_api',
+			telegramBotToken,
+			telegramChatId,
+			telegramChatType: 'channel',
+			telegramBotApiTimeoutMs: 10_000,
+			telegramActivationAt,
+			leaseSeconds: 60,
+		});
+	});
+
+	it('requires a secret-shaped token, protected signed-decimal chat, and exact chat type', () => {
+		const base = {
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+			TELEGRAM_PROVIDER: 'bot_api',
+			TELEGRAM_BOT_TOKEN: telegramBotToken,
+			TELEGRAM_CHAT_ID: telegramChatId,
+			TELEGRAM_CHAT_TYPE: 'channel',
+			TELEGRAM_ACTIVATION_AT: telegramActivationAt,
+		} as const;
+
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_BOT_TOKEN: undefined },
+			'TELEGRAM_BOT_TOKEN:required_when_provider_enabled'
+		);
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_BOT_TOKEN: 'replace-with-a-telegram-token' },
+			'TELEGRAM_BOT_TOKEN:placeholder'
+		);
+		for (const invalidToken of [
+			'not-a-token',
+			`012345:${'A'.repeat(30)}`,
+			`9007199254740992:${'A'.repeat(30)}`,
+		]) {
+			expectRuntimeIssue(
+				{ ...base, TELEGRAM_BOT_TOKEN: invalidToken },
+				'TELEGRAM_BOT_TOKEN:invalid_format'
+			);
+		}
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_CHAT_ID: undefined },
+			'TELEGRAM_CHAT_ID:required_when_provider_enabled'
+		);
+		for (const invalidChatId of ['@bureau', '0012345', '0', '9007199254740992']) {
+			expectRuntimeIssue(
+				{ ...base, TELEGRAM_CHAT_ID: invalidChatId },
+				'TELEGRAM_CHAT_ID:signed_decimal_required'
+			);
+		}
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_CHAT_TYPE: undefined },
+			'TELEGRAM_CHAT_TYPE:required_when_provider_enabled'
+		);
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_ACTIVATION_AT: undefined },
+			'TELEGRAM_ACTIVATION_AT:required_when_provider_enabled'
+		);
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_ACTIVATION_AT: '2026-08-13 12:00:00' },
+			'TELEGRAM_ACTIVATION_AT:canonical_utc_required'
+		);
+	});
+
+	it('keeps the Bot API timeout below its lease and within the hard risk range', () => {
+		const base = {
+			APP_ENV: 'development',
+			PORTAL_PUBLIC_ORIGIN: 'http://127.0.0.1:5173',
+			DB: fakeDb,
+			TELEGRAM_PROVIDER: 'bot_api',
+			TELEGRAM_BOT_TOKEN: telegramBotToken,
+			TELEGRAM_CHAT_ID: telegramChatId,
+			TELEGRAM_CHAT_TYPE: 'supergroup',
+			TELEGRAM_ACTIVATION_AT: telegramActivationAt,
+		} as const;
+
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_BOT_API_TIMEOUT_MS: '999' },
+			'TELEGRAM_BOT_API_TIMEOUT_MS:out_of_range'
+		);
+		expectRuntimeIssue(
+			{ ...base, TELEGRAM_BOT_API_TIMEOUT_MS: '30001' },
+			'TELEGRAM_BOT_API_TIMEOUT_MS:risk_ceiling_exceeded'
+		);
+		expectRuntimeIssue(
+			{
+				...base,
+				TELEGRAM_BOT_API_TIMEOUT_MS: '10000',
+				OUTBOX_LEASE_SECONDS: '10',
+			},
+			'TELEGRAM_BOT_API_TIMEOUT_MS:must_be_less_than_outbox_lease'
+		);
+		const valid = loadRuntimeConfig({
+			...base,
+			TELEGRAM_BOT_API_TIMEOUT_MS: '29999',
+			OUTBOX_LEASE_SECONDS: '30',
+		});
+		expect(valid.messaging.telegramBotApiTimeoutMs).toBe(29_999);
+	});
+
+	it('forbids fake Telegram in production while allowing disabled and bot_api modes', () => {
+		const production = {
+			APP_ENV: 'production',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal.example.org',
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			TURNSTILE_SITE_KEY: 'test-site-key',
+			TURNSTILE_SECRET_KEY: 'test-secret-key',
+			TURNSTILE_HOSTNAMES: 'portal.example.org',
+			SCHEDULED_JOBS_ENABLED: 'true',
+			...officialLinks,
+		} as const;
+
+		expect(loadRuntimeConfig(production).messaging.telegramProvider).toBe('disabled');
+		expectRuntimeIssue(
+			{ ...production, TELEGRAM_PROVIDER: 'fake', TELEGRAM_CHAT_ID: 'bureau-test' },
+			'TELEGRAM_PROVIDER:fake_forbidden_in_production'
+		);
+		expect(
+			loadRuntimeConfig({
+				...production,
+				TELEGRAM_PROVIDER: 'bot_api',
+				TELEGRAM_BOT_TOKEN: telegramBotToken,
+				TELEGRAM_CHAT_ID: telegramChatId,
+				TELEGRAM_CHAT_TYPE: 'channel',
+				TELEGRAM_ACTIVATION_AT: telegramActivationAt,
+			}).messaging.telegramProvider
+		).toBe('bot_api');
 	});
 
 	it('fails closed when required base configuration is missing', () => {

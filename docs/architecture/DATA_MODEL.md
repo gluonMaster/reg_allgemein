@@ -1,5 +1,7 @@
 # Целевая модель данных D1
 
+Ревизия: 2026-08-14.
+
 Документ задает логическую модель и обязательные инварианты. Конкретные SQL-
 миграции создаются поэтапно и могут добавлять технические поля, но не должны
 ослаблять эти ограничения.
@@ -281,6 +283,55 @@ promotion и требует новой contract version.
 
 Issues хранят безопасный контекст, достаточный для поиска записи локальным
 инструментом, но не полный PII dump.
+
+### `legacy_import_release_plans`, `legacy_import_bundle_events`,
+`legacy_import_stage_cleanup_events`
+
+Schema-v3 protected plan artifact до D1 фиксирует
+`sourceClass=synthetic_preview|current_production` и nullable
+`syntheticFixtureId`. Preview требует exact
+`legacy-preview-synthetic-baseline-v1|legacy-preview-synthetic-candidate-v1`,
+production требует `syntheticFixtureId=null`; preview/source и
+production/source-class cross-combinations недопустимы.
+
+`legacy_import_release_plans` связывает immutable plan/staged digests с exact
+environment/D1 UUID/git commit/period, deterministic PlusBText и Access
+run/version pair, expected previous pair и безопасным aggregate summary. Поля
+`planned_by`, `staged_by` различаются. `verification_contract_json` immutable
+фиксирует planned run/source/snapshot/projection/issue counts; D1 triggers
+сверяют его перед review/promote и запрещают error/fatal publication. Review
+fields записываются один раз independent reviewer, не совпадающим с planner или
+stager; status допускает только
+`staged → reviewed → promoted ↔ rolled_back` через repository invariants.
+
+`legacy_import_bundle_events` — append-only history
+`promote|rollback|roll_forward`. Каждая строка связывает target и previous
+PlusBText/Access pair, review digest, два fencing token и обязательный для
+`promote` recovery-evidence digest, а `actor_operator_id` обязан отличаться от
+reviewer. Trigger проверяет expected current pointers, Access→PlusBText
+dependency, review/status и ранее опубликованную rollback pair.
+Pair pointers, Access projection, run statuses, release status, source events и
+audit меняются одним D1 batch. Детерминированные run/version/plan IDs и read-back
+event/current state дают явное reconciliation после ambiguous remote write;
+mixed state не принимается за успех.
+
+Protected ignored recovery-evidence artifact не является D1 substitute или
+произвольным digest: он связывает exact environment/account/database/plan/review/
+current pair, recovery method/reference, distinct isolated-restore database,
+restore verification digest, `restoredCurrentPair`, `verifiedBy`, `verifiedAt`
+и `validUntil`. `verifiedBy` отличается от planner, stager, reviewer и promoter;
+promote хранит только проверенный artifact digest в append-only event/audit.
+
+`legacy_import_stage_cleanup_events` — append-only exact-actor evidence удаления
+только failed deterministic staging attempt. `UNIQUE(import_run_id, action)`,
+source-kind/status triggers и запрет update/delete не позволяют превратить
+cleanup в произвольное удаление plan либо validated/published run.
+
+При populated upgrade `0016`→`0018` старые plan rows с `planned_by`/
+`staged_by IS NULL` либо legacy `{}` verification contract не переписываются и
+остаются immutable historical evidence. Явные NULL/schema guards и null-safe
+actor comparisons запрещают для них review/promote/rollback/roll-forward;
+оператор создаёт новый hardened schema-v3 plan.
 
 ## Legacy family и дети
 
@@ -1318,19 +1369,83 @@ Cabinet и следующий price review используют current effectiv
 
 Структурированная absence record и сообщение создаются одной операцией.
 
-### `email_outbox` и `telegram_outbox`
+### `email_outbox`, `telegram_outbox` и Telegram delivery evidence
 
 Общие поля:
 
 - `id`, `source_kind`, `source_id`, `template_or_category`;
 - `payload_json` с минимизированными данными, `dedupe_key`;
-- `not_before`, `status` (`pending|processing|retry|sent|dead|cancelled`);
+- `not_before`, `status`; email допускает
+  `pending|processing|retry|sent|dead|cancelled`, Telegram дополнительно допускает
+  terminal-for-automatic-worker `delivery_unknown`;
 - `attempts`, `max_attempts`, `next_attempt_at`, `last_error_code`;
 - `locked_at`, `sent_at`, `created_at`.
 
 Email дополнительно хранит recipient/reference template; Telegram — bureau chat
-destination из конфигурации, но не secret token. `UNIQUE(dedupe_key)` исключает
-двойную отправку одного события.
+destination из конфигурации, но не secret token. Telegram также хранит stable
+PII-free `delivery_reference`, `dispatch_started_at` как durable marker перед
+первым возможным HTTP dispatch, safe `provider_message_id` только после
+проверенного success и optional `delivery_unknown_at`/`resolved_at`. Token, chat
+ID, request/response body и provider description в D1/audit/log не сохраняются.
+
+`UNIQUE(dedupe_key)` исключает только вторую outbox row для того же доменного
+события; Telegram `sendMessage` не имеет документированного idempotency key,
+поэтому этот constraint не доказывает exactly-once внешнего side effect. Stale
+`processing` без `dispatch_started_at` можно reclaim. Stale `processing` после
+marker атомарно переводится в `delivery_unknown` и не выбирается обычным cron.
+Valid `ok=false` может очистить marker только в той же D1-операции, которая
+фиксирует conclusive retry/dead result: `429`/`408`/`425`/`5xx` retryable, а
+permanent rejection становится `dead`. Неопределенный transport/timeout,
+unreadable/oversized/malformed response, ambiguous envelope, invalid/mismatched
+success или post-send commit result сохраняет marker и safe code
+`TELEGRAM_DELIVERY_UNKNOWN`.
+
+Manual resolution `delivery_unknown` выполняется только idempotent audited
+командой `confirm_sent|retry_after_review|cancel`. Audit хранит actor, timestamp,
+обязательную безопасную reason/evidence и before/after status; delivery/dedupe
+identity не меняется. `retry_after_review` разрешен только после operator check,
+что delivery reference отсутствует в approved destination, и создает новый
+dispatch attempt, а не скрыто переиспользует ambiguous lease.
+
+`telegram_delivery_attempts` содержит append-only identity и допустимый переход
+`dispatch_started → delivered|not_delivered|delivery_unknown`; terminal evidence
+immutable. `telegram_delivery_resolutions` и
+`telegram_delivery_resolution_assertions` связывают ровно один exact attempt,
+actor/reason/evidence, before/after state и commit assertion; update/delete
+запрещены. `telegram_destination_activation_floors` монотонно исключает backlog,
+а `telegram_destination_policies` durable связывает claim с configured
+`max_attempts`. `telegram_preview_smoke_claim_authorizations` и
+`telegram_preview_smoke_claim_assertions` разрешают только отдельно
+подготовленный disarmed `max_attempts=1` cohort и не создают общий bypass
+обычного outbox claim. `telegram_preview_smoke_abort_authorizations` и
+`telegram_preview_smoke_abort_assertions` образуют отдельную append-only
+no-send ветку: exact target-bound synthetic row можно атомарно перевести в
+`cancelled` только из `pending` либо partial `processing`, когда для неё нет ни
+одного `telegram_delivery_attempts`. Initial-state/transition triggers,
+append-only guards и ordinary-claim exclusion запрещают abort после dispatch,
+повторный abort и Cron reclaim smoke signature, включая stale partial claim.
+
+Если exact smoke row остался `processing` после durable `dispatch_started`,
+target/cohort-bound reconcile разрешён только при истёкшем `lease_until`, exact
+claim proof, одном unresolved attempt и отсутствии abort/provider request ID.
+Команда не вызывает provider: guarded updates переводят attempt, затем outbox в
+`delivery_unknown`, увеличивают `attempts` до 1 и освобождают lease. Partial или
+completed D1 result read-back reconciles идемпотентно; row далее подчиняется
+обычной `telegram_delivery_resolutions` state machine и никогда не возвращается
+в smoke run/abort.
+
+Claim исключает destination при unresolved `delivery_unknown`, terminal `dead`,
+active durable cooldown или pre-activation row. Для `429` cooldown равен
+computed `next_attempt_at` и сохраняется даже при missing/invalid
+`parameters.retry_after`. Поэтому новый row не обходит
+неразобранный инцидент, а configured `max_attempts` применяется из durable
+destination policy, а не только из producer default.
+
+Migration `0017_telegram_delivery_certainty.sql` реализует эту модель;
+`0016_legacy_import_release_control.sql` и
+`0018_legacy_import_release_hardening.sql` реализуют legacy release control.
+Все три являются локальными append-only candidate migrations и не считаются
+применёнными в deployed preview, где подтверждены только `0001`–`0015`.
 
 Email claim повторяет recipient/account/token predicates в conditional `UPDATE`,
 а не доверяет предварительному candidate `SELECT`. Privacy closure меняет

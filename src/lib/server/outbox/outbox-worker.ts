@@ -1,6 +1,6 @@
 import type { RuntimeConfig } from '$lib/server/config/runtime';
 import { nextBusinessWindow, type BusinessHoursSchedule } from './business-hours';
-import type { OutboxStore } from './contracts';
+import type { EmailOutboxStore, TelegramOutboxStore } from './contracts';
 import {
 	OutboxProviderError,
 	type EmailProvider,
@@ -12,12 +12,24 @@ import {
 	renderTelegramTemplate,
 } from './templates';
 
-export type DispatchOutcome = 'empty' | 'deferred' | 'sent' | 'retry' | 'dead' | 'lost_lease';
+export type DispatchOutcome =
+	| 'empty'
+	| 'deferred'
+	| 'sent'
+	| 'retry'
+	| 'dead'
+	| 'delivery_unknown'
+	| 'lost_lease';
 
 export interface WorkerTimingConfig {
 	leaseSeconds: number;
 	retryBaseSeconds: number;
 	retryMaxSeconds: number;
+}
+
+export interface TelegramWorkerConfig extends WorkerTimingConfig {
+	maxAttempts?: number;
+	activationAt?: string;
 }
 
 function assertInstant(value: string): void {
@@ -54,9 +66,45 @@ function safeError(error: unknown): { code: string; permanent: boolean } {
 	return { code: 'PROVIDER_FAILURE', permanent: false };
 }
 
+function safeTelegramError(error: unknown): {
+	code: string;
+	permanent: boolean;
+	delivery: 'not_delivered' | 'unknown';
+	retryAfterSeconds?: number;
+} {
+	if (error instanceof OutboxProviderError) {
+		const code = /^[A-Z0-9_]{1,80}$/u.test(error.code) ? error.code : 'PROVIDER_FAILURE';
+		return {
+			code,
+			permanent: !error.retryable,
+			delivery: error.options.delivery,
+			...(error.options.retryAfterSeconds === undefined
+				? {}
+				: { retryAfterSeconds: error.options.retryAfterSeconds }),
+		};
+	}
+	return {
+		code: 'TELEGRAM_DELIVERY_UNKNOWN',
+		permanent: true,
+		delivery: 'unknown',
+	};
+}
+
+function retryAtWithProviderDelay(
+	now: string,
+	attemptNumber: number,
+	timing: WorkerTimingConfig,
+	retryAfterSeconds?: number
+): string {
+	const deterministic = deterministicRetryAt(now, attemptNumber, timing);
+	if (retryAfterSeconds === undefined) return deterministic;
+	const provider = secondsAfter(now, retryAfterSeconds);
+	return provider > deterministic ? provider : deterministic;
+}
+
 export class EmailOutboxWorker {
 	constructor(
-		private readonly repository: OutboxStore,
+		private readonly repository: EmailOutboxStore,
 		private readonly provider: EmailProvider,
 		private readonly secret: string | undefined,
 		private readonly config: Pick<RuntimeConfig, 'portalPublicOrigin'>,
@@ -105,12 +153,12 @@ export class EmailOutboxWorker {
 
 export class TelegramOutboxWorker {
 	constructor(
-		private readonly repository: OutboxStore,
+		private readonly repository: TelegramOutboxStore,
 		private readonly provider: TelegramProvider,
 		private readonly chatId: string | undefined,
 		private readonly config: Pick<RuntimeConfig, 'portalPublicOrigin'>,
 		private readonly schedule: BusinessHoursSchedule,
-		private readonly timing: WorkerTimingConfig,
+		private readonly timing: TelegramWorkerConfig,
 		private readonly workerId: string = `telegram-worker:${crypto.randomUUID()}`,
 		private readonly clock: () => string = () => new Date().toISOString()
 	) {}
@@ -121,6 +169,12 @@ export class TelegramOutboxWorker {
 			now,
 			leaseOwner: this.workerId,
 			leaseUntil: secondsAfter(now, this.timing.leaseSeconds),
+			...(this.timing.maxAttempts === undefined
+				? {}
+				: { maxAttempts: this.timing.maxAttempts }),
+			...(this.timing.activationAt === undefined
+				? {}
+				: { activationAt: this.timing.activationAt }),
 		});
 		if (!row) return 'empty';
 		const allowedAt = nextBusinessWindow(now, this.schedule);
@@ -134,21 +188,13 @@ export class TelegramOutboxWorker {
 				? 'deferred'
 				: 'lost_lease';
 		}
+		let message: Awaited<ReturnType<typeof renderTelegramTemplate>>;
 		try {
-			const message = renderTelegramTemplate({
+			message = await renderTelegramTemplate({
 				row,
 				config: this.config,
 				chatId: this.chatId,
 			});
-			const result = await this.provider.send(message, { idempotencyKey: row.dedupe_key });
-			return (await this.repository.markTelegramSent({
-				id: row.id,
-				leaseOwner: this.workerId,
-				providerRequestId: result.providerRequestId,
-				now,
-			}))
-				? 'sent'
-				: 'lost_lease';
 		} catch (error) {
 			const safe = safeError(error);
 			return this.repository.markTelegramFailed({
@@ -160,6 +206,61 @@ export class TelegramOutboxWorker {
 				now,
 			});
 		}
+		const attempt = await this.repository.startTelegramDispatch({
+			id: row.id,
+			leaseOwner: this.workerId,
+			deliveryReference: message.deliveryReference,
+			now,
+		});
+		if (!attempt) return 'lost_lease';
+		try {
+			const result = await this.provider.send(message, { idempotencyKey: row.dedupe_key });
+			const completedAt = this.clock();
+			assertInstant(completedAt);
+			return await this.repository.markTelegramSent({
+				id: row.id,
+				leaseOwner: this.workerId,
+				attemptId: attempt.attemptId,
+				providerRequestId: result.providerRequestId,
+				now: completedAt,
+			});
+		} catch (error) {
+			const completedAt = this.clock();
+			assertInstant(completedAt);
+			const safe = safeTelegramError(error);
+			if (safe.delivery === 'unknown') {
+				return this.repository.markTelegramUnknown({
+					id: row.id,
+					leaseOwner: this.workerId,
+					attemptId: attempt.attemptId,
+					errorCode: safe.code,
+					now: completedAt,
+				});
+			}
+			const nextAttemptAt = safe.retryAfterSeconds === undefined
+				? deterministicRetryAt(completedAt, row.attempts + 1, this.timing)
+				: retryAtWithProviderDelay(
+						completedAt,
+						row.attempts + 1,
+						this.timing,
+						safe.retryAfterSeconds
+					);
+			const destinationCooldownUntil =
+				safe.code === 'TELEGRAM_RATE_LIMITED' || safe.retryAfterSeconds !== undefined
+					? nextAttemptAt
+					: undefined;
+			return this.repository.markTelegramNotDelivered({
+				id: row.id,
+				leaseOwner: this.workerId,
+				attemptId: attempt.attemptId,
+				errorCode: safe.code,
+				permanent: safe.permanent,
+				nextAttemptAt,
+				...(destinationCooldownUntil === undefined
+					? {}
+					: { destinationCooldownUntil }),
+				now: completedAt,
+			});
+		}
 	}
 }
-

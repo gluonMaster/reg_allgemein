@@ -1,4 +1,4 @@
-import { DatabaseBoundary } from './database';
+import type { SqlDatabaseBoundary } from './database';
 import { isSha256Hex, scopedHash } from '$lib/server/security/digest';
 
 export class FoundationStorageError extends Error {
@@ -51,7 +51,7 @@ export async function hashRequestFingerprint(
 }
 
 export class FoundationRepository {
-	constructor(private readonly db: DatabaseBoundary) {}
+	constructor(private readonly db: SqlDatabaseBoundary) {}
 
 	async reserveIdempotency(input: {
 		scope: string;

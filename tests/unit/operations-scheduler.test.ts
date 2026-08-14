@@ -3,6 +3,7 @@ import {
 	drainOutbox,
 	runScheduledJobs,
 	scheduledJobNamesForCron,
+	TELEGRAM_DRAIN_STOP_OUTCOMES,
 } from '$lib/server/operations/scheduler';
 
 describe('operations scheduler', () => {
@@ -50,6 +51,29 @@ describe('operations scheduler', () => {
 		]);
 		expect(result).toMatchObject({ claimed: 2, sent: 1, retry: 1 });
 	});
+
+	it.each(['delivery_unknown', 'retry', 'dead'] as const)(
+		'stops a Telegram drain immediately after %s',
+		async (terminalOutcome) => {
+			let calls = 0;
+			const result = await drainOutbox(
+				async () => {
+					calls += 1;
+					return calls === 1 ? terminalOutcome : 'sent';
+				},
+				10,
+				() => '2026-07-22T10:00:00.000Z',
+				TELEGRAM_DRAIN_STOP_OUTCOMES
+			);
+
+			expect(calls).toBe(1);
+			expect(result.claimed).toBe(1);
+			expect(result.sent).toBe(0);
+			expect(result[terminalOutcome === 'delivery_unknown'
+				? 'deliveryUnknown'
+				: terminalOutcome]).toBe(1);
+		}
+	);
 
 	it('rejects an unaudited manual invocation before touching runtime bindings', async () => {
 		await expect(

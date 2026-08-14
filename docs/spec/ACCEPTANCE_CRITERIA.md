@@ -1,5 +1,7 @@
 # Критерии приемки и краевые случаи
 
+Ревизия: 2026-08-14.
+
 Критерии дополняют [MVP_SPEC.md](MVP_SPEC.md), но не вводят отдельные
 бизнес-правила. Идентификаторы в скобках указывают связанные требования.
 
@@ -221,6 +223,65 @@ MVP готов, когда:
   создает `import_issue`/review, а не произвольное совпадение.
 - Import report содержит counts, skipped, warnings и unmatched entities, но не
   содержит полные клиентские строки или документы.
+- **AC-IMPORT-16.** Synthetic PlusBText v1 fixture со styled self-closing empty
+  `K1` непосредственно перед populated `L1` сохраняет логический header
+  `E/K/T empty; F/L/M/N present`, корректно читает target fields и не создаёт
+  ложный `PLUSB_HEADER_CONTRACT_MISMATCH`/v2 drift. Перед release текущие
+  read-only источники дают `admin-xlsm-plusbtext:1` и
+  `access-tblkartei:1`; Access plan фиксирует ожидаемые `1703` source rows и
+  `21/21` обязательных полей без вывода значений.
+- **AC-IMPORT-17.** `import:legacy:plan:remote` до любого write отклоняет
+  отсутствующий `--remote`, example/mismatched config, неверный APP_ENV или
+  D1 UUID, неизвестный period, изменившийся source/contract и Access row count,
+  отличный от `--expected-access-rows`, dirty/mismatched Git candidate и
+  отсутствующие opaque `--operator-id`/canonical `--created-at`. Preview plan
+  сам создаёт встроенный 1703-row synthetic bundle, фиксирует
+  `sourceClass=synthetic_preview`, exact baseline/candidate
+  `syntheticFixtureId` (`legacy-preview-synthetic-baseline-v1` или
+  `legacy-preview-synthetic-candidate-v1`) и отклоняет `--access-source`/
+  `--plusbtext-source`; production фиксирует `current_production` и требует оба
+  read-only path. Успех создаёт только schema-v3 ignored `imports/*.json`; safe
+  stdout не содержит UUID, digests, source paths, secrets, email, телефоны,
+  адреса, имена или raw rows.
+- **AC-IMPORT-18.** Remote stage создаёт unpublished deterministic PlusBText и
+  зависимый Access snapshot и current pair не меняется до promote. Повтор того
+  же plan после timeout-before-commit и timeout-after-commit reconciles state
+  без duplicate snapshot; mixed/conflicting deterministic state блокируется.
+  Failed partial staging удаляется только точным повтором с append-only cleanup
+  event и не позволяет удалить plan. Plan/stage operators различаются, review
+  проходит только для exact staged digest, explicit canonical `reviewed-at` и
+  третьего independent operator; после записи plan/count contract/review fields
+  immutable. Populated `0016`→`0018` upgrade сохраняет прежний plan как
+  immutable evidence, но lifecycle transition для plan с `NULL` actor fields
+  либо `{}` verification contract fail-closed; продолжение требует нового
+  hardened schema-v3 plan.
+- **AC-IMPORT-19.** Promote без валидного recovery-evidence digest, без exact
+  review binding/typed confirmation, при изменившемся current pair, неверной
+  dependency или занятом lease ничего не публикует. Injected failure после
+  начала PlusBText switch откатывает весь D1 batch; успешный promote оставляет
+  ровно одну current PlusBText и Access pair, exact dependency, оба promoted
+  run, append-only event и PII-free audit с recovery-evidence digest. Digest
+  принимается только из защищённого artifact, который совпадает с exact
+  environment/account/D1/plan/review/current-pair, документирует isolated
+  restore, не старше 24 часов и подтверждён operator, отличным от planner,
+  stager, reviewer и promoter. До отдельного remote transaction evidence
+  production transition ещё до чтения API token или network call возвращает
+  `LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED`.
+- **AC-IMPORT-20.** Read-only verify возвращает только status, безопасные
+  aggregate target/issue/event counts и booleans для pair uniqueness,
+  dependency и `PRAGMA foreign_key_check`; D1 trigger и verifier отклоняют любое
+  расхождение immutable verification contract с run/source/snapshot/projection/
+  issue counts. Source rows и PII отсутствуют.
+  Перед production synthetic preview evidence отдельно доказывает реальную
+  remote batch atomicity, timeout/reconciliation и expected row-count check;
+  одних local integration tests недостаточно.
+- **AC-IMPORT-21.** Rollback и roll-forward атомарно переключают обе versions,
+  сохраняют Access→PlusBText dependency и append-only history; повтор после
+  ambiguous completed write является idempotent после verify. Для first import
+  без previous pair rollback завершается
+  `LEGACY_RELEASE_ROLLBACK_TARGET_MISSING`, а promote невозможен без внешнего
+  recovery-evidence digest. Ни одна acceptance-проверка не выполняет
+  production import/deploy/migration без отдельного разрешения.
 
 ## 5. Каталог, capacity и trial
 
@@ -571,9 +632,21 @@ MVP готов, когда:
   thread нельзя добавить сообщение, а повтор ответа/закрытия не дублирует его.
 - Telegram вне `Mo-Fr 09:00-17:00 Europe/Berlin` получает корректный
   `not_before`; тесты покрывают выходные и оба перехода DST.
-- Временная ошибка Telegram использует backoff и конечное число попыток;
-  permanent failure становится `dead` и виден админу, а повтор cron не шлет
-  уже отправленное сообщение. (`REL-02`)
+- Валидный Telegram `ok=false` классифицирует retryable/permanent error; `429`
+  учитывает max(backoff, `retry_after`) и атомарно блокирует весь тот же
+  destination до deadline, сохраняя computed backoff как cooldown также при
+  missing/invalid `retry_after`; explicit `408|425|5xx` только в синтаксически
+  валидном `ok=false` являются conclusive retryable, а не ambiguous;
+  `migrate_to_chat_id` fail closed как config drift, а network/timeout/
+  unreadable/oversized/malformed response, non-`ok=true` ambiguous envelope,
+  invalid/mismatched success, destination mismatch или потерянный post-send D1
+  commit дают `delivery_unknown` без blind retry. Первый unknown/retry/dead
+  останавливает текущий drain, а unresolved unknown или terminal dead блокирует
+  последующие sends и остаётся persistent alert также при disabled provider.
+  Stale lease после
+  durable dispatch marker не reclaimed для отправки; audited `confirm_sent`,
+  `retry_after_review` или `cancel` привязаны к exact attempt и требуют operator
+  reason/evidence, а `sent` cron повторно не шлет. (`MSG-06`, `REL-02`)
 - Resend mode загружается только с отдельным secret и exact identity
   `Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>` /
   `registration@kolibri-dresden.de`; adapter передаёт псевдонимизированный
@@ -581,9 +654,36 @@ MVP готов, когда:
   раскрывает API key, recipient, body или provider diagnostic. Fake provider в
   production отклоняется, а disabled mode не имеет внешнего fallback.
   (`MSG-03`, `SEC-02`, `REL-02`)
-- Telegram отправляется только в служебный канал бюро; Telegram/email payload
-  не содержит содержимого funding-файла Jobcenter/Sozialamt, полного адреса,
-  токена, документа или служебного stack trace. (`MSG-04`)
+- `TELEGRAM_PROVIDER=bot_api` требует раздельные preview/production bot secrets,
+  exact numeric private bureau destination и reviewed canonical UTC activation
+  cutoff; строки до cutoff не отправляются автоматически, а configured max
+  attempts применяется при claim. Режим запрещает inbound path/fake production
+  fallback и отправляет только plain `sendMessage` с disabled link preview и
+  `protect_content`. Final renderer принимает exact keys, allowlisted category,
+  opaque UUID reference, canonical UTC time и предопределённый query-free admin
+  path. Telegram payload не содержит funding-файл, полный адрес/email/телефон,
+  token, document, sensitive free text или provider diagnostic.
+  (`MSG-04`, `MSG-05`, `SEC-02`)
+- Отдельно разрешённый preview smoke сначала pin-ит exact target/candidate,
+  выполняет read-only bot/chat/rights/no-webhook preflight и создаёт ровно один
+  PII-free normal-outbox cohort с `max_attempts=1`. Ровно один реальный
+  `sendMessage` attempt через normal worker даёт фактический `sent` с одним
+  provider reference либо `delivery_unknown` без retry; local fake success или
+  ambiguity не являются внешним evidence и не доказывают оба исхода.
+  (`MSG-05`, `MSG-06`, `REL-02`)
+- Если provider dispatch не начинался, D1-only smoke abort без Telegram secret/
+  preflight/provider call атомарно отменяет только exact prepared `pending` или
+  partial `processing` cohort с нулём delivery attempts, записывает append-only
+  authorization/assertion и исключает smoke signature из Cron reclaim. После
+  любого dispatch attempt или terminal state abort fail-closed; неоднозначный
+  D1 результат сначала сверяется read-only verify. (`MSG-06`, `REL-02`)
+- Если smoke process оборвался после durable `dispatch_started`, exact target/
+  cohort reconcile до lease expiry fail-closed. После expiry команда без
+  Telegram secrets/preflight/provider send/retry проверяет claim/attempt proof,
+  идемпотентно переводит attempt и outbox в `delivery_unknown`, возвращает
+  `attemptCount=1`, no provider ID и `requiresManualResolution=true`; повторный
+  `run`/abort запрещён, дальше применима только обычная exact-attempt operator
+  resolution. (`MSG-06`, `REL-02`)
 
 ## 10. UX и эксплуатация
 

@@ -1,5 +1,7 @@
 # Канонический контракт production readiness
 
+Ревизия: 2026-08-14.
+
 Этот документ задаёт обязательные deliverables, release gates и доказательства
 для доведения портала до production. Он не является готовой инструкцией по
 несуществующей реализации: точные команды, имена scripts, bindings и ожидаемые
@@ -79,6 +81,21 @@ placeholder-ов, ожидаемый безопасный результат, с
 10. безопасный staged/dry-run/promote initial import с явным academic period и
     проверку current promoted legacy snapshot до включения регистрации: lookup
     error/отсутствие snapshot не должны превращаться в namespace-2 allocation;
+    production-grade import обязан отдельно покрывать актуальный Access source,
+    current-source parser regression/contract evidence для PlusBText,
+    target-pinned remote `plan -> stage -> review -> recovery-evidence ->
+    promote -> verify -> rollback|roll-forward`, попарно разные planner/stager/
+    reviewer, transition actor, отличный от reviewer, recovery verifier,
+    отличный от planner/stager/reviewer/promoter, typed confirmations exact
+    target/config/D1 UUID,
+    идемпотентность и rollback. Preview plan обязан использовать только
+    встроенный deterministic `synthetic_preview` bundle из 1703 строк без
+    Office source paths; production plan — только `current_production` с двумя
+    явными read-only sources. Первый promote, у которого
+    нет предыдущей published version, восстанавливается из проверенного
+    pre-import D1 backup либо отдельным заранее реализованным и испытанным
+    переходом к `no current snapshot`; обычная команда rollback предыдущей
+    version этот случай не доказывает;
 11. preview deploy и production-shaped smoke без production PII;
 12. production deployment и post-deploy smoke как команды, которые исполняются
     только после отдельного разрешения;
@@ -150,6 +167,13 @@ Checklist является текущим release ledger и содержит sta
   fail-closed registration при unavailable/stale snapshot;
 - Cron inventory и проверку каждого scheduled path;
 - email/Telegram provider configuration и разрешённый non-production smoke;
+- настоящий односторонний Telegram Bot API adapter: environment-specific bot
+  token и утверждённый bureau chat, минимизированный payload, timeout/error/retry
+  policy, valid-`ok=false` retry/permanent classification, destination-wide 429
+  cooldown, terminal `delivery_unknown` для неоднозначного результата, dead/
+  unknown lane block, аудируемые operator decisions без blind retry и
+  разрешённый synthetic preview smoke с no-send abort для zero-attempt cohort и
+  no-send reconcile истёкшего `dispatch_started` lease в `delivery_unknown`;
 - remote Browser Run glyph/font/pagination/quota/budget conformance;
 - approved production templates, legal profiles и applicable contract blockers;
 - privacy notice, DPA/AVV/subprocessors и media text/contact approval;
@@ -163,6 +187,25 @@ External legal/business approval записывается как evidence и own
 подменяет его своей оценкой. Gate конкретной функции может быть
 `feature_disabled`; checklist обязан назвать проверенный flag/path и остаточный
 scope.
+
+Следующие stable rows нельзя объединять с общим «import/provider smoke» или
+пропускать: PR-B12 PlusBText current-source parser/contract evidence, PR-B13
+exact-target remote runner, PR-B14 review-bound atomic legacy bundle, PR-B15
+synthetic no-PII preview promote/rollback/roll-forward with first-import restore,
+PR-B16 authorized production current import/post-verify; PR-F12 Telegram Bot API
+adapter/config/secrets, PR-F13 ambiguous delivery/manual resolution, PR-F14
+authorized synthetic preview smoke и PR-F15 destination/rotation/recovery drill.
+Пока реализация/evidence отсутствует, row остаётся `blocked`, даже если source
+profile известен или provider flag `disabled`.
+
+На ревизию 2026-08-14 local worktree реализует code/migrations boundary этих
+rows через unapplied candidates `0016` (legacy release control), `0017`
+(Telegram delivery certainty) и `0018` (legacy role/count/cleanup hardening).
+`0018` сохраняет grandfathered `0016` plans как immutable evidence, но
+fail-closes их lifecycle при `NULL` actors/legacy `{}` contract и требует новый
+hardened plan.
+Это не меняет deployed preview `0001`–`0015`, не закрывает PR-B12–PR-B16 или
+PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
 
 ## Обязательная non-production валидация
 
@@ -178,6 +221,13 @@ Rehearsal включает:
 - empty и representative upgraded D1 migrations;
 - production-shaped bindings и Cron manual trigger/freshness checks;
 - remote Browser conformance и разрешённый provider smoke;
+- remote import rehearsal использует только synthetic/no-PII fixture в обычном
+  preview, причём fixture генерируется самим release CLI, фиксируется как
+  `sourceClass=synthetic_preview`, а любые Office source arguments отклоняются.
+  Актуальный Access source с PII не загружается в обычный preview:
+  реальный import допустим только в отдельно утверждённый target с data-owner/
+  privacy approval, выключенными public auth/providers, pre-import backup,
+  ограниченным доступом и доказанным cleanup/restore plan;
 - bootstrap/admin/RBAC smoke без реальных клиентов;
 - backup и полное восстановление D1/R2 в новую non-production environment;
 - code/migration/import rollback decision drill;
@@ -199,6 +249,29 @@ Production readiness запрещено объявлять, если:
   failure procedure;
 - registration включена без валидного current promoted legacy snapshot либо
   lookup failure ошибочно трактуется как отсутствие legacy match;
+- актуальный Access profile не проверен allowlisted неисполняющим parser,
+  PlusBText current-source parse не подтверждает exact approved v1 contract либо
+  parser sanitizer меняет логическую структуру self-closing/styled empty cells;
+  изменение настоящего source contract по-прежнему требует отдельной version,
+  но parser bug нельзя ошибочно выдавать за business/schema drift;
+- remote import command не pin-ит exact environment/config/D1 UUID/clean Git
+  candidate/`sourceClass`, допускает stage/promote без отдельного immutable
+  review и role separation, принимает произвольный recovery digest вместо
+  target/plan/review-bound fresh isolated-restore artifact, выводит source
+  rows/paths/PII или не имеет доказанного first-import restore/no-current
+  rollback;
+- production import transition не остаётся fail-closed ещё до API-token lookup/
+  network, пока отдельное preview remote-transaction evidence отсутствует,
+  либо ошибочно выдаёт local D1 test за это environment evidence;
+- обычный preview rehearsal использует актуальные клиентские Access/Office data,
+  а не synthetic/no-PII fixture;
+- Telegram Bot API path не имеет exact destination ownership, secret/config
+  validation, безопасного `delivery_unknown` состояния и auditable manual
+  resolution, ошибочно считает valid `ok=false` 408/425/5xx неоднозначным, повторяет
+  возможную доставку, обходит terminal dead/unknown lane block либо позволяет
+  abort/reclaim smoke cohort после dispatch attempt; crash после
+  `dispatch_started` повторяется или reconciles до lease expiry/с provider path
+  вместо terminal `delivery_unknown`;
 - first-admin bootstrap оставляет постоянный неаудируемый privilege path;
 - secret попал в tracked file, output, log sample или operator evidence;
 - обязательный legal/privacy/template/upload gate не имеет `passed`, а функция

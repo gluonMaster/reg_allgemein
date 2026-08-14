@@ -1,5 +1,5 @@
 import type { RuntimeConfig } from '$lib/server/config/runtime';
-import type { OutboxStore } from '$lib/server/outbox/contracts';
+import type { EmailOutboxStore } from '$lib/server/outbox/contracts';
 import { EmailOutboxWorker } from '$lib/server/outbox/outbox-worker';
 
 export {
@@ -20,7 +20,7 @@ export class AuthEmailDispatcher {
 	private readonly worker: EmailOutboxWorker;
 
 	constructor(
-		repository: OutboxStore,
+		repository: EmailOutboxStore,
 		provider: EmailProvider,
 		secret: string,
 		config: Pick<RuntimeConfig, 'portalPublicOrigin'>,
@@ -39,6 +39,8 @@ export class AuthEmailDispatcher {
 
 	async dispatchNext(): Promise<'empty' | 'sent' | 'retry' | 'dead'> {
 		const result = await this.worker.dispatchNext();
-		return result === 'lost_lease' || result === 'deferred' ? 'empty' : result;
+		return result === 'lost_lease' || result === 'deferred' || result === 'delivery_unknown'
+			? 'empty'
+			: result;
 	}
 }

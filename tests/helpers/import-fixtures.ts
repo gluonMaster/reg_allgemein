@@ -165,6 +165,7 @@ export function createSyntheticPlusBTextWorkbook(input?: {
 	macroEnabled?: boolean;
 	includeSheet?: boolean;
 	headerMismatch?: boolean;
+	styledEmptyKHeader?: boolean;
 }): Buffer {
 	const rows = input?.rows ?? [
 		{ e: '10', f: 'Old Group', k: null, l: null },
@@ -179,6 +180,7 @@ export function createSyntheticPlusBTextWorkbook(input?: {
 	];
 	const header = [
 		sharedCell('F1', 0),
+		...(input?.styledEmptyKHeader ? ['<c r="K1" s="0"/>'] : []),
 		inlineCell('L1', 'Target group'),
 		inlineCell('M1', 'Teacher'),
 		inlineCell('N1', 'Weekday'),

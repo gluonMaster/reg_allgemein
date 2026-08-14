@@ -49,8 +49,14 @@ EMAIL_MAX_ATTEMPTS = "5"
 OUTBOX_LEASE_SECONDS = "60"
 OUTBOX_RETRY_BASE_SECONDS = "60"
 OUTBOX_RETRY_MAX_SECONDS = "3600"
+# Safe default. Set bot_api only after the separately authorized provider gate.
 TELEGRAM_PROVIDER = "disabled"
 TELEGRAM_MAX_ATTEMPTS = "5"
+TELEGRAM_CHAT_TYPE = "channel"
+TELEGRAM_BOT_API_TIMEOUT_MS = "10000"
+# Set to the reviewed preview/production activation instant immediately before enablement.
+# Rows created before this UTC cutoff are never dispatched automatically.
+# TELEGRAM_ACTIVATION_AT = "2099-01-01T00:00:00.000Z"
 DEFAULT_GROUP_CAPACITY = "12"
 DEFAULT_DANCE_CAPACITY = "15"
 INDIVIDUAL_PRICE_CENTS_PER_45_MIN = "3000"
@@ -103,4 +109,4 @@ jurisdiction = "eu"
 # TURNSTILE_SECRET_KEY
 # RESEND_API_KEY
 # TELEGRAM_BOT_TOKEN
-# TELEGRAM_CHAT_ID
+# TELEGRAM_CHAT_ID (exact signed-decimal value; never @username)

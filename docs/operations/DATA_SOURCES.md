@@ -1,5 +1,7 @@
 # Источники данных
 
+Ревизия: 2026-08-14.
+
 Локальные upstream-файлы считаются read-only. Они могут находиться в
 игнорируемом рабочем каталоге для ручной проверки, но не попадают в Git,
 runtime Worker, CI artifacts или диагностические логи. В tracked-части
@@ -14,8 +16,15 @@ repository находятся только безопасные обезличе
 <LOCAL_ACCESS_SOURCE>
 ```
 
-Таблица `tblKartei`, чтение через локальный Microsoft Access driver. Проверенный
-обезличенный schema profile: [access-schema-profile.md](../../references/data/access-schema-profile.md).
+Таблица `tblKartei` читается напрямую из bytes неисполняющим allowlisted
+парсером; Microsoft Access/Excel/COM/LibreOffice не запускаются. Проверенный
+обезличенный schema profile:
+[access-schema-profile.md](../../references/data/access-schema-profile.md).
+Sanitized preflight актуального 2026 snapshot от 2026-08-13 подтвердил 1703
+source rows, наличие 21/21 обязательных полей и совместимость с
+`access-tblkartei:1`. Эти counts являются release-plan precondition текущего
+импорта, а не вечной business-константой; значения строк, source hash и локальный
+absolute path в tracked docs/report не сохраняются.
 
 ### Identity
 
@@ -121,6 +130,13 @@ drift требует fail-closed review.
 - `K/L/M/N/T` — разреженный target block: old-ID token list, имя новой группы,
   teacher, weekday, duration.
 
+Логический header `admin-xlsm-plusbtext:1` остаётся
+`E/K/T empty; F/L/M/N present`. Styled blank OOXML cell может быть
+self-closing `<c .../>`; parser обязан считать её отдельной пустой cell, не
+поглощая следующую populated cell. Sanitized preflight 2026-08-13 после
+regression fix подтвердил v1 compatibility; parser defect не является
+основанием для v2 contract.
+
 Эти блоки не связаны физическим row number. Для future packages сначала ищутся
 все exact normalized new-group candidates в `L`; fallback выполняет join
 `F -> E -> token in K -> L/M/N/T`. Duplicate/conflicting candidates,
@@ -129,6 +145,13 @@ dangling IDs и missing attributes создают issue; first/same/neighbor-row
 `null`; 90-minute estimate применяется только quote layer для уже
 классифицированной group service. Access import фиксирует content hash и
 source-contract version.
+
+Эти current production sources никогда не используются в ordinary preview.
+Remote preview release CLI не принимает их paths и генерирует только встроенные
+`legacy-preview-synthetic-baseline-v1`/
+`legacy-preview-synthetic-candidate-v1` с
+`sourceClass=synthetic_preview` и 1703 synthetic Access rows. Production plan
+фиксирует `sourceClass=current_production` и требует оба read-only sources.
 
 Полный workbook содержит множество sheets, включая hidden/veryHidden с PII, и
 крупный неподписанный VBA-проект с auto-run, filesystem, Access/Outlook и

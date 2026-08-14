@@ -22,7 +22,12 @@ Declared dimension и AutoFilter не являются data bounds; `T` може
 
 Header определяется versioned structural position/shape, не названиями:
 в текущем row 1 из allowlist непусты только `F/L/M/N`, а `E/K/T` пусты.
-Изменение header position/shape — schema drift, а не повод угадать новую строку.
+Пустая styled cell может быть сериализована как self-closing `<c .../>`; parser
+обязан выделить её как отдельный XML element и не поглощать следующую populated
+cell. В частности, self-closing `K1` непосредственно перед populated `L1`
+сохраняет прежнюю логическую форму v1. Это различие OOXML serialization и
+исправление sanitizer не создают contract v2. Изменение логической header
+position/shape — schema drift, а не повод угадать новую строку.
 
 ## Два независимых блока
 

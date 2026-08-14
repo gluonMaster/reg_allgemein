@@ -76,6 +76,9 @@ declare global {
 				SCHEDULED_LEASE_SECONDS?: string;
 				TELEGRAM_BOT_TOKEN?: string;
 				TELEGRAM_CHAT_ID?: string;
+				TELEGRAM_CHAT_TYPE?: string;
+				TELEGRAM_BOT_API_TIMEOUT_MS?: string;
+				TELEGRAM_ACTIVATION_AT?: string;
 				TELEGRAM_BUSINESS_TIMEZONE?: string;
 				TELEGRAM_BUSINESS_HOURS?: string;
 			};

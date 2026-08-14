@@ -62,16 +62,24 @@ function minuteBucket(value: string): string {
 
 const systemClock = () => new Date().toISOString();
 
+export const TELEGRAM_DRAIN_STOP_OUTCOMES: readonly DispatchOutcome[] = [
+	'delivery_unknown',
+	'retry',
+	'dead',
+];
+
 export async function drainOutbox(
 	dispatch: (now: string) => Promise<DispatchOutcome>,
 	limit: number,
-	clock: () => string = systemClock
+	clock: () => string = systemClock,
+	stopAfter: readonly DispatchOutcome[] = []
 ): Promise<Record<string, number>> {
 	const counts: Record<string, number> = {
 		claimed: 0,
 		sent: 0,
 		retry: 0,
 		dead: 0,
+		deliveryUnknown: 0,
 		deferred: 0,
 		lostLease: 0,
 	};
@@ -82,7 +90,9 @@ export async function drainOutbox(
 		if (outcome === 'empty') break;
 		counts.claimed += 1;
 		if (outcome === 'lost_lease') counts.lostLease += 1;
+		else if (outcome === 'delivery_unknown') counts.deliveryUnknown += 1;
 		else counts[outcome] = (counts[outcome] ?? 0) + 1;
+		if (stopAfter.includes(outcome)) break;
 	}
 	return counts;
 }
@@ -92,7 +102,11 @@ async function executeJob(
 	jobName: ScheduledJobName,
 	now: string,
 	clock: () => string
-): Promise<{ disabled: boolean; result: Record<string, number | string | boolean | null> }> {
+): Promise<{
+	disabled: boolean;
+	result: Record<string, number | string | boolean | null>;
+	errorCode?: string;
+}> {
 	const limit = config.operations.maintenanceBatchLimit;
 	switch (jobName) {
 		case 'email_outbox': {
@@ -100,27 +114,106 @@ async function executeJob(
 				return { disabled: true, result: { reason: 'provider_disabled' } };
 			}
 			const worker = createOutboxRuntime(config).emailWorker;
+			const result = await drainOutbox(
+				(value) => worker.dispatchNext(value),
+				config.operations.outboxBatchLimit,
+				clock
+			);
 			return {
 				disabled: false,
-				result: await drainOutbox(
-					(value) => worker.dispatchNext(value),
-					config.operations.outboxBatchLimit,
-					clock
-				),
+				result,
+				...(result.dead > 0 ? { errorCode: 'EMAIL_OUTBOX_DEAD' } : {}),
 			};
 		}
 		case 'telegram_outbox': {
+			const runtime = createOutboxRuntime(config);
+			// Reconciliation is a D1-only safety action. It must keep running while
+			// provider dispatch is disabled, otherwise a crash after send can leave a
+			// stale `processing` row invisible to both operators and alerts forever.
+			const reconciledDeliveryUnknown =
+				await runtime.repository.reconcileStaleTelegramDispatches(now);
+			const unresolvedDeliveryUnknown =
+				await runtime.repository.countUnresolvedTelegramDeliveries();
+			const terminalDead = await runtime.repository.countTerminalTelegramFailures();
 			if (config.messaging.telegramProvider === 'disabled') {
-				return { disabled: true, result: { reason: 'provider_disabled' } };
+				return unresolvedDeliveryUnknown > 0 || terminalDead > 0
+					? {
+							disabled: false,
+							result: {
+								reason: 'provider_disabled',
+								deliveryUnknown: unresolvedDeliveryUnknown,
+								reconciledDeliveryUnknown,
+								unresolvedDeliveryUnknown,
+								terminalDead,
+							},
+							errorCode: unresolvedDeliveryUnknown > 0
+								? 'TELEGRAM_DELIVERY_UNKNOWN'
+								: 'TELEGRAM_OUTBOX_DEAD',
+						}
+					: { disabled: true, result: { reason: 'provider_disabled' } };
 			}
-			const worker = createOutboxRuntime(config).telegramWorker;
+			if (unresolvedDeliveryUnknown > 0) {
+				return {
+					disabled: false,
+					result: {
+						reason: 'delivery_unknown_open',
+						claimed: 0,
+						sent: 0,
+						retry: 0,
+						dead: 0,
+						deliveryUnknown: reconciledDeliveryUnknown,
+						deferred: 0,
+						lostLease: 0,
+						reconciledDeliveryUnknown,
+						unresolvedDeliveryUnknown,
+						terminalDead,
+					},
+					errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
+				};
+			}
+			// There is one Telegram destination (`bureau`). A terminal failure therefore
+			// blocks the whole provider lane until an operator performs an audited retry
+			// or cancellation. Continuing on the next cron would repeatedly call a
+			// potentially invalid token/chat after permanent provider or contract drift.
+			if (terminalDead > 0) {
+				return {
+					disabled: false,
+					result: {
+						reason: 'terminal_dead_open',
+						claimed: 0,
+						sent: 0,
+						retry: 0,
+						dead: 0,
+						deliveryUnknown: reconciledDeliveryUnknown,
+						deferred: 0,
+						lostLease: 0,
+						reconciledDeliveryUnknown,
+						unresolvedDeliveryUnknown,
+						terminalDead,
+					},
+					errorCode: 'TELEGRAM_OUTBOX_DEAD',
+				};
+			}
+			const worker = runtime.telegramWorker;
+			const result = await drainOutbox(
+				(value) => worker.dispatchNext(value),
+				config.operations.outboxBatchLimit,
+				clock,
+				TELEGRAM_DRAIN_STOP_OUTCOMES
+			);
+			result.deliveryUnknown += reconciledDeliveryUnknown;
+			result.reconciledDeliveryUnknown = reconciledDeliveryUnknown;
+			result.unresolvedDeliveryUnknown =
+				await runtime.repository.countUnresolvedTelegramDeliveries();
+			result.terminalDead = await runtime.repository.countTerminalTelegramFailures();
 			return {
 				disabled: false,
-				result: await drainOutbox(
-					(value) => worker.dispatchNext(value),
-					config.operations.outboxBatchLimit,
-					clock
-				),
+				result,
+				...(result.deliveryUnknown > 0 || result.unresolvedDeliveryUnknown > 0
+					? { errorCode: 'TELEGRAM_DELIVERY_UNKNOWN' }
+					: result.dead > 0 || result.terminalDead > 0
+						? { errorCode: 'TELEGRAM_OUTBOX_DEAD' }
+						: {}),
 			};
 		}
 		case 'price_review':
@@ -299,14 +392,24 @@ export async function runScheduledJobs(
 				continue;
 			}
 			const execution = await executeJob(config, jobName, jobNow, clock);
-			const status = execution.disabled ? 'feature_disabled' : 'succeeded';
+			const status = execution.disabled
+				? 'feature_disabled'
+				: execution.errorCode
+					? 'failed'
+					: 'succeeded';
 			await operations.finishRun({
 				id: runId,
 				status,
 				safeResult: execution.result,
+				...(execution.errorCode ? { errorCode: execution.errorCode } : {}),
 				now: clock(),
 			});
-			results.push({ jobName, status, runId });
+			results.push({
+				jobName,
+				status,
+				runId,
+				...(execution.errorCode ? { errorCode: execution.errorCode } : {}),
+			});
 		} catch (error) {
 			const errorCode = safeErrorCode(error);
 			if (started) {

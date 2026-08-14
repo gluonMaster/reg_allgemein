@@ -1,5 +1,7 @@
 # Import pipeline
 
+Ревизия: 2026-08-14.
+
 ## Гарантии
 
 Каждый import run должен быть:
@@ -47,6 +49,205 @@ Academic period передается importer явно, например
 
 Access staging возможен без готового mapping, но его promotion не должен
 придумывать course/price. Unmatched records сохраняются с review issues.
+
+## Production release актуальной PlusBText + Access pair
+
+Нормативные требования: `IMPORT-01`–`IMPORT-06` из
+[MVP specification](../spec/MVP_SPEC.md). Это отдельный target-pinned процесс;
+локальные `import:plusbtext:local`/`import:access:local` не являются production
+entrypoint. Ни одна команда ниже, включая remote reads, не выполняется против
+preview/production без отдельного разрешения. `plan`, `verify` и
+`recovery-evidence` делают remote reads; `plan`/`recovery-evidence` дополнительно
+создают protected ignored local artifacts. `stage`, `review`, `promote`,
+`rollback` и `roll-forward` меняют указанную D1 и разрешаются раздельно.
+`confirmation` является локальной read-only проверкой config/target/artifacts/
+clean HEAD: она не требует API token и не обращается к D1.
+
+Общие обязательные границы каждого remote entrypoint:
+
+- `--environment preview|production`, exact non-example `--config` и exact
+  environment-specific `--database-id`; config обязан иметь `APP_ENV`, один
+  binding `DB` и разные preview/production UUID;
+- `CLOUDFLARE_API_TOKEN` передаётся только через process environment и не
+  печатается/сериализуется; boundary хранит token в JS-private field;
+- raw script требует явный `--remote`; package entrypoints ниже уже добавляют
+  этот flag и не имеют local/implicit target fallback;
+- Remote D1 API вызывается exact UUID endpoint с parameterized
+  `{batch:[{sql,params}]}`. Batch response должен быть array; object допускается
+  только для single query. Reads имеют bounded retry, request timeout меньше
+  60 секунд и response body не больше 8 MiB; write не retry-ится автоматически;
+- каждый phase требует clean worktree и exact HEAD из plan. Artifact создаётся
+  только как regular non-symlink `imports/*.json` и защищается current-user ACL
+  на Windows либо mode `0600` на POSIX;
+- planner ≠ stager; reviewer отличается от обоих; transition operator
+  отличается от reviewer; recovery verifier отличается от planner/stager/
+  reviewer и promoter.
+
+### 1. No-write plan
+
+Ordinary preview никогда не принимает Office path. CLI сам создаёт 1703-row
+synthetic Access extract через тот же allowlisted parser и synthetic PlusBText
+v1 snapshot. `baseline` нужен для first-import/restore proof; `candidate` имеет
+детерминированный safe delta и отдельные source/version hashes для последующего
+promote→rollback→roll-forward. Их exact IDs:
+`legacy-preview-synthetic-baseline-v1` и
+`legacy-preview-synthetic-candidate-v1`:
+
+```powershell
+npm run import:legacy:plan:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period 2026-2027 --synthetic-variant baseline --git-commit <FULL_GIT_SHA> --operator-id <OPAQUE_PLANNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --expected-access-rows 1703 --output imports/legacy-preview-baseline-plan.json
+```
+
+Preview artifact имеет schema v3, `sourceClass=synthetic_preview` и exact
+`syntheticFixtureId`; переданные `--access-source`/`--plusbtext-source` либо
+variant mismatch завершаются fail-closed. Production plan принимает только
+`sourceClass=current_production` и имеет отдельную форму:
+
+```powershell
+npm run import:legacy:plan:remote -- --environment production --config <WRANGLER_PRODUCTION_CONFIG> --database-id <PRODUCTION_D1_UUID> --academic-period 2026-2027 --plusbtext-source <READ_ONLY_PLUSB_SOURCE> --access-source <READ_ONLY_ACCESS_SOURCE> --git-commit <FULL_GIT_SHA> --operator-id <OPAQUE_PLANNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --expected-access-rows 1703 --output imports/legacy-production-plan.json
+```
+
+Production запрещает `--synthetic-variant`; preview запрещает оба source path.
+Plan проверяет exact current pair, v1 contracts, structural fingerprints,
+Access count и формирует safe diff. Stdout показывает лишь source class,
+contracts и aggregate rows/diff/issues. Любое отличие 1703, 21/21 required
+fields для current-source preflight, v1 logical PlusBText header или expected
+current pair — stop; artifact вручную не исправляется.
+
+### 2. Deterministic unpublished stage
+
+Typed confirmation формируется реализованной локальной read-only командой. Она
+валидирует config/target/protected plan/clean exact HEAD, не требует API token и
+не обращается к D1:
+
+```powershell
+npm run import:legacy:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --action stage --plan imports/legacy-preview-baseline-plan.json
+```
+
+```powershell
+npm run import:legacy:stage:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan imports/legacy-preview-baseline-plan.json --synthetic-variant baseline --operator-id <OPAQUE_STAGER_ID> --confirmation <STAGE_CONFIRMATION>
+```
+
+`STAGE_CONFIRMATION` имеет форму
+`LEGACY_IMPORT_STAGE_<ENV>_<D1_UUID>_<PLAN_DIGEST>`. Stage regenerates exact
+preview fixture либо повторно парсит оба production read-only sources, сверяет
+plan digest/source class/fixture ID, создаёт deterministic unpublished
+run/version IDs, затем Access snapshot с exact dependency на новую PlusBText
+version. Current pair не меняется. Safe result содержит `planId`,
+`stagedDigestSha256`, aggregate diff/issues/rows.
+
+При `delivery=ambiguous` нельзя менять plan/source или запускать новый import.
+Сначала выполнить `verify`, затем повторить **точно ту же** stage-команду тем же
+stager: validated deterministic state будет принят, failed incomplete staging
+очистится с exact-actor append-only cleanup event и безопасно перестроится,
+mixed run/version/hash завершится fail-closed. Plan нельзя удалить.
+
+После применения candidate `0018` любой plan, созданный только под `0016` и
+имеющий `NULL planned_by|staged_by` либо legacy `{}` verification contract,
+остаётся неизменяемым evidence, но не может продолжить lifecycle. Не дополнять
+его direct SQL: создать новый schema-v3 plan и заново пройти stage/review.
+
+### 3. Immutable review
+
+```powershell
+npm run import:legacy:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --action review --plan imports/legacy-preview-baseline-plan.json --staged-digest <STAGED_DIGEST>
+```
+
+```powershell
+npm run import:legacy:review:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan-id <PLAN_ID> --staged-digest <STAGED_DIGEST> --reviewed-by <OPAQUE_REVIEWER_ID> --reason-code LEGACY_IMPORT_REVIEWED --reviewed-at <CANONICAL_UTC_TIMESTAMP> --confirmation <REVIEW_CONFIRMATION>
+```
+
+`REVIEW_CONFIRMATION` =
+`LEGACY_IMPORT_REVIEW_<ENV>_<D1_UUID>_<STAGED_DIGEST>`. Reviewer сверяет safe
+counts/diff/issues и immutable verification contract с reviewed release record;
+free-form PII в `reviewed-by` или `reason-code` запрещена. Успех возвращает
+immutable `reviewDigestSha256`.
+
+### 4. Protected recovery evidence
+
+До promote должен существовать отдельно проверенный recovery point и isolated
+restore для exact target/current pair. Следующая read-only команда не создаёт
+backup и не выполняет restore: она только связывает уже проверенное external
+evidence с exact target/plan/review и создаёт protected artifact сроком не более
+24 часов. Для first import `restored-current-pair=none`, для следующего —
+`previous`:
+
+```powershell
+npm run import:legacy:recovery-evidence:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan-id <PLAN_ID> --review-digest <REVIEW_DIGEST> --recovery-method <d1-bookmark|d1-backup> --recovery-reference-digest <RECOVERY_REFERENCE_SHA256> --isolated-restore-database-id <ISOLATED_RESTORE_D1_UUID> --restore-verification-digest <RESTORE_VERIFICATION_SHA256> --restored-current-pair <none|previous> --verified-by <OPAQUE_RECOVERY_VERIFIER_ID> --verified-at <CANONICAL_UTC_TIMESTAMP> --valid-until <CANONICAL_UTC_TIMESTAMP> --output imports/legacy-preview-recovery.json
+```
+
+Произвольный 64-hex digest не принимается: promote читает сам artifact, сверяет
+environment/account/D1/plan/review/current pair/freshness и независимость ролей.
+
+### 5. Recovery-bound atomic promote
+
+```powershell
+npm run import:legacy:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --action promote --plan imports/legacy-preview-baseline-plan.json --review-digest <REVIEW_DIGEST> --recovery-evidence imports/legacy-preview-recovery.json --operator-id <OPAQUE_PROMOTER_ID>
+```
+
+```powershell
+npm run import:legacy:promote:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan-id <PLAN_ID> --review-digest <REVIEW_DIGEST> --recovery-evidence imports/legacy-preview-recovery.json --operator-id <OPAQUE_PROMOTER_ID> --confirmation <PROMOTE_CONFIRMATION>
+```
+
+`PROMOTE_CONFIRMATION` =
+`LEGACY_IMPORT_PROMOTE_<ENV>_<D1_UUID>_<BINDING_DIGEST>`, где
+`BINDING_DIGEST = SHA-256(canonical JSON {reviewDigestSha256,
+recoveryEvidenceDigestSha256,operatorId})`. Promote получает PlusBText и Access
+leases в фиксированном порядке и одним batch выполняет CAS expected-current,
+projection, pair switch, run status, append-only events и audit. Recovery digest
+обязателен для каждого promote и сохраняется в event/audit.
+
+Сейчас `production` promote/rollback/roll-forward всегда останавливается с
+`LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED` до чтения
+Cloudflare API token и до network call. Не обходить этот guard: сначала
+требуется отдельно разрешённое remote preview evidence.
+
+### 6. PII-free verification
+
+```powershell
+npm run import:legacy:verify:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan-id <PLAN_ID>
+```
+
+Ожидаются `currentPair=target|previous|none`, `currentPairUnique=true`,
+`dependencyCompatible=true`, `foreignKeyIntegrity=true`, exact immutable
+planned-versus-actual run/source/snapshot/projection/issue counts и согласованные
+event counts. Review/promote D1 triggers также fail closed при count drift,
+error/fatal issue или нарушенной projection. Verify не возвращает source rows,
+source hashes, client fields или token. `PRAGMA quick_check` и реальная remote
+transactional/timeout semantics остаются отдельным preview evidence gate:
+успешные local Miniflare tests их не доказывают.
+
+### 7. Atomic rollback и roll-forward
+
+Сначала локально получить каждую exact typed confirmation, используя тот же
+protected candidate plan, review digest и transition operator:
+
+```powershell
+npm run import:legacy:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --action rollback --plan imports/legacy-preview-candidate-plan.json --review-digest <REVIEW_DIGEST> --operator-id <OPAQUE_TRANSITION_OPERATOR_ID>
+npm run import:legacy:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --action roll-forward --plan imports/legacy-preview-candidate-plan.json --review-digest <REVIEW_DIGEST> --operator-id <OPAQUE_TRANSITION_OPERATOR_ID>
+```
+
+```powershell
+npm run import:legacy:rollback:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan-id <PLAN_ID> --review-digest <REVIEW_DIGEST> --operator-id <OPAQUE_TRANSITION_OPERATOR_ID> --confirmation <ROLLBACK_CONFIRMATION>
+npm run import:legacy:roll-forward:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --plan-id <PLAN_ID> --review-digest <REVIEW_DIGEST> --operator-id <OPAQUE_TRANSITION_OPERATOR_ID> --confirmation <ROLL_FORWARD_CONFIRMATION>
+```
+
+Confirmations связывают action/environment/UUID и canonical hash exact review +
+operator. Оба действия переключают только совместимую pair и затем требуют
+`verify`. При первом import previous pair отсутствует, поэтому logical rollback
+возвращает `LEGACY_RELEASE_ROLLBACK_TARGET_MISSING`; восстановление выполняется
+только по заранее проверенной внешней recovery процедуре. При любой
+неоднозначной write delivery оператор не запускает обратную/новую команду, пока
+`verify` не определит фактическое состояние; повтор completed deterministic
+transition является idempotent.
+
+Обязательный synthetic preview gate состоит из двух review-bound plans. Сначала
+`baseline` проходит plan→stage→review→recovery-evidence(`none`)→promote→verify и
+доказывает first-import restore. Затем новый `candidate` plan при текущем
+baseline проходит stage→review→recovery-evidence(`previous`)→promote→verify→
+repeated promote reconciliation→rollback→verify→roll-forward→verify, включая
+timeout-after-commit reconciliation. Оба используют встроенные fixtures и
+сохраняют только sanitized evidence. Production остаётся NO-GO, пока preview,
+restore, legal/provider и остальные release gates не закрыты.
 
 ## Price import
 

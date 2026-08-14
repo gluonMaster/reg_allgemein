@@ -29,6 +29,24 @@ describe('PlusBText allowlisted parser', () => {
 		expect(serialized).not.toContain('AUTO_OPEN_SYNTHETIC_MARKER');
 	});
 
+	it('keeps L1 after a styled self-closing empty K1 cell in the v1 header', async () => {
+		const snapshot = await parsePlusBTextWorkbook(
+			createSyntheticPlusBTextWorkbook({ styledEmptyKHeader: true })
+		);
+
+		expect(snapshot.sourceContractVersion).toBe(1);
+		expect(snapshot.oldGroups).toHaveLength(1);
+		expect(snapshot.targets).toMatchObject([
+			{
+				oldGroupIds: [10],
+				groupNameRaw: 'Target Group',
+				teacherName: 'Teacher A',
+				dayRaw: 'Mo',
+				durationMinutes: 90,
+			},
+		]);
+	});
+
 	it('uses exact L first and then the exact F -> E -> K target join', async () => {
 		const snapshot = await parsePlusBTextWorkbook(
 			createSyntheticPlusBTextWorkbook({

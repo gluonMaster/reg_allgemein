@@ -95,23 +95,53 @@ describe('stage 11 outbox contracts', () => {
 		}
 	});
 
-	it('renders only minimized bureau metadata for Telegram', () => {
+	it('renders only minimized bureau metadata for Telegram', async () => {
+		const reference = '11111111-1111-4111-8111-111111111111';
 		const row: TelegramOutboxRow = {
-			id: 'telegram-1', source_kind: 'support_thread', source_id: 'thread-1',
+			id: 'telegram-1', source_kind: 'support_thread', source_id: reference,
 			template_or_category: 'bureau.support', destination_ref: 'bureau', locale: 'de',
 			payload_json: JSON.stringify({
-				category: 'technical', reference: 'MSG-100',
-				receivedAt: '2026-07-22T10:00:00.000Z', adminPath: '/admin/messages/MSG-100',
+				category: 'technical', reference,
+				receivedAt: '2026-07-22T10:00:00.000Z', adminPath: `/admin/messages/${reference}`,
 			}),
 			dedupe_key: 'telegram:thread-1:v1', attempts: 0, max_attempts: 5,
 			lease_owner: 'fixture-worker',
 		};
-		const message = renderTelegramTemplate({ row, config: portal, chatId: 'bureau-chat' });
+		const message = await renderTelegramTemplate({ row, config: portal, chatId: 'bureau-chat' });
 		expect(message.chatId).toBe('bureau-chat');
-		expect(message.text).toContain('MSG-100');
-		expect(message.text).toContain('https://portal.example.test/admin/messages/MSG-100');
+		expect(message.deliveryReference).toMatch(/^TG-[A-F0-9]{12}$/u);
+		expect(message.text).toContain(message.deliveryReference);
+		expect(message.text).toContain(reference);
+		expect(message.text).toContain(`https://portal.example.test/admin/messages/${reference}`);
 		for (const forbidden of ['parent@example.test', '+4912345', 'Freitext', 'token=']) {
 			expect(message.text).not.toContain(forbidden);
+		}
+	});
+
+	it('rejects non-minimized or mismatched Telegram payloads before provider dispatch', async () => {
+		const reference = '11111111-1111-4111-8111-111111111111';
+		const base: TelegramOutboxRow = {
+			id: 'telegram-invalid', source_kind: 'support_thread', source_id: reference,
+			template_or_category: 'bureau.support', destination_ref: 'bureau', locale: 'de',
+			payload_json: '', dedupe_key: 'telegram:invalid:v1', attempts: 0, max_attempts: 5,
+			lease_owner: 'fixture-worker',
+		};
+		const valid = {
+			category: 'technical', reference, receivedAt: '2026-07-22T10:00:00.000Z',
+			adminPath: `/admin/messages/${reference}`,
+		};
+		for (const payload of [
+			{ ...valid, freeText: 'parent@example.test' },
+			{ ...valid, reference: 'parent@example.test', adminPath: '/admin/messages/parent@example.test' },
+			{ ...valid, category: 'Parent Name' },
+			{ ...valid, receivedAt: '2026-07-22 10:00:00' },
+			{ ...valid, adminPath: `${valid.adminPath}?token=secret` },
+			{ ...valid, adminPath: '/admin/messages/22222222-2222-4222-8222-222222222222' },
+		]) {
+			await expect(renderTelegramTemplate({
+				row: { ...base, payload_json: JSON.stringify(payload) }, config: portal,
+				chatId: 'bureau-chat',
+			})).rejects.toMatchObject({ code: 'TELEGRAM_PAYLOAD_NOT_MINIMIZED' });
 		}
 	});
 });

@@ -1,5 +1,7 @@
 # Roadmap реализации MVP
 
+Ревизия: 2026-08-14.
+
 Roadmap определяет порядок и quality gates, но не является источником
 бизнес-правил. Каждый этап читает [спецификацию](../spec/MVP_SPEC.md),
 [открытые вопросы](../spec/OPEN_QUESTIONS.md) и перечисленные тематические
@@ -56,7 +58,7 @@ npm run build
 |  10 | done   | Price review batches/items, notifications и effective-date apply                                                                       | 04, 09                  |
 |  11 | done   | Support/absence, email/Telegram outboxes и cron retry                                                                                  | 05–10                   |
 |  12 | done   | Privacy export/delete, account closure, retained-archive separation и closure races                                                    | 05–11, включая 06A      |
-|  13 | done   | Независимый hardening, production readiness и проверенные русские operator runbooks                                                    | 01–12                   |
+|  13 | in_progress | Независимый hardening, production readiness, Access/Telegram candidate и русские operator runbooks; external NO-GO gates остаются | 01–12 |
 
 ## 01. Foundation
 
@@ -98,6 +100,9 @@ Exit gate:
 - PlusBText old/target blocks связываются только по source contract; content
   hash отделён от structural fingerprint; valid `T` хранится как минуты, blank
   остаётся `null`, invalid present value создаёт issue без import fallback;
+- OOXML sanitizer не поглощает следующую populated cell после styled
+  self-closing blank cell: v1 header `E/K/T empty; F/L/M/N present` покрыт
+  regression fixture и не требует ложной v2 contract;
 - `ID`/`Value48`, `Value15`–`Value20`, packages 1–5 покрыты fixtures;
 - raw legacy FamilyID (`1. 3477`, namespace 1), portal namespace 2 и
   collision-checked family/contract numbering не смешиваются;
@@ -342,7 +347,7 @@ Exit gate:
 
 Текущий статус: fresh Ultra audit закрыл local traceability gate PR-A06
 2026-08-12, но production readiness остаётся `blocked`. Матрица проверена для
-91/91 normative MVP IDs и 166 acceptance bullets, найденные dual-control,
+всех normative MVP IDs и acceptance bullets, найденные dual-control,
 configured-upload, privacy-handler и parent-route gaps исправлены; полный
 финальный local-only worktree `release:verify` прошёл за 619.5 s: check 0/0,
 Vitest 54 files/340 tests, Chromium 8 files/18 tests, build, production audit 0,
@@ -376,6 +381,42 @@ Provider/manual smoke, job-specific alerts, restore rehearsal и внешние 
 inputs также отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
+Production legacy release из `IMPORT-01`–`IMPORT-06` теперь является отдельным
+обязательным Stage-13 gate. Локально реализованы v1 parser regression,
+exact-target remote boundary, schema-v3 protected no-write plan с
+`sourceClass`/`syntheticFixtureId`, встроенные 1703-row
+`legacy-preview-synthetic-baseline-v1|legacy-preview-synthetic-candidate-v1`
+без Office paths,
+deterministic resumable PlusBText+Access stage, попарно разные planner/stager/
+reviewer, transition actor, отличный от reviewer, и recovery verifier,
+отличный от planner/stager/reviewer/promoter, immutable digest/count review,
+target-bound recovery artifact,
+failed-stage cleanup evidence, recovery-bound atomic promote/
+rollback/roll-forward и aggregate verify. Это реализуют candidate migrations
+`0016` и `0018`; populated-upgrade tests сохраняют прежние unhardened plans как
+immutable evidence, но запрещают их lifecycle и требуют новый hardened plan.
+Deployed preview остаётся на `0001`–`0015`.
+Production transitions намеренно fail closed ещё до API-token lookup/network,
+пока remote transaction evidence отсутствует.
+Это не делает environment gate `passed`: remote preview plan/stage/promotion не
+выполнялись, реальная remote D1 batch atomicity/timeout reconciliation не
+доказана, recovery point/restore не проверены, а production import не разрешён.
+
+Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
+candidate добавляет real one-way `bot_api` adapter, strict minimized payload,
+activation/max-attempt destination policy, append-only delivery attempts,
+terminal `delivery_unknown`, exact-attempt operator resolution и target-bound
+single-message preview-smoke boundary через candidate migration `0017`, включая
+append-only D1-only abort только для unsent zero-attempt cohort и запрет Cron
+reclaim его smoke signature, а также exact-target expired-lease reconcile
+post-`dispatch_started` crash в `delivery_unknown` без provider send/retry.
+Синтаксически валидный Bot API `ok=false` `408|425|5xx` является conclusive
+retryable; `429` сохраняет destination cooldown даже без usable `retry_after`;
+transport/timeout/unreadable/oversized/malformed, ambiguous envelope,
+invalid/mismatched success и post-send-D1 uncertainty — ambiguous. Ни migration,
+ни secret/config, ни external preflight/send не
+применялись; PR-F12–PR-F15 остаются `blocked`.
+
 Tracked packet этапа:
 
 - [traceability matrix](STAGE_13_TRACEABILITY.md);
@@ -385,7 +426,8 @@ Tracked packet этапа:
 - [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md);
 - [persistent handoff](handoffs/stage-13.md).
 
-Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, migrations `0014`–`0015`,
+Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed migrations
+`0014`–`0015`, local unapplied candidates `0016`–`0018`,
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
 покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются
@@ -411,6 +453,12 @@ Exit gate:
   recovery описаны и испытаны без записи credentials/PII в документацию;
 - current promoted legacy snapshot проверен до enable registration; 0/1/multiple
   lookup smoke проходит, а unavailable/stale snapshot не выделяет namespace `2`;
+- synthetic isolated preview проходит exact-target legacy
+  plan→stage→review→recovery-evidence→promote→verify→rollback→roll-forward с
+  CLI-built expected 1703 Access rows/21-field contract без source paths,
+  immutable planned/actual count contract, timeout reconciliation, one current
+  dependency-compatible pair, FK integrity и PII-free evidence; local D1 tests
+  не заменяют этот gate;
 - D1/R2 backup, restore и migration/code/import rollback/roll-forward
   отрепетированы в non-production; RPO/RTO и backup cadence рассматриваются как
   явные release inputs и не выдумываются агентом;

@@ -8,7 +8,10 @@ export default defineConfig({
 		environment: 'node',
 		setupFiles: ['./tests/setup.ts'],
 		testTimeout: 15_000,
-		hookTimeout: 15_000,
+		// Applying the full append-only D1 migration chain is intentionally part of
+		// every integration fixture. Keep assertions tight, but leave enough room
+		// for Miniflare setup when the full suite runs several fixtures in parallel.
+		hookTimeout: 30_000,
 	},
 	resolve: {
 		alias: {

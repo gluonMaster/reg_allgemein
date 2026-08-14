@@ -161,6 +161,23 @@ describe('D1 production migration upgrade', () => {
 						'Synthetic upgrade body',
 						SYNTHETIC_NOW
 					),
+				context.db
+					.prepare(
+						`INSERT INTO telegram_outbox
+							(id, source_kind, source_id, template_or_category, destination_ref,
+							 locale, payload_json, dedupe_key, not_before, status, attempts,
+							 max_attempts, created_at, updated_at)
+						 VALUES (?, 'fixture', ?, 'bureau.support', 'bureau', 'de', '{}', ?, ?,
+							 'pending', 0, 3, ?, ?)`
+					)
+					.bind(
+						'telegram-upgrade-synthetic',
+						'telegram-upgrade-source',
+						'telegram-upgrade-dedupe',
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW
+					),
 			]);
 
 			const appliedMigrationIds = await applyTestD1Migrations(context.db, {
@@ -206,6 +223,9 @@ describe('D1 production migration upgrade', () => {
 						'admin_bootstrap_actions',
 						'admin_bootstrap_assertions',
 						'worker_error_buckets',
+						'legacy_import_release_plans',
+						'telegram_delivery_attempts',
+						'telegram_delivery_resolutions',
 					])
 				);
 				const cleanupColumns = await context.db
@@ -284,11 +304,258 @@ describe('D1 production migration upgrade', () => {
 						.bind('support-message-upgrade-synthetic')
 						.run()
 				).rejects.toThrow('support message is immutable');
+				expect(
+					await context.db
+						.prepare(`SELECT status, dedupe_key FROM telegram_outbox WHERE id = ?`)
+						.bind('telegram-upgrade-synthetic')
+						.first()
+				).toEqual({ status: 'pending', dedupe_key: 'telegram-upgrade-dedupe' });
+
+				const bridgeTriggers = await context.db
+					.prepare(
+						`SELECT name FROM sqlite_master
+						 WHERE type = 'trigger' AND name IN (
+							'contract_outbox_to_common_transport',
+							'price_review_outbox_to_common_transport'
+						 ) ORDER BY name`
+					)
+					.all<{ name: string }>();
+				expect(bridgeTriggers.results.map(({ name }) => name)).toEqual([
+					'contract_outbox_to_common_transport',
+					'price_review_outbox_to_common_transport',
+				]);
+				await context.db.batch([
+					context.db
+						.prepare(
+							`INSERT INTO contract_outbox_events
+								(id, event_type, source_kind, source_id, payload_json,
+								 dedupe_key, status, created_at)
+							 VALUES (?, 'offer_declined', 'contract_offer', ?, '{}', ?,
+								 'pending', ?)`
+						)
+						.bind(
+							'contract-bridge-upgrade-synthetic',
+							'contract-source-upgrade-synthetic',
+							'contract-bridge-upgrade-dedupe',
+							SYNTHETIC_NOW
+						),
+					context.db
+						.prepare(
+							`INSERT INTO price_review_outbox_events
+								(id, event_type, source_kind, source_id, recipient_role,
+								 recipient_user_id, payload_json, dedupe_key, status, created_at)
+							 VALUES (?, 'parent_declined', 'price_review_item', ?, 'admin',
+								 NULL, '{}', ?, 'pending', ?)`
+						)
+						.bind(
+							'price-bridge-upgrade-synthetic',
+							'price-source-upgrade-synthetic',
+							'price-bridge-upgrade-dedupe',
+							SYNTHETIC_NOW
+						),
+				]);
+				expect(
+					await context.db
+						.prepare(
+							`SELECT COUNT(*) AS count FROM telegram_outbox
+							 WHERE id IN (?, ?)`
+						)
+						.bind(
+							'telegram:contract:contract-bridge-upgrade-synthetic',
+							'telegram:price-review:price-bridge-upgrade-synthetic'
+						)
+						.first()
+				).toEqual({ count: 2 });
 			} else {
 				expect(tables).toEqual(
 					expect.arrayContaining(['privacy_requests', 'privacy_export_artifacts'])
 				);
 			}
+		} finally {
+			await context.dispose();
+		}
+	});
+
+	it('fails closed for a release plan populated after 0016 but before hardening', async () => {
+		const availableMigrationIds = await listTestD1MigrationIds();
+		const releaseControlMigration = availableMigrationIds.find((migrationId) =>
+			migrationId.startsWith('0016_')
+		);
+		const hardeningMigration = availableMigrationIds.find((migrationId) =>
+			migrationId.startsWith('0018_')
+		);
+		expect(releaseControlMigration).toBeDefined();
+		expect(hardeningMigration).toBeDefined();
+		if (!releaseControlMigration || !hardeningMigration) {
+			throw new Error('Release-control and hardening migrations are required.');
+		}
+
+		const context = await createMigratedTestD1({ through: releaseControlMigration });
+		try {
+			const periodId = 'period-release-hardening-upgrade';
+			const plusRunId = 'run-plus-release-hardening-upgrade';
+			const accessRunId = 'run-access-release-hardening-upgrade';
+			const plusVersionId = 'version-plus-release-hardening-upgrade';
+			const accessVersionId = 'version-access-release-hardening-upgrade';
+			const planId = 'plan-release-hardening-upgrade';
+			await context.db.batch([
+				context.db
+					.prepare(
+						`INSERT INTO academic_periods
+							(id, code, display_name, starts_on, ends_on, is_current, created_at)
+						 VALUES (?, 'release-hardening-upgrade', 'Release hardening upgrade',
+							'2026-08-01', '2027-07-31', 0, ?)`
+					)
+					.bind(periodId, SYNTHETIC_NOW),
+				...[
+					{
+						id: plusRunId,
+						kind: 'plusbtext',
+						label: 'synthetic-plus-release-hardening-upgrade',
+						hash: '1',
+					},
+					{
+						id: accessRunId,
+						kind: 'access',
+						label: 'synthetic-access-release-hardening-upgrade',
+						hash: '2',
+					},
+				].map(({ id, kind, label, hash }) =>
+					context.db
+						.prepare(
+							`INSERT INTO import_runs (
+								id, source_kind, academic_period_id, source_label,
+								source_hash_sha256, source_contract_id, source_contract_version,
+								structural_fingerprint_sha256, dependency_hashes_json,
+								dependency_set_hash_sha256, run_fingerprint, attempt_no, status,
+								started_at, validated_at, finished_at, rows_total, rows_staged,
+								rows_promoted, rows_skipped, created_at, updated_at
+							) VALUES (?, ?, ?, ?, ?, ?, 1, ?, '{}', ?, ?, 1, 'validated',
+								?, ?, ?, 9, 9, 0, 0, ?, ?)`
+						)
+						.bind(
+							id,
+							kind,
+							periodId,
+							label,
+							hash.repeat(64),
+							`synthetic-${kind}`,
+							(hash === '1' ? '3' : '4').repeat(64),
+							(hash === '1' ? '5' : '6').repeat(64),
+							(hash === '1' ? '7' : '8').repeat(64),
+							SYNTHETIC_NOW,
+							SYNTHETIC_NOW,
+							SYNTHETIC_NOW,
+							SYNTHETIC_NOW,
+							SYNTHETIC_NOW
+						)
+				),
+				context.db
+					.prepare(
+						`INSERT INTO plusbtext_versions (
+							id, academic_period_id, import_run_id, version_hash_sha256,
+							fingerprint_algorithm_version, logical_shape_fingerprint_sha256,
+							style_fingerprint_sha256, created_at
+						) VALUES (?, ?, ?, ?, 1, ?, ?, ?)`
+					)
+					.bind(
+						plusVersionId,
+						periodId,
+						plusRunId,
+						'9'.repeat(64),
+						'a'.repeat(64),
+						'b'.repeat(64),
+						SYNTHETIC_NOW
+					),
+				context.db
+					.prepare(
+						`INSERT INTO legacy_versions (
+							id, academic_period_id, import_run_id, plusbtext_version_id,
+							version_hash_sha256, created_at
+						) VALUES (?, ?, ?, ?, ?, ?)`
+					)
+					.bind(
+						accessVersionId,
+						periodId,
+						accessRunId,
+						plusVersionId,
+						'c'.repeat(64),
+						SYNTHETIC_NOW
+					),
+				context.db
+					.prepare(
+						`INSERT INTO legacy_import_release_plans (
+							id, plan_digest_sha256, staged_digest_sha256, environment,
+							target_database_id, git_commit_sha, academic_period_id,
+							plusbtext_run_id, access_run_id, plusbtext_version_id,
+							access_version_id, safe_summary_json, status, created_at, updated_at
+						) VALUES (?, ?, ?, 'preview', ?, ?, ?, ?, ?, ?, ?, '{}', 'staged', ?, ?)`
+					)
+					.bind(
+						planId,
+						'd'.repeat(64),
+						'e'.repeat(64),
+						'11111111-1111-4111-8111-111111111111',
+						'f'.repeat(40),
+						periodId,
+						plusRunId,
+						accessRunId,
+						plusVersionId,
+						accessVersionId,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW
+					),
+			]);
+
+			const applied = await applyTestD1Migrations(context.db, {
+				after: releaseControlMigration,
+			});
+			expect(applied).toContain(hardeningMigration);
+			expect(
+				await context.db
+					.prepare(
+						`SELECT status, planned_by, staged_by, verification_contract_json
+						 FROM legacy_import_release_plans WHERE id = ?`
+					)
+					.bind(planId)
+					.first()
+			).toEqual({
+				status: 'staged',
+				planned_by: null,
+				staged_by: null,
+				verification_contract_json: '{}',
+			});
+			await expect(
+				context.db
+					.prepare(
+						`UPDATE legacy_import_release_plans
+						 SET status = 'reviewed', review_digest_sha256 = ?,
+							reviewed_by = 'independent-upgrade-reviewer',
+							review_reason_code = 'UPGRADE_REVIEW', reviewed_at = ?, updated_at = ?
+						 WHERE id = ?`
+					)
+					.bind(
+						'0'.repeat(64),
+						'2026-07-22T10:01:00.000Z',
+						'2026-07-22T10:01:00.000Z',
+						planId
+					)
+					.run()
+			).rejects.toThrow();
+			expect(
+				await context.db
+					.prepare(
+						`SELECT status, review_digest_sha256, reviewed_by, reviewed_at
+						 FROM legacy_import_release_plans WHERE id = ?`
+					)
+					.bind(planId)
+					.first()
+			).toEqual({
+				status: 'staged',
+				review_digest_sha256: null,
+				reviewed_by: null,
+				reviewed_at: null,
+			});
 		} finally {
 			await context.dispose();
 		}

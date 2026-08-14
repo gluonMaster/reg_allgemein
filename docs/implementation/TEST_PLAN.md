@@ -1,5 +1,7 @@
 # Стратегия тестирования
 
+Ревизия: 2026-08-14.
+
 ## Принципы
 
 - Ни один automated fixture не содержит реальных имен, email, телефонов,
@@ -31,7 +33,8 @@ concurrency/idempotency проверки в названном suite. Точны
 | `PRICE-01`–`PRICE-04`                                           | Import contract, occupancy/price и price review |
 | `REQ-01`–`REQ-10`                                               | Requests и documents                            |
 | `CONTRACT-01`–`CONTRACT-20`                                     | Contracts и price review                        |
-| `MSG-01`–`MSG-04`                                               | Messaging                                       |
+| `MSG-01`–`MSG-06`                                               | Messaging                                       |
+| `IMPORT-01`–`IMPORT-06`                                         | Production legacy release                       |
 | `ADMIN-01`–`ADMIN-03`, `PRIV-01`–`PRIV-03`                      | Admin и privacy                                 |
 | `REL-01`–`REL-02`, `TIME-01`, `UI-01`, `OBS-01`, `OPS-01`       | Cross-suite quality/release gates               |
 
@@ -54,6 +57,9 @@ concurrency/idempotency проверки в названном suite. Точны
 - synthetic macro-enabled workbook читается без исполнения VBA и только по
   allowlisted sheet/fields; hidden/veryHidden sheets и PII-like extra columns
   не попадают в extract/report;
+- styled self-closing empty `K1` непосредственно перед populated `L1` не
+  поглощает следующую cell: логический v1 header остаётся
+  `E/K/T empty; F/L/M/N present`, target fields читаются полностью;
 - encrypted/unsupported workbook, missing `PlusBText`/column и изменённый
   schema/hash завершаются fail-closed;
 - vector `Dauer/Faecher`, duplicate/ambiguous price rule;
@@ -72,6 +78,63 @@ concurrency/idempotency проверки в названном suite. Точны
 - retry failed fingerprint, concurrent promotion lease и fencing token;
 - two concurrent promotions and preservation of current version.
 
+### Production legacy release
+
+- CLI parser для
+  `plan|stage|review|recovery-evidence|confirmation|promote|verify|rollback|roll-forward`
+  требует explicit `--remote`, принимает только command-specific flags и
+  отклоняет example config, APP_ENV/D1 UUID mismatch и ambiguous selector до
+  source/target mutation;
+- local/read-only `confirmation` валидирует protected plan, exact config/target
+  и clean HEAD без API token/D1 call и формирует action-specific confirmation;
+  лишние или недостающие stage/review/promote/rollback flags отклоняются;
+- preview plan запрещает Office source args и детерминированно строит встроенные
+  `baseline|candidate` 1703-row fixtures с `sourceClass=synthetic_preview` и
+  immutable `syntheticFixtureId` values
+  `legacy-preview-synthetic-baseline-v1` и
+  `legacy-preview-synthetic-candidate-v1`; stage обязан regenerate exact variant;
+  production требует оба read-only source path и
+  `sourceClass=current_production`;
+- no-write schema-v3 plan pin-ит exact target/current pair, period, clean exact
+  full git SHA, opaque planner, caller-supplied canonical UTC creation time,
+  `access-tblkartei:1`, `admin-xlsm-plusbtext:1`, source/structure/version
+  hashes, expected Access rows и safe diff; protected artifact остаётся только
+  в ignored `imports/*.json`, а serialized CLI/boundary state не содержит token,
+  target UUID, source paths, digests или PII в printable summary;
+- `RemoteD1Boundary` отправляет официальный parameterized
+  `{batch:[{sql,params}]}` на exact database UUID, принимает array result для
+  batch и документированный object result для single query, retry-ит только
+  reads, имеет bounded `<60s` AbortSignal и классифицирует любое uncertain
+  write как ambiguous без blind retry; token является JS-private и
+  non-enumerable;
+- deterministic run/version/plan IDs: обычный повтор validated stage — no-op;
+  synthetic timeout-before-commit очищает/replays incomplete unpublished state,
+  timeout-after-commit принимает committed state, а mixed run/version/hash
+  блокируется. Failed partial staging требует exact-actor append-only cleanup
+  event; plan delete запрещён. Отдельно покрываются PlusBText и зависимый Access
+  stage;
+- review принимает только exact staged digest, immutable operator/reason/time
+  binding, требует попарно различных planner/stager/reviewer и не позволяет
+  заменить review после записи; transition actor отличается от reviewer;
+- `recovery-evidence` создаёт protected artifact только из exact target/plan/
+  review, recovery reference, distinct isolated D1, restore digest/current-pair,
+  independent verifier, отличного от planner/stager/reviewer/promoter, и
+  canonical `verified-at|valid-until` не более 24 часов;
+- promote без этого artifact или с неверным confirmation binding
+  `hash(review+recovery+operator)` блокируется; успешный event сохраняет digest,
+  injected Access publish failure после PlusBText work откатывает весь batch;
+- bundle promote/rollback/roll-forward проверяет expected current pair,
+  PlusBText/Access leases и fencing tokens, dependency и append-only events;
+  retry timeout-after-commit reconciles completed event/current pair, а
+  incompatible/mixed current state fail-closed;
+- verify возвращает только aggregate target/issue/event counts, pair status и
+  booleans pair uniqueness/dependency/foreign-key integrity и сверяет immutable
+  planned run/source/snapshot/projection/issue count contract; first-import
+  logical rollback отсутствует и возвращает
+  `LEGACY_RELEASE_ROLLBACK_TARGET_MISSING`. Production promote/rollback/
+  roll-forward до API-token lookup/network call fail closed кодом
+  `LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED`;
+
 ### D1 integration
 
 - clean migrations and constraints;
@@ -83,6 +146,17 @@ concurrency/idempotency проверки в названном suite. Точны
   append-only contract events;
 - price review batch/item cardinality;
 - outbox lease/dedupe/retry.
+- append-only migrations `0016_legacy_import_release_control.sql` и
+  `0018_legacy_import_release_hardening.sql`: immutable plan/review/event,
+  actor separation, protected count contract, append-only cleanup evidence и
+  atomic PlusBText+Access release batch; populated `0016`→`0018` regression
+  сохраняет grandfathered rows, но доказывает fail-closed для всех lifecycle
+  transitions при `NULL` actors/`{}` contract и требует новый hardened plan.
+- `0017_telegram_delivery_certainty.sql`: append-only delivery attempts/
+  resolutions, activation/cooldown/policy constraints and preview-smoke claim/
+  abort authorization/assertion guards. Empty и populated upgrade suites проходят
+  весь local candidate `0001`–`0018`; deployed preview остаётся на
+  `0001`–`0015`, поэтому local migration evidence не считается remote apply.
 
 ### API/browser integration
 
@@ -443,14 +517,60 @@ concurrency/idempotency проверки в названном suite. Точны
 - support waiting/answered/closed transitions, closed-thread continuation и
   idempotent reply/close;
 - admin answer persists when email fails;
-- outbox duplicate event sends once;
-- transient retry/backoff, permanent/dead, stale lease recovery;
+- outbox duplicate event creates one D1 row; fake-provider dedupe sends once, но
+  этот тест не считается evidence внешней Telegram idempotency;
+- transient retry/backoff, permanent/dead и stale lease recovery до provider
+  dispatch;
 - outbox candidate-select race повторно проверяет recipient внутри claim UPDATE;
   claim-first блокирует closure, closure-first возвращает null/cancelled и
   никогда не даёт одновременно closed account + processing email;
 - outside hours, Friday evening/weekend;
 - DST start/end in `Europe/Berlin`;
-- payload redaction/minimal Telegram content.
+- payload redaction/minimal Telegram content;
+- `tests/unit/telegram-bot-api-provider.test.ts`: exact `sendMessage` POST JSON,
+  numeric configured destination, plain text, `link_preview_options.is_disabled`,
+  `protect_content`, no parse mode/media/reply markup и отсутствие token/chat/
+  payload/provider description в diagnostics;
+- provider response matrix: valid `ok=true` с ожидаемым message/chat, destination
+  mismatch, `429` с `retry_after`, explicit valid-`ok=false` `408|425|5xx` как
+  conclusive retryable, permanent `400|401|403|404` и `migrate_to_chat_id`;
+  destination mismatch, malformed/truncated/oversized/contradictory response,
+  non-`ok=true` ambiguous envelope, network error и timeout становятся
+  `TELEGRAM_DELIVERY_UNKNOWN` без automatic retry;
+- `tests/unit/config.test.ts`: `bot_api` требует token и exact numeric chat,
+  принимает signed-decimal string без `@username`, разделяет preview/production
+  config, требует canonical UTC activation cutoff, запрещает production fake и
+  fail closed при missing/invalid values;
+- `tests/integration/messaging-outbox-d1.test.ts`: durable dispatch marker до
+  fetch, post-dispatch crash/timeout и потерянный mark-sent переходят в
+  `delivery_unknown`; stale lease после marker не отправляется снова, тогда как
+  lease без marker остается reclaimable;
+- audited manual reconciliation: `confirm_sent`, `retry_after_review` только с
+  reason/evidence и explicit confirmation, `cancel`, неизменный delivery/
+  dedupe reference, отсутствие generic retry для `delivery_unknown`;
+- scheduler/admin-route tests различают `dead` и `delivery_unknown`, не считают
+  их успешной доставкой и не раскрывают provider/PII evidence;
+- `tests/integration/telegram-drain-safety-d1.test.ts`: первая ambiguous/retry/
+  dead provider result размыкает batch; unresolved unknown или terminal dead
+  блокирует следующий cron; `429` сохраняет destination cooldown даже без
+  usable `retry_after`, который не обходит newly queued row; configured max
+  attempts применяется при claim; pre-activation backlog остаётся pending;
+- `tests/integration/telegram-preview-smoke-d1.test.ts`: exact target-bound
+  `telegram:smoke:abort` отменяет только prepared pending или partial processing
+  cohort с нулём attempts одним append-only authorization/update/assertion
+  batch; cron не reclaim-ит smoke signature, post-dispatch/terminal abort
+  запрещён, uncertain abort reconciles через read-only verify;
+- тот же suite моделирует crash сразу после durable `dispatch_started` без
+  provider call: `telegram:smoke:reconcile` до lease expiry отклоняется, после
+  expiry без provider secrets/send/retry переводит exact attempt/outbox в
+  `delivery_unknown`, возвращает one-attempt/manual-resolution evidence,
+  идемпотентно reconciles partial/complete D1 write и запрещает новый run/abort;
+- renderer/worker negative cases отклоняют до provider unexpected payload key,
+  PII/free text, non-UUID reference, noncanonical time, query string и path/
+  reference mismatch; D1 trigger tests отклоняют terminal status без matching
+  append-only attempt/audit/resolution evidence;
+- все перечисленные provider tests используют injected fake fetch и не делают
+  внешних Telegram API calls.
 
 ### Admin и privacy
 
@@ -539,8 +659,35 @@ npm run build
 - clean `npm ci`;
 - migrations on empty and representative upgraded D1;
 - `npm audit --omit=dev` с документированным результатом;
-- preview smoke с fake/non-production email, Telegram и R2;
+- preview smoke с fake/non-production email и R2; локальные Telegram tests
+  используют только fake fetch/provider;
+- только после отдельного разрешения — один real Telegram `bot_api` preview smoke
+  в dedicated preview channel с синтетическим минимизированным payload:
+  ignored target manifest, independent ≤24h deployment observation, clean exact
+  Git SHA и deployed Worker version; keyed bot/chat binding; read-only
+  identity/chat/rights/no-webhook preflight; disarmed `max_attempts=1` normal-
+  outbox row; exact-cohort atomic claim, concurrent run/ordinary-cron exclusion,
+  видимый delivery reference, returned message ID, exact one delivery и PII-free
+  log/admin evidence. Ambiguous result обязан остаться `delivery_unknown` без
+  retry. Если send не разрешён/не начался, D1-only abort доказывает `cancelled`,
+  zero attempts и no provider ID. Local suites используют fake provider/D1 и не
+  являются external smoke;
+- если authorized `run` завершился после `dispatch_started` без terminal
+  evidence, не повторять его: после exact lease expiry D1-only reconcile без
+  Telegram secrets/provider path должен доказать `delivery_unknown`, one attempt
+  и необходимость обычного audited operator resolution;
+- target/deployment-evidence writers не перезаписывают artifact, отклоняют
+  symlink, используют POSIX `0600`; на Windows удаляют inheritance, назначают
+  current SID owner и единственный `FullControl` allow rule, затем fail-closed
+  сверяют `rulesProtected`/owner/rules. Secret/chat/observer identifiers не
+  попадают в argv/stdout;
 - remote Browser Run и provider sandbox smoke с production-shaped bindings;
+- отдельный synthetic preview legacy release: exact-target plan с ожидаемыми
+  встроенными 1703 Access rows/21 required fields и без Office paths,
+  stage/review/recovery-evidence/promote/verify/rollback/
+  roll-forward, timeout reconciliation, FK/pair/dependency checks и PII-free
+  evidence. Этот gate требует отдельного разрешения на remote changes и остаётся
+  blocked до фактического rehearsal; local D1 atomicity его не заменяет;
 - D1/R2 backup/restore и code/data rollback/roll-forward rehearsal в отдельной
   non-production среде;
 - link/documentation validation;

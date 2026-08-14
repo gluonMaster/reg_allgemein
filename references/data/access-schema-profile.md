@@ -47,3 +47,9 @@ Value48 (control mirror)
 ```
 
 При отсутствии/переименовании поля importer завершается до staging/promotion.
+
+Sanitized повторная проверка актуального 2026 snapshot от 2026-08-13
+неисполняющим parser подтвердила 1703 rows и присутствие 21/21 перечисленных
+обязательных fields, то есть `access-tblkartei:1` совместим. Этот aggregate
+count используется как explicit expected-row precondition конкретного release
+plan; значения, hashes строк и локальный путь источника не публикуются.

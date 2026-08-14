@@ -86,30 +86,50 @@ function workbookPartName(target: string | null, code: string): string {
 	return target.startsWith('/') ? target.slice(1) : `xl/${target.replace(/^\.\//, '')}`;
 }
 
+interface XmlElementMatch {
+	attributes: string;
+	body: string;
+	raw: string;
+}
+
+/**
+ * Match the two OOXML element forms without allowing a self-closing tag to be
+ * consumed as the opening tag of the following element. The self-closing
+ * alternative must remain first: `<c .../>` immediately followed by a normal
+ * `<c>...</c>` is common for styled-but-empty Excel cells.
+ */
+function xmlElements(xml: string, tagName: 'row' | 'c'): XmlElementMatch[] {
+	const pattern = new RegExp(
+		`<${tagName}\\b([^>]*?)\\s*/>|<${tagName}\\b([^>]*?)>([\\s\\S]*?)<\\/${tagName}>`,
+		'g'
+	);
+	return [...xml.matchAll(pattern)].map((match) => ({
+		attributes: match[1] ?? match[2] ?? '',
+		body: match[3] ?? '',
+		raw: match[0],
+	}));
+}
+
 function allowlistedWorksheetXml(input: { worksheetXml: string; declaredMaxRow: number }): {
 	xml: string;
 	sharedStringIndexes: Set<number>;
 } {
 	const rows: string[] = [];
 	const sharedStringIndexes = new Set<number>();
-	for (const rowMatch of input.worksheetXml.matchAll(
-		/<row\b([^>]*)>([\s\S]*?)<\/row>|<row\b([^>]*)\/>/g
-	)) {
-		const rowAttributes = rowMatch[1] ?? rowMatch[3] ?? '';
+	for (const rowMatch of xmlElements(input.worksheetXml, 'row')) {
+		const rowAttributes = rowMatch.attributes;
 		const cells: string[] = [];
-		for (const cellMatch of (rowMatch[2] ?? '').matchAll(
-			/<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g
-		)) {
-			const attributes = cellMatch[1] ?? cellMatch[3] ?? '';
+		for (const cellMatch of xmlElements(rowMatch.body, 'c')) {
+			const attributes = cellMatch.attributes;
 			const reference = xmlAttribute(attributes, 'r');
 			const column = reference ? /^[A-Z]+/i.exec(reference)?.[0]?.toUpperCase() : null;
 			if (!column || !ALLOWLIST.includes(column as AllowlistedColumn)) continue;
 			if (xmlAttribute(attributes, 't') === 's') {
-				const indexText = /<v(?:\s[^>]*)?>(\d+)<\/v>/.exec(cellMatch[2] ?? '')?.[1];
+				const indexText = /<v(?:\s[^>]*)?>(\d+)<\/v>/.exec(cellMatch.body)?.[1];
 				if (indexText === undefined) throw new Error('PLUSB_SHARED_STRING_INDEX_INVALID');
 				sharedStringIndexes.add(Number(indexText));
 			}
-			cells.push(cellMatch[0]);
+			cells.push(cellMatch.raw);
 		}
 		if (!cells.length) continue;
 		const declaredRow = Number(xmlAttribute(rowAttributes, 'r') ?? 0);
@@ -319,8 +339,8 @@ function allowlistedCellProfile(worksheetXml: string): Array<{
 		style: string | null;
 		hasFormula: boolean;
 	}> = [];
-	for (const match of worksheetXml.matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g)) {
-		const attributes = match[1] ?? match[3] ?? '';
+	for (const match of xmlElements(worksheetXml, 'c')) {
+		const attributes = match.attributes;
 		const reference = xmlAttribute(attributes, 'r');
 		const column = reference ? /^[A-Z]+/i.exec(reference)?.[0]?.toUpperCase() : null;
 		if (!column || !ALLOWLIST.includes(column as AllowlistedColumn)) continue;
@@ -329,7 +349,7 @@ function allowlistedCellProfile(worksheetXml: string): Array<{
 			row: Number(/\d+$/.exec(reference!)?.[0] ?? 0),
 			type: xmlAttribute(attributes, 't'),
 			style: xmlAttribute(attributes, 's'),
-			hasFormula: /<f(?:\s|>)/.test(match[2] ?? ''),
+			hasFormula: /<f(?:\s|>)/.test(match.body),
 		});
 	}
 	return cells.sort(

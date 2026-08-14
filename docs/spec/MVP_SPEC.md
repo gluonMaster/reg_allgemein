@@ -2,7 +2,7 @@
 
 Статус: этап 01 готов к реализации. Открытых owner/product-вопросов в
 [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) нет; независимые legal, security,
-provider и operational release gates сохраняются. Актуально на 2026-07-15.
+provider и operational release gates сохраняются. Актуально на 2026-08-14.
 
 Ключевые слова **должен**, **нельзя** и **только** обозначают обязательное
 требование. Проверяемые сценарии находятся в
@@ -515,9 +515,23 @@ provider и operational release gates сохраняются. Актуально
   одновременно создает сообщение в thread; две независимые заявки не создаются.
 - **MSG-03.** Ответ админа сначала сохраняется в D1, затем ставится в email
   outbox. Ошибка email не теряет ответ и видна администратору.
-- **MSG-04.** Telegram является только служебным уведомлением бюро и не содержит
-  документы или избыточные PII. Правила времени и retry определены в
-  [domain/MESSAGING.md](../domain/MESSAGING.md).
+- **MSG-04.** Telegram является только односторонним служебным уведомлением бюро и содержит лишь минимизированные category/reference/time/delivery reference/admin link без документов, свободного чувствительного текста или избыточных PII.
+- **MSG-05.** Настоящая отправка выполняется только в fail-closed mode `TELEGRAM_PROVIDER=bot_api` через dedicated private bureau destination, отдельные preview/production bot token, exact numeric chat config и reviewed UTC activation cutoff, который исключает автоматическую отправку старого backlog; `sendMessage` использует plain text, отключенный link preview и `protect_content`, а inbound webhook/polling path отсутствует.
+- **MSG-06.** Так как Telegram `sendMessage` не имеет документированного
+  idempotency key, перед HTTP dispatch сохраняется durable marker. Только
+  синтаксически валидный `ok=false` доказывает provider non-delivery: explicit
+  `408|425|5xx` retryable, а `429` задаёт durable destination-wide cooldown даже
+  без usable `retry_after`. Transport/timeout, unreadable/oversized/malformed
+  response, ambiguous envelope либо invalid/mismatched success становятся
+  `delivery_unknown` без blind retry; unresolved unknown или terminal `dead`
+  блокирует sole bureau lane. Повтор или подтверждение доставки возможны только
+  через audited operator reconciliation по правилам
+  [domain/MESSAGING.md](../domain/MESSAGING.md). Target-bound synthetic preview
+  smoke допускает no-send abort только до первого dispatch attempt; abort
+  фиксируется append-only и не создаёт общий Cron/provider bypass. Если process
+  оборвался уже после durable `dispatch_started`, отдельный target/cohort-bound
+  reconcile только после lease expiry без provider secrets/send/retry переводит
+  попытку в `delivery_unknown` для обычного manual resolution.
 - **ADMIN-01.** Админка покрывает import runs/issues, review tasks, legacy-
   поиск, пользователей и детей, каталог, прайс, trials, requests/documents,
   contracts/enrollments, price reviews, messages и outbox. Для family name-match
@@ -532,6 +546,72 @@ provider и operational release gates сохраняются. Актуально
   evidence.
 - **ADMIN-03.** Опасные повторные действия защищены idempotency и подтверждением;
   списки имеют поиск/фильтр и не выгружают PII без явной необходимости.
+
+### 10.1. Production import актуальных legacy-данных
+
+- **IMPORT-01.** Актуальные Access и PlusBText источники всегда остаются
+  read-only и читаются только неисполняющими allowlisted parsers без
+  Access/Excel/COM/LibreOffice и без VBA. Access обязан соответствовать
+  `access-tblkartei:1`; PlusBText — `admin-xlsm-plusbtext:1`. Логический v1
+  header имеет пустые `E/K/T` и непустые `F/L/M/N`; styled self-closing OOXML
+  cell является допустимым представлением пустой ячейки, а не новой версией
+  contract. Любой настоящий structural drift блокирует staging.
+- **IMPORT-02.** До remote write создаётся неизменяемый no-write plan: он
+  pin-ит `preview|production`, exact environment-specific D1 UUID, полный git
+  commit, academic period, source/contract/structure/version hashes, ожидаемое
+  число Access rows, безопасный diff и exact expected-current PlusBText/Access
+  pair. Schema-v3 plan обязательно фиксирует `sourceClass`: preview принимает
+  только встроенные детерминированные `synthetic_preview` baseline/candidate
+  bundles на 1703 строк, фиксирует exact `syntheticFixtureId`
+  `legacy-preview-synthetic-baseline-v1` либо
+  `legacy-preview-synthetic-candidate-v1` и отклоняет любые Office source paths,
+  production принимает только
+  `current_production` с обоими явными read-only source paths. Plan artifact
+  хранится только в ignored protected `imports/*.json`, а stdout/evidence не
+  содержат PII, локальных путей, source rows или secrets.
+- **IMPORT-03.** Remote stage записывает детерминированные unpublished
+  PlusBText и Access versions; Access version ссылается именно на staged
+  PlusBText version. Stage не меняет runtime current pair. Review является
+  отдельным явным действием и immutable связывает staged digest, opaque
+  operator ID, safe reason code и переданный canonical UTC timestamp. Plan и
+  stage выполняют разные operators, reviewer не совпадает ни с одним из них,
+  а transition operator не совпадает с reviewer. Неоднозначный результат write
+  не повторяется вслепую: тот же plan безопасно reconciles deterministic state,
+  завершённый step принимает как idempotent, незавершённый failed staging
+  очищает только с append-only cleanup evidence, а mixed/conflicting state
+  блокирует. Plan, унаследованный из `0016` без hardened actor/count contract
+  (`planned_by`/`staged_by` `NULL` либо пустой contract), остаётся immutable
+  evidence, но не может перейти ни в один lifecycle status: после `0018`
+  оператор обязан создать новый schema-v3 plan.
+- **IMPORT-04.** Promote разрешён только exact-target remote-командой с
+  review digest, защищённым recovery-evidence artifact, привязанным к exact
+  target/plan/review и свежему independent isolated restore, и typed
+  confirmation, связанным с action/environment/D1 UUID/review/recovery/operator.
+  Recovery verifier обязан отличаться от planner, stager, reviewer и promoter;
+  promoter также не совпадает с reviewer.
+  PlusBText и Access current pointers, Access projection, import runs,
+  append-only events и audit переключаются как один dependency-compatible D1
+  batch под двумя leases/fencing tokens и compare-and-set expected-current;
+  частично опубликованная legacy pair недопустима.
+- **IMPORT-05.** После каждого stage/promote/rollback/roll-forward выполняется
+  PII-free verify: plan/run state, immutable planned-versus-actual source,
+  snapshot, projection и issue counts,
+  current-pair uniqueness, exact Access→PlusBText dependency, foreign-key
+  integrity и append-only event counts. До production тот же reviewed artifact
+  проходит synthetic preview stage/promote/verify/rollback/roll-forward и
+  доказывает remote batch transactional semantics; локальные D1 tests не
+  заменяют это environment evidence. Production transitions обязаны fail closed,
+  пока это remote transaction evidence не зарегистрировано в release process:
+  до API-token lookup/network call возвращается
+  `LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED`.
+- **IMPORT-06.** Rollback и roll-forward всегда переключают совместимую
+  PlusBText/Access pair атомарно и требуют тот же immutable review binding.
+  Если это первый import и previous pair отсутствует, logical rollback
+  fail-closed; promote всё равно требует проверенный внешний D1 recovery point.
+  Network/timeout/malformed response после write считается
+  `delivery_unknown`: operator сначала запускает read-only verify/reconciliation
+  и только затем повторяет ту же deterministic команду. Production import,
+  migration или promotion выполняются лишь по отдельному прямому разрешению.
 
 ## 11. Нефункциональные требования
 

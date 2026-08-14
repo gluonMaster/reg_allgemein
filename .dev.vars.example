@@ -2,3 +2,7 @@
 # Never place real preview or production values in this repository.
 JWT_SECRET=replace-with-a-long-random-local-value
 TURNSTILE_SECRET_KEY=replace-with-a-turnstile-test-secret
+# Unit tests inject fake fetch; these placeholders must never be used for a real send.
+# TELEGRAM_BOT_TOKEN=replace-with-a-synthetic-local-bot-token
+# TELEGRAM_CHAT_ID=replace-with-a-synthetic-signed-decimal-chat-id
+# TELEGRAM_ACTIVATION_AT=2099-01-01T00:00:00.000Z

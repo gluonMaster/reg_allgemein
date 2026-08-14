@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import { parseBusinessHours, type BusinessHoursSchedule } from '$lib/server/outbox/business-hours';
+import {
+	isTelegramBotToken,
+	isTelegramChatId,
+	TELEGRAM_BOT_API_MAX_TIMEOUT_MS,
+	TELEGRAM_BOT_API_MIN_TIMEOUT_MS,
+	TELEGRAM_BOT_API_TIMEOUT_MS,
+	type TelegramBureauChatType,
+} from '$lib/server/telegram/bot-api';
 
 const rawConfigSchema = z.object({
 	APP_ENV: z.enum(['development', 'test', 'preview', 'production']),
@@ -31,10 +39,13 @@ const rawConfigSchema = z.object({
 	OUTBOX_LEASE_SECONDS: z.string().optional(),
 	OUTBOX_RETRY_BASE_SECONDS: z.string().optional(),
 	OUTBOX_RETRY_MAX_SECONDS: z.string().optional(),
-	TELEGRAM_PROVIDER: z.enum(['disabled', 'fake']).optional(),
+	TELEGRAM_PROVIDER: z.enum(['disabled', 'fake', 'bot_api']).optional(),
 	TELEGRAM_MAX_ATTEMPTS: z.string().optional(),
 	TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
 	TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+	TELEGRAM_CHAT_TYPE: z.enum(['group', 'supergroup', 'channel']).optional(),
+	TELEGRAM_BOT_API_TIMEOUT_MS: z.string().optional(),
+	TELEGRAM_ACTIVATION_AT: z.string().optional(),
 	TELEGRAM_BUSINESS_TIMEZONE: z.string().min(1).optional(),
 	TELEGRAM_BUSINESS_HOURS: z.string().min(1).optional(),
 	INDIVIDUAL_PRICE_CENTS_PER_45_MIN: z.string().optional(),
@@ -66,6 +77,7 @@ const rawConfigSchema = z.object({
 
 export type PortalEnvironment = z.infer<typeof rawConfigSchema>['APP_ENV'];
 export type EmailProviderKind = 'disabled' | 'fake' | 'resend';
+export type TelegramProviderKind = 'disabled' | 'fake' | 'bot_api';
 
 export const APPROVED_EMAIL_FROM =
 	'Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>';
@@ -143,8 +155,12 @@ export interface MessagingRuntimeConfig {
 	emailFrom?: string;
 	emailReplyTo?: string;
 	resendApiKey?: string;
-	telegramProvider: 'disabled' | 'fake';
+	telegramProvider: TelegramProviderKind;
+	telegramBotToken?: string;
 	telegramChatId?: string;
+	telegramChatType?: TelegramBureauChatType;
+	telegramBotApiTimeoutMs: number;
+	telegramActivationAt?: string;
 	emailMaxAttempts: number;
 	telegramMaxAttempts: number;
 	leaseSeconds: number;
@@ -492,11 +508,37 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (parsed.data.APP_ENV === 'production' && emailProvider === 'fake') {
 		issues.push('EMAIL_PROVIDER:fake_forbidden_in_production');
 	}
-	if (parsed.data.APP_ENV === 'production' && telegramProvider !== 'disabled') {
-		issues.push('TELEGRAM_PROVIDER:production_provider_not_implemented');
+	if (parsed.data.APP_ENV === 'production' && telegramProvider === 'fake') {
+		issues.push('TELEGRAM_PROVIDER:fake_forbidden_in_production');
 	}
 	if (telegramProvider !== 'disabled' && !parsed.data.TELEGRAM_CHAT_ID) {
 		issues.push('TELEGRAM_CHAT_ID:required_when_provider_enabled');
+	}
+	if (telegramProvider === 'bot_api') {
+		if (!parsed.data.TELEGRAM_BOT_TOKEN) {
+			issues.push('TELEGRAM_BOT_TOKEN:required_when_provider_enabled');
+		} else if (isPlaceholder(parsed.data.TELEGRAM_BOT_TOKEN)) {
+			issues.push('TELEGRAM_BOT_TOKEN:placeholder');
+		} else if (!isTelegramBotToken(parsed.data.TELEGRAM_BOT_TOKEN)) {
+			issues.push('TELEGRAM_BOT_TOKEN:invalid_format');
+		}
+		if (parsed.data.TELEGRAM_CHAT_ID && !isTelegramChatId(parsed.data.TELEGRAM_CHAT_ID)) {
+			issues.push('TELEGRAM_CHAT_ID:signed_decimal_required');
+		}
+		if (!parsed.data.TELEGRAM_CHAT_TYPE) {
+			issues.push('TELEGRAM_CHAT_TYPE:required_when_provider_enabled');
+		}
+		if (!parsed.data.TELEGRAM_ACTIVATION_AT) {
+			issues.push('TELEGRAM_ACTIVATION_AT:required_when_provider_enabled');
+		} else if (
+			!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(
+				parsed.data.TELEGRAM_ACTIVATION_AT
+			) || Number.isNaN(Date.parse(parsed.data.TELEGRAM_ACTIVATION_AT))
+			|| new Date(parsed.data.TELEGRAM_ACTIVATION_AT).toISOString()
+				!== parsed.data.TELEGRAM_ACTIVATION_AT
+		) {
+			issues.push('TELEGRAM_ACTIVATION_AT:canonical_utc_required');
+		}
 	}
 	if (documentUploadEnabled && !isR2Bucket(env?.R2_QUARANTINE)) {
 		issues.push('R2_QUARANTINE:required_when_document_upload_enabled');
@@ -627,13 +669,27 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('TELEGRAM_BUSINESS_HOURS:invalid');
 		telegramSchedule = parseBusinessHours('Europe/Berlin', 'Mo-Fr 09:00-17:00');
 	}
+	const telegramBotApiTimeoutMs = parseIntegerConfig({
+		name: 'TELEGRAM_BOT_API_TIMEOUT_MS',
+		value: parsed.data.TELEGRAM_BOT_API_TIMEOUT_MS,
+		defaultValue: TELEGRAM_BOT_API_TIMEOUT_MS,
+		minimum: TELEGRAM_BOT_API_MIN_TIMEOUT_MS,
+		issues,
+	});
+	if (telegramBotApiTimeoutMs > TELEGRAM_BOT_API_MAX_TIMEOUT_MS) {
+		issues.push('TELEGRAM_BOT_API_TIMEOUT_MS:risk_ceiling_exceeded');
+	}
 	const messaging: MessagingRuntimeConfig = {
 		emailProvider,
 		emailFrom: parsed.data.EMAIL_FROM,
 		emailReplyTo: parsed.data.EMAIL_REPLY_TO,
 		resendApiKey: parsed.data.RESEND_API_KEY,
 		telegramProvider,
+		telegramBotToken: parsed.data.TELEGRAM_BOT_TOKEN,
 		telegramChatId: parsed.data.TELEGRAM_CHAT_ID,
+		telegramChatType: parsed.data.TELEGRAM_CHAT_TYPE,
+		telegramBotApiTimeoutMs,
+		telegramActivationAt: parsed.data.TELEGRAM_ACTIVATION_AT,
 		emailMaxAttempts: auth.emailMaxAttempts,
 		telegramMaxAttempts: parseIntegerConfig({
 			name: 'TELEGRAM_MAX_ATTEMPTS',
@@ -667,6 +723,12 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	};
 	if (messaging.retryBaseSeconds > messaging.retryMaxSeconds) {
 		issues.push('OUTBOX_RETRY:base_exceeds_max');
+	}
+	if (
+		telegramProvider === 'bot_api' &&
+		messaging.telegramBotApiTimeoutMs >= messaging.leaseSeconds * 1_000
+	) {
+		issues.push('TELEGRAM_BOT_API_TIMEOUT_MS:must_be_less_than_outbox_lease');
 	}
 
 	const pricing: PricingRuntimeConfig = {

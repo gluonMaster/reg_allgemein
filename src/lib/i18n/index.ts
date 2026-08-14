@@ -128,7 +128,7 @@ export const germanCatalog = {
 	'support.email.reply.body':
 		'Zu Ihrem Vorgang {reference} wurde eine Antwort gespeichert. Der vollständige Inhalt ist nur nach Anmeldung im Portal sichtbar:\n\n{link}',
 	'telegram.bureau.notification':
-		'Neue Portal-Mitteilung. Kategorie: {category}. Vorgang: {reference}. Eingang: {receivedAt}. Verwaltung: {link}',
+		'Neue Portal-Mitteilung. Zustellreferenz: {deliveryReference}. Kategorie: {category}. Vorgang: {reference}. Eingang: {receivedAt}. Verwaltung: {link}',
 	'cabinet.title': 'Mein Bereich',
 	'cabinet.profile.title': 'Profil',
 	'cabinet.profile.familyId': 'Familiennummer',
@@ -389,6 +389,16 @@ export const germanCatalog = {
 	'admin.outbox.template': 'Vorlage oder Kategorie',
 	'admin.outbox.attempts': 'Versuche',
 	'admin.outbox.error': 'Letzter sicherer Fehlercode',
+	'admin.outbox.deliveryReference': 'Zustellreferenz',
+	'admin.outbox.unknownNotice':
+		'Die Übermittlung kann erfolgt sein. Vor einer Entscheidung muss die Zustellreferenz im freigegebenen Telegram-Ziel geprüft werden.',
+	'admin.outbox.resolution': 'Geprüftes Ergebnis',
+	'admin.outbox.confirmSent': 'Nachricht gefunden – als gesendet bestätigen',
+	'admin.outbox.retryAfterReview': 'Nachricht nicht gefunden – erneuten Versuch freigeben',
+	'admin.outbox.abandonUnknown': 'Unklare Zustellung ohne Wiederholung schließen',
+	'admin.outbox.unknownConfirm':
+		'Ich habe das freigegebene Ziel anhand der Zustellreferenz geprüft und bestätige diese Entscheidung.',
+	'admin.outbox.resolve': 'Geprüfte Entscheidung protokollieren',
 	'admin.outbox.retry': 'Versand erneut freigeben',
 	'admin.outbox.cancel': 'Ausstehenden Versand abbrechen',
 	'admin.outbox.confirm': 'Ich bestätige diese Outbox-Aktion ausdrücklich.',

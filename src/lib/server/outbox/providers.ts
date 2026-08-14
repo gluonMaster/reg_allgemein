@@ -15,6 +15,7 @@ export interface EmailProvider {
 export interface TelegramMessage {
 	chatId: string;
 	text: string;
+	deliveryReference: string;
 }
 
 export interface TelegramProvider {
@@ -27,7 +28,11 @@ export interface TelegramProvider {
 export class OutboxProviderError extends Error {
 	constructor(
 		readonly code: string,
-		readonly retryable: boolean
+		readonly retryable: boolean,
+		readonly options: {
+			delivery: 'not_delivered' | 'unknown';
+			retryAfterSeconds?: number;
+		} = { delivery: 'not_delivered' }
 	) {
 		super('External provider operation failed.');
 		this.name = 'OutboxProviderError';
@@ -42,8 +47,20 @@ export class EmailProviderError extends OutboxProviderError {
 }
 
 export class TelegramProviderError extends OutboxProviderError {
-	constructor(code: string, retryable = true) {
-		super(code, retryable);
+	constructor(
+		code: string,
+		retryable = true,
+		options: {
+			delivery?: 'not_delivered' | 'unknown';
+			retryAfterSeconds?: number;
+		} = {}
+	) {
+		super(code, retryable, {
+			delivery: options.delivery ?? 'not_delivered',
+			...(options.retryAfterSeconds === undefined
+				? {}
+				: { retryAfterSeconds: options.retryAfterSeconds }),
+		});
 		this.name = 'TelegramProviderError';
 	}
 }
@@ -116,4 +133,3 @@ export class FakeTelegramProvider extends IdempotentFakeProvider implements Tele
 		return { providerRequestId };
 	}
 }
-

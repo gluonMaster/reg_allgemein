@@ -38,6 +38,9 @@ describe('foundation D1 migration and repositories', () => {
 			'0013_privacy_closure.sql',
 			'0014_production_operations.sql',
 			'0015_worker_monitoring.sql',
+			'0016_legacy_import_release_control.sql',
+			'0017_telegram_delivery_certainty.sql',
+			'0018_legacy_import_release_hardening.sql',
 		]);
 
 		const result = await context.db

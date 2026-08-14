@@ -187,6 +187,7 @@ async function runImport(input: {
 		const plusBText = await input.repository.loadPlusBTextVersion({
 			academicPeriodId: period.id,
 			versionId: stringOption(input.options, 'plusbtext-version'),
+			allowValidatedStaged: input.options.get('allow-staged-plusbtext') === true,
 		});
 		if (!plusBText) throw new ImportStorageError('PLUSB_CURRENT_VERSION_MISSING');
 		dependencyInputs = {

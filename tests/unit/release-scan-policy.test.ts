@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import {
 	hasUnexpectedTextControl,
 	isApprovedOperationalEmail,
@@ -33,5 +34,19 @@ describe('release scan text policy', () => {
 		expect(isApprovedOperationalEmail('Registration@Kolibri-Dresden.de')).toBe(true);
 		expect(isApprovedOperationalEmail(['person', 'kolibri-dresden.de'].join('@'))).toBe(false);
 		expect(isApprovedOperationalEmail('registration@example.org')).toBe(false);
+	});
+
+	it('keeps protected Telegram target and deployment evidence outside Git/release scan', () => {
+		for (const path of [
+			'imports/telegram-preview-target.json',
+			'imports/telegram-preview-deployment-evidence.json',
+		]) {
+			expect(
+				execFileSync('git', ['check-ignore', path], {
+					cwd: process.cwd(),
+					encoding: 'utf8',
+				}).trim()
+			).toBe(path);
+		}
 	});
 });

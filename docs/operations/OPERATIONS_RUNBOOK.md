@@ -1,11 +1,14 @@
 # Ежедневная эксплуатация и реагирование
 
+Ревизия: 2026-08-14.
+
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
 handler и manual operations реализованы и локально протестированы; независимый
 content cold-read 2026-07-22 прошёл. Preview Worker/D1/R2, automatic Cron
 delivery/freshness и независимый UptimeRobot 5-minute `HEAD` alert с DOWN→UP
 delivery подтверждены 2026-08-11; remote authenticated/manual/provider/Browser
-Run/failure и restore procedures остаются непроверенными.
+Run/failure, target-pinned legacy import/first-import restore и Telegram Bot API
+ambiguous-delivery operator procedures остаются непроверенными.
 
 Runbook относится только к самостоятельному порталу регистрации. Он не даёт
 доступа к CMS или runtime официального сайта. Production-команды выполняются
@@ -31,18 +34,20 @@ approval.
 
 ## Текущий operational inventory
 
-| Область               | Реализованный интерфейс                                                                                            | Недостающее                                              | Gate                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------- |
-| Import review         | `/admin/imports`, `/admin/imports/<run-id>`                                                                        | remote import/recovery rehearsal                         | `blocked`                    |
-| Outbox review         | `/admin/outbox`, retry/cancel; local scheduler tests + preview automatic Cron passed                               | production providers, dead alert/manual failure rehearsal | `feature_disabled`/`blocked` |
-| Document review       | `/admin/requests`, AV/business review; separate preview EU R2 bindings и cleanup verified                          | remote R2 failure/restore alert, approved training       | `feature_disabled`/`blocked` |
-| Price maintenance     | `/admin/price-reviews` и `/admin/operations` manual/Cron run; local tests                                          | remote manual/failure rehearsal и job-specific alert     | `blocked`                    |
-| Privacy operations    | `/admin/privacy` и `/admin/operations` cleanup run; local D1/R2 + preview automatic cleanup verified              | remote R2 failure/retry rehearsal and job-specific alert | `blocked`                    |
-| Health/cron dashboard | `/admin/operations` + empty `/_health/operations` 204/503 signal; preview external HEAD monitor delivery passed | authenticated admin/manual/failure rehearsal              | `blocked`                    |
-| Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs; preview automatic delivery/freshness passed                  | remote manual/dedupe/failure и job-specific alerts       | `blocked`                    |
-| Admin bootstrap       | `npm run admin:bootstrap`; target guard, one-shot D1 flow, session revoke/audit и upgrade auto-seal tested locally | remote exercise; отдельной post-consume recovery CLI нет | `blocked`                    |
-| Email provider        | Resend HTTPS adapter, verified EU domain, scoped sending key и preview Worker secret подготовлены                 | provider disabled; delivery/reply smoke и approvals отсутствуют | `feature_disabled`/`blocked` |
-| Browser Run           | binding/config и fail-closed contract renderer path реализованы                                                    | remote conformance, quota/budget, templates/legal approval | `feature_disabled`/`blocked` |
+| Область               | Реализованный интерфейс                                                                                                                                                              | Недостающее                                                                                                                            | Gate                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Import review         | `/admin/imports`, `/admin/imports/<run-id>`                                                                                                                                          | remote import/recovery rehearsal                                                                                                       | `blocked`                    |
+| Outbox review         | `/admin/outbox`, retry/cancel; local scheduler tests + preview automatic Cron passed                                                                                                 | production providers, dead alert/manual failure rehearsal                                                                              | `feature_disabled`/`blocked` |
+| Document review       | `/admin/requests`, AV/business review; separate preview EU R2 bindings и cleanup verified                                                                                            | remote R2 failure/restore alert, approved training                                                                                     | `feature_disabled`/`blocked` |
+| Price maintenance     | `/admin/price-reviews` и `/admin/operations` manual/Cron run; local tests                                                                                                            | remote manual/failure rehearsal и job-specific alert                                                                                   | `blocked`                    |
+| Privacy operations    | `/admin/privacy` и `/admin/operations` cleanup run; local D1/R2 + preview automatic cleanup verified                                                                                 | remote R2 failure/retry rehearsal and job-specific alert                                                                               | `blocked`                    |
+| Health/cron dashboard | `/admin/operations` + empty `/_health/operations` 204/503 signal; preview external HEAD monitor delivery passed                                                                      | authenticated admin/manual/failure rehearsal                                                                                           | `blocked`                    |
+| Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs; preview automatic delivery/freshness passed                                                                                    | remote manual/dedupe/failure и job-specific alerts                                                                                     | `blocked`                    |
+| Admin bootstrap       | `npm run admin:bootstrap`; target guard, one-shot D1 flow, session revoke/audit и upgrade auto-seal tested locally                                                                   | remote exercise; отдельной post-consume recovery CLI нет                                                                               | `blocked`                    |
+| Email provider        | Resend HTTPS adapter, verified EU domain, scoped sending key и preview Worker secret подготовлены                                                                                    | provider disabled; delivery/reply smoke и approvals отсутствуют                                                                        | `feature_disabled`/`blocked` |
+| Telegram provider     | deployed preview/baseline `c5712d0` is disabled; local candidate implements `bot_api`, durable certainty/cooldown/activation policy and audited exact-attempt actions                | exact candidate verification, token/chat ownership, target-pinned preflight, operator drill and authorized synthetic send smoke absent | `feature_disabled`/`blocked` |
+| Legacy import         | current Access profile reports 1703 rows, 21/21 required fields, v1 compatible; PlusBText v1 sanitizer regression fixed; exact-target reviewed atomic bundle boundary passes locally | authorized synthetic remote lifecycle, first-import restore, immutable candidate evidence and current production import absent         | `blocked`                    |
+| Browser Run           | binding/config и fail-closed contract renderer path реализованы                                                                                                                      | remote conformance, quota/budget, templates/legal approval                                                                             | `feature_disabled`/`blocked` |
 
 ## Scheduled jobs inventory
 
@@ -56,17 +61,17 @@ application Worker errors; он не является job-specific backlog/dead/
 failure alert. Такие alerts и remote manual/dedupe/failure rehearsals отсутствуют,
 поэтому ни один job ниже не имеет production `passed`.
 
-| Назначение                       | Реализованный service method                                   | Schedule/timezone                         | Dedupe/lock                          | Manual run / signal                               | Статус                                 |
-| -------------------------------- | -------------------------------------------------------------- | ----------------------------------------- | ------------------------------------ | ------------------------------------------------- | -------------------------------------- |
-| Email outbox drain               | `EmailOutboxWorker.dispatchNext()`                             | `* * * * *` UTC                           | job lock/dedupe + outbox lease/retry | aggregate freshness/error passed; oldest/dead/provider alert missing | `blocked`; provider `feature_disabled` |
-| Telegram outbox drain            | Telegram dispatch worker                                       | `* * * * *`; business rules Europe/Berlin | job lock/dedupe + outbox lease/retry | aggregate freshness/error passed; dead/provider alert missing | `blocked`; provider `feature_disabled` |
-| Price-review maintenance         | `PriceReviewService.runScheduledMaintenance()`                 | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
-| Quarantine cleanup               | `DocumentService.cleanupExpired()`                             | `*/15 * * * *`; 14×24h threshold UTC      | job lock + conditional object claim  | aggregate freshness/error passed; backlog alert missing | `blocked`; uploads `feature_disabled`  |
-| Expired funding authorizations   | `IndividualRequestAdminService.processExpiredAuthorizations()` | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
-| Expired email reservations       | `AuthService.cleanupExpiredEmailReservations()`                | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards  | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
-| Expired privacy exports/R2 retry | `PrivacyService.cleanupExpiredExports()`                       | `*/15 * * * *` UTC                        | job lock/dedupe + object state       | aggregate freshness/error passed; R2 retry alert missing | `blocked`                              |
-| Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch      | aggregate freshness/error passed; job-specific failure alert missing | `blocked`                              |
-| Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe       | aggregate freshness/error passed; R2 retry/orphan alert missing | `blocked`                              |
+| Назначение                       | Реализованный service method                                   | Schedule/timezone                         | Dedupe/lock                                                                                            | Manual run / signal                                                                          | Статус                                 |
+| -------------------------------- | -------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Email outbox drain               | `EmailOutboxWorker.dispatchNext()`                             | `* * * * *` UTC                           | job lock/dedupe + outbox lease/retry                                                                   | aggregate freshness/error passed; oldest/dead/provider alert missing                         | `blocked`; provider `feature_disabled` |
+| Telegram outbox drain            | disabled/fake plus locally tested real Bot API worker          | `* * * * *`; business rules Europe/Berlin | lease + dispatch evidence, terminal unknown, circuit-break, activation cutoff and destination cooldown | local persistent dead/unknown signal; target-pinned preview alert/provider rehearsal missing | `blocked`; provider `feature_disabled` |
+| Price-review maintenance         | `PriceReviewService.runScheduledMaintenance()`                 | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards                                                                    | aggregate freshness/error passed; job-specific failure alert missing                         | `blocked`                              |
+| Quarantine cleanup               | `DocumentService.cleanupExpired()`                             | `*/15 * * * *`; 14×24h threshold UTC      | job lock + conditional object claim                                                                    | aggregate freshness/error passed; backlog alert missing                                      | `blocked`; uploads `feature_disabled`  |
+| Expired funding authorizations   | `IndividualRequestAdminService.processExpiredAuthorizations()` | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards                                                                    | aggregate freshness/error passed; job-specific failure alert missing                         | `blocked`                              |
+| Expired email reservations       | `AuthService.cleanupExpiredEmailReservations()`                | `*/15 * * * *` UTC                        | job lock/dedupe + repository guards                                                                    | aggregate freshness/error passed; job-specific failure alert missing                         | `blocked`                              |
+| Expired privacy exports/R2 retry | `PrivacyService.cleanupExpiredExports()`                       | `*/15 * * * *` UTC                        | job lock/dedupe + object state                                                                         | aggregate freshness/error passed; R2 retry alert missing                                     | `blocked`                              |
+| Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch                                                                        | aggregate freshness/error passed; job-specific failure alert missing                         | `blocked`                              |
+| Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe                                                                         | aggregate freshness/error passed; R2 retry/orphan alert missing                              | `blocked`                              |
 
 Migrations `0014_production_operations.sql` и `0015_worker_monitoring.sql`,
 clean/upgrade coverage, job/storage repositories, Worker scheduled handler,
@@ -81,6 +86,11 @@ preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датиро�
 историческим evidence; append-only `0015_worker_monitoring.sql` была применена
 2026-08-11. Initial 14/14 не является текущим migration inventory и не доказывает
 backup/restore.
+
+Resulting local candidate добавляет append-only `0016`–`0018`. Они проходят
+local migration suites, но не применены remote и не входят в current preview
+inventory/evidence; до их separately authorized apply Telegram/import candidate
+paths там отсутствуют.
 
 ## 1. Начало смены: health и freshness
 
@@ -152,6 +162,13 @@ stale lock, repeated Worker error, raw logs содержат PII или target e
 **Prerequisites:** active admin session; CSRF/session valid; operator понимает
 source kind и academic period; source files не открываются Office/COM/LibreOffice.
 
+Current-source evidence is sanitized only: Access has 1703 rows and 21/21
+required fields under `access-tblkartei:v1`; PlusBText remains compatible with
+`admin-xlsm-plusbtext:v1`. Earlier header mismatch came from a parser sanitizer
+defect around a styled self-closing empty cell, not a changed source contract.
+Operator must still stop until focused/current-source parser regression and the
+full immutable candidate gate are recorded. No source row/path is copied here.
+
 **Точное UI:** открыть `<PORTAL_ORIGIN>/admin/imports`; выбрать безопасный status
 filter; открыть `/admin/imports/<run-id>`. Не вставлять source row в комментарий.
 Для local диагностики:
@@ -166,8 +183,24 @@ issue codes; нет необъяснённых failed/promoting run или stale
 **Проверка:** current promoted price/schedule/access/plusbtext версии согласованы
 по academic period; fatal/error issue запрещает promotion/registration enable.
 
+For a separately authorized remote operation, `/admin/imports` is review-only
+and never replaces exact-target CLI pinning. Required sequence is no-write
+`plan` → inactive `stage` → digest-bound independent `review` → protected
+`recovery-evidence` → atomic Access+PlusBText `promote` → safe `verify`; exact
+flags are in [IMPORT_PIPELINE.md](IMPORT_PIPELINE.md). The operator verifies
+environment, ignored config, D1 UUID, clean exact SHA, schema-v3 `sourceClass`,
+academic period, source/fixture/dependency hashes, caller timestamps, separated
+operator IDs and safe diff/count contract at every boundary. Preview accepts
+only CLI-built 1703-row `baseline|candidate` fixtures and forbids Office paths;
+production requires both read-only paths. No remote command has been authorized
+or executed.
+
 **Stop condition:** failed promotion, dependency mismatch, PII в issue output,
-0/multiple current snapshot, unavailable/stale legacy snapshot.
+0/multiple current snapshot, unavailable/stale legacy snapshot, parser contract
+regression not evidenced, plan digest changed, target/config/D1 UUID mismatch,
+role separation/recovery artifact/count contract invalid, stage attempts to
+change current pointer, review/promote are conflated or production guard would
+need bypassing.
 
 **Rollback/recovery:** выключить public registration; не править D1 вручную.
 Local rehearsal rollback:
@@ -176,8 +209,17 @@ Local rehearsal rollback:
 npm run import:rollback:local -- --source-kind <price|schedule|plusbtext|access> --academic-period <PERIOD_CODE> --to-version <VERSION_ID>
 ```
 
-Remote import/rollback command отсутствует; production recovery `blocked` до его
-реализации и rehearsal.
+Exact-target remote import/rollback command boundary реализована и локально
+протестирована, но ни одна remote команда не была разрешена или выполнена;
+production recovery остаётся `blocked` до preview rehearsal. Для первого promote
+previous version не существует: operator до mutation проверяет recovery
+bookmark/pre-import backup, successful isolated restore to no-current state и
+создаёт plan/review-bound artifact командой
+`import:legacy:recovery-evidence:remote`. Ordinary preview uses only built-in
+`synthetic_preview` sources. Real current Access/PlusBText data never enters
+ordinary preview and requires separate data/privacy plus exact mutation
+permission. Candidate migrations `0016`/`0018` не применены в deployed preview;
+production transitions пока fail closed.
 
 ## 3. Проверить outbox retry/dead
 
@@ -185,9 +227,25 @@ Remote import/rollback command отсутствует; production recovery `bloc
 отправка отдельно разрешена.
 
 **Точное UI:** `<PORTAL_ORIGIN>/admin/outbox`; поля filter `channel` и `status`.
-Для строки `dead` доступно действие `outboxAction=retry`; для `pending|retry` —
-`outboxAction=cancel`; для обоих действий установить обязательное
-`confirmation=confirmed`. Поля `reason` в этой форме нет.
+Для обычной строки `dead` доступно действие `outboxAction=retry`; для
+`pending|retry` — `outboxAction=cancel`; для обоих действий установить
+обязательное `confirmation=confirmed`. Telegram `delivery_unknown` намеренно не
+принимает эти generic actions: форма связывает решение с exact attempt ID и
+предлагает только audited `confirm_sent|retry_after_review|cancel` с фиксированным
+safe reason code. PR-F13 остаётся `blocked` до immutable-candidate verification и
+target-pinned operator rehearsal.
+Unknown означает, что HTTP request мог быть доставлен, хотя Worker не получил
+однозначного success. Такая row не reclaim-ится и не retry-ится автоматически.
+Синтаксически валидный Bot API `ok=false` означает provider rejection: `429` и
+explicit `408|425|5xx` являются conclusive retryable, не unknown. Transport/
+timeout/unreadable-or-oversized/malformed/contradictory response, non-`ok=true`
+ambiguous envelope, invalid/mismatched success либо destination mismatch после
+`sendMessage` являются ambiguous. `429` сохраняет computed `nextAttemptAt` как
+destination-wide D1 cooldown даже при missing/invalid `retry_after`. Unresolved
+unknown или terminal dead блокирует sole bureau lane на следующих Cron runs.
+`retry_after_review` допустим только после проверки approved bureau chat и
+доказанного отсутствия сообщения; operator не читает/копирует клиентский payload
+в incident evidence.
 
 **Ожидаемый безопасный результат:** retry/cancel создаёт audit-safe transition;
 dedupe сохраняется; message body и recipient не появляются в evidence.
@@ -197,12 +255,191 @@ dedupe сохраняется; message body и recipient не появляютс
 
 **Stop condition:** provider `disabled`, массовый dead backlog, повтор создаёт
 duplicate send, неизвестный recipient scope, нет scheduled drain/alert или нужен
-просмотр body вне authorized UI.
+просмотр body вне authorized UI. Для Telegram также остановиться, если
+`delivery_unknown` попал в обычный retry/stale reclaim, exact destination или bot
+owner неизвестен, `migrate_to_chat_id` предлагается принять автоматически либо
+operator resolution action/audit отсутствуют.
 
 **Rollback/recovery:** при provider incident оставить provider disabled; cancel
-только доказанно небезопасные pending items после обязательного confirmation;
-поля причины у действия cancel нет. Не включать real provider ради очистки
-backlog. Эскалировать owner provider и сохранить sanitized counts/error code.
+только доказанно небезопасные pending items после обязательного confirmation.
+Не включать real provider ради очистки backlog. Эскалировать owner provider и
+сохранить sanitized counts/error code. Telegram unknown row не переводить direct
+SQL в `retry|sent`: использовать только exact-attempt audited action; пока
+target-pinned rehearsal не пройден, оставить provider disabled.
+
+### 3.1 Telegram Bot API smoke и provider incident
+
+**Current status:** `blocked`. Deployed preview и baseline `c5712d0` используют
+`TELEGRAM_PROVIDER=disabled`; local candidate реализует `bot_api`, token/config
+wiring, durable `delivery_unknown` и operator actions, но не имеет immutable
+clean-clone/target-pinned preview evidence. No application Telegram send is
+authorized by this runbook.
+
+**Prerequisites for a future preview smoke:** PR-F12 local conformance passed;
+approved bot owner and exact bureau test/approved chat; separately authorized
+one-message preview send; synthetic event only; public auth and unrelated
+providers remain disabled; operator can inspect the destination without copying
+chat content to evidence. Historical Telegram `pending|retry` count must be
+reviewed first and remain outside a new canonical UTC `TELEGRAM_ACTIVATION_AT`;
+any unresolved unknown/dead row or eligible historical backlog is a stop.
+
+**Реализованная boundary (внешне не выполнялась):** ignored
+`wrangler.preview.toml`, protected `imports/telegram-preview-target.json` и
+отдельный `imports/telegram-preview-deployment-evidence.json` связывают exact
+preview Worker/account/D1/origin, fail-closed flags, `bot_api` settings,
+`TELEGRAM_ACTIVATION_AT`, resulting clean Git SHA и observed deployed Worker
+version. Deployment observer и manifest reviewer обязаны различаться; observation
+не старше 24 часов. Оба JSON остаются ignored, не могут быть symlink и должны
+иметь owner-only POSIX mode либо Windows ACL без Everyone/Authenticated Users/
+Users allow. Manifest хранит только HMAC-SHA-256 chat/bot bindings; ключ
+`TELEGRAM_TARGET_BINDING_KEY`, bot token и exact chat остаются environment-only.
+
+Read-only target/preflight sequence после отдельных разрешений:
+
+Independent deployment observer получает exact deployed Worker version из
+read-only Cloudflare dashboard/API evidence после отдельно разрешённого deploy и
+создаёт `imports/telegram-preview-deployment-evidence.json` с exact keys
+`schemaVersion,purpose,accountId,workerName,workerVersionId,candidateGitCommitSha,observedAt,observedBy`.
+Внешнее наблюдение остаётся независимой ручной сверкой, а local writer только
+валидирует и записывает уже наблюдённые значения: observer через утверждённый
+protected environment injection задаёт `APP_ENV=preview`,
+`TELEGRAM_DEPLOYMENT_ACCOUNT_ID`, `TELEGRAM_DEPLOYMENT_WORKER_NAME`,
+`TELEGRAM_DEPLOYMENT_WORKER_VERSION_ID`, `TELEGRAM_DEPLOYMENT_GIT_SHA`,
+`TELEGRAM_DEPLOYMENT_OBSERVED_AT`, `TELEGRAM_DEPLOYMENT_OBSERVED_BY`, затем
+выполняет команду без identifiers в argv:
+
+```powershell
+npm run telegram:deployment-evidence:create -- --environment preview --confirmation WRITE_PROTECTED_DEPLOYMENT_EVIDENCE
+```
+
+Writer не обращается к Cloudflare и не превращает operator input в доказательство
+remote truth: source остаётся read-only Cloudflare dashboard/API, а реальный
+external evidence gate закрывается только независимым наблюдением. Reviewer
+(другой человек) через protected environment injection задаёт `APP_ENV=preview`,
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_CHAT_TYPE`,
+`TELEGRAM_TARGET_BINDING_KEY`, `TELEGRAM_TARGET_REVIEWED_AT` и
+`TELEGRAM_TARGET_REVIEWED_BY`, затем создаёт manifest без identifiers/secrets в
+argv или output:
+
+```powershell
+npm run telegram:target:create -- --environment preview --config wrangler.preview.toml --deployment-evidence imports/telegram-preview-deployment-evidence.json --manifest imports/telegram-preview-target.json --confirmation WRITE_PROTECTED_TARGET_MANIFEST
+```
+
+Оба writer используют `flag=wx` (не перезаписывают существующий artifact), POSIX
+mode 0600 и затем тот же ACL/path/symlink validator. На Windows writer сам
+отключает inheritance, назначает текущий SID owner, оставляет единственное
+`FullControl` allow rule для этого SID и fail-closed проверяет
+`rulesProtected`/owner/rules. Артефакты удаляются после evidence capture через
+утверждённую local secure-delete/retention procedure; Git/release scan их не
+подхватывает. Writer никогда не перезаписывает stale artifact: его удаление и
+повторное создание требуют отдельного retention/secure-delete шага. Exact chat,
+token, binding key и infrastructure/observer/reviewer identifiers не входят в
+argv/output; chat/token/key также не входят в JSON.
+
+```powershell
+npm run telegram:smoke:target -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --confirmation TARGET_MANIFEST_READ_ONLY
+npm run telegram:preflight -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --confirm-preview-secrets PREVIEW_SECRETS_ONLY --confirm-read-only PREFLIGHT_READ_ONLY
+```
+
+Target command требует clean worktree и exact manifest Git SHA; preflight вызывает
+только `getMe|getChat|getChatMember|getWebhookInfo`, не `sendMessage`. Safe output
+содержит только derived fingerprint и boolean checks. `APP_ENV=preview`, token,
+exact chat/type и binding key передаются только через protected environment.
+
+Separately authorized normal one-row lifecycle использует один UUID cohort и
+три remote D1/provider phases; `<TARGET_FINGERPRINT>` берётся из target output.
+Abort ниже является отдельной no-send альтернативой, а не четвёртой provider
+phase:
+
+```powershell
+npm run telegram:smoke:prepare -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --cohort <UUID_V4> --confirmation TELEGRAM_PREVIEW_SMOKE_PREPARE_ONE_<TARGET_FINGERPRINT>_<UUID_V4>
+npm run telegram:smoke:run -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --cohort <UUID_V4> --confirmation TELEGRAM_PREVIEW_SMOKE_SEND_ONE_<TARGET_FINGERPRINT>_<UUID_V4>
+npm run telegram:smoke:verify -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --cohort <UUID_V4> --confirmation SMOKE_VERIFY_READ_ONLY
+```
+
+`prepare` — отдельная remote D1 mutation: она fail-closed при любом active/dead/
+unresolved Telegram backlog и создаёт одну PII-free row с `max_attempts=1`,
+disarmed far-future `not_before`; ordinary drain её не claim-ит. `run` — отдельная
+provider-send authorization: после fresh successful preflight exact-row CAS без
+eligible-pending окна сразу переводит cohort в `processing`, затем существующий
+`TelegramOutboxWorker` выполняет normal dispatch. Concurrent second run row не
+получает. `verify` только читает D1. Direct Bot API calls из curl/dashboard и
+manual text sends не являются evidence. Cloudflare token нужен remote D1 phases;
+Telegram secrets — только preflight/run. Эти команды здесь не запускались.
+
+Если после `prepare` send permission отозвана, target изменился либо `run`
+остановился до dispatch marker, cohort обязательно закрывается отдельной D1-only
+командой без Telegram secret/preflight/provider call:
+
+```powershell
+npm run telegram:smoke:abort -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --cohort <UUID_V4> --confirmation TELEGRAM_PREVIEW_SMOKE_ABORT_UNSENT_ONE_<TARGET_FINGERPRINT>_<UUID_V4>
+```
+
+Abort разрешён только exact target-bound synthetic `pending` row либо partial
+`processing` claim с нулём `telegram_delivery_attempts`; одним D1 batch он
+добавляет append-only authorization, переводит row в `cancelled` и фиксирует
+assertion. Ordinary cron не reclaim-ит smoke signature, включая stale partial
+claim. После любого dispatch attempt либо для `sent|dead|delivery_unknown|
+cancelled` abort fail closed. Неоднозначный D1 результат сначала сверяется
+read-only `telegram:smoke:verify`; повторять send/abort вслепую нельзя.
+Успешный safe outcome: `state=cancelled`, `attemptCount=0`,
+`providerRequestIdPresent=false`; такой row больше не блокирует новый cohort.
+
+Поле claim proof `provider_send_disabled=1` означает только, что preparation/
+authorization batch сам не вызывал provider. Оно не отключает последующий
+normal-worker dispatch после exact `SEND_ONE` confirmation.
+
+Если `run` завершился уже после durable `dispatch_started`, но до terminal
+evidence, его нельзя повторять и abort уже неприменим. Дождаться expiry exact
+claim lease; до expiry reconcile возвращает
+`TELEGRAM_SMOKE_RECONCILE_LEASE_ACTIVE`. Затем выполнить отдельную D1-only
+команду с Cloudflare D1 token, но без Telegram secrets/preflight/provider path:
+
+```powershell
+npm run telegram:smoke:reconcile -- --environment preview --config wrangler.preview.toml --target-manifest imports/telegram-preview-target.json --deployment-evidence imports/telegram-preview-deployment-evidence.json --cohort <UUID_V4> --confirmation TELEGRAM_PREVIEW_SMOKE_RECONCILE_EXPIRED_NO_SEND_<TARGET_FINGERPRINT>_<UUID_V4>
+```
+
+Reconcile принимает только exact target/cohort, `processing`, один matching
+`dispatch_started` attempt, immutable target/reviewer/activation/request-hash-
+bound claim authorization + assertion, no abort proof/provider request ID и
+expired lease. Wrong/absent proof возвращает
+`TELEGRAM_SMOKE_RECONCILE_PROOF_INVALID`. Команда сама ничего не отправляет и не
+retry-ит: guarded D1 writes переводят attempt/outbox в `delivery_unknown`,
+увеличивают attempts `0 → 1`, очищают lease и возвращают
+`state=delivery_unknown`, `attemptCount=1`,
+`providerRequestIdPresent=false`, `requiresManualResolution=true`. Partial/
+ambiguous D1 write сверяется read-back, а повтор уже reconciled cohort
+идемпотентен. После этого используется только exact-attempt audited operator
+resolution; повторять `run`/abort или делать direct SQL нельзя.
+
+**Expected safe result:** exactly one real `sendMessage` attempt containing only
+category, synthetic reference, event time and authenticated admin link. Its
+actual result is either `sent` with one provider message ID/reference and no
+duplicate, or `delivery_unknown` with safe operator visibility and no retry; the
+runbook не требует намеренно создавать второй ambiguous external send. Local
+fake-provider tests отдельно доказывают uncertain-response handling and не
+закрывают external smoke. One unknown/retry/dead stops the drain, а unresolved
+unknown или terminal dead блокирует sole bureau lane. A modeled valid-`ok=false`
+`429` creates durable cooldown at computed `nextAttemptAt` even without usable
+`retry_after`; a second/new row cannot send before its deadline.
+
+**Verification/evidence:** environment, immutable Worker/config fingerprints,
+UTC timestamps, safe row/message references, delivery/unknown counts, operator
+role and audit action only. Never copy bot token, exact chat ID, client/child
+data, message body or provider diagnostic. Verify `migrate_to_chat_id` is treated
+as permanent config drift and no auto-reroute occurred.
+
+**Stop condition:** any client/PII/free-text row, wrong/unknown destination,
+inbound bot workflow, secret/body in logs, duplicate delivery, unknown row
+auto-retry, provider flag change outside approved deploy or absent audit action.
+
+**Rollback/recovery:** keep/return `TELEGRAM_PROVIDER=disabled` through the
+approved config/deploy procedure; preserve unknown rows; revoke/rotate token on
+compromise; correct destination only through reviewed config. `confirm_sent`,
+`retry_after_review` and `cancel` are separate audited decisions after the
+operator checks the approved chat. Prepared unsent smoke cohort закрывать только
+`telegram:smoke:abort` по ограничениям выше; post-marker expired cohort — только
+`telegram:smoke:reconcile`, не generic cancel/direct SQL.
 
 ## 4. Ручная проверка quarantined document
 
@@ -388,6 +625,15 @@ npx wrangler secret put <SECRET_NAME> --config <TARGET_CONFIG>
 credential отозван provider-side; affected sessions/tokens revoked, если это
 требует threat model; feature возвращается только после smoke.
 
+Для Telegram сначала установить `TELEGRAM_PROVIDER=disabled` approved change,
+затем revoke old bot token через BotFather/provider owner, выпустить отдельный
+environment token и интерактивно обновить `TELEGRAM_BOT_TOKEN`. Protected
+signed-decimal `TELEGRAM_CHAT_ID` и `TELEGRAM_CHAT_TYPE` перепроверяются отдельно;
+`TELEGRAM_BOT_API_TIMEOUT_MS` должен оставаться в range 1000..30000 и ниже
+outbox lease. `migrate_to_chat_id` не является поводом молча принять новый chat.
+Feature возвращается только после separately approved synthetic smoke и review
+всех `delivery_unknown` rows.
+
 **Проверка:** safe authentication/sending smoke в разрешённой среде; logs не
 содержат old/new values.
 
@@ -431,11 +677,11 @@ access и повторить полный preflight.
 
 ## Инциденты
 
-| Severity | Пример                                                                         | Первое безопасное действие                                                                                                |
-| -------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| S1       | cross-user document/contract access, exposed secret/PII, corrupted active data | отключить affected path, revoke credential/session, сохранить sanitized evidence, немедленная security/privacy escalation |
-| S2       | missed Cron, growing dead outbox/quarantine, provider/Browser exhaustion       | оставить external path disabled, остановить trigger при риске side effect, operations escalation                          |
-| S3       | единичная retriable operation без data/security impact                         | bounded retry по verified UI, наблюдать freshness                                                                         |
+| Severity | Пример                                                                                       | Первое безопасное действие                                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| S1       | cross-user document/contract access, exposed secret/PII, corrupted active data               | отключить affected path, revoke credential/session, сохранить sanitized evidence, немедленная security/privacy escalation            |
+| S2       | missed Cron, growing dead/`delivery_unknown` outbox, quarantine, provider/Browser exhaustion | оставить external path disabled, запретить blind retry/auto-reroute, остановить trigger при риске side effect, operations escalation |
+| S3       | единичная retriable operation без data/security impact                                       | bounded retry по verified UI, наблюдать freshness                                                                                    |
 
 ### Универсальная процедура инцидента
 
@@ -467,4 +713,5 @@ review, authenticated manual/failure/provider smoke, production-resource checks,
 job-specific alert или restore rehearsal. Preview Worker/D1/private EU R2,
 automatic Cron и aggregate alert уже подтверждены; пока оставшиеся manual/
 provider/job-specific/production-resource/restore/approval gates не закрыты,
-production verdict — **NO-GO**.
+а exact-target legacy import/first-import restore и Telegram Bot API unknown-
+delivery/operator smoke также не закрыты, production verdict — **NO-GO**.

@@ -3,7 +3,7 @@
 	import { translate } from '$lib/i18n';
 	import type { ActionData, PageData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
-	const statuses = ['pending', 'processing', 'retry', 'sent', 'dead', 'cancelled'] as const;
+	const statuses = ['pending', 'processing', 'retry', 'sent', 'dead', 'cancelled', 'delivery_unknown'] as const;
 </script>
 
 <svelte:head><title>{translate('de', 'admin.outbox.title')}</title></svelte:head>
@@ -33,8 +33,26 @@
 				<h2>{row.templateOrCategory}</h2>
 				<p>{row.sourceKind} · {row.sourceId}</p>
 				<p>{translate('de', 'admin.outbox.attempts')}: {row.attempts}/{row.maxAttempts}</p>
+				{#if row.deliveryReference}<p>{translate('de', 'admin.outbox.deliveryReference')}: {row.deliveryReference}</p>{/if}
+				{#if row.deliveryAttemptNo && row.deliveryStartedAt}<p>Attempt {row.deliveryAttemptNo} · {row.deliveryStartedAt}</p>{/if}
 				{#if row.lastErrorCode}<p>{translate('de', 'admin.outbox.error')}: {row.lastErrorCode}</p>{/if}
-				{#if row.status === 'dead' || row.status === 'pending' || row.status === 'retry'}
+				{#if row.status === 'delivery_unknown'}
+					<p>{translate('de', 'admin.outbox.unknownNotice')}</p>
+					<form class="admin-action-form" method="POST" action="?/resolveTelegram">
+						<input type="hidden" name="_csrf" value={data.csrfToken} />
+						<input type="hidden" name="idempotencyKey" value={row.commandKey} />
+						<input type="hidden" name="outboxId" value={row.id} />
+						<input type="hidden" name="attemptId" value={row.deliveryAttemptId} />
+						<label>{translate('de', 'admin.outbox.resolution')}<select name="outboxAction" required>
+							<option value="" disabled selected>{translate('de', 'admin.outbox.resolution')}</option>
+							<option value="confirm_sent">{translate('de', 'admin.outbox.confirmSent')}</option>
+							<option value="retry_after_review">{translate('de', 'admin.outbox.retryAfterReview')}</option>
+							<option value="cancel">{translate('de', 'admin.outbox.abandonUnknown')}</option>
+						</select></label>
+						<label class="checkbox"><input type="checkbox" name="confirmation" value="confirmed" required /><span>{translate('de', 'admin.outbox.unknownConfirm')}</span></label>
+						<button type="submit">{translate('de', 'admin.outbox.resolve')}</button>
+					</form>
+				{:else if row.status === 'dead' || row.status === 'pending' || row.status === 'retry'}
 					<form class="admin-action-form" method="POST" action="?/change">
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="idempotencyKey" value={row.commandKey} />
@@ -49,4 +67,3 @@
 		{/each}
 	</div>
 </section>
-

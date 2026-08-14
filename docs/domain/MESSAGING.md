@@ -1,5 +1,7 @@
 # Обращения, email и Telegram
 
+Ревизия: 2026-08-14.
+
 ## Каналы MVP
 
 - Кабинет/D1 — каноническая история обращения.
@@ -51,17 +53,29 @@ API.
 pending -> processing -> sent
                     \-> retry -> processing
                     \-> dead
+                    \-> delivery_unknown   (только Telegram)
 pending|retry -> cancelled
+
+delivery_unknown --confirm_sent--------> sent
+                 --retry_after_review--> retry
+                 --cancel--------------> cancelled
 ```
 
 - worker берет due rows с lock/lease;
-- `dedupe_key` уникален для доменного события и канала;
+- `dedupe_key` уникален для доменного события и канала, но дедуплицирует только
+  постановку в outbox и не является idempotency key внешнего provider;
 - transient error увеличивает attempts и ставит `next_attempt_at` с
   конфигурируемым exponential backoff;
 - permanent error или исчерпание `max_attempts` дает `dead`;
-- stale processing lease можно безопасно забрать повторно;
+- stale processing lease можно безопасно забрать повторно только если для него
+  не был зафиксирован Telegram dispatch marker; stale Telegram lease после
+  dispatch marker переводится в `delivery_unknown` без автоматической отправки;
 - `sent` никогда не отправляется cron повторно;
-- ручной retry admin создает audit и не меняет dedupe identity.
+- ручной retry `dead` создает audit и не меняет dedupe identity;
+- `delivery_unknown` не участвует в обычном retry/cron: admin может выполнить
+  только audited `confirm_sent`, `retry_after_review` после проверки отсутствия
+  сообщения по delivery reference либо `cancel`, с обязательными reason и
+  evidence без PII.
 
 По умолчанию `max_attempts` должен быть конечным и задаваться конфигурацией.
 Точные интервалы являются эксплуатационной настройкой, но тест использует
@@ -81,7 +95,8 @@ redirect bridge, auth/session provider или runtime API.
 
 ## Минимизация Telegram payload
 
-Telegram содержит category, ticket/reference ID, время и ссылку на admin UI.
+Telegram содержит category, ticket/reference ID, время, стабильный
+псевдонимизированный delivery reference и ссылку на admin UI.
 Он не должен содержать:
 
 - содержимое funding documents Jobcenter/Sozialamt или contract documents;
@@ -89,6 +104,95 @@ Telegram содержит category, ticket/reference ID, время и ссыл�
 - секретный object URL/token;
 - полный свободный текст чувствительного обращения, если достаточно summary;
 - stack trace или provider credentials.
+
+## Telegram Bot API provider
+
+Production-shaped runtime mode называется `TELEGRAM_PROVIDER=bot_api`. При
+включении обязательны отдельный environment secret `TELEGRAM_BOT_TOKEN` и
+защищенное `TELEGRAM_CHAT_ID` как exact signed-decimal string без `@username`
+alias; отсутствие любого из них, fake mode в production или невалидный numeric
+destination должны fail closed.
+До включения также задаётся canonical UTC `TELEGRAM_ACTIVATION_AT`, привязанный
+к reviewed change. Worker никогда автоматически не отправляет накопленные до
+этого cutoff `pending|retry` rows: такой backlog сначала отдельно считают,
+проверяют и аудируемо отменяют/переносят. Настройка
+`TELEGRAM_MAX_ATTEMPTS` применяется при D1 claim и не может оставаться
+неиспользуемой декларацией поверх producer default.
+Preview и production используют разные dedicated bot/token/destination. Bot
+добавляется только в утвержденный private bureau channel/supergroup с минимальным
+правом публикации, не переиспользуется для иных процессов и не принимает
+родительские сообщения. Портал не регистрирует webhook, long polling или иной
+inbound Telegram path.
+
+Adapter вызывает только `sendMessage` HTTPS POST с JSON и exact destination из
+конфигурации. Текст plain, без `parse_mode`, entities, reply markup, media или
+documents; `link_preview_options.is_disabled=true` не дает Telegram получать
+admin URL для preview, а `protect_content=true` ограничивает пересылку/сохранение.
+Успехом считается только валидный ответ `ok=true` с `message_id` и ожидаемым
+`chat.id`/разрешенным типом destination. В D1 сохраняются только безопасный
+provider message ID, delivery reference и timestamp, но не token, chat ID,
+request/response body или provider `description`.
+
+Telegram Bot API не предоставляет документированный idempotency key для
+`sendMessage`; `UNIQUE(dedupe_key)` поэтому не доказывает exactly-once delivery.
+Перед первым возможным HTTP dispatch worker обязан отдельной завершенной D1-
+операцией записать `dispatch_started_at` и стабильный PII-free delivery reference.
+После этого действуют следующие правила certainty:
+
+- только синтаксически валидный `ok=false` означает, что provider явно отклонил
+  запрос и автоматический retry можно классифицировать безопасно;
+- `error_code=429` является retryable, а `next_attempt_at` не может быть раньше
+  ни exponential backoff, ни provider `parameters.retry_after`; тот же deadline
+  атомарно становится durable destination-wide cooldown. Если `retry_after`
+  отсутствует/невалиден, computed backoff всё равно сохраняется как cooldown,
+  поэтому другой или вновь созданный row не обходит rate limit в следующем cron;
+- явные `408|425|5xx` с валидным `ok=false` являются retryable;
+- `400|401|403|404`, validation/auth/permission failures и иные явно permanent
+  ответы переходят в `dead`;
+- `parameters.migrate_to_chat_id` считается permanent configuration drift:
+  destination никогда не меняется и отправка не повторяется автоматически;
+- network error, timeout, unreadable/oversized/malformed/truncated/contradictory
+  response, non-`ok=true` ambiguous envelope, `ok=true` без проверяемого
+  ожидаемого результата, destination mismatch или потеря D1-
+  подтверждения после provider success переводят строку в `delivery_unknown` с
+  безопасным кодом `TELEGRAM_DELIVERY_UNKNOWN` и без blind retry.
+
+Telegram drain останавливается после первого `delivery_unknown`, retryable или
+permanent provider outcome. Пока существует unresolved `delivery_unknown` либо
+terminal `dead`, последующие provider sends для sole bureau destination
+заблокированы, а scheduler продолжает поднимать persistent safe alert даже при
+`TELEGRAM_PROVIDER=disabled`.
+Final external-send boundary принимает только exact per-template payload keys,
+allowlisted category, opaque UUID reference, canonical UTC timestamp и
+предопределённый admin path без query; любое несоответствие становится
+pre-dispatch terminal error и не вызывает provider.
+
+Read-only preflight сверяет ожидаемую bot identity, exact chat/type, право
+публикации и отсутствие webhook. Он не заменяет delivery smoke. Реальный preview
+smoke допускается только по отдельному разрешению: отдельный preview bot/channel,
+один синтетический row и ровно один реальный `sendMessage` attempt. Его
+фактический результат фиксируется как `sent` с message ID/delivery reference/no
+duplicate либо как `delivery_unknown` без retry. Local automated fake-transport
+success/ambiguity не подменяет ни один внешний исход. Local automated tests всегда
+используют fake fetch/provider и не выполняют Telegram API calls. Provider/privacy
+approval, secret provisioning и preview smoke остаются самостоятельными release
+gates и не закрываются локальным тестом adapter.
+
+Подготовленный synthetic smoke cohort имеет отдельный no-send abort. Он не
+вызывает preflight или Bot API и разрешён только для exact target-bound
+`pending` row либо partial `processing` claim с нулём dispatch attempts. Один D1
+batch записывает append-only authorization/assertion и переводит row в
+`cancelled`; ordinary Cron не может reclaim-ить smoke signature. После любого
+dispatch attempt либо terminal state abort fail-closed, а неоднозначный D1
+результат сначала сверяется read-only verify. Поэтому abort не является способом
+повторить или замаскировать возможную provider delivery.
+
+Crash после durable `dispatch_started` не переводится в abort и не разрешает
+повтор `run`. Только после expiry исходного lease exact target/cohort-bound
+reconcile без Telegram secrets, preflight или provider call проверяет сохранённый
+claim/attempt proof и переводит попытку в `delivery_unknown`. Операция
+идемпотентно reconciles partial D1 write, сама ничего не отправляет и оставляет
+строку для обычного exact-attempt audited manual resolution.
 
 ## Email outbox
 

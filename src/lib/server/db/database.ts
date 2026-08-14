@@ -3,7 +3,16 @@ export interface StatementSpec {
 	params?: readonly unknown[];
 }
 
-export class DatabaseBoundary {
+export interface SqlDatabaseBoundary {
+	run<T = Record<string, unknown>>(statement: StatementSpec): Promise<D1Result<T>>;
+	first<T = Record<string, unknown>>(statement: StatementSpec): Promise<T | null>;
+	all<T = Record<string, unknown>>(statement: StatementSpec): Promise<D1Result<T>>;
+	batch<T = Record<string, unknown>>(
+		statements: readonly StatementSpec[]
+	): Promise<D1Result<T>[]>;
+}
+
+export class DatabaseBoundary implements SqlDatabaseBoundary {
 	constructor(private readonly database: D1Database) {}
 
 	prepare(statement: StatementSpec): D1PreparedStatement {

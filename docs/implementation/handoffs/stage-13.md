@@ -1,6 +1,10 @@
 # Handoff этапа 13: hardening и production readiness
 
-Статус этапа: `done` (локальный scope реализован и проверен)
+Ревизия: 2026-08-14.
+
+Статус этапа: `in_progress` — обязательный Access/Telegram local candidate
+реализован и прошёл fresh full local-worktree verification; immutable exact-SHA
+independent review и все external gates ещё не закрыты.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -21,6 +25,10 @@ stored-log remediation проверены 2026-08-12.
 - Предыдущий handoff: [stage-12.md](stage-12.md).
 - Operational contract:
   [PRODUCTION_READINESS.md](../../operations/PRODUCTION_READINESS.md).
+- Clean baseline for the Access/Telegram readiness expansion:
+  `c5712d06af217129f0344864b69ddda962c29d19`. It predates the required
+  implementation below and is not the resulting release candidate; new exact
+  candidate SHA and clean-clone evidence are pending.
 - Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
   Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
@@ -73,16 +81,17 @@ stored-log remediation проверены 2026-08-12.
 
 | Область     | Evidence                                                                                     | Остаточный gate                                             |
 | ----------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Empty D1    | initial local/preview `0001`–`0014` parity passed; `0015` later applied, current pending 0    | production migration и isolated restore                     |
-| Upgraded D1 | populated `0013 → 0015` upgrade + selector-rejection coverage passed                         | isolated backup/restore + rollback rehearsal                |
+| Empty D1    | deployed preview `0001`–`0015`, pending 0; resulting local candidate suite includes unapplied `0016`–`0018` | authorized remote candidate apply, production migration и isolated restore |
+| Upgraded D1 | historical populated `0013 → 0015` plus current local suffix upgrade through `0018` and selector rejection | remote apply, isolated backup/restore + rollback rehearsal |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                             | production resources/policy и isolated restore              |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed | remote manual/dedupe/failure rehearsal                       |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
-| Imports     | local allowlist/dry-run/promote/rollback tests remain                                        | authorized current source and remote audited path           |
+| Imports     | local allowlist/dry-run/promote/rollback tests; current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText confirmed v1 after isolating parser sanitizer false mismatch | parser regression/full candidate evidence, exact-target remote bundle lifecycle, synthetic preview/no-PII, first-import restore and authorized current production import |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
-разрешённый restore.
+разрешённый restore. Local candidates `0016`–`0018` не применены remote и не
+входят в deployed evidence.
 
 ## Feature flags и fail-closed production paths
 
@@ -90,7 +99,7 @@ migration — совместимый code rollback, новая forward-fix migra
 | ------------------------------------- | ----------------------------------------------------------- | ------------------ |
 | Public registration                   | `AUTH_PUBLIC_ENABLED=false`                                 | `feature_disabled` |
 | Email                                 | `EMAIL_PROVIDER=disabled`                                   | `feature_disabled` |
-| Telegram                              | `TELEGRAM_PROVIDER=disabled`                                | `feature_disabled` |
+| Telegram                              | deployed preview/baseline `c5712d0`: `TELEGRAM_PROVIDER=disabled`; resulting `bot_api` candidate is not yet verified or deployed | `feature_disabled`; implementation/release gate `blocked` |
 | Document upload                       | `DOCUMENT_UPLOAD_ENABLED=false`                             | `feature_disabled` |
 | Contract rendering/send               | `CONTRACT_RENDERER=disabled`, `CONTRACT_SEND_ENABLED=false` | `feature_disabled` |
 | Online media grant                    | `MEDIA_ONLINE_GRANT_ENABLED=false`                          | `feature_disabled` |
@@ -457,8 +466,8 @@ release:verify` завершился с exit code 0.
 
 ### Fresh Ultra PR-A06 audit и local authenticated E2E
 
-- Fresh repository-wide Ultra audit 2026-08-12 проверил 91/91 нормативных MVP
-  IDs и все 166 acceptance bullets. Для 37 bullets без embedded requirement ID
+- Fresh repository-wide Ultra audit 2026-08-12 проверил тогдашние 91/91
+  нормативных MVP IDs и все 166 acceptance bullets. Для 37 bullets без embedded requirement ID
   заведены stable matrix IDs; implementation и automated-test paths сверены с
   текущим code/spec, а environment gaps отделены от local trace status.
 - Audit выявил HIGH defects в dual-role/dual-control переходе parent→admin и
@@ -545,11 +554,102 @@ release:verify` завершился с exit code 0.
   136 links/51 files + 82 commands и scan 500/500. Отдельный полный `npm audit`
   вернул total 0. Port 4173 свободен, `.wrangler/e2e-runtime/runtime.env`
   отсутствует, pre-existing `.wrangler/state` не менялся.
-- Commit, содержащий эту ревизию, создаёт новый local Stage-13 candidate; exact
-  SHA нужно получить после commit через `git rev-parse HEAD` и проверить в clean
-  clone. Deployed preview остаётся на `200268f39ece1d43c5e091dcb7db6569d41275af`.
-  Deploy, migrations, provider sends, feature enablement и другие remote
-  mutations не выполнялись.
+- Эта историческая локальная ревизия позднее была зафиксирована как clean
+  baseline `c5712d0`; приведённая выше pre-commit verification относится именно
+  к ней и не переносится на Access/Telegram resulting candidate. Deployed preview
+  остаётся на `200268f39ece1d43c5e091dcb7db6569d41275af`. Deploy, migrations,
+  provider sends, feature enablement и другие remote mutations при подготовке
+  baseline не выполнялись.
+
+### Mandatory Access/PlusBText and Telegram readiness expansion 2026-08-14
+
+- User-directed continuation established `c5712d06af217129f0344864b69ddda962c29d19`
+  as the clean baseline. It does not contain the complete required work below;
+  therefore a new immutable candidate and exact-SHA clean-clone verification are
+  pending. Existing deployed preview remains `200268f` / `62b3cac4…`.
+- Current Access source was previously inspected only through the non-executing
+  allowlisted parser: sanitized result 1703 rows, 21/21 required fields,
+  `access-tblkartei:v1` compatible. No source row/path/hash is recorded here and
+  no D1 import was performed.
+- Value-free inspection established that current PlusBText still conforms to
+  `admin-xlsm-plusbtext:v1`. The earlier `PLUSB_HEADER_CONTRACT_MISMATCH` was a
+  parser sanitizer false mismatch around a styled self-closing empty cell that
+  consumed the following populated cell, not source-contract drift. PR-B12 tracks
+  focused/current-source regression plus full immutable verification; v1 is not
+  silently relaxed and any true future contract change still requires a new
+  approved version.
+- The resulting local candidate implements the PR-B13/PR-B14 command and D1
+  boundary: schema-v3 no-write plan with `sourceClass`/`syntheticFixtureId`,
+  inactive stage,
+  digest-bound independent review, target/plan/review-bound recovery artifact,
+  recovery-bound atomic Access+PlusBText CAS promote, safe planned/actual-count
+  verify, rollback and roll-forward. Preview generates its own deterministic
+  1703-row `legacy-preview-synthetic-baseline-v1` /
+  `legacy-preview-synthetic-candidate-v1` bundles and rejects Office
+  paths; production
+  requires both read-only sources. Candidate migrations `0016` and `0018` add
+  append-only release/event control, pairwise planner/stager/reviewer separation,
+  transition-actor separation from reviewer, recovery-verifier separation from
+  planner/stager/reviewer/promoter,
+  immutable count contract and exact-actor failed-stage cleanup.
+  Populated `0016`→`0018` regression also proves that grandfathered plans with
+  `NULL` actor fields or `{}` contract remain immutable but fail closed for
+  every lifecycle transition; they must be replaced by a new hardened plan.
+  Final focused legacy validation passed 13/13 integration and 38/38 unit
+  tests; migration-upgrade and normal release-lifecycle subsets passed 3/3 and
+  2/2.
+  Deployed preview remains on `0001`–`0015`; neither migration nor a remote
+  command was authorized/executed. Production transitions remain fail-closed
+  before API-token lookup/network pending remote transaction evidence.
+- First import has no previous-version rollback target. Before the first remote
+  promote, a recovery bookmark/pre-import backup and isolated restore to the
+  no-current state are mandatory. Direct SQL/delete is not recovery.
+- Telegram remains externally fail-closed, while the resulting local candidate
+  implements the PR-F12/PR-F13 core: one-way `TELEGRAM_PROVIDER=bot_api`, strict
+  minimized payload, bounded Bot API policy, append-only dispatch evidence and
+  terminal `delivery_unknown` (`TELEGRAM_DELIVERY_UNKNOWN`). Unknown/retry/dead
+  stops the drain; `429` persists destination cooldown even without usable
+  `retry_after`; activation cutoff keeps historical backlog out; unresolved
+  unknown or terminal dead blocks later sends and alerts;
+  operator uses exact-attempt audited `confirm_sent`, `retry_after_review` only
+  after verifying absence, or `cancel`. No provider call was made.
+- Valid Bot API `ok=false` `408|425|5xx` is conclusive retryable. Network/
+  timeout/unreadable/oversized/malformed/non-`ok=true` ambiguous envelope,
+  invalid/mismatched success, destination mismatch or lost post-send D1
+  confirmation is ambiguous and becomes `delivery_unknown`; a local fake
+  ambiguous test is not evidence that the real preview send was ambiguous.
+- Telegram preview evidence requires a separately authorized single synthetic
+  send plus failure/unknown operator drill, with no client/child/document/free
+  text and no token/chat/body/provider diagnostic in evidence. No provider send,
+  secret/config change, deploy, migration or remote import was authorized by
+  this documentation update.
+- The local PR-F14 boundary also implements D1-only
+  `telegram:smoke:abort`: only an exact target-bound unsent `pending` or partial
+  zero-attempt `processing` cohort can become `cancelled`, with append-only
+  authorization/assertion. Cron cannot reclaim the smoke signature; any
+  dispatch attempt or terminal row fails closed. Manifest/evidence writers use
+  POSIX `0600` or a protected Windows ACL whose sole allow rule grants current
+  SID `FullControl`. До final reconcile change focused Telegram verification
+  passed 8 files/91 tests and `check:src` 0/0; no remote D1/provider operation
+  occurred.
+- Final local smoke hardening additionally provides
+  `telegram:smoke:reconcile` for a crash after durable `dispatch_started`: exact
+  target/cohort and expired lease are mandatory; the D1-only command has no
+  Telegram secrets/preflight/send/retry path and idempotently records one
+  `delivery_unknown` attempt for ordinary audited manual resolution. Active
+  lease, wrong proof, new `run` or abort fail closed. Focused crash test and the
+  full preview-smoke D1 suite passed 1/1 and 7/7; this command was not run
+  against remote D1.
+- Final mutable-worktree verification on 2026-08-14 passed: `npm run check`
+  0 errors/warnings; Vitest 63 files / 471 tests; Chromium 18/18; production
+  build; `npm audit --omit=dev` with 0 vulnerabilities; documentation 143
+  links in 51 files plus 105 executable commands; release scan 522/522; and
+  `git diff --check`. This is strong local evidence only and does not satisfy
+  PR-A16 immutable exact-SHA, clean-clone or independent-review requirements.
+- These new rows remain `blocked` after local implementation until an immutable
+  candidate and exact target-pinned preview evidence exist. Legal/provider approvals, restore/RPO/RTO,
+  production resources/origin, remaining browser/manual gates and explicit
+  production permissions independently preserve the overall **NO-GO**.
 
 ## Release gates
 
@@ -557,13 +657,14 @@ release:verify` завершился с exit code 0.
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `passed`           | PR-A06 Ultra audit: 91/91 MVP IDs, 166 acceptance bullets/37 stable untagged mappings, full worktree verify; no HIGH/BLOCKER on final re-review. Local candidate commit prepared; exact-SHA clean-clone verification is next | Codex Ultra independent reviewer, 2026-08-12; release operator |
+| Local implementation/traceability | `passed` for prior audited scope; resulting candidate `blocked` | PR-A06 Ultra audit covered the then-current 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings with no prior HIGH/BLOCKER. The current local matrix maps 99/99 IDs and 175 bullets, but is not independent release evidence. `c5712d0` is the new-work baseline; PR-A16 requires a new immutable Access/Telegram candidate, independent re-review and clean-clone verification | Codex Ultra independent reviewer, 2026-08-12; release operator |
 | Dependency security               | `passed`           | immutable `200268f`: clean install, full audit 0, full release verification | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
+| Current legacy import             | `blocked`          | Access source profile known safely; local PlusBText v1 sanitizer regression and exact-target reviewed atomic bundle implementation/tests pass. New immutable clean-clone verification, synthetic no-PII remote preview lifecycle, first-import restore and authorized production import remain absent | import/data/backup/privacy owners |
 | Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
-| Telegram                          | `feature_disabled` | approved adapter/DPA absent                                                   | provider/privacy owner         |
+| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed/baseline evidence exists; local `bot_api`/delivery-certainty/operator implementation and focused tests exist. Resulting exact-SHA clean-clone evidence, target-pinned secret/destination ownership, operator rehearsal, authorized synthetic normal-outbox preview smoke and approvals remain absent | provider/privacy/reliability/operations owners |
 | Upload                            | `feature_disabled` | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent | storage/security/legal owner   |
 | Contract/statutory/media          | `feature_disabled` | production renderer/templates/legal assessment absent                         | contract/legal/privacy owners  |
 | Backup/restore/RPO/RTO            | `blocked`          | inputs/mechanism/isolated rehearsal absent                                    | data/backup/operations owners  |
@@ -582,8 +683,12 @@ release:verify` завершился с exit code 0.
 2. preview deploy/migration/provider/Cron/Browser smoke;
 3. production D1 migration;
 4. production Worker deploy или rollback;
-5. реальный PII import/promote/rollback;
-6. email/Telegram enablement и реальная отправка;
+5. remote import plan/read-only review, inactive stage, immutable review,
+   promote, verify,
+   rollback/roll-forward and restore are separately scoped; real PII import has
+   its own data/privacy approval and is forbidden in ordinary preview;
+6. email/Telegram enablement, secret/config mutation and each real external send,
+   including one synthetic preview smoke, are separately scoped;
 7. upload/contract/media/statutory enablement;
 8. production backup/restore;
 9. изменение CMS, ссылок или страниц официального сайта.
@@ -592,27 +697,39 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. Продолжить безопасный local PR-A12 scope только для оставшихся lifecycles:
+1. Fresh full mutable-worktree verification local scope PR-B12–PR-B16 и
+   PR-F12–PR-F15 уже пройдена. До остальных deployment gates зафиксировать
+   отдельно разрешённый immutable candidate, выполнить independent exact-SHA
+   review и clean-clone verification для migrations `0016`–`0018`, built-in
+   synthetic preview source boundary, exact-target reviewed
+   import/count/recovery workflow, Telegram Bot API/delivery
+   certainty/operator actions и sanitized tests. Не выполнять remote
+   stage/promote/restore, secret/config mutation или send.
+2. После local verification отдельно запросить exact-scope permissions для
+   synthetic/no-PII preview import lifecycle/first-import restore и single
+   synthetic Telegram delivery/unknown operator smoke. Current PII source не
+   помещать в ordinary preview.
+3. Продолжить безопасный local PR-A12 scope только для оставшихся lifecycles:
    register/verify/claim, funded Nachhilfe upload/document review, enabled
    contract accept/form/activate, price admin-send и scheduled apply; preview/
    provider authenticated rehearsal требует отдельного разрешения.
-2. Для PR-A13 провести literal/manual zoom, assistive-technology и glyph/font
+4. Для PR-A13 провести literal/manual zoom, assistive-technology и glyph/font
    review. Для PR-A14 закрыть disabled-upload mutation, оставшиеся
    enrollment/group-service и guessed/admin-purpose variants; preview matrix
    также требует отдельного разрешения.
-3. На exact SHA commit, содержащего эту ревизию, выполнить clean-clone
+5. На exact SHA commit, содержащего эту ревизию, выполнить clean-clone
    `npm ci`, full audit и полный `npm run release:verify`; только после этого
    переносить local evidence на immutable-candidate gate. Push/deploy остаются
    отдельными явно разрешаемыми действиями.
-4. Поддерживать independent uptime monitor для `/_health/operations` и
+6. Поддерживать independent uptime monitor для `/_health/operations` и
    периодически повторять delivery test; real-token Turnstile, synthetic email
    delivery/reply и другие provider sends требуют отдельных разрешений.
-5. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
+7. Получить RPO/RTO/cadence, реализовать R2 backup и пройти полный isolated D1/R2
    restore + rollback/roll-forward drill.
-6. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.
-7. Провести full non-production bootstrap/runbook execution с approved preview
+8. Получить legal/privacy/template/provider/DPA/AVV inputs и approvals.
+9. Провести full non-production bootstrap/runbook execution с approved preview
    resources; локальный content cold-read уже пройден.
-8. Только после отсутствия `blocked` запросить отдельные production и site-link
+10. Только после отсутствия `blocked` запросить отдельные production и site-link
    поручения.
 
 ## Session checkpoint 2026-08-12
@@ -667,19 +784,16 @@ release:verify` завершился с exit code 0.
 
 ## Итог worktree
 
-- HEAD: `200268f39ece1d43c5e091dcb7db6569d41275af fix: suppress expected 4xx error
-  logs` поверх `5a982ee fix: add portal metadata and favicon` и `63995f8 chore:
-  remediate release tooling advisories`.
-- Logging remediation закоммичен и проверен в clean clone на exact SHA. Текущий
-  незакоммиченный worktree теперь включает PR-A06 security/concurrency/route
-  fixes, deployable privacy handlers, expanded authenticated/lifecycle/axe/IDOR
-  E2E harness, canonical spec/test/operations updates и readiness evidence. Его
-  newest local `release:verify` прошёл за 619.5 s: 54 files/340 Vitest,
-  8 files/18 Playwright, build, audits 0, docs 136/51 + 82 commands и scan
-  500/500. Port 4173 свободен, runtime secret отсутствует, `.wrangler/state` не
-  менялся. Commit, содержащий эту ревизию, является новым local candidate, но
-  до exact-SHA clean-clone verification не является release-ready и не должен
-  deploy-иться.
+- Clean baseline at the start of the new readiness expansion:
+  `c5712d06af217129f0344864b69ddda962c29d19 feat: complete stage 13 readiness
+  hardening`. It contains the earlier PR-A06/A12/A13/A14 work that had passed the
+  619.5 s working-tree verification before commit, but it predates the required
+  Access remote-import and Telegram Bot API implementation. Therefore it is a
+  baseline, not the resulting deploy candidate. New exact SHA, clean-clone
+  `npm ci`/full audit/`release:verify` and preview recurrence remain pending.
+- The historical deployed preview still runs exact `200268f` as Worker version
+  `sha256:f4cd52e14dbd`; no new deploy/migration/import/send or
+  feature enablement occurred during the readiness documentation expansion.
 - `docs/prompts/stage-13-continue-deployment.md` обновлён как ignored local
   accelerator для новой Ultra-сессии и не должен добавляться в Git.
 - Final read-only preview recheck `2026-08-12T17:14–17:16Z` подтвердил version
