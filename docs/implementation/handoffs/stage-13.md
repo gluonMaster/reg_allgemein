@@ -1,10 +1,10 @@
 # Handoff этапа 13: hardening и production readiness
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-17.
 
-Статус этапа: `in_progress` — обязательный Access/Telegram local candidate
-реализован и прошёл fresh full local-worktree verification; immutable exact-SHA
-independent review и все external gates ещё не закрыты.
+Статус этапа: `in_progress` — обязательный Access/Telegram deploy/runtime
+candidate `a590d1f` реализован, прошёл full local verification и independent
+exact-SHA review без code HIGH/BLOCKER; все external gates ещё не закрыты.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -25,12 +25,11 @@ stored-log remediation проверены 2026-08-12.
 - Предыдущий handoff: [stage-12.md](stage-12.md).
 - Operational contract:
   [PRODUCTION_READINESS.md](../../operations/PRODUCTION_READINESS.md).
-- Clean baseline for the Access/Telegram readiness expansion:
-  `c5712d06af217129f0344864b69ddda962c29d19`. It predates the required
-  implementation below and is not the resulting release candidate. The
-  authorized candidate is `e7c94f8e7d33ca95cde123652223bd4c99108945` plus
-  clean-clone documentation-check fix
-  `8f247e5f02ef24482d2ff438d2e1e437b82caf7c`.
+- Exact deploy/runtime candidate for the Access/Telegram readiness expansion:
+  `a590d1f08110c20b6f7b45294cb91a7be7b5a8e3`. Its parent `ca4ef8f` contains
+  the Access OLE date fix; `a590d1f` adds only the tracked 2026-08-17 deployment
+  checkpoint. Historical `c5712d0`/`8f247e5` evidence remains provenance, not
+  the current candidate.
 - Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
   Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
@@ -661,16 +660,21 @@ release:verify` завершился с exit code 0.
 
 ### Read-only preview and current-source checkpoint 2026-08-17
 
-- Exact candidate `ca4ef8f50ea0ffc1139c2ec3d286cbdb7e4158ec` adds strict
-  Access OLE Automation date-serial handling. Its exact-SHA clean clone passed
-  `npm ci` and full `release:verify` in 556.4 s: check 0/0, Vitest 63 files/472
-  tests, Chromium 18/18, build, production audit 0, docs 143 links/51 files plus
-  105 commands and scan 458/458. PR-A16 still requires an independent exact-SHA
-  traceability/security verdict.
+- Parent `ca4ef8f50ea0ffc1139c2ec3d286cbdb7e4158ec` adds strict Access OLE
+  Automation date-serial handling and passed exact-SHA clean-clone `npm ci` plus
+  full `release:verify` in 556.4 s. Exact deploy/runtime candidate `a590d1f`
+  then passed full clean-worktree `release:verify` in 522.9 s: check 0/0,
+  Vitest 63 files/472 tests, Chromium 18/18, build, production audit 0, docs 143
+  links/51 files plus 105 commands and scan 522/522.
+- Independent read-only exact-SHA review of `a590d1f` found no code HIGH/BLOCKER
+  across migrations `0016`–`0018`, exact-target import/PII boundaries, strict
+  Access OLE parsing and Telegram delivery certainty/minimization/operator
+  flows. PR-A16 is passed locally; this does not transfer historical preview
+  evidence or close any external gate.
 - Read-only public and Wrangler inventory confirmed root HEAD 200 and
   operations-health HEAD 204. Preview still runs historical `200268f` as Worker
   version `sha256:f4cd52e14dbd` at 100%; candidate
-  `ca4ef8f` is not deployed.
+  `a590d1f` is not deployed.
 - Remote preview D1 remains without an academic period, users, import runs,
   current PlusBText/Access snapshots or Telegram outbox rows. Candidate
   migrations `0016`–`0018` are pending. A current Time Travel bookmark exists,
@@ -709,14 +713,14 @@ release:verify` завершился с exit code 0.
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `passed` for prior audited scope; resulting candidate `blocked` | PR-A06 Ultra audit covered the then-current 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings with no prior HIGH/BLOCKER. Candidate `ca4ef8f` maps 99/99 IDs and 175 bullets and passed exact-SHA clean-clone verification including the current Access parser fix; PR-A16 remains blocked for independent exact-SHA traceability/security re-review | Codex Ultra independent reviewer, 2026-08-12; release operator |
+| Local implementation/traceability | `passed` | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Exact candidate `a590d1f` maps the expanded 99/99 IDs and 175 bullets, passed full local verification and independent exact-SHA review without code HIGH/BLOCKER; historical preview evidence was not transferred | Independent exact-SHA reviewer + release operator, 2026-08-17 |
 | Dependency security               | `passed`           | immutable `200268f`: clean install, full audit 0, full release verification | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
-| Current legacy import             | `blocked`          | Fresh current-source sanitized parse and exact `ca4ef8f` clean-clone evidence exist; local PlusBText v1/parser and exact-target reviewed atomic bundle tests pass. The protected preview control config is not yet exact-target complete; synthetic no-PII remote lifecycle, first-import restore, review of 26 skipped records/1429 warnings and any authorized current-data import remain absent | import/data/backup/privacy owners |
+| Current legacy import             | `blocked`          | Fresh current-source sanitized parse and exact `a590d1f` verification/independent review exist; local PlusBText v1/parser and exact-target reviewed atomic bundle tests pass. The protected preview control config is not yet exact-target complete; synthetic no-PII remote lifecycle, first-import restore, review of 26 skipped records/1429 warning occurrences and any authorized current-data import remain absent | import/data/backup/privacy owners |
 | Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
-| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and exact `ca4ef8f` clean-clone verification exist; local `bot_api`/delivery-certainty/operator implementation and focused tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent | provider/privacy/reliability/operations owners |
+| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent | provider/privacy/reliability/operations owners |
 | Upload                            | `feature_disabled` | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent | storage/security/legal owner   |
 | Contract/statutory/media          | `feature_disabled` | production renderer/templates/legal assessment absent                         | contract/legal/privacy owners  |
 | Backup/restore/RPO/RTO            | `blocked`          | inputs/mechanism/isolated rehearsal absent                                    | data/backup/operations owners  |
@@ -749,12 +753,11 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. Exact candidate `ca4ef8f` and its clean-clone verification are complete. The
-   next non-mutating gate is an independent exact-SHA review of migrations
-   `0016`–`0018`, the built-in synthetic preview source boundary, exact-target
-   reviewed import/count/recovery workflow, Telegram Bot API/delivery certainty
-   and operator actions. Do not perform remote stage/promote/restore,
-   secret/config mutation or send as part of that review.
+1. Exact candidate `a590d1f`, full local verification and independent exact-SHA
+   review are complete. Before any candidate apply, prepare and independently
+   review the protected exact-target preview control config and obtain separate
+   authorization for backup/isolated restore, deploy and migrations. Do not
+   combine these permissions with import, secret mutation or provider send.
 2. После local verification отдельно запросить exact-scope permissions для
    synthetic/no-PII preview import lifecycle/first-import restore и single
    synthetic Telegram delivery/unknown operator smoke. Current PII source не
@@ -834,11 +837,11 @@ release:verify` завершился с exit code 0.
 
 ## Итог worktree
 
-- Current resulting deploy candidate is
-  `ca4ef8f50ea0ffc1139c2ec3d286cbdb7e4158ec fix: parse Access OLE date serials`.
-  Its exact-SHA clean clone passed `npm ci`, full audit and `release:verify` on
-  2026-08-17. Independent PR-A16 exact-SHA review and every remote/external gate
-  remain pending.
+- Current deploy/runtime candidate is
+  `a590d1f08110c20b6f7b45294cb91a7be7b5a8e3 docs: record preview deployment
+  checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
+  candidate local verification and independent PR-A16 review passed on
+  2026-08-17. Every remote/external gate remains pending.
 - The historical deployed preview still runs exact `200268f` as Worker version
   `sha256:f4cd52e14dbd`; no new deploy/migration/import/send or
   feature enablement occurred during the readiness documentation expansion.

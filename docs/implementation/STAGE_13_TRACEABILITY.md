@@ -1,6 +1,6 @@
 # Stage 13: traceability требований и release evidence
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-17.
 
 Матрица связывает все нормативные MVP requirement ID из
 [MVP specification](../spec/MVP_SPEC.md) и acceptance bullets с
@@ -8,13 +8,13 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Immutable evidence ниже относится к HEAD
-`200268f39ece1d43c5e091dcb7db6569d41275af` от 2026-08-12, а `MVP:L…` и `AC:L…`
-anchors механически пересчитаны для текущих canonical documents. Текущий
-worktree уже содержит Stage-13 documentation evidence, PR-A06 security/
-concurrency исправления и local authenticated E2E harness, поэтому он не
-является immutable release candidate. Стабильными ключами остаются requirement ID,
-section name и текст acceptance bullet.
+Current exact deploy/runtime candidate is
+`a590d1f08110c20b6f7b45294cb91a7be7b5a8e3` from 2026-08-17. It maps the
+current `MVP:L…` and `AC:L…` anchors and passed full local verification plus an
+independent exact-SHA review without code HIGH/BLOCKER. Historical immutable
+`200268f39ece1d43c5e091dcb7db6569d41275af` remains deployed-preview
+provenance only and is not transferred to the current candidate. Stable keys
+remain requirement ID, section name and acceptance-bullet text.
 
 ## Статусы и границы claims
 
@@ -315,9 +315,24 @@ criterion text survive line movement.
 | E-APPROVALS | No implicit approval inferred from code/tests. | Legal/privacy/retention/templates/provider/security/official-link and limited-release owner approvals remain `blocked`. |
 | E-PRODUCTION | No production mutation, migration, deploy, DNS, CMS or official-site action is represented by this matrix. | Exact production resources/secrets/config, immutable candidate, change window and explicit deploy/go-live authorization remain `blocked`; overall NO-GO. |
 
-## Immutable baseline and dirty-worktree caveat
+## Exact candidate and historical provenance
 
-Last immutable local evidence at `200268f39ece1d43c5e091dcb7db6569d41275af`:
+Current exact deploy/runtime candidate
+`a590d1f08110c20b6f7b45294cb91a7be7b5a8e3` has the following local evidence:
+
+- its parent `ca4ef8f` passed exact-SHA clean-clone `npm ci` and full
+  `release:verify` in 556.4 s;
+- exact `a590d1f` passed full `release:verify` from a clean worktree in 522.9 s:
+  check 0/0, Vitest 63 files/472 tests, Chromium 18/18, build, production audit
+  0, documentation 143 links/51 files plus 105 commands and scan 522/522;
+- independent read-only exact-SHA review found no code HIGH/BLOCKER in
+  migrations `0016`–`0018`, import target/PII enforcement, Access OLE parsing or
+  Telegram delivery certainty/minimization/operator boundaries;
+- worktree was independently confirmed clean at the reviewed SHA; no remote
+  mutation or provider call was performed.
+
+Historical deployed-preview evidence at
+`200268f39ece1d43c5e091dcb7db6569d41275af` remains:
 
 - full automated run: 46 test files, 269 tests;
 - documentation verification: 137 links across 51 Markdown files plus 82
@@ -328,7 +343,7 @@ Last immutable local evidence at `200268f39ece1d43c5e091dcb7db6569d41275af`:
 - public preview/browser, two-private-EU-R2, all-nine-Cron, aggregate UptimeRobot
   and stored-log remediation evidence as recorded in the environment ledger.
 
-These numbers remain the immutable provenance. The fresh PR-A06 audit used its
+These historical numbers remain provenance for the deployed preview only. The fresh PR-A06 audit used its
 then-current dirty-worktree checkpoint and completed `npm run release:verify` in 487.3 s: check
 0 errors/warnings, 53 Vitest files/327 tests, local Chromium 2 files/8 tests,
 build, production audit 0, documentation 136 links across 51 files plus 82
@@ -387,12 +402,10 @@ external `E-TELEGRAM-PREVIEW`/`E-LEGACY` gates remain blocked. Поэтому п
 91/91 conclusion нельзя использовать как независимый claim полной traceability
 текущего MVP: требуется новый exact-SHA independent re-review.
 
-The prior implementation candidate remains historical evidence; this changed
-canonical worktree is not a release candidate until a new immutable commit,
-clean-clone verification and independent review exist. Deployed preview remains
-`200268f39ece1d43c5e091dcb7db6569d41275af`. Final lifecycle/
-accessibility/IDOR plus contract atomicity/replay expansion and independent
-re-review found no HIGH/BLOCKER, but the explicitly listed residual
-PR-A12/13/14 and external release gates remain blocked. CONTRACT-19 remains an
-explicit tracked product gap, and overall production readiness is still
-`blocked` / NO-GO.
+Exact deploy/runtime candidate `a590d1f` now has local verification and
+independent exact-SHA review without code HIGH/BLOCKER. Deployed preview remains
+historical `200268f39ece1d43c5e091dcb7db6569d41275af`; candidate deploy,
+migrations, restore rehearsal, import lifecycle, Telegram preflight/send,
+authenticated/manual/browser evidence and every legal/provider/production gate
+remain blocked. CONTRACT-19 remains an explicit tracked product gap, and
+overall production readiness is still `blocked` / NO-GO.
