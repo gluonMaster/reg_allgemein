@@ -308,7 +308,10 @@ Validation:
 - сверять `Value48` mirror; mismatch/duplicate — issue;
 - `Value4=Zahlung` не создает child/enrollment;
 - строки без child для непустой activity quarantine/skip с warning;
-- phone сохраняется как text, даты tolerant parse в ISO;
+- phone сохраняется как text; даты tolerant parse принимает validated ISO,
+  German `D.M.YYYY`, native Date и строгий пятизначный Access/OLE Automation
+  serial (epoch `1899-12-30`). Decimal/negative/short/long serial drift остаётся
+  invalid и создаёт issue;
 - email normalizes trim/lower, но raw сохраняется для admin verification;
 - parent `Value2` сохраняется raw; versioned normalizer создаёт separate
   first-name/last-name match key только при детерминированном разборе, иначе

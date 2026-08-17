@@ -65,6 +65,8 @@ concurrency/idempotency проверки в названном suite. Точны
 - vector `Dauer/Faecher`, duplicate/ambiguous price rule;
 - schedule schema/generation/duplicate IDs/display-name collisions;
 - Access rows с `ID`, mirror mismatch, `Zahlung`, packages 1–5;
+- Access birth dates: ISO/German/native Date и exact five-digit OLE Automation
+  serial; decimal/negative/short/long drift остаётся invalid;
 - family/child/contact conflicts и PlusBText ambiguity;
 - PlusBText independent old/target blocks, anchor bounds, exact-L then
   F->E->K-token join, semicolon K, duplicate/dangling/sparse cases;

@@ -229,7 +229,10 @@ MVP готов, когда:
   ложный `PLUSB_HEADER_CONTRACT_MISMATCH`/v2 drift. Перед release текущие
   read-only источники дают `admin-xlsm-plusbtext:1` и
   `access-tblkartei:1`; Access plan фиксирует ожидаемые `1703` source rows и
-  `21/21` обязательных полей без вывода значений.
+  `21/21` обязательных полей без вывода значений. Access birth date принимает
+  validated ISO/German/native Date и строгий пятизначный OLE Automation serial;
+  decimal/negative/short/long serial не угадывается и создаёт
+  `ACCESS_CHILD_BIRTH_DATE_INVALID`.
 - **AC-IMPORT-17.** `import:legacy:plan:remote` до любого write отклоняет
   отсутствующий `--remote`, example/mismatched config, неверный APP_ENV или
   D1 UUID, неизвестный period, изменившийся source/contract и Access row count,

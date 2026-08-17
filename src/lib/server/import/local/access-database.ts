@@ -117,6 +117,18 @@ function parseBirthDate(value: unknown): string | null {
 		return value.toISOString().slice(0, 10);
 	const raw = rawText(value)?.trim() ?? '';
 	if (!raw) return null;
+	const oleAutomation = /^(\d{5})$/.exec(raw);
+	if (oleAutomation) {
+		const serial = Number(oleAutomation[1]);
+		const probe = new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000);
+		if (
+			Number.isFinite(probe.getTime()) &&
+			probe.getUTCFullYear() >= 1900 &&
+			probe.getUTCFullYear() <= 9999
+		)
+			return probe.toISOString().slice(0, 10);
+		return null;
+	}
 	const iso = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(raw);
 	const german = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(raw);
 	const parts = iso

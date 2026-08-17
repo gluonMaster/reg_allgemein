@@ -198,6 +198,32 @@ describe('Access legacy parser', () => {
 		);
 	});
 
+	it('parses strict five-digit Access/OLE date serials without accepting adjacent drift', async () => {
+		const plus = await plusSnapshot();
+		const extract = await createSyntheticAccessExtract([
+			createSyntheticAccessRow({ ID: 1, Value5: '43831', Value48: '1' }),
+			createSyntheticAccessRow({
+				ID: 2,
+				Value1: '1. 3478',
+				Value4: 'Other Child',
+				Value5: '43831.5',
+				Value48: '2',
+			}),
+		]);
+		const snapshot = await parseAccessExtract({
+			extract,
+			academicPeriodCode: '2026-2027',
+			plusBTextVersionId: 'plus-version-a',
+			plusBText: plus,
+		});
+
+		expect(snapshot.children).toHaveLength(1);
+		expect(snapshot.children[0].sourceBirthDate).toBe('2020-01-01');
+		expect(snapshot.issues.map((entry) => entry.code)).toContain(
+			'ACCESS_CHILD_BIRTH_DATE_INVALID'
+		);
+	});
+
 	it('rejects duplicate/null IDs and schema/profile drift before staging', async () => {
 		const plus = await plusSnapshot();
 		const duplicate = await createSyntheticAccessExtract([
