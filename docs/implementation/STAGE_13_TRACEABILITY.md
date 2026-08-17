@@ -328,6 +328,8 @@ Current exact deploy/runtime candidate
 - independent read-only exact-SHA review found no code HIGH/BLOCKER in
   migrations `0016`–`0018`, import target/PII enforcement, Access OLE parsing or
   Telegram delivery certainty/minimization/operator boundaries;
+- independent verdict and exact-candidate evidence are sealed in docs-only
+  commit `7292d6ff1dbc67f20c7f803e9da1cdb51c8aa322`;
 - worktree was independently confirmed clean at the reviewed SHA; no remote
   mutation or provider call was performed.
 

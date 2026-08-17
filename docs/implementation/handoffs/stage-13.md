@@ -669,8 +669,9 @@ release:verify` завершился с exit code 0.
 - Independent read-only exact-SHA review of `a590d1f` found no code HIGH/BLOCKER
   across migrations `0016`–`0018`, exact-target import/PII boundaries, strict
   Access OLE parsing and Telegram delivery certainty/minimization/operator
-  flows. PR-A16 is passed locally; this does not transfer historical preview
-  evidence or close any external gate.
+  flows. Evidence is recorded in docs-only seal
+  `7292d6ff1dbc67f20c7f803e9da1cdb51c8aa322`. PR-A16 is passed locally; this
+  does not transfer historical preview evidence or close any external gate.
 - Read-only public and Wrangler inventory confirmed root HEAD 200 and
   operations-health HEAD 204. Preview still runs historical `200268f` as Worker
   version `sha256:f4cd52e14dbd` at 100%; candidate
