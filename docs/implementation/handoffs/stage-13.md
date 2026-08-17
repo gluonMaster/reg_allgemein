@@ -659,20 +659,64 @@ release:verify` завершился с exit code 0.
   production resources/origin, remaining browser/manual gates and explicit
   production permissions independently preserve the overall **NO-GO**.
 
+### Read-only preview and current-source checkpoint 2026-08-17
+
+- Exact candidate `ca4ef8f50ea0ffc1139c2ec3d286cbdb7e4158ec` adds strict
+  Access OLE Automation date-serial handling. Its exact-SHA clean clone passed
+  `npm ci` and full `release:verify` in 556.4 s: check 0/0, Vitest 63 files/472
+  tests, Chromium 18/18, build, production audit 0, docs 143 links/51 files plus
+  105 commands and scan 458/458. PR-A16 still requires an independent exact-SHA
+  traceability/security verdict.
+- Read-only public and Wrangler inventory confirmed root HEAD 200 and
+  operations-health HEAD 204. Preview still runs historical `200268f` as Worker
+  version `sha256:f4cd52e14dbd` at 100%; candidate
+  `ca4ef8f` is not deployed.
+- Remote preview D1 remains without an academic period, users, import runs,
+  current PlusBText/Access snapshots or Telegram outbox rows. Candidate
+  migrations `0016`–`0018` are pending. A current Time Travel bookmark exists,
+  but a protected backup plus independently verified isolated restore is not
+  evidenced. No migration/import/restore was executed.
+- Fresh read-only non-executing current-source parsing confirmed strict
+  `admin-xlsm-plusbtext:v1` with 302 rows, 164 old groups, 138 targets, 61
+  warnings and no error/fatal; and strict `access-tblkartei:v1` with 1703 source
+  rows and 21/21 required fields. The Access aggregate projection is 580
+  families, 713 children and 929 enrollments; 26 rows remain skipped for
+  missing/invalid birth dates and 1429 warnings require data-owner review. No
+  row values, PII, source hashes or Office contents were emitted.
+- The available protected preview config is Git-ignored but lacks the separate
+  pinned `account_id`/`preview_database_id` control binding required by the
+  remote import runner. This is a correct fail-closed boundary, not a reason to
+  weaken exact-target validation.
+- Ordinary preview remains a synthetic/no-PII rehearsal target. Uploading the
+  current Access/Admin PII into that public preview is not authorized by an
+  import request alone. If real-data rehearsal is required, the data/privacy
+  owner must approve a separate locked-down PII target with public auth and
+  external providers disabled, explicit retention/cleanup, a recovery point
+  and independently verified isolated restore.
+- Preview runtime remains fail-closed for public auth, email, Telegram, upload,
+  contract renderer/send, public contract functions and online-media grant.
+  Scheduled jobs are enabled. Secret-name-only inventory found no
+  `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID`; the owner-reported private channel
+  invitation does not establish bot identity, numeric channel ID or posting
+  permission. No secret value was read and no Telegram request/send occurred.
+- No deploy, remote migration, remote import/stage/promote, backup restore,
+  secret/config mutation, provider send or production/CMS action occurred in
+  this checkpoint. Overall status remains **NO-GO**.
+
 ## Release gates
 
 Полный ledger: [PRODUCTION_READINESS_CHECKLIST.md](../../operations/PRODUCTION_READINESS_CHECKLIST.md).
 
 | Gate                              | Статус             | Evidence / next action                                                        | Owner                          |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------ |
-| Local implementation/traceability | `passed` for prior audited scope; resulting candidate `blocked` | PR-A06 Ultra audit covered the then-current 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings with no prior HIGH/BLOCKER. Candidate lineage through `8f247e5` maps 99/99 IDs and 175 bullets and passed exact-SHA clean-clone verification; PR-A16 remains blocked only for independent exact-SHA traceability/security re-review | Codex Ultra independent reviewer, 2026-08-12; release operator |
+| Local implementation/traceability | `passed` for prior audited scope; resulting candidate `blocked` | PR-A06 Ultra audit covered the then-current 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings with no prior HIGH/BLOCKER. Candidate `ca4ef8f` maps 99/99 IDs and 175 bullets and passed exact-SHA clean-clone verification including the current Access parser fix; PR-A16 remains blocked for independent exact-SHA traceability/security re-review | Codex Ultra independent reviewer, 2026-08-12; release operator |
 | Dependency security               | `passed`           | immutable `200268f`: clean install, full audit 0, full release verification | dependency/security owner |
 | Environment/origin/R2 isolation   | `blocked`          | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent | Cloudflare/security owner      |
 | Scheduled monitoring              | `passed`           | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11 | operations owner/account contact |
 | Admin bootstrap/recovery          | `blocked`          | local one-shot passed; remote clean-room and recovery drill                   | security/operations owner      |
-| Current legacy import             | `blocked`          | Access source profile known safely; local PlusBText v1 sanitizer regression and exact-target reviewed atomic bundle implementation/tests pass. New immutable clean-clone verification, synthetic no-PII remote preview lifecycle, first-import restore and authorized production import remain absent | import/data/backup/privacy owners |
+| Current legacy import             | `blocked`          | Fresh current-source sanitized parse and exact `ca4ef8f` clean-clone evidence exist; local PlusBText v1/parser and exact-target reviewed atomic bundle tests pass. The protected preview control config is not yet exact-target complete; synthetic no-PII remote lifecycle, first-import restore, review of 26 skipped records/1429 warnings and any authorized current-data import remain absent | import/data/backup/privacy owners |
 | Public auth/email                 | `feature_disabled` | scoped key/secrets installed; enablement, real-token and delivery smoke absent | auth/provider owner            |
-| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed/baseline evidence exists; local `bot_api`/delivery-certainty/operator implementation and focused tests exist. Resulting exact-SHA clean-clone evidence, target-pinned secret/destination ownership, operator rehearsal, authorized synthetic normal-outbox preview smoke and approvals remain absent | provider/privacy/reliability/operations owners |
+| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and exact `ca4ef8f` clean-clone verification exist; local `bot_api`/delivery-certainty/operator implementation and focused tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent | provider/privacy/reliability/operations owners |
 | Upload                            | `feature_disabled` | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent | storage/security/legal owner   |
 | Contract/statutory/media          | `feature_disabled` | production renderer/templates/legal assessment absent                         | contract/legal/privacy owners  |
 | Backup/restore/RPO/RTO            | `blocked`          | inputs/mechanism/isolated rehearsal absent                                    | data/backup/operations owners  |
@@ -705,14 +749,12 @@ release:verify` завершился с exit code 0.
 
 ## Следующие действия
 
-1. Fresh full mutable-worktree verification local scope PR-B12–PR-B16 и
-   PR-F12–PR-F15, authorized immutable candidate и exact-SHA clean-clone
-   verification уже пройдены. До остальных deployment gates выполнить
-   independent exact-SHA review для migrations `0016`–`0018`, built-in
-   synthetic preview source boundary, exact-target reviewed import/count/recovery
-   workflow, Telegram Bot API/delivery certainty/operator actions и sanitized
-   tests. Не выполнять remote stage/promote/restore, secret/config mutation или
-   send.
+1. Exact candidate `ca4ef8f` and its clean-clone verification are complete. The
+   next non-mutating gate is an independent exact-SHA review of migrations
+   `0016`–`0018`, the built-in synthetic preview source boundary, exact-target
+   reviewed import/count/recovery workflow, Telegram Bot API/delivery certainty
+   and operator actions. Do not perform remote stage/promote/restore,
+   secret/config mutation or send as part of that review.
 2. После local verification отдельно запросить exact-scope permissions для
    synthetic/no-PII preview import lifecycle/first-import restore и single
    synthetic Telegram delivery/unknown operator smoke. Current PII source не
@@ -792,24 +834,21 @@ release:verify` завершился с exit code 0.
 
 ## Итог worktree
 
-- Clean baseline at the start of the new readiness expansion:
-  `c5712d06af217129f0344864b69ddda962c29d19 feat: complete stage 13 readiness
-  hardening`. It contains the earlier PR-A06/A12/A13/A14 work that had passed the
-  619.5 s working-tree verification before commit, but it predates the required
-  Access remote-import and Telegram Bot API implementation. Therefore it is a
-  baseline, not the resulting deploy candidate. New exact SHA, clean-clone
-  `npm ci`/full audit/`release:verify` and preview recurrence remain pending.
+- Current resulting deploy candidate is
+  `ca4ef8f50ea0ffc1139c2ec3d286cbdb7e4158ec fix: parse Access OLE date serials`.
+  Its exact-SHA clean clone passed `npm ci`, full audit and `release:verify` on
+  2026-08-17. Independent PR-A16 exact-SHA review and every remote/external gate
+  remain pending.
 - The historical deployed preview still runs exact `200268f` as Worker version
   `sha256:f4cd52e14dbd`; no new deploy/migration/import/send or
   feature enablement occurred during the readiness documentation expansion.
 - `docs/prompts/stage-13-continue-deployment.md` обновлён как ignored local
   accelerator для новой Ultra-сессии и не должен добавляться в Git.
-- Final read-only preview recheck `2026-08-12T17:14–17:16Z` подтвердил version
-  `sha256:f4cd52e14dbd` на 100%, D1 migrations `0001`–`0015`
-  pending 0, оба configured private R2 bucket в EEUR и empty HEAD+GET 204 для
-  `/_health/operations`. Wrangler 4.120.1 не имеет безопасной read-only команды
-  списка remote Cron triggers, поэтому trigger deploy не вызывался: оба schedule
-  остаются в preview config, а их prior remote delivery evidence сохраняется.
-  Secret values, R2 objects и deployment metadata с author identity не читались;
-  remote mutation не выполнялась.
+- Read-only preview recheck 2026-08-17 confirmed historical version
+  `sha256:f4cd52e14dbd` at 100%, root HEAD 200 and operations
+  health HEAD 204. Remote D1 still has deployed migrations `0001`–`0015`, while
+  `0016`–`0018` are pending; client/import/Telegram aggregate state is empty.
+  Runtime flags remain fail-closed and preview Telegram secret names are absent.
+  Secret values, client rows and deployment author identity were not read;
+  remote mutation was not performed.
 - Production/CMS/official-site actions не выполнялись.
