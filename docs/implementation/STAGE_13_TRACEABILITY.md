@@ -118,9 +118,9 @@ criterion text survive line movement.
 | AC-DOD-01 | `AC:L12` — clean D1 migrations plus preview recheck | T-RELIABILITY, T-OPERATIONS, T-IMPORT-BUNDLE, T-TELEGRAM-DELIVERY-UNKNOWN | local candidate supported through `0018`; deployed preview recheck remains only through `0015` | E-BACKUP, E-PRODUCTION |
 | AC-DOD-02 | `AC:L13` — current safe reference import report and repeat without duplicates | import parser/integration suites in `tests/unit/*import*.test.ts` and `tests/integration/import-d1.test.ts` | partial: synthetic/local supported; authorized current source not run | E-LEGACY |
 | AC-DOD-03 | `AC:L15` — all mandatory user/admin scenarios | T-RELIABILITY plus all domain flow suites, T-AUTH-E2E-LOCAL, T-IDOR-E2E-LOCAL, T-BUSINESS-E2E-LOCAL, T-CATALOG-TRIAL-E2E-LOCAL, T-MESSAGING-E2E-LOCAL, T-ABSENCE-E2E-LOCAL, T-PRICE-REVIEW-E2E-LOCAL and T-A11Y-E2E-LOCAL | partial: connected D1 flow and local Chromium 8 files/18 tests cover request, catalog/trial, support, structured absence, price review through `scheduled`, broad IDOR/session and representative accessibility paths; register/verify/claim, funded upload/review, enabled contract, price send/apply and provider/preview paths remain absent | E-BROWSER-AUTH |
-| AC-DOD-04 | `AC:L16` — `check`, tests and build succeed | immutable `200268f` release verification plus complete PR-A06 and post-audit worktree `release:verify` runs | supported before candidate commit: check 0/0, 54 Vitest files/340 tests, Chromium 8 files/18 tests and build passed; exact-SHA clean-clone rerun remains required | E-PRODUCTION |
+| AC-DOD-04 | `AC:L16` — `check`, tests and build succeed | historical `200268f` verification plus exact candidate `a590d1f` `release:verify` and PR-A16 independent review | supported locally: exact `a590d1f` passed check 0/0, 63 Vitest files/472 tests, Chromium 18/18 and build; remote recurrence remains separate | E-PRODUCTION |
 | AC-DOD-05 | `AC:L17` — authorization, CSRF, import rollback, pricing and upload tests in suite | T-AUTH-SECURITY, T-SECURITY, T-PRICING, T-DOCUMENT-LIMITS, T-PR-A06-UPLOAD-RACE, T-PR-A06-DUAL-CONTROL, T-PR-A06-PARENT-BOUNDARIES, T-PR-A06-SAFE-NOT-FOUND, T-CONTRACT-ATOMIC, T-IDOR-E2E-LOCAL; import rollback tests | supported by focused route/repository/atomicity suites and the complete final worktree run | E-BROWSER-AUTH |
-| AC-DOD-06 | `AC:L19` — no secrets/source PII/generated artifacts in Git/build | `release:scan`; T-SECURITY | supported on latest audited worktree: production and separate full audits 0, scan 500/500, transient runtime secret absent, port 4173 free and persistent local state untouched; immutable candidate rerun remains separate | E-LOGS, E-PRODUCTION |
+| AC-DOD-06 | `AC:L19` — no secrets/source PII/generated artifacts in Git/build | `release:scan`; T-SECURITY | supported on exact candidate `a590d1f`: production audit 0 and scan 522/522; independent review found no tracked Office/PII/secret/generated artifact. Remote log recurrence remains separate | E-LOGS, E-PRODUCTION |
 | AC-LEGACY-01 | `AC:L155` — Access row ID is scoped by source namespace and period | `tests/integration/legacy-import-d1.test.ts` — stable slot/period identity cases | supported | E-LEGACY |
 | AC-IMPORT-01 | `AC:L190` — missing column/schema/critical error preserves active version | `tests/integration/import-d1.test.ts` — failed validation/promotion rollback cases | supported | E-LEGACY |
 | AC-IMPORT-02 | `AC:L192` — payment/service row creates no child/enrollment | `tests/unit/access-import-parser.test.ts`; `tests/integration/legacy-import-d1.test.ts` | supported | E-LEGACY |
@@ -313,7 +313,7 @@ criterion text survive line movement.
 | E-OPERATIONS-DRILL | Automatic schedule and aggregate alert evidence exists. | Bounded manual-run UX, injected job/provider failure, alert receipt/recovery, rollback and four-runbook clean-room walkthrough remain `blocked`. |
 | E-ORIGIN | Preview origin/TLS/security headers/host-only cookie configuration passed for the preview host. | Final `PORTAL_PUBLIC_ORIGIN`, custom origin/DNS and exact official-link manifest require owner input; official site is a separate go-live. |
 | E-APPROVALS | No implicit approval inferred from code/tests. | Legal/privacy/retention/templates/provider/security/official-link and limited-release owner approvals remain `blocked`. |
-| E-PRODUCTION | No production mutation, migration, deploy, DNS, CMS or official-site action is represented by this matrix. | Exact production resources/secrets/config, immutable candidate, change window and explicit deploy/go-live authorization remain `blocked`; overall NO-GO. |
+| E-PRODUCTION | No production mutation, migration, deploy, DNS, CMS or official-site action is represented by this matrix. Exact candidate `a590d1f` exists and passed local PR-A16. | Exact production resources/secrets/config, change window, external rehearsals and explicit deploy/go-live authorization remain `blocked`; overall NO-GO. |
 
 ## Exact candidate and historical provenance
 
@@ -401,8 +401,9 @@ matrix maps all 99 IDs and all 175 acceptance bullets: six named
 reconcile bullets were added; the historical set of 37 untagged bullets keeps
 its stable matrix IDs. Local implementation/evidence is represented here, but
 external `E-TELEGRAM-PREVIEW`/`E-LEGACY` gates remain blocked. Поэтому прежнее
-91/91 conclusion нельзя использовать как независимый claim полной traceability
-текущего MVP: требуется новый exact-SHA independent re-review.
+Historical 91/91 conclusion alone cannot be used as a claim for the expanded
+current MVP; the required current 99/99 exact-SHA review is now recorded for
+`a590d1f` below.
 
 Exact deploy/runtime candidate `a590d1f` now has local verification and
 independent exact-SHA review without code HIGH/BLOCKER. Deployed preview remains

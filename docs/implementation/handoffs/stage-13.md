@@ -87,7 +87,7 @@ stored-log remediation проверены 2026-08-12.
 | R2 split    | local guards + два отдельных private EU preview buckets verified                             | production resources/policy и isolated restore              |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed | remote manual/dedupe/failure rehearsal                       |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed  | remote clean-room/least-privilege/zero-admin recovery drill |
-| Imports     | local allowlist/dry-run/promote/rollback tests; current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText confirmed v1 after isolating parser sanitizer false mismatch | parser regression/full candidate evidence, exact-target remote bundle lifecycle, synthetic preview/no-PII, first-import restore and authorized current production import |
+| Imports     | exact candidate parser/full local evidence; current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed; independent exact-SHA review passed | exact-target remote bundle lifecycle, synthetic preview/no-PII, first-import restore and authorized current production import |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
@@ -100,7 +100,7 @@ migration — совместимый code rollback, новая forward-fix migra
 | ------------------------------------- | ----------------------------------------------------------- | ------------------ |
 | Public registration                   | `AUTH_PUBLIC_ENABLED=false`                                 | `feature_disabled` |
 | Email                                 | `EMAIL_PROVIDER=disabled`                                   | `feature_disabled` |
-| Telegram                              | deployed preview/baseline `c5712d0`: `TELEGRAM_PROVIDER=disabled`; resulting `bot_api` candidate is not yet verified or deployed | `feature_disabled`; implementation/release gate `blocked` |
+| Telegram                              | deployed preview uses `TELEGRAM_PROVIDER=disabled`; exact `a590d1f` `bot_api` candidate passed local verification/independent review but is not deployed | `feature_disabled`; external provider/rehearsal gate `blocked` |
 | Document upload                       | `DOCUMENT_UPLOAD_ENABLED=false`                             | `feature_disabled` |
 | Contract rendering/send               | `CONTRACT_RENDERER=disabled`, `CONTRACT_SEND_ENABLED=false` | `feature_disabled` |
 | Online media grant                    | `MEDIA_ONLINE_GRANT_ENABLED=false`                          | `feature_disabled` |
@@ -651,8 +651,9 @@ release:verify` завершился с exit code 0.
 - Exact-SHA clean clone of `8f247e5` subsequently passed `npm ci` and the full
   `npm run release:verify` in 563.9 s: check 0/0, Vitest 63 files / 471 tests,
   Chromium 18/18, build, production audit 0, documentation 143 links in 51
-  files plus 105 commands and fresh-clone scan 458/458. PR-A16 now remains
-  blocked only for its independent exact-SHA traceability/security verdict.
+  files plus 105 commands and fresh-clone scan 458/458. At that historical
+  checkpoint PR-A16 still awaited the later `a590d1f` independent verdict,
+  which is now recorded in the 2026-08-17 checkpoint below.
 - These new rows remain `blocked` after local implementation until an immutable
   candidate and exact target-pinned preview evidence exist. Legal/provider approvals, restore/RPO/RTO,
   production resources/origin, remaining browser/manual gates and explicit
