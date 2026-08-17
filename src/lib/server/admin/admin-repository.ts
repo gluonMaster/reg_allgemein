@@ -14,6 +14,16 @@ function safeJson(value: string): unknown {
 	}
 }
 
+function safeLegacyFamilyReference(value: unknown): string | null {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+	const context = value as Record<string, unknown>;
+	return context.entityType === 'legacy_family' &&
+		typeof context.entityId === 'string' &&
+		/^legacy_family_[a-f0-9]{32}$/u.test(context.entityId)
+		? context.entityId
+		: null;
+}
+
 function sanitizeAdminContext(value: unknown, depth = 0): unknown {
 	if (depth > 8) return '[TRUNCATED]';
 	if (typeof value === 'string') {
@@ -165,10 +175,14 @@ export class AdminConsoleRepository {
 		return {
 			...safeRun,
 			safeSummary: safeJson(safe_summary_json),
-			issues: issues.results.map(({ safe_context_json, ...issue }) => ({
-				...issue,
-				safeContext: safeJson(safe_context_json),
-			})),
+			issues: issues.results.map(({ safe_context_json, ...issue }) => {
+				const safeContext = safeJson(safe_context_json);
+				return {
+					...issue,
+					safeContext,
+					legacyFamilyId: safeLegacyFamilyReference(safeContext),
+				};
+			}),
 		};
 	}
 

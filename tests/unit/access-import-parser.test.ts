@@ -66,9 +66,9 @@ describe('Access legacy parser', () => {
 				'package_2',
 				'package_3',
 				'package_4',
-				'package_5',
 			])
 		);
+		expect(snapshot.enrollments.map((item) => item.groupNameRaw)).not.toContain('Package Five');
 		expect(snapshot.enrollments.find((item) => item.sourceSlot === 'package_2')).toMatchObject({
 			teacherName: 'Teacher B',
 			dayRaw: 'Di',
@@ -78,7 +78,7 @@ describe('Access legacy parser', () => {
 		expect(Object.keys(snapshot.sourceRows[0].sourceValues)).toHaveLength(20);
 	});
 
-	it('normalizes every status class without turning O/V or V/O into an override', async () => {
+	it('uses S contract markers and T activity codes without treating notes as an override', async () => {
 		const plus = await plusSnapshot({
 			rows: [
 				{ l: 'Group J', m: 'Teacher', n: 'Mo', t: '90' },
@@ -92,24 +92,25 @@ describe('Access legacy parser', () => {
 			],
 		});
 		const inputs = [
-			['J', 'Group J'],
-			['M', 'Group M'],
-			['O/V', 'Group OV'],
-			['V/O', 'Group VO'],
-			['NH', 'Nachhilfe'],
-			['IND', 'Ind. Musik'],
-			['KN', 'Group KN'],
-			['0', 'Group Provisional'],
+			['J', null, 'Group J'],
+			['M', 'O/V', 'Group M'],
+			['', 'monthly O/V note', 'Group OV'],
+			['O/V', 'V/O', 'Group VO'],
+			['NH', null, 'Nachhilfe'],
+			['IND', null, 'Ind. Musik'],
+			['KN', 'O/V', 'Group KN'],
+			['0', null, 'Group Provisional'],
 		] as const;
 		const extract = await createSyntheticAccessExtract(
-			inputs.map(([status, group], index) =>
+			inputs.map(([activityCode, contractMarker, group], index) =>
 				createSyntheticAccessRow({
 					ID: index + 1,
 					Value1: `1. ${4000 + index}`,
 					Value4: `Child ${index}`,
 					Value5: `201${index}-01-01`,
 					Value15: group,
-					Value20: status,
+					Value19: contractMarker,
+					Value20: activityCode,
 					Value42: null,
 					Value48: String(index + 1),
 				})
@@ -121,34 +122,110 @@ describe('Access legacy parser', () => {
 			plusBTextVersionId: 'plus-version-a',
 			plusBText: plus,
 		});
-		const byStatus = new Map(snapshot.enrollments.map((item) => [item.statusCodeRaw, item]));
+		const byGroup = new Map(snapshot.enrollments.map((item) => [item.groupNameRaw, item]));
 
-		expect(byStatus.get('J')).toMatchObject({ contractKind: 'yearly', priceSource: 'yearly' });
-		expect(byStatus.get('M')).toMatchObject({
+		expect(byGroup.get('Group J')).toMatchObject({
+			contractKind: 'yearly',
+			priceSource: 'yearly',
+		});
+		expect(byGroup.get('Group M')).toMatchObject({
 			contractKind: 'monthly',
 			priceSource: 'monthly',
 		});
-		for (const marker of ['O/V', 'V/O']) {
-			expect(byStatus.get(marker)).toMatchObject({
+		for (const group of ['Group OV', 'Group VO']) {
+			expect(byGroup.get(group)).toMatchObject({
 				contractKind: 'monthly',
 				priceSource: 'monthly',
 				priceMode: 'rule_derived',
 			});
 		}
-		expect(byStatus.get('NH')).toMatchObject({
+		expect(byGroup.get('Nachhilfe')).toMatchObject({
 			lessonKind: 'nachhilfe',
 			contractKind: 'nachhilfe',
 		});
-		expect(byStatus.get('IND')).toMatchObject({
+		expect(byGroup.get('Ind. Musik')).toMatchObject({
 			lessonKind: 'individual',
 			contractKind: 'individual',
 		});
-		expect(byStatus.get('KN')).toMatchObject({ contractKind: null, priceSource: null });
-		expect(byStatus.get('0')).toMatchObject({
-			contractKind: 'monthly',
-			needsAdminReview: true,
+		expect(byGroup.get('Group KN')).toMatchObject({ contractKind: null, priceSource: null });
+		expect(byGroup.get('Group Provisional')).toMatchObject({
+			contractKind: 'yearly',
+			needsAdminReview: false,
 		});
 		expect(snapshot.enrollments.map((item) => item.priceMode)).not.toContain('manual_override');
+	});
+
+	it('does not require PlusBText duration or a positive R price for inactive and hourly services', async () => {
+		const plus = await plusSnapshot({
+			rows: [
+				{ l: 'Group Missing Duration', m: 'Teacher', n: 'Mo' },
+				{ l: 'Nachhilfe', m: 'Teacher', n: 'Di' },
+				{ l: 'Ind. Musik', m: 'Teacher', n: 'Mi' },
+				{ l: 'Inactive Group', m: 'Teacher', n: 'Do' },
+			],
+		});
+		const extract = await createSyntheticAccessExtract(
+			[
+				['', 'Group Missing Duration'],
+				['NH', 'Nachhilfe'],
+				['IND', 'Ind. Musik'],
+				['KN', 'Inactive Group'],
+			].map(([activityCode, groupName], index) =>
+				createSyntheticAccessRow({
+					ID: index + 1,
+					Value1: `1. ${5000 + index}`,
+					Value4: `Synthetic Child ${index}`,
+					Value5: `201${index}-01-01`,
+					Value15: groupName,
+					Value18: '0',
+					Value19: null,
+					Value20: activityCode,
+					Value42: null,
+					Value48: String(index + 1),
+				})
+			)
+		);
+		const snapshot = await parseAccessExtract({
+			extract,
+			academicPeriodCode: '2026-2027',
+			plusBTextVersionId: 'plus-version-a',
+			plusBText: plus,
+		});
+		const issueCodes = snapshot.issues.map((issue) => issue.code);
+
+		expect(issueCodes.filter((code) => code === 'ACCESS_DURATION_MISSING')).toHaveLength(1);
+		expect(issueCodes.filter((code) => code === 'ACCESS_PLANNED_PRICE_INVALID')).toHaveLength(
+			1
+		);
+		for (const groupName of ['Nachhilfe', 'Ind. Musik', 'Inactive Group']) {
+			expect(
+				snapshot.enrollments.find((item) => item.groupNameRaw === groupName)
+			).toMatchObject({
+				plannedPriceCents: null,
+				needsAdminReview: false,
+			});
+		}
+	});
+
+	it('always ignores service-marker AT while keeping AP-AS package values fail-closed', async () => {
+		const plus = await plusSnapshot();
+		const extract = await createSyntheticAccessExtract([
+			createSyntheticAccessRow({ Value42: '3', Value46: 'arbitrary service marker' }),
+		]);
+		const snapshot = await parseAccessExtract({
+			extract,
+			academicPeriodCode: '2026-2027',
+			plusBTextVersionId: 'plus-version-a',
+			plusBText: plus,
+		});
+
+		expect(snapshot.enrollments.map((item) => item.groupNameRaw)).toContain('3');
+		expect(snapshot.enrollments.map((item) => item.groupNameRaw)).not.toContain(
+			'arbitrary service marker'
+		);
+		expect(snapshot.issues.map((issue) => issue.code)).not.toContain(
+			'ACCESS_PACKAGE_NUMERIC_MARKERS_IGNORED'
+		);
 	});
 
 	it('keeps invalid family rows as evidence but excludes payment and unstable children', async () => {
@@ -298,9 +375,13 @@ describe('Access legacy parser', () => {
 	it.each([
 		[null, 'unavailable'],
 		['', 'unavailable'],
-		['Muster Maria', 'ambiguous'],
+		['Muster Maria', 'eligible'],
+		['Muster;Anna', 'eligible'],
+		['Muster; Anna', 'eligible'],
 		['Muster, Maria', 'eligible'],
 		['Müller-Šimić, Zoë', 'eligible'],
+		['Muster/Beispiel, Anna', 'ambiguous'],
+		['von Muster Maria', 'ambiguous'],
 	])('normalizes parent name %j as %s without assigning identity', (raw, status) => {
 		const normalized = normalizeLegacyParentName(raw);
 		expect(normalized.status).toBe(status);

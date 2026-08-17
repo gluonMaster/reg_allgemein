@@ -84,7 +84,7 @@ placeholder-ов, ожидаемый безопасный результат, с
     production-grade import обязан отдельно покрывать актуальный Access source,
     current-source parser regression/contract evidence для PlusBText,
     target-pinned remote `plan -> stage -> review -> recovery-evidence ->
-    promote -> verify -> rollback|roll-forward`, попарно разные planner/stager/
+promote -> verify -> rollback|roll-forward`, попарно разные planner/stager/
     reviewer, transition actor, отличный от reviewer, recovery verifier,
     отличный от planner/stager/reviewer/promoter, typed confirmations exact
     target/config/D1 UUID,
@@ -192,7 +192,8 @@ scope.
 пропускать: PR-B12 PlusBText current-source parser/contract evidence, PR-B13
 exact-target remote runner, PR-B14 review-bound atomic legacy bundle, PR-B15
 synthetic no-PII preview promote/rollback/roll-forward with first-import restore,
-PR-B16 authorized production current import/post-verify; PR-F12 Telegram Bot API
+PR-B16 authorized production current import/post-verify, PR-B17 Access owner
+semantics/current-source reconciliation; PR-F12 Telegram Bot API
 adapter/config/secrets, PR-F13 ambiguous delivery/manual resolution, PR-F14
 authorized synthetic preview smoke и PR-F15 destination/rotation/recovery drill.
 Пока реализация/evidence отсутствует, row остаётся `blocked`, даже если source
@@ -204,7 +205,18 @@ rows через unapplied candidates `0016` (legacy release control), `0017`
 `0018` сохраняет grandfathered `0016` plans как immutable evidence, но
 fail-closes их lifecycle при `NULL` actors/legacy `{}` contract и требует новый
 hardened plan.
-Это не меняет deployed preview `0001`–`0015`, не закрывает PR-B12–PR-B16 или
+Текущий worktree дополнительно реализует `IMPORT-07`: owner-approved
+`O/R/S/T` crosswalk, versioned safe name normalization, hourly exceptions,
+Access-price priority и PII-free admin references. Package groups ограничены
+первыми четырьмя slots, `AO/AT` всегда исключены. Read-only current-source rerun
+сократил obsolete 1429 warning occurrences/751 enrollment reviews до 160/53;
+это уменьшение false positives, а не автоматическое принятие данных. Active
+unresolved group подтверждён как upstream error и остаётся `awaiting_upstream`.
+Для structural duplicates и остальных actionable classes обязателен `IMPORT-08`
+durable reconciliation contour из tracked TZ; его migration/repository/UI/tests
+пока отсутствуют.
+
+Это не меняет deployed preview `0001`–`0015`, не закрывает PR-B12–PR-B17 или
 PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
 
 ## Обязательная non-production валидация

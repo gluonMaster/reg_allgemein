@@ -190,9 +190,7 @@ async function stageAccess(input: {
 	allowValidatedStagedPlusBText?: boolean;
 	runId?: string;
 	versionId?: string;
-}): Promise<
-	StagedImportResult & { snapshot: Awaited<ReturnType<typeof parseAccessExtract>> }
-> {
+}): Promise<StagedImportResult & { snapshot: Awaited<ReturnType<typeof parseAccessExtract>> }> {
 	const plus = await input.repository.loadPlusBTextVersion({
 		academicPeriodId: input.period.id,
 		versionId: input.plusBTextVersionId,
@@ -616,7 +614,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			repository,
 			period,
 			rows: [
-				createSyntheticAccessRow({ Value20: 'O/V' }),
+				createSyntheticAccessRow({ Value19: 'O/V', Value20: '' }),
 				createSyntheticAccessRow({
 					ID: 102,
 					Value15: 'Target Group',
@@ -654,7 +652,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			.prepare(
 				`SELECT contract_kind, price_source, price_mode, duration_minutes, duration_status,
 					is_active_for_occupancy FROM legacy_enrollments
-				WHERE status_code_raw = 'O/V' LIMIT 1`
+				WHERE notes_raw = 'O/V' LIMIT 1`
 			)
 			.first<{
 				contract_kind: string;

@@ -68,7 +68,17 @@ correction request/admin action. Approved correction записывается к
    наследует claim/owner и stable children; period enrollment snapshots
    создаются заново.
 10. Контактный/child конфликт, смена или ошибочное повторное использование
-   `FamilyID` создаёт continuity review без автоматической передачи owner.
+    `FamilyID` создаёт continuity review без автоматической передачи owner.
+
+Invalid legacy email имеет `email_normalized=NULL` и никогда не участвует в
+automatic exact-email claim. Verified login-email ручной portal registration не
+переписывает его: связывание выполняется только через однозначный proof либо
+audited admin correction. Пустая/неразбираемая legacy birth date сохраняет source
+row и issue, но не создаёт child/enrollment. Parent вводит valid birth date при
+создании portal child; связь с legacy row после этого требует admin review/
+correction и не превращает invalid source value в дату. Family contact/name и
+child identity issues содержат только opaque family/source reference в общем
+report; полный correction context доступен только авторизованному admin.
 
 Последующая смена login-email сама по себе не меняет FamilyID. Name-only не
 является доказательством владения, global child-name match и автоматическая
@@ -101,14 +111,14 @@ conditional transaction:
 
 ## Trial
 
-| Текущее состояние | Действие | Новое состояние |
-| --- | --- | --- |
-| — | Parent submits | `requested` |
-| `requested` | Admin confirms date/capacity | `confirmed` |
-| `requested` | Admin rejects with reason | `rejected` |
-| `requested|confirmed` | Parent/admin cancels | `cancelled` |
-| `confirmed` | Admin records attendance | `attended|no_show` |
-| `attended` | Admin starts contract workflow | `converted` |
+| Текущее состояние      | Действие                       | Новое состояние     |
+| ---------------------- | ------------------------------ | ------------------- |
+| —                      | Parent submits                 | `requested`         |
+| `requested`            | Admin confirms date/capacity   | `confirmed`         |
+| `requested`            | Admin rejects with reason      | `rejected`          |
+| `requested\|confirmed` | Parent/admin cancels           | `cancelled`         |
+| `confirmed`            | Admin records attendance       | `attended\|no_show` |
+| `attended`             | Admin starts contract workflow | `converted`         |
 
 Только одна open trial на child/course. Confirming проверяет future date,
 ownership, отсутствие active enrollment и актуальное состояние capacity. Full
@@ -130,16 +140,16 @@ flowchart TD
     G -- "Нет" --> I["rejected"]
 ```
 
-| Текущее состояние | Действие | Новое состояние |
-| --- | --- | --- |
-| — | Parent creates | `draft` |
-| `draft|needs_documents|needs_info` | Parent submits/resubmits | `submitted` |
-| `submitted` | System detects missing required files | `needs_documents` |
-| `submitted` | Validation complete | `pending_admin_review` |
-| `pending_admin_review` | Admin requests files/details | `needs_documents|needs_info` |
-| `pending_admin_review` | Admin decides | `approved|rejected` |
-| `draft|submitted|needs_documents|needs_info|pending_admin_review` | Parent cancels | `cancelled` |
-| `approved` | Parent/admin cancels before contract/enrollment | `cancelled` |
+| Текущее состояние                                                     | Действие                                        | Новое состояние               |
+| --------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------- |
+| —                                                                     | Parent creates                                  | `draft`                       |
+| `draft\|needs_documents\|needs_info`                                  | Parent submits/resubmits                        | `submitted`                   |
+| `submitted`                                                           | System detects missing required files           | `needs_documents`             |
+| `submitted`                                                           | Validation complete                             | `pending_admin_review`        |
+| `pending_admin_review`                                                | Admin requests files/details                    | `needs_documents\|needs_info` |
+| `pending_admin_review`                                                | Admin decides                                   | `approved\|rejected`          |
+| `draft\|submitted\|needs_documents\|needs_info\|pending_admin_review` | Parent cancels                                  | `cancelled`                   |
+| `approved`                                                            | Parent/admin cancels before contract/enrollment | `cancelled`                   |
 
 `draft` можно сохранить без документов. Submitted `individual` всегда
 `self_pay`. Submitted `nachhilfe` всегда `jobcenter|socialamt` и требует минимум
@@ -198,18 +208,18 @@ eligible для удаления при `now >= uploaded_at + 14×24h` UTC и у
 
 ## Contract offer
 
-| Текущее состояние | Actor/action | Новое состояние |
-| --- | --- | --- |
-| — | Admin creates | `draft` |
-| `draft` | Generate immutable HTML/PDF, validate snapshots, send | `sent` |
-| `sent` | Parent accepts current hash before expiry | `accepted_by_parent` |
-| `sent` | Parent declines | `declined_by_parent` |
-| `sent` | Deadline passes | `expired` |
-| `draft|sent` | Admin cancels | `cancelled` |
-| `sent` | Conditions replaced by new version | `superseded` |
-| `accepted_by_parent` | Admin approves/forms and activates transactionally | `approved_by_admin` |
-| `accepted_by_parent` | Admin cancels with reason when activation is impossible | `cancelled` |
-| `accepted_by_parent` | Conditions changed; admin creates new version | `superseded` |
+| Текущее состояние    | Actor/action                                            | Новое состояние      |
+| -------------------- | ------------------------------------------------------- | -------------------- |
+| —                    | Admin creates                                           | `draft`              |
+| `draft`              | Generate immutable HTML/PDF, validate snapshots, send   | `sent`               |
+| `sent`               | Parent accepts current hash before expiry               | `accepted_by_parent` |
+| `sent`               | Parent declines                                         | `declined_by_parent` |
+| `sent`               | Deadline passes                                         | `expired`            |
+| `draft\|sent`        | Admin cancels                                           | `cancelled`          |
+| `sent`               | Conditions replaced by new version                      | `superseded`         |
+| `accepted_by_parent` | Admin approves/forms and activates transactionally      | `approved_by_admin`  |
+| `accepted_by_parent` | Admin cancels with reason when activation is impossible | `cancelled`          |
+| `accepted_by_parent` | Conditions changed; admin creates new version           | `superseded`         |
 
 После `sent` offer immutable. Новые условия означают новую version, старую
 принять нельзя; acceptance старой version не переносится. Parent-side
@@ -242,11 +252,11 @@ offer очищает/отменяет неактивный engagement; active re
 
 ### Widerruf, Kündigung и mutual termination
 
-| Вид | Действие parent | Реакция системы/admin |
-| --- | --- | --- |
-| `withdrawal` | Отправляет statutory Widerruf в применимый срок | Система сразу фиксирует receipt/hash/time, прекращает contract по утверждённой policy и отправляет durable confirmation; admin approval/debt check не требуется |
-| `ordinary_termination|extraordinary_termination` | Указывает contract, вид и желаемую/самую раннюю дату | Система сразу фиксирует и подтверждает получение; admin устанавливает calculated effective date либо `disputed`, но не отклоняет сам факт receipt |
-| `mutual_termination_request` | Просит прекратить раньше договорной даты | `received -> approved|declined`; необходимость переписки/звонка создаёт отдельную admin task, а внешний debt check может быть условием соглашения, но не меняет ordinary Kündigung |
+| Вид                                               | Действие parent                                      | Реакция системы/admin                                                                                                                                                               |
+| ------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `withdrawal`                                      | Отправляет statutory Widerruf в применимый срок      | Система сразу фиксирует receipt/hash/time, прекращает contract по утверждённой policy и отправляет durable confirmation; admin approval/debt check не требуется                     |
+| `ordinary_termination\|extraordinary_termination` | Указывает contract, вид и желаемую/самую раннюю дату | Система сразу фиксирует и подтверждает получение; admin устанавливает calculated effective date либо `disputed`, но не отклоняет сам факт receipt                                   |
+| `mutual_termination_request`                      | Просит прекратить раньше договорной даты             | `received -> approved\|declined`; необходимость переписки/звонка создаёт отдельную admin task, а внешний debt check может быть условием соглашения, но не меняет ordinary Kündigung |
 
 Каждый request/event immutable и idempotent, а email confirmation идёт через
 outbox. Долг не моделируется в портале: допускается только manual attestation с
@@ -349,13 +359,13 @@ decrease; response одного item не меняет другие.
 child, enrollment и дату и атомарно создает связанную `absence_report` и message
 в thread. Ответ admin сначала сохраняется, затем ставится в email outbox.
 
-| Текущее состояние | Actor/action | Новое состояние |
-| --- | --- | --- |
-| —/`open` | Parent сохраняет первое сообщение | `waiting_for_admin` |
-| `waiting_for_admin` | Admin отвечает и ожидает уточнение | `waiting_for_parent` |
-| `waiting_for_admin` | Admin дает финальный ответ | `answered` |
-| `waiting_for_parent|answered` | Parent пишет продолжение | `waiting_for_admin` |
-| Любое незакрытое | Parent или admin закрывает | `closed` |
+| Текущее состояние              | Actor/action                       | Новое состояние      |
+| ------------------------------ | ---------------------------------- | -------------------- |
+| —/`open`                       | Parent сохраняет первое сообщение  | `waiting_for_admin`  |
+| `waiting_for_admin`            | Admin отвечает и ожидает уточнение | `waiting_for_parent` |
+| `waiting_for_admin`            | Admin дает финальный ответ         | `answered`           |
+| `waiting_for_parent\|answered` | Parent пишет продолжение           | `waiting_for_admin`  |
+| Любое незакрытое               | Parent или admin закрывает         | `closed`             |
 
 `open` допустим только как краткое draft/transactional состояние до первого
 message. В `closed` новые сообщения не добавляются; продолжение создает новый

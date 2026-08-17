@@ -151,7 +151,7 @@ export interface LegacyFamilyDraft {
 	parentFirstNameNormalized: string | null;
 	parentLastNameNormalized: string | null;
 	parentNameMatchStatus: 'eligible' | 'ambiguous' | 'unavailable';
-	parentNameNormalizerVersion: 1;
+	parentNameNormalizerVersion: 2;
 	continuityNeedsReview: boolean;
 	addressRaw: string | null;
 	phoneRaw: string | null;

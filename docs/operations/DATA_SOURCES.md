@@ -1,6 +1,6 @@
 # Источники данных
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-17.
 
 Локальные upstream-файлы считаются read-only. Они могут находиться в
 игнорируемом рабочем каталоге для ручной проверки, но не попадают в Git,
@@ -55,9 +55,11 @@ namespace + academic period + `ID`, а mismatch/duplicate `Value48` записы
 - `Value9` — email.
 
 `Value2` может участвовать только в post-verification candidate flow. Importer
-хранит raw value и создаёт versioned normalized фамилия+имя key лишь при
-однозначном разборе; ambiguous/unavailable value не становится публичным
-совпадением и уходит в admin review. `Value9` нормализуется для exact-email и
+хранит raw value; normalizer v2 создаёт versioned normalized фамилия+имя key для
+ровно двух валидных частей, разделённых одной `;`, `,` либо одним пробелом с
+optional whitespace. Slash/fraction, несколько separators и multipart whitespace
+остаются ambiguous, не становятся публичным совпадением и уходят в admin review.
+Child name не разрезается на first/last. `Value9` нормализуется для exact-email и
 alternate-email proof, но полный адрес не показывается parent: UI получает
 только маску по `CLAIM-06`.
 
@@ -79,28 +81,45 @@ claim. Они не перезаписывают подтвержденный п�
 - `Value16` — преподаватель;
 - `Value17` — день;
 - `Value18` — плановая цена;
-- `Value19` — примечание;
-- `Value20` — статус/тип договора.
+- `Value19` — примечание и marker contract kind для будущей группы;
+- `Value20` — рабочий activity code строки, но не marker group contract kind.
 
-`Value20` нельзя исключать из extract: без него невозможно убрать `KN` и
-классифицировать `NH/N/IND`.
+`Value19` и `Value20` нельзя исключать из extract: первый различает monthly/
+yearly, второй убирает `KN` и классифицирует `NH/N/IND`. В исходном worksheet
+текущая пара — `J/M/N`, будущая — `O/R/S`; importer 2026–2027 использует именно
+future `O/R/S`.
 
-Additional future packages: `Value42`–`Value46`, включая package 5.
+Package blocks в worksheet имеют по пять физических cells, но только первые
+четыре являются услугами:
+
+- current: `AK–AN` = `Value37–Value40`;
+- future: `AP–AS` = `Value42–Value45`;
+- `AO/Value41` и `AT/Value46` переиспользуются как service-marker cells.
+
+Importer 2026–2027 извлекает future `Value42–Value46`, читает packages только из
+`Value42–Value45` и сохраняет `Value46` в allowlisted read-only source snapshot,
+но всегда исключает его из enrollment и PlusBText/course mapping без issue.
+`Value41` не входит в этот exact future-period extract; если current block будет
+добавлен позже, он обязан применить то же unconditional-ignore правило. Это
+owner-approved `OQ-029`, а не эвристика по значению `1`/`2`.
 
 ### Status normalization
 
-- `KN` — inactive, не участвует в occupancy;
-- `J` — yearly для подтвержденной ordinary/dance group;
-- `M` — monthly для подтвержденной ordinary/dance group;
-- `O/V` или `V/O` — legacy monthly marker; использует месячную ставку из
-  исторически названной колонки `Sonderpreis`, но не означает льготу;
-- `NH`/`N` — Nachhilfe, не group monthly/yearly;
-- `IND` — individual;
-- `0`, пустое/неизвестное — не догадка: для надежно классифицированной обычной
-  group допускается provisional monthly с warning; иначе admin review.
+- пустая `Value15`/worksheet `O` не создаёт enrollment; обычно такие строки также
+  имеют `Value20/T=KN`, но importer проверяет оба условия независимо;
+- `Value20/T=KN` — inactive, не участвует в occupancy и не требует group price/
+  PlusBText duration;
+- `Value20/T=NH|N` — Nachhilfe, `IND` — individual; это не group monthly/yearly;
+- token `O/V` в `Value19/S` означает monthly ordinary/dance group; `V/O`
+  поддерживается как legacy alias;
+- blank `Value19/S` или любое значение без этого token означает yearly group;
+- `J/M/O/V` в `T` не выбирают contract kind и не подменяют `S`.
 
-Сначала определяется lesson kind, затем contract kind и price source. Legacy
-`Value18` сохраняется независимо от возможности нового lookup.
+Сначала `T` определяет inactive/hourly kind, затем `S` — group contract kind.
+Positive legacy `Value18/R` сохраняется как фактическая current imported price и
+имеет приоритет над price-table lookup для существующей legacy service. Zero/
+invalid активной group price остаётся review; для `KN` и hourly services не
+создаёт price issue.
 
 ## Excel: PlusBText
 

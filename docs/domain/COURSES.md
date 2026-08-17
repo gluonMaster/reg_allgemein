@@ -18,13 +18,13 @@ capacity и occupancy. Правила цены находятся в [PRICING.md
 
 ## Типы занятий
 
-| `lesson_kind` | Назначение | Capacity | Public CTA | Автоматическая цена |
-| --- | --- | ---: | --- | --- |
-| `group` | Обычная группа | 12 | Trial request | Групповой lookup |
-| `dance_group` | Танцевальная группа | 15 | Trial request | Групповой lookup |
-| `nachhilfe` | Финансируемая индивидуальная Nachhilfe | 1 | Nachhilfe request | 30 EUR / 45 min funded unit; document + dates, admin review |
-| `individual` | Другое индивидуальное занятие | 1 | Individual request | Config, default 30 EUR / 45 min |
-| `group_nachhilfe` | Админская групповая Nachhilfe | Только manual | Нет public trial | Только manual |
+| `lesson_kind`     | Назначение                             |      Capacity | Public CTA         | Автоматическая цена                                         |
+| ----------------- | -------------------------------------- | ------------: | ------------------ | ----------------------------------------------------------- |
+| `group`           | Обычная группа                         |            12 | Trial request      | Групповой lookup                                            |
+| `dance_group`     | Танцевальная группа                    |            15 | Trial request      | Групповой lookup                                            |
+| `nachhilfe`       | Финансируемая индивидуальная Nachhilfe |             1 | Nachhilfe request  | 30 EUR / 45 min funded unit; document + dates, admin review |
+| `individual`      | Другое индивидуальное занятие          |             1 | Individual request | Config, default 30 EUR / 45 min                             |
+| `group_nachhilfe` | Админская групповая Nachhilfe          | Только manual | Нет public trial   | Только manual                                               |
 
 `capacity_override` администратора имеет приоритет над default, требует причины
 и audit. Capacity не равна price lookup count и не ограничивается шестью.
@@ -101,12 +101,22 @@ enrollment.
 
 - один child/course считается один раз, даже если он встречается в main и
   package;
+- exact normalized повтор child/group в нескольких Access rows/slots получает
+  structural diagnostic (`distinctSourceRows`, `main|package` pattern), но не
+  считается доказательством второго посещения; отличающееся day-suffix name
+  остаётся отдельным service candidate;
 - claim семьи сам по себе не меняет count;
 - activation portal enrollment, связанного с legacy, атомарно исключает legacy
   запись из повторного учета;
 - `KN`, trial, pending offer/request и cancelled/ended enrollment не входят;
 - count вычисляется на planned/effective date, а не просто «сейчас»;
 - duplicate/mapping ambiguity создает warning и не завышает count.
+- package groups читаются только из `Value37–Value40`/`AK–AN` и
+  `Value42–Value45`/`AP–AS`; пятые cells `Value41/AO` и `Value46/AT` являются
+  service markers и никогда не становятся course/enrollment независимо от
+  содержимого.
+- unresolved source label не получает fuzzy mapping: администратор выбирает
+  exact target либо `awaiting_upstream`, а исправление подтверждает reimport.
 
 ## Availability в каталоге
 

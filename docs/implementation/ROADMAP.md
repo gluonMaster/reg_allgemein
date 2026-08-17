@@ -43,22 +43,22 @@ npm run build
 
 ## Этапы
 
-|   № | Статус | Результат                                                                                                                              | Зависит от              |
-| --: | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-|  01 | done   | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations                                              | —                       |
-|  02 | done   | Versioned import schema, price и schedule staging/validation/promotion                                                                 | 01                      |
-|  03 | done   | Access/PlusBText import, family/child aggregation, issues и reconciliation                                                             | 02                      |
-|  04 | done   | Course mappings, occupancy и безопасный pricing/quote engine                                                                           | 02–03                   |
-|  05 | done   | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC                                                                     | 01                      |
-|  06 | done   | Portal children, atomic legacy claim и parent cabinet                                                                                  | 03–05                   |
-| 06A | done   | Admin shell, import/review/legacy/users/catalog core surfaces                                                                          | 02–06                   |
-|  07 | done   | Published catalog, availability и полный trial workflow                                                                                | 04, 06, 06A             |
-|  08 | done   | Nachhilfe/individual requests, private R2 documents и review                                                                           | 05, 06, 06A             |
-|  09 | done   | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
-|  10 | done   | Price review batches/items, notifications и effective-date apply                                                                       | 04, 09                  |
-|  11 | done   | Support/absence, email/Telegram outboxes и cron retry                                                                                  | 05–10                   |
-|  12 | done   | Privacy export/delete, account closure, retained-archive separation и closure races                                                    | 05–11, включая 06A      |
-|  13 | in_progress | Независимый hardening, production readiness, Access/Telegram candidate и русские operator runbooks; external NO-GO gates остаются | 01–12 |
+|   № | Статус      | Результат                                                                                                                              | Зависит от              |
+| --: | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+|  01 | done        | Baseline структуры, D1 migration/test harness, config validation, error/audit foundations                                              | —                       |
+|  02 | done        | Versioned import schema, price и schedule staging/validation/promotion                                                                 | 01                      |
+|  03 | done        | Access/PlusBText import, family/child aggregation, issues и reconciliation                                                             | 02                      |
+|  04 | done        | Course mappings, occupancy и безопасный pricing/quote engine                                                                           | 02–03                   |
+|  05 | done        | Auth, sessions, verification/reset, CSRF/Turnstile/rate limit/RBAC                                                                     | 01                      |
+|  06 | done        | Portal children, atomic legacy claim и parent cabinet                                                                                  | 03–05                   |
+| 06A | done        | Admin shell, import/review/legacy/users/catalog core surfaces                                                                          | 02–06                   |
+|  07 | done        | Published catalog, availability и полный trial workflow                                                                                | 04, 06, 06A             |
+|  08 | done        | Nachhilfe/individual requests, private R2 documents и review                                                                           | 05, 06, 06A             |
+|  09 | done        | Contract core: immutable HTML, Browser Run/synthetic adapters, acceptance и admin approval/activation; legal/business production gated | 04, 05, 06, 06A, 07, 08 |
+|  10 | done        | Price review batches/items, notifications и effective-date apply                                                                       | 04, 09                  |
+|  11 | done        | Support/absence, email/Telegram outboxes и cron retry                                                                                  | 05–10                   |
+|  12 | done        | Privacy export/delete, account closure, retained-archive separation и closure races                                                    | 05–11, включая 06A      |
+|  13 | in_progress | Независимый hardening, production readiness, Access/Telegram candidate и русские operator runbooks; external NO-GO gates остаются      | 01–12                   |
 
 ## 01. Foundation
 
@@ -103,7 +103,9 @@ Exit gate:
 - OOXML sanitizer не поглощает следующую populated cell после styled
   self-closing blank cell: v1 header `E/K/T empty; F/L/M/N present` покрыт
   regression fixture и не требует ложной v2 contract;
-- `ID`/`Value48`, `Value15`–`Value20`, packages 1–5 покрыты fixtures;
+- `ID`/`Value48`, `Value15`–`Value20` и historical package-slot schema покрыты
+  fixtures; актуальный owner rule создаёт только package 1–4 и оставляет slot 5
+  service-marker evidence;
 - raw legacy FamilyID (`1. 3477`, namespace 1), portal namespace 2 и
   collision-checked family/contract numbering не смешиваются;
 - `Zahlung`, child aggregation и contact conflicts обработаны; raw parent name
@@ -381,7 +383,7 @@ Provider/manual smoke, job-specific alerts, restore rehearsal и внешние 
 inputs также отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
-Production legacy release из `IMPORT-01`–`IMPORT-06` теперь является отдельным
+Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,
 exact-target remote boundary, schema-v3 protected no-write plan с
 `sourceClass`/`syntheticFixtureId`, встроенные 1703-row
@@ -401,6 +403,19 @@ Production transitions намеренно fail closed ещё до API-token look
 Это не делает environment gate `passed`: remote preview plan/stage/promotion не
 выполнялись, реальная remote D1 batch atomicity/timeout reconciliation не
 доказана, recovery point/restore не проверены, а production import не разрешён.
+Access normalization `IMPORT-07` локально переведена на exact `O/R/S/T`
+crosswalk, parent-name normalizer v2, hourly duration semantics, invalid email/
+DOB fail-closed и traceable family issues. Owner decision ограничивает package
+groups первыми четырьмя cells каждого блока и всегда исключает `AO/AT`; sanitized
+current-source projection снизила warning occurrences с 1429 до 160 и enrollment
+review queue с 751 до 53 без вывода PII. Единственный active unresolved-group
+case признан upstream error и не получает fuzzy mapping. Шесть structural
+duplicate buckets и остальные anomaly classes требуют штатного cross-import
+admin contour. Он нормативно зафиксирован как `IMPORT-08`/
+`AC-IMPORT-27`–`AC-IMPORT-31` в
+[отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md), но migration/repository/UI/
+suite ещё отсутствуют, поэтому PR-B17 остаётся blocked. Этот local delta ещё не
+является exact-SHA candidate evidence и ничего не менял remote.
 
 Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
 candidate добавляет real one-way `bot_api` adapter, strict minimized payload,
@@ -420,6 +435,7 @@ invalid/mismatched success и post-send-D1 uncertainty — ambiguous. Ни migra
 Tracked packet этапа:
 
 - [traceability matrix](STAGE_13_TRACEABILITY.md);
+- [import admin reconciliation TZ](IMPORT_ADMIN_RECONCILIATION_TZ.md);
 - [deployment runbook](../operations/PRODUCTION_DEPLOYMENT.md);
 - [operations runbook](../operations/OPERATIONS_RUNBOOK.md);
 - [disaster-recovery runbook](../operations/DISASTER_RECOVERY.md);

@@ -16,7 +16,7 @@ import { resolvePlusBTextGroup } from './plusbtext-workbook';
 
 const TABLE_NAME = 'tblKartei';
 const SOURCE_NAMESPACE = 'legacy_1' as const;
-const PARENT_NAME_NORMALIZER_VERSION = 1 as const;
+const PARENT_NAME_NORMALIZER_VERSION = 2 as const;
 const REQUIRED_VALUE_FIELDS = [
 	'Value1',
 	'Value2',
@@ -67,6 +67,7 @@ function safeIssue(input: {
 	sourceRecordKey?: string;
 	field?: string;
 	count?: number;
+	context?: Record<string, string | number | boolean | null>;
 	severity?: ImportIssueDraft['severity'];
 	blocksPromotion?: boolean;
 }): ImportIssueDraft {
@@ -77,6 +78,7 @@ function safeIssue(input: {
 		safeContext: {
 			...(input.field ? { field: input.field } : {}),
 			...(input.count !== undefined ? { count: input.count } : {}),
+			...input.context,
 		},
 		blocksPromotion: input.blocksPromotion ?? false,
 	};
@@ -157,7 +159,7 @@ export function normalizeLegacyParentName(raw: string | null): {
 	firstNameNormalized: string | null;
 	lastNameNormalized: string | null;
 	status: 'eligible' | 'ambiguous' | 'unavailable';
-	version: 1;
+	version: 2;
 } {
 	if (!raw || !normalizeImportText(raw)) {
 		return {
@@ -168,7 +170,21 @@ export function normalizeLegacyParentName(raw: string | null): {
 		};
 	}
 	const normalized = normalizeImportText(raw);
-	const parts = normalized.split(',').map((part) => normalizeImportText(part));
+	if (/[\/⁄∕]/u.test(normalized)) {
+		return {
+			firstNameNormalized: null,
+			lastNameNormalized: null,
+			status: 'ambiguous',
+			version: PARENT_NAME_NORMALIZER_VERSION,
+		};
+	}
+	const delimiterMatches = normalized.match(/[,;]/gu) ?? [];
+	const parts =
+		delimiterMatches.length === 1
+			? normalized.split(delimiterMatches[0]).map((part) => normalizeImportText(part))
+			: delimiterMatches.length === 0
+				? normalized.split(' ').map((part) => normalizeImportText(part))
+				: [];
 	if (
 		parts.length !== 2 ||
 		!parts[0] ||
@@ -237,7 +253,8 @@ function classifyLesson(groupName: string, statusRaw: string | null): LessonKind
 }
 
 function normalizeStatus(input: {
-	statusRaw: string | null;
+	activityCodeRaw: string | null;
+	contractMarkerRaw: string | null;
 	lessonKind: LessonKind;
 	sourceRecordKey: string;
 }): {
@@ -247,40 +264,9 @@ function normalizeStatus(input: {
 	needsReview: boolean;
 	issues: ImportIssueDraft[];
 } {
-	const status = normalizeImportText(input.statusRaw ?? '').toUpperCase();
-	if (status === 'NH' || status === 'N' || input.lessonKind === 'nachhilfe')
-		return {
-			contractKind: 'nachhilfe',
-			priceSource: null,
-			priceMode: null,
-			needsReview: false,
-			issues: [],
-		};
-	if (status === 'IND' || input.lessonKind === 'individual')
-		return {
-			contractKind: 'individual',
-			priceSource: null,
-			priceMode: null,
-			needsReview: false,
-			issues: [],
-		};
-	if (status === 'J')
-		return {
-			contractKind: 'yearly',
-			priceSource: 'yearly',
-			priceMode: 'rule_derived',
-			needsReview: false,
-			issues: [],
-		};
-	if (status === 'M' || status === 'O/V' || status === 'V/O')
-		return {
-			contractKind: 'monthly',
-			priceSource: 'monthly',
-			priceMode: 'rule_derived',
-			needsReview: false,
-			issues: [],
-		};
-	if (status === 'KN')
+	const activityCode = normalizeImportText(input.activityCodeRaw ?? '').toUpperCase();
+	const contractMarker = normalizeImportText(input.contractMarkerRaw ?? '').toUpperCase();
+	if (activityCode === 'KN')
 		return {
 			contractKind: null,
 			priceSource: null,
@@ -288,21 +274,32 @@ function normalizeStatus(input: {
 			needsReview: false,
 			issues: [],
 		};
-	if (
-		(status === '' || status === '0') &&
-		(input.lessonKind === 'group' || input.lessonKind === 'dance_group')
-	) {
+	if (activityCode === 'NH' || activityCode === 'N' || input.lessonKind === 'nachhilfe')
 		return {
-			contractKind: 'monthly',
-			priceSource: 'monthly',
+			contractKind: 'nachhilfe',
+			priceSource: null,
+			priceMode: null,
+			needsReview: false,
+			issues: [],
+		};
+	if (activityCode === 'IND' || input.lessonKind === 'individual')
+		return {
+			contractKind: 'individual',
+			priceSource: null,
+			priceMode: null,
+			needsReview: false,
+			issues: [],
+		};
+	if (input.lessonKind === 'group' || input.lessonKind === 'dance_group') {
+		const monthly = /(^|[^\p{L}\p{N}])(?:O\s*\/\s*V|V\s*\/\s*O)($|[^\p{L}\p{N}])/u.test(
+			contractMarker
+		);
+		return {
+			contractKind: monthly ? 'monthly' : 'yearly',
+			priceSource: monthly ? 'monthly' : 'yearly',
 			priceMode: 'rule_derived',
-			needsReview: true,
-			issues: [
-				safeIssue({
-					code: 'ACCESS_STATUS_PROVISIONAL_MONTHLY',
-					sourceRecordKey: input.sourceRecordKey,
-				}),
-			],
+			needsReview: false,
+			issues: [],
 		};
 	}
 	return {
@@ -552,6 +549,14 @@ export async function parseAccessExtract(input: {
 	const families: LegacyFamilyDraft[] = [];
 	const emails: LegacyEmailDraft[] = [];
 	for (const family of familyByKey.values()) {
+		const familySourceRecordKey = sourceRowKey(
+			input.academicPeriodCode,
+			Math.min(...family.rows.map((row) => row.accessId))
+		);
+		const familyIssueContext = {
+			entityType: 'legacy_family',
+			entityId: family.legacyFamilyId,
+		};
 		const parent = uniqueRaw(family.rows, 'Value2');
 		const address = uniqueRaw(family.rows, 'Value6');
 		const phone = uniqueRaw(family.rows, 'Value7');
@@ -566,7 +571,14 @@ export async function parseAccessExtract(input: {
 					}
 				: normalizeLegacyParentName(parent.value);
 		if (parent.count > 1)
-			issues.push(safeIssue({ code: 'ACCESS_PARENT_NAME_CONFLICT', count: parent.count }));
+			issues.push(
+				safeIssue({
+					code: 'ACCESS_PARENT_NAME_CONFLICT',
+					count: parent.count,
+					sourceRecordKey: familySourceRecordKey,
+					context: familyIssueContext,
+				})
+			);
 		else if (parentName.status !== 'eligible')
 			issues.push(
 				safeIssue({
@@ -574,6 +586,8 @@ export async function parseAccessExtract(input: {
 						parentName.status === 'ambiguous'
 							? 'ACCESS_PARENT_NAME_AMBIGUOUS'
 							: 'ACCESS_PARENT_NAME_UNAVAILABLE',
+					sourceRecordKey: familySourceRecordKey,
+					context: familyIssueContext,
 				})
 			);
 		for (const [field, contact] of [
@@ -587,6 +601,8 @@ export async function parseAccessExtract(input: {
 						code: 'ACCESS_FAMILY_CONTACT_CONFLICT',
 						field,
 						count: contact.count,
+						sourceRecordKey: familySourceRecordKey,
+						context: familyIssueContext,
 					})
 				);
 		}
@@ -655,7 +671,12 @@ export async function parseAccessExtract(input: {
 		}
 		if (normalizedEmails.size > 1)
 			issues.push(
-				safeIssue({ code: 'ACCESS_FAMILY_EMAIL_CONFLICT', count: normalizedEmails.size })
+				safeIssue({
+					code: 'ACCESS_FAMILY_EMAIL_CONFLICT',
+					count: normalizedEmails.size,
+					sourceRecordKey: familySourceRecordKey,
+					context: familyIssueContext,
+				})
 			);
 	}
 
@@ -747,26 +768,37 @@ export async function parseAccessExtract(input: {
 	}
 
 	const children = [...childrenByKey.values()];
-	const childDatesByFamilyAndName = new Map<string, Set<string>>();
+	const childDatesByFamilyAndName = new Map<
+		string,
+		{ stableFamilyKey: string; dates: Set<string> }
+	>();
 	for (const child of children) {
 		const key = `${child.stableFamilyKey}:${child.sourceFullNameNormalized}`;
-		const dates = childDatesByFamilyAndName.get(key) ?? new Set<string>();
-		dates.add(child.sourceBirthDate);
-		childDatesByFamilyAndName.set(key, dates);
+		const candidate = childDatesByFamilyAndName.get(key) ?? {
+			stableFamilyKey: child.stableFamilyKey,
+			dates: new Set<string>(),
+		};
+		candidate.dates.add(child.sourceBirthDate);
+		childDatesByFamilyAndName.set(key, candidate);
 	}
-	const sameNameDifferentDates = [...childDatesByFamilyAndName.values()].filter(
-		(dates) => dates.size > 1
-	).length;
-	if (sameNameDifferentDates)
+	for (const candidate of childDatesByFamilyAndName.values()) {
+		if (candidate.dates.size < 2) continue;
+		const family = familyByKey.get(candidate.stableFamilyKey)!;
 		issues.push(
 			safeIssue({
 				code: 'ACCESS_CHILD_SAME_NAME_MULTIPLE_BIRTH_DATES',
-				count: sameNameDifferentDates,
+				count: candidate.dates.size,
+				sourceRecordKey: sourceRowKey(
+					input.academicPeriodCode,
+					Math.min(...family.rows.map((row) => row.accessId))
+				),
+				context: { entityType: 'legacy_family', entityId: family.legacyFamilyId },
 			})
 		);
+	}
 
 	const enrollments: LegacyEnrollmentDraft[] = [];
-	const packageFields = ['Value42', 'Value43', 'Value44', 'Value45', 'Value46'] as const;
+	const packageFields = ['Value42', 'Value43', 'Value44', 'Value45'] as const;
 	for (const row of rows) {
 		const family = familyForAccessId.get(row.accessId)!;
 		const sourceChildKey = sourceChildKeyByAccessId.get(row.accessId);
@@ -807,16 +839,22 @@ export async function parseAccessExtract(input: {
 				oldGroups: input.plusBText.oldGroups,
 				targets: input.plusBText.targets,
 			});
-			issues.push(...resolution.issues);
 			const lessonKind = classifyLesson(slot.groupName, row.values.Value20);
 			const status = normalizeStatus({
-				statusRaw: row.values.Value20,
+				activityCodeRaw: row.values.Value20,
+				contractMarkerRaw: row.values.Value19,
 				lessonKind,
 				sourceRecordKey: recordKey,
 			});
 			issues.push(...status.issues);
-			const plannedPriceCents = parsePositiveCents(slot.plannedPrice);
-			if (slot.plannedPrice && plannedPriceCents === null)
+			const requiresGroupEnrichment =
+				status.contractKind !== null &&
+				(lessonKind === 'group' || lessonKind === 'dance_group');
+			if (requiresGroupEnrichment) issues.push(...resolution.issues);
+			const plannedPriceCents = requiresGroupEnrichment
+				? parsePositiveCents(slot.plannedPrice)
+				: null;
+			if (requiresGroupEnrichment && slot.plannedPrice && plannedPriceCents === null)
 				issues.push(
 					safeIssue({
 						code: 'ACCESS_PLANNED_PRICE_INVALID',
@@ -824,13 +862,27 @@ export async function parseAccessExtract(input: {
 						field: 'Value18',
 					})
 				);
+			if (requiresGroupEnrichment && slot.slot === 'main_next' && !slot.plannedPrice)
+				issues.push(
+					safeIssue({
+						code: 'ACCESS_PLANNED_PRICE_MISSING',
+						sourceRecordKey: recordKey,
+						field: 'Value18',
+					})
+				);
 			const needsAdminReview =
-				resolution.status !== 'resolved' ||
-				resolution.durationMinutes === null ||
+				(requiresGroupEnrichment && resolution.status !== 'resolved') ||
+				(requiresGroupEnrichment && resolution.durationMinutes === null) ||
 				status.needsReview ||
 				lessonKind === 'needs_review' ||
-				Boolean(slot.plannedPrice && plannedPriceCents === null);
-			if (resolution.status === 'resolved' && resolution.durationMinutes === null)
+				(requiresGroupEnrichment &&
+					slot.slot === 'main_next' &&
+					(!slot.plannedPrice || plannedPriceCents === null));
+			if (
+				requiresGroupEnrichment &&
+				resolution.status === 'resolved' &&
+				resolution.durationMinutes === null
+			)
 				issues.push(
 					safeIssue({ code: 'ACCESS_DURATION_MISSING', sourceRecordKey: recordKey })
 				);
@@ -876,7 +928,6 @@ export async function parseAccessExtract(input: {
 			enrollments.push(draft);
 		}
 	}
-
 	const duplicateServiceGroups = new Map<string, LegacyEnrollmentDraft[]>();
 	for (const enrollment of enrollments) {
 		const key = `${enrollment.sourceChildKey}:${enrollment.groupNameNormalized}`;
@@ -887,8 +938,22 @@ export async function parseAccessExtract(input: {
 	for (const candidates of duplicateServiceGroups.values()) {
 		if (candidates.length < 2) continue;
 		for (const candidate of candidates) candidate.needsAdminReview = true;
+		const sourceRows = new Set(candidates.map((candidate) => candidate.sourceAccessId)).size;
+		const slotKinds = new Set(
+			candidates.map((candidate) =>
+				candidate.sourceSlot === 'main_next' ? 'main' : 'package'
+			)
+		);
 		issues.push(
-			safeIssue({ code: 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS', count: candidates.length })
+			safeIssue({
+				code: 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS',
+				count: candidates.length,
+				sourceRecordKey: candidates[0].sourceRecordKey,
+				context: {
+					distinctSourceRows: sourceRows,
+					slotPattern: [...slotKinds].sort().join('+'),
+				},
+			})
 		);
 	}
 

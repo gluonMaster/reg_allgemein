@@ -285,6 +285,54 @@ MVP готов, когда:
   `LEGACY_RELEASE_ROLLBACK_TARGET_MISSING`, а promote невозможен без внешнего
   recovery-evidence digest. Ни одна acceptance-проверка не выполняет
   production import/deploy/migration без отдельного разрешения.
+- **AC-IMPORT-22.** Synthetic Access rows доказывают exact crosswalk: blank `O`
+  не создаёт enrollment; `T=KN` inactive; `T=NH/N/IND` hourly; ordinary/dance
+  group с token `O/V`/`V/O` в `S` monthly, а blank/other `S` yearly. Значения
+  `J/M/O/V` в `T` contract kind не выбирают. Текущий source после этого не
+  создаёт `ACCESS_STATUS_PROVISIONAL_MONTHLY`.
+- **AC-IMPORT-23.** Parent normalizer v2 принимает `Surname;First`,
+  `Surname, First` и ровно `Surname First` с optional whitespace, но slash,
+  несколько separators и multipart whitespace остаются ambiguous и не создают
+  ownership. Family contact/name/identity issue имеет safe source key и opaque
+  family reference, пригодный для admin correction без PII в report.
+- **AC-IMPORT-24.** Missing PlusBText duration и zero/blank `R` не создают review
+  для `KN|individual|nachhilfe`; hourly rate остаётся 3000 cents/45 minutes.
+  Missing group duration и zero/invalid active group `R` остаются review.
+  Positive `R` является current imported legacy price и не заменяется lookup.
+- **AC-IMPORT-25.** Invalid legacy email получает normalized `NULL` и не
+  участвует в automatic claim. Invalid/missing birth date сохраняет source issue,
+  но не создаёт legacy child/enrollment; valid portal date не исправляет source
+  и требует explicit admin reconciliation.
+- **AC-IMPORT-26.** Synthetic rows доказывают, что `Value37–Value40` и
+  `Value42–Value45` являются четырьмя package slots соответствующего блока, а
+  `Value41/AO` и `Value46/AT` всегда игнорируются как service-marker cells при
+  любом содержимом. Current future-period extract сохраняет `Value46` как source
+  evidence, но не создаёт enrollment, lookup или issue; `Value41` не входит в
+  этот future-period allowlist. Exact child/group repetitions дают structural duplicate
+  context и не завышают occupancy; разные normalized names, включая day suffix,
+  не объединяются.
+- **AC-IMPORT-27.** Повторные import runs создают или переиспользуют один durable
+  reconciliation case по stable source identity + period + issue code. Case с
+  тем же отклонением не дублируется и не закрывается новым run; исчезнувшее после
+  upstream correction отклонение закрывается только как `resolved_by_reimport`
+  с exact previous/current version evidence.
+- **AC-IMPORT-28.** Actionable import issue нельзя закрыть generic
+  `resolve|dismiss`. Typed action требует current admin, CSRF, reason code,
+  optimistic version/idempotency key и append-only audit/assertion; concurrent
+  либо stale submit отклоняется без частичного изменения.
+- **AC-IMPORT-29.** Course/group case принимает только exact catalog target либо
+  `awaiting_upstream`; fuzzy/substring/day-insensitive match запрещён. Ошибочная
+  source group остаётся исключённой из automatic mapping до исправления Access и
+  подтверждающего reimport.
+- **AC-IMPORT-30.** Identity/contact/email/birth-date/price/duration/duplicate
+  cases направляют администратора в соответствующий typed tool. Invalid email
+  не участвует в claim; invalid birth date не импортируется; duplicate service
+  учитывается один раз, пока отдельность двух услуг не доказана. Batch action
+  разрешена только для одной issue class и одного решения.
+- **AC-IMPORT-31.** Queue/list/export/log содержат только opaque case/family/
+  source references, codes, counts, state и timestamps. PII доступна лишь в
+  уже авторизованной entity detail; promotion/registration gates fail-closed при
+  unresolved blocking cases, а retention/cleanup оставляет append-only audit.
 
 ## 5. Каталог, capacity и trial
 

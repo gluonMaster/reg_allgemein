@@ -46,6 +46,12 @@ Value42, Value43, Value44, Value45, Value46
 Value48 (control mirror)
 ```
 
+`Value42`–`Value45` — четыре future package group slots. `Value46` остаётся
+обязательным только для exact read-only source evidence/profile parity: это
+owner-approved service-marker cell, которая никогда не создаёт group,
+enrollment или mapping независимо от содержимого. Current-block `Value41`
+отсутствует в этом future-period MVP allowlist.
+
 При отсутствии/переименовании поля importer завершается до staging/promotion.
 
 Sanitized повторная проверка актуального 2026 snapshot от 2026-08-13

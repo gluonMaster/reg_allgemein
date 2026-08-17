@@ -1,8 +1,10 @@
 # Спецификация MVP портала регистрации
 
-Статус: этап 01 готов к реализации. Открытых owner/product-вопросов в
-[OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) нет; независимые legal, security,
-provider и operational release gates сохраняются. Актуально на 2026-08-14.
+Статус: этап 01 готов к реализации. В
+[OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) нет открытых owner/data-вопросов по
+Access normalization; независимые legal, security, provider и operational
+release gates сохраняются.
+Актуально на 2026-08-17.
 
 Ключевые слова **должен**, **нельзя** и **только** обозначают обязательное
 требование. Проверяемые сценарии находятся в
@@ -612,6 +614,33 @@ provider и operational release gates сохраняются. Актуально
   `delivery_unknown`: operator сначала запускает read-only verify/reconciliation
   и только затем повторяет ту же deterministic команду. Production import,
   migration или promotion выполняются лишь по отдельному прямому разрешению.
+- **IMPORT-07.** Access normalization использует future `O/R/S` как group,
+  фактическую imported legacy price и contract marker, а `T` — только как
+  activity code: `KN` inactive, `NH/N/IND` hourly, token `O/V` (`V/O` legacy
+  alias) в `S` monthly, отсутствие token — yearly. Пустая `O` не создаёт
+  enrollment. Parent-name normalizer v2 принимает ровно две допустимые части с
+  `;`, `,` либо одним пробелом, но slash/multipart остаётся manual. Missing
+  duration допустима для individual/Nachhilfe с 3000 cents/45 minutes, но не для
+  group. Invalid email не участвует в auto-claim; invalid birth date не создаёт
+  child/enrollment. Package groups читаются только из первых четырёх ячеек
+  каждого блока: `Value37–Value40` (`AK–AN`) и `Value42–Value45` (`AP–AS`);
+  `Value41/AO` и `Value46/AT` всегда считаются служебными полями и не создают
+  group/enrollment/mapping независимо от содержимого. Exact child/group
+  duplicates не завышают occupancy, а contact/identity conflicts получают
+  безопасную admin-traceable issue reference.
+- **IMPORT-08.** Каждый actionable import issue имеет долговечный reconciliation
+  case, связанный со stable source identity, academic period, issue code и exact
+  import version. Case проходит только типизированные состояния `open`,
+  `assigned`, `awaiting_upstream`, `ready_to_verify`, `resolved` или
+  `superseded`; generic resolve/dismiss не может закрыть требующее исправления
+  отклонение. Upstream-коррекция считается завершённой только когда последующий
+  immutable import доказывает исчезновение того же issue; повторение сохраняет
+  или переоткрывает case. Course mapping использует только exact audited target,
+  fuzzy mapping запрещён. Identity/contact/email/birth-date/price/duration и
+  duplicate decisions выполняются через отдельные typed actions с RBAC, CSRF,
+  append-only audit/evidence и PII-minimized list/export. Полный контур задан в
+  [IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md)
+  и является обязательным gate штатного повторяемого импорта.
 
 ## 11. Нефункциональные требования
 

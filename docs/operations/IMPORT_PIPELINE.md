@@ -1,6 +1,6 @@
 # Import pipeline
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-17.
 
 ## Гарантии
 
@@ -52,7 +52,7 @@ Access staging возможен без готового mapping, но его pro
 
 ## Production release актуальной PlusBText + Access pair
 
-Нормативные требования: `IMPORT-01`–`IMPORT-06` из
+Нормативные требования: `IMPORT-01`–`IMPORT-08` из
 [MVP specification](../spec/MVP_SPEC.md). Это отдельный target-pinned процесс;
 локальные `import:plusbtext:local`/`import:access:local` не являются production
 entrypoint. Ни одна команда ниже, включая remote reads, не выполняется против
@@ -313,18 +313,28 @@ Validation:
   serial (epoch `1899-12-30`). Decimal/negative/short/long serial drift остаётся
   invalid и создаёт issue;
 - email normalizes trim/lower, но raw сохраняется для admin verification;
-- parent `Value2` сохраняется raw; versioned normalizer создаёт separate
-  first-name/last-name match key только при детерминированном разборе, иначе
+- parent `Value2` сохраняется raw; normalizer v2 принимает ровно две valid части
+  через одну `;`, `,` либо один пробел; slash/multipart остаётся ambiguous;
+  versioned normalizer создаёт separate first-name/last-name match key только при
+  детерминированном разборе, иначе
   `parent_name_match_status=ambiguous|unavailable` и self-service name-match
   запрещён;
-- `Value15`–`Value20` извлекаются вместе;
-- `Value42`–`Value46` обрабатываются все пять.
+- `Value15`–`Value20` извлекаются вместе: `O/R/S` дают future group/current
+  imported price/contract marker, `T` — activity code;
+- package groups текущего блока читаются из `Value37–Value40` (`AK–AN`),
+  будущего — из `Value42–Value45` (`AP–AS`); importer 2026–2027 использует
+  future block;
+- `Value46/AT` остаётся в текущем future-period allowlisted source snapshot, но
+  всегда игнорируется как service-marker cell независимо от содержимого и не
+  создаёт enrollment, PlusBText lookup или issue. `Value41/AO` не входит в этот
+  exact future-period extract и при будущем current-block import должен
+  игнорироваться по тому же правилу.
 
 Stable keys:
 
 ```text
 access:{source_namespace}:{academic_period}:{ID}:main_next
-access:{source_namespace}:{academic_period}:{ID}:package:{1..5}
+access:{source_namespace}:{academic_period}:{ID}:package:{1..4}
 ```
 
 Group name hash не входит: исправление/переименование обновляет тот же slot
@@ -348,15 +358,18 @@ Group name hash не входит: исправление/переименова
 - точное непротиворечивое совпадение FamilyID нового периода наследует claim/
   owner; редкая ID/contact/child collision создаёт continuity review;
 - row ID остается на `legacy_source_rows/enrollments`, не на child identity;
-- duplicate main/package child/course учитывается один раз и дает warning;
+- duplicate main/package child/course учитывается один раз и даёт warning с
+  opaque source key, distinct-row count и main/package pattern;
 - пользовательские corrections/claim owner не перезаписываются reimport.
 
 ### Status и occupancy
 
-- `KN` inactive;
-- `NH/N/IND` не monthly group;
-- неизвестный status допускает provisional mapping только при однозначной
-  классификации, иначе review;
+- blank future `O` не создаёт enrollment; `T=KN` inactive;
+- `T=NH/N/IND` задаёт hourly kind и не требует PlusBText duration/group price;
+- для ordinary/dance group token `O/V` (`V/O` alias) в `S` означает monthly,
+  любое `S` без token — yearly; provisional monthly из blank `T` запрещён;
+- positive `R` является current imported legacy price и имеет приоритет над
+  price-table lookup существующей service; zero/invalid active group price review;
 - legacy occupancy меняется только после course mapping и successful promotion;
 - promotion не рассылает price changes: он создает internal review batch/task.
 
@@ -427,9 +440,18 @@ Warnings/review examples:
 
 - `ID`/`Value48` mirror mismatch;
 - conflicting family contacts;
+- invalid email/DOB с traceable source key без auto-link/invalid child import;
 - ambiguous child/group/price/duration;
 - missing PlusBText enrichment;
 - unknown status or placeholder course.
+
+Actionable issue не закрывается generic `resolve|dismiss`. Его stable identity
+переходит в durable cross-import case, а допустимое typed действие, проверка
+следующим immutable import, grouping, assignment, audit и PII-minimized UI
+определены в
+[IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md).
+До реализации `IMPORT-08` current issue list является диагностикой, а не
+полноценным операторским workflow; bulk-dismiss запрещён.
 
 ## Конкурентность
 

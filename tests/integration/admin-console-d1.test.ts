@@ -149,6 +149,8 @@ describe('stage 06A administrative console in D1', () => {
 					localPath: 'C:\\clients\\private.accdb',
 					email: 'client@example.test',
 					rowNumber: 7,
+					entityType: 'legacy_family',
+					entityId: `legacy_family_${'a'.repeat(32)}`,
 				}),
 				NOW
 			)
@@ -159,6 +161,7 @@ describe('stage 06A administrative console in D1', () => {
 		expect(JSON.stringify(detail)).not.toContain('private.accdb');
 		expect(JSON.stringify(detail)).not.toContain('client@example.test');
 		expect(JSON.stringify(detail)).toContain('[REDACTED]');
+		expect(detail?.issues[0].legacyFamilyId).toBe(`legacy_family_${'a'.repeat(32)}`);
 		expect(
 			JSON.stringify(
 				await repository.listLegacyFamilies({ q: '', status: '', kind: '', page: 1 })

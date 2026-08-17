@@ -49,16 +49,22 @@ version; он не означает бесплатное занятие и не 
 
 Заголовок `Sonderpreis` исторический и не отражает бизнес-смысл:
 
-| `contract_kind` | Source-колонка | Значение |
-| --- | --- | --- |
-| `group_yearly` | `Preis` | месячная плата по годовому договору |
-| `group_monthly` | `Sonderpreis` | месячная плата по месячному договору |
+| `contract_kind` | Source-колонка | Значение                             |
+| --------------- | -------------- | ------------------------------------ |
+| `group_yearly`  | `Preis`        | месячная плата по годовому договору  |
+| `group_monthly` | `Sonderpreis`  | месячная плата по месячному договору |
 
-Access marker `O/V|V/O` классифицирует запись как `group_monthly` и выбирает
+Access token `O/V|V/O` в current/future note cell `N/S` классифицирует запись как
+`group_monthly`; отсутствие token, включая blank cell, означает `group_yearly`.
+Рабочий code `T` этого не определяет, кроме `KN`/hourly classification. Contract
+kind выбирает
 месячную source-колонку; это не special eligibility. Для однозначно
 классифицированного contract kind public quote использует соответствующую
-колонку. Legacy `Value18` сохраняется как импортированная плановая цена и не
-подменяет lookup без review.
+колонку для нового quote. Для существующей legacy service положительная цена из
+current/future `M/R` (`Value13/18`) является фактической imported current price и
+имеет приоритет над price-table lookup, даже если это индивидуально установленная
+сумма. Это source evidence, а не новый portal `manual_override`; последующее
+изменение идёт только через обычный auditable price-review/override flow.
 
 Обе суммы являются базовыми месячными тарифами, а не рассчитанным счётом за
 конкретный месяц. Каникулы не оплачиваются, но календарь каникул, pauses,
@@ -200,8 +206,9 @@ audit. Пустое/нулевое поле не переключает mode с�
 
 ## Legacy и общая сумма
 
-- `Value18` парсится в cents и хранится как planned imported price;
-- непарсируемое/пустое значение — unknown, а не zero;
+- `Value18/R` парсится в cents и хранится как current imported legacy price;
+- zero/непарсируемое/пустое значение активной group service — unknown/review, а
+  не zero; у `KN` и individual/Nachhilfe поле не является group-price error;
 - кабинет показывает claimed legacy record как строку активной услуги, а не
   digital contract; PDF/contract history для неё не создаются;
 - общий показатель — только сумма известных текущих base prices активных

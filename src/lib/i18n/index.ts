@@ -206,7 +206,8 @@ export const germanCatalog = {
 	'privacy.kind.delete': 'Kontoschließung',
 	'privacy.delete.title': 'Kontoschließung',
 	'privacy.delete.dryRun': 'Sichere Vorprüfung',
-	'privacy.delete.activeContracts': 'Aktive Verträge oder Leistungen, die die Schließung blockieren',
+	'privacy.delete.activeContracts':
+		'Aktive Verträge oder Leistungen, die die Schließung blockieren',
 	'privacy.delete.retained': 'Nach der Schließung getrennt aufbewahrte Nachweise',
 	'privacy.delete.holds': 'Zusätzliche rechtliche Sperren einzelner Nachweise',
 	'privacy.delete.cleanup': 'Zu schließende oder zu minimierende Arbeitsdaten',
@@ -216,7 +217,8 @@ export const germanCatalog = {
 		'Vertrags-, Annahme- und freigegebene Förderungsnachweise werden vom Arbeitsprofil getrennt. Eine automatische Löschung dieses Rechtsarchivs ist deaktiviert; ein angezeigtes Prüfdatum löst keine Löschung aus.',
 	'privacy.delete.submit': 'Kontoschließung zur Prüfung anfordern',
 	'privacy.delete.requested': 'Die Kontoschließung wurde zur Prüfung angefordert.',
-	'privacy.delete.blocked': 'Die Kontoschließung wurde wegen eines aktiven Vertrags vollständig blockiert. Es wurden keine Profildaten teilweise gelöscht und keine Medienfreigaben widerrufen.',
+	'privacy.delete.blocked':
+		'Die Kontoschließung wurde wegen eines aktiven Vertrags vollständig blockiert. Es wurden keine Profildaten teilweise gelöscht und keine Medienfreigaben widerrufen.',
 	'privacy.history.title': 'Ihre Datenschutzvorgänge',
 	'privacy.history.empty': 'Noch kein Datenschutzvorgang vorhanden.',
 	'privacy.failed': 'Der Datenschutzvorgang konnte nicht sicher ausgeführt werden.',
@@ -224,7 +226,8 @@ export const germanCatalog = {
 	'privacy.status.reviewing': 'In Prüfung',
 	'privacy.status.processing': 'Wird verarbeitet',
 	'privacy.status.completed': 'Abgeschlossen',
-	'privacy.status.completed_with_retained_evidence': 'Abgeschlossen; Nachweise getrennt aufbewahrt',
+	'privacy.status.completed_with_retained_evidence':
+		'Abgeschlossen; Nachweise getrennt aufbewahrt',
 	'privacy.status.blocked_by_active_contract': 'Durch aktiven Vertrag blockiert',
 	'privacy.status.failed': 'Fehlgeschlagen',
 	'privacy.status.cancelled': 'Beendet',
@@ -275,7 +278,8 @@ export const germanCatalog = {
 	'messages.detail': 'Nachrichtenverlauf',
 	'messages.add': 'Antwort ergänzen',
 	'messages.close': 'Vorgang schließen',
-	'messages.closedNotice': 'Dieser Vorgang ist geschlossen. Für eine Fortsetzung legen Sie bitte einen neuen Vorgang an.',
+	'messages.closedNotice':
+		'Dieser Vorgang ist geschlossen. Für eine Fortsetzung legen Sie bitte einen neuen Vorgang an.',
 	'messages.sender.parent': 'Sie',
 	'messages.sender.admin': 'Verwaltung',
 	'messages.sender.system': 'Portal',
@@ -326,8 +330,7 @@ export const germanCatalog = {
 	'catalog.price.perMonth': 'Orientierender monatlicher Grundpreis: {amount}',
 	'catalog.price.perUnit': 'Orientierender Tarif je 45 Minuten: {amount}',
 	'catalog.price.pending': 'Preis wird von der Verwaltung geprüft.',
-	'catalog.price.funded':
-		'Finanzierte Nachhilfe: keine Preisangabe als Zahlbetrag für Eltern.',
+	'catalog.price.funded': 'Finanzierte Nachhilfe: keine Preisangabe als Zahlbetrag für Eltern.',
 	'catalog.cta.trial': 'Probestunde anfragen',
 	'catalog.cta.nachhilfe_request': 'Nachhilfe anfragen',
 	'catalog.cta.individual_request': 'Einzelunterricht anfragen',
@@ -380,7 +383,8 @@ export const germanCatalog = {
 	'admin.messages.finalReply': 'Vorgang als beantwortet markieren',
 	'admin.messages.waitReply': 'Rückmeldung der Eltern erwarten',
 	'admin.messages.close': 'Vorgang schließen',
-	'admin.messages.replySaved': 'Die Antwort wurde gespeichert und unabhängig davon in die E-Mail-Outbox gestellt.',
+	'admin.messages.replySaved':
+		'Die Antwort wurde gespeichert und unabhängig davon in die E-Mail-Outbox gestellt.',
 	'admin.messages.actionFailed': 'Die Nachrichtenaktion wurde sicher abgelehnt.',
 	'admin.outbox.title': 'E-Mail- und Telegram-Versandstatus',
 	'admin.outbox.notice':
@@ -451,7 +455,8 @@ export const germanCatalog = {
 	'contract.media.failed': 'Die Medienentscheidung konnte nicht sicher gespeichert werden.',
 	'contract.status.draft': 'Entwurf',
 	'contract.status.sent': 'Zur Entscheidung bereit',
-	'contract.status.accepted_by_parent': 'Von den Eltern angenommen – Bestätigung des Vereins ausstehend',
+	'contract.status.accepted_by_parent':
+		'Von den Eltern angenommen – Bestätigung des Vereins ausstehend',
 	'contract.status.declined_by_parent': 'Abgelehnt',
 	'contract.status.approved_by_admin': 'Vertrag gebildet',
 	'contract.status.cancelled': 'Storniert',
@@ -477,7 +482,8 @@ export const germanCatalog = {
 	'priceReviews.detail.accept': 'Preisänderung zustimmen',
 	'priceReviews.detail.decline': 'Preisänderung ablehnen',
 	'priceReviews.detail.responded': 'Ihre Antwort wurde unveränderlich gespeichert.',
-	'priceReviews.detail.rejected': 'Die Antwort konnte nicht angewendet werden. Der Vorgang wurde sicher zur Prüfung vorgemerkt.',
+	'priceReviews.detail.rejected':
+		'Die Antwort konnte nicht angewendet werden. Der Vorgang wurde sicher zur Prüfung vorgemerkt.',
 	'priceReviews.detail.notActionable': 'Für diesen Vorgang ist derzeit keine Antwort möglich.',
 	'admin.priceReviews.title': 'Kontrollierte Preisänderungen',
 	'admin.priceReviews.notice':
@@ -512,7 +518,8 @@ export const germanCatalog = {
 		'Der versionierte Render-Input wird serverseitig vollständig validiert. Bei Produktionsvorlagen sind ein gebundener Preisnachweis und sämtliche Freigaben zwingend; ein Fehler erzeugt keinen Teilzustand.',
 	'admin.contracts.overrideConfirm':
 		'Ich bestätige die Abweichung, die dokumentierte Begründung und die Verantwortung für den manuell gesetzten Preis erneut.',
-	'admin.contracts.created': 'Der Vertragsentwurf und seine endgültige Vertragsnummer wurden angelegt.',
+	'admin.contracts.created':
+		'Der Vertragsentwurf und seine endgültige Vertragsnummer wurden angelegt.',
 	'admin.contracts.formActivate': 'Vertrag bilden und Leistung aktivieren',
 	'admin.contracts.reason': 'Begründung der administrativen Bestätigung',
 	'admin.contracts.confirm':
@@ -526,7 +533,8 @@ export const germanCatalog = {
 		'Nur nach Prüfung der Zuordnung zum betreffenden Elternkonto erfassen. Kein vollständiger E-Mail-Inhalt und keine Gesprächsaufzeichnung werden gespeichert. Der Eingangszeitpunkt darf nicht auf den späteren Erfassungszeitpunkt verschoben werden.',
 	'admin.contracts.mediaEvidence': 'Minimale Nachweisnotiz',
 	'admin.contracts.mediaWithdrawalSave': 'Widerruf unveränderlich erfassen',
-	'admin.contracts.mediaWithdrawalRecorded': 'Der Medienwiderruf wurde mit seinem tatsächlichen Eingangszeitpunkt gespeichert.',
+	'admin.contracts.mediaWithdrawalRecorded':
+		'Der Medienwiderruf wurde mit seinem tatsächlichen Eingangszeitpunkt gespeichert.',
 	'admin.contracts.endRequests': 'Eingegangene Beendigungserklärungen',
 	'admin.contracts.terminationReview': 'Prüfung unveränderlich speichern',
 	'admin.contracts.terminationReviewed': 'Die Prüfung des Wirksamkeitsdatums wurde gespeichert.',
@@ -543,8 +551,7 @@ export const germanCatalog = {
 	'request.error.save':
 		'Die Anfrage konnte nicht gespeichert werden. Bitte prüfen Sie Ihre Angaben.',
 	'request.error.change': 'Die Anfrage konnte nicht geändert werden.',
-	'request.error.submit':
-		'Die Anfrage ist noch nicht vollständig oder wurde bereits geändert.',
+	'request.error.submit': 'Die Anfrage ist noch nicht vollständig oder wurde bereits geändert.',
 	'request.error.cancel': 'Die Anfrage konnte nicht storniert werden.',
 	'request.error.upload':
 		'Das Dokument wurde abgelehnt oder der Upload ist derzeit nicht verfügbar.',
@@ -552,8 +559,7 @@ export const germanCatalog = {
 	'request.saved': 'Der Entwurf wurde gespeichert.',
 	'request.submitted': 'Die Anfrage wurde eingereicht.',
 	'request.cancelled': 'Die Anfrage wurde storniert.',
-	'request.documentUploaded':
-		'Das Dokument wurde in die private Quarantäne hochgeladen.',
+	'request.documentUploaded': 'Das Dokument wurde in die private Quarantäne hochgeladen.',
 	'request.documentDeleted': 'Das Dokument wurde entfernt.',
 	'request.childRequired': 'Bitte legen Sie zuerst ein Kind in Ihrem Bereich an.',
 	'request.childAdd': 'Kind anlegen',
@@ -673,7 +679,8 @@ export const germanCatalog = {
 	'admin.operations.empty': 'Noch kein Lauf gespeichert.',
 	'admin.operations.error': 'Sicherer Fehlercode',
 	'admin.operations.completed': 'Der begrenzte Lauf wurde gespeichert.',
-	'admin.operations.failed': 'Der Lauf wurde nicht sicher abgeschlossen. Prüfen Sie den letzten Fehlercode.',
+	'admin.operations.failed':
+		'Der Lauf wurde nicht sicher abgeschlossen. Prüfen Sie den letzten Fehlercode.',
 	'admin.dashboard.openReviews': 'Offene Prüfaufgaben',
 	'admin.dashboard.openIssues': 'Offene Importhinweise',
 	'admin.dashboard.blockedUsers': 'Gesperrte Konten',
@@ -748,6 +755,7 @@ export const germanCatalog = {
 	'admin.imports.issues': 'Hinweise',
 	'admin.imports.detail': 'Importdetails',
 	'admin.imports.safeSummary': 'Sichere Zusammenfassung',
+	'admin.imports.openFamily': 'Betroffene Familie prüfen',
 	'admin.reviews.title': 'Prüfaufgaben',
 	'admin.reviews.typedNotice':
 		'Jede Aktion ist an den Typ der Aufgabe gebunden; ein freies Ändern des Status ist nicht möglich.',

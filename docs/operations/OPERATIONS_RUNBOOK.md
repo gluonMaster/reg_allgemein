@@ -166,8 +166,14 @@ Current-source evidence is sanitized only: Access has 1703 rows and 21/21
 required fields under `access-tblkartei:v1`; PlusBText remains compatible with
 `admin-xlsm-plusbtext:v1`. Earlier header mismatch came from a parser sanitizer
 defect around a styled self-closing empty cell, not a changed source contract.
-Operator must still stop until focused/current-source parser regression and the
-full immutable candidate gate are recorded. No source row/path is copied here.
+The owner-approved `IMPORT-07` normalization rerun produces 580 families, 713
+children and 809 real enrollments with 160 aggregate issue occurrences and 53
+enrollment reviews; the older 1429/751 counts contained false-positive status,
+name and fifth-package-slot diagnostics. `AO/AT` are service-marker cells and
+never packages. The active unresolved group is an upstream correction case and
+must not receive fuzzy mapping. Operator must still stop until six structural
+duplicate buckets, the `IMPORT-08` durable reconciliation contour and the full
+immutable candidate gate are closed. No source row/path is copied here.
 
 **Точное UI:** открыть `<PORTAL_ORIGIN>/admin/imports`; выбрать безопасный status
 filter; открыть `/admin/imports/<run-id>`. Не вставлять source row в комментарий.
@@ -178,7 +184,17 @@ npm run import:status:local -- --limit <SAFE_LIMIT>
 ```
 
 **Ожидаемый безопасный результат:** видны safe counts, hashes, dependency state и
-issue codes; нет необъяснённых failed/promoting run или stale current snapshot.
+issue codes; family/contact/identity issues expose only an opaque admin link,
+not client values. There are no unexplained failed/promoting runs or stale
+current snapshots. `Value46/AT` is retained by the exact future-period extract
+but never expanded into groups or issue rows; `Value41/AO` is outside that
+allowlist and must follow the same ignore rule if current-block import is added.
+
+До реализации
+[IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md)
+generic `resolve|dismiss` не считается исправлением actionable issue. Для
+ошибки upstream администратор фиксирует `awaiting_upstream`, оператор исправляет
+read-only source вне портала, а closure подтверждает только следующий import.
 
 **Проверка:** current promoted price/schedule/access/plusbtext версии согласованы
 по academic period; fatal/error issue запрещает promotion/registration enable.

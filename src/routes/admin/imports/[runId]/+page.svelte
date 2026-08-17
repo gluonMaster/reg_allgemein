@@ -36,6 +36,13 @@
 				<h4>{issue.code}</h4>
 				<p>{issue.severity} · {translateAdminCode('de', issue.status)}</p>
 				{#if issue.source_record_key}<p><code>{issue.source_record_key}</code></p>{/if}
+				{#if issue.legacyFamilyId}
+					<p>
+						<a href={`/admin/legacy/${issue.legacyFamilyId}`}
+							>{translate('de', 'admin.imports.openFamily')}</a
+						>
+					</p>
+				{/if}
 				<pre class="safe-json">{JSON.stringify(issue.safeContext, null, 2)}</pre>
 				{#if issue.status === 'open'}
 					<form method="POST" action="?/decideIssue" class="admin-action-form">

@@ -284,7 +284,24 @@ promotion и требует новой contract version.
 Issues хранят безопасный контекст, достаточный для поиска записи локальным
 инструментом, но не полный PII dump.
 
+### Planned `legacy_reconciliation_cases`, decisions и assertions
+
+`IMPORT-08` требует durable case поверх run-scoped `import_issues`. Stable
+identity связывает academic period, source kind, PII-free source identity digest
+и issue code. Case state:
+`open|assigned|awaiting_upstream|ready_to_verify|resolved|superseded`; exact
+first/last-seen run/version и optimistic integer version обязательны.
+
+Typed decisions, transition assertions и audit append-only. Actionable case не
+переходит terminal через generic `resolve|dismiss`; upstream correction закрывает
+его только новый immutable import как `resolved_by_reimport`. Full planned
+schema, transitions и privacy contract заданы в
+[IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md).
+Эти tables/triggers ещё не реализованы; предполагаемая migration `0019` должна
+быть перепроверена против актуального следующего номера перед созданием.
+
 ### `legacy_import_release_plans`, `legacy_import_bundle_events`,
+
 `legacy_import_stage_cleanup_events`
 
 Schema-v3 protected plan artifact до D1 фиксирует
@@ -542,6 +559,10 @@ Access snapshot `ID` является уникальным ключом стро
 
 `UNIQUE(source_record_key)`. Main/package одного child/course и legacy запись,
 уже представленная portal enrollment, не считаются дважды.
+Schema enum сохраняет historical `package_5` ради append-only migration
+compatibility, но owner-approved importer больше никогда его не создаёт:
+физические пятые cells `Value41/AO` и `Value46/AT` являются service markers.
+Новые rows используют только `package_1..package_4`.
 
 ## Каталог и расписание
 

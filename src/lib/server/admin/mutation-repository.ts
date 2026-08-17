@@ -495,7 +495,8 @@ export class AdminMutationRepository {
 								sql: `UPDATE legacy_enrollments SET course_group_id = ?,
 								is_active_for_occupancy = CASE
 									WHEN lesson_kind IN ('group', 'dance_group')
-										AND upper(coalesce(status_code_raw, '')) IN ('J', 'M', 'O/V', 'V/O')
+										AND contract_kind IN ('yearly', 'monthly')
+										AND upper(trim(coalesce(status_code_raw, ''))) <> 'KN'
 									THEN 1 ELSE 0 END, updated_at = ?
 							WHERE academic_period_id = ? AND group_name_normalized = ?
 								AND is_current = 1 AND ${ACTIVE_ADMIN_SQL}`,

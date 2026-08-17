@@ -1,6 +1,6 @@
 # Стратегия тестирования
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-17.
 
 ## Принципы
 
@@ -34,7 +34,7 @@ concurrency/idempotency проверки в названном suite. Точны
 | `REQ-01`–`REQ-10`                                               | Requests и documents                            |
 | `CONTRACT-01`–`CONTRACT-20`                                     | Contracts и price review                        |
 | `MSG-01`–`MSG-06`                                               | Messaging                                       |
-| `IMPORT-01`–`IMPORT-06`                                         | Production legacy release                       |
+| `IMPORT-01`–`IMPORT-08`                                         | Production legacy release and reconciliation    |
 | `ADMIN-01`–`ADMIN-03`, `PRIV-01`–`PRIV-03`                      | Admin и privacy                                 |
 | `REL-01`–`REL-02`, `TIME-01`, `UI-01`, `OBS-01`, `OPS-01`       | Cross-suite quality/release gates               |
 
@@ -64,10 +64,24 @@ concurrency/idempotency проверки в названном suite. Точны
   schema/hash завершаются fail-closed;
 - vector `Dauer/Faecher`, duplicate/ambiguous price rule;
 - schedule schema/generation/duplicate IDs/display-name collisions;
-- Access rows с `ID`, mirror mismatch, `Zahlung`, packages 1–5;
+- Access rows с `ID`, mirror mismatch, `Zahlung`, package groups только в
+  `Value37–Value40`/`Value42–Value45`; arbitrary `Value46` сохраняется текущим
+  future-period extract в source evidence, но не создаёт group/enrollment/issue;
+  будущий current-block extract обязан так же игнорировать `Value41`;
+- Access future `O/R/S/T`: blank group, `KN`, hourly codes, `O/V|V/O` token in
+  notes, blank/other notes yearly и запрет provisional monthly по blank `T`;
+- parent-name v2 separators `;|,|single-space`, optional whitespace и
+  fail-closed slash/multipart; issue содержит opaque family/source reference;
 - Access birth dates: ISO/German/native Date и exact five-digit OLE Automation
   serial; decimal/negative/short/long drift остаётся invalid;
 - family/child/contact conflicts и PlusBText ambiguity;
+- invalid email исключён из exact claim; invalid DOB не создаёт child/enrollment;
+- individual/Nachhilfe missing duration и zero price не требуют group review;
+  group missing duration и zero/invalid `R` требуют review, positive `R`
+  сохраняется как current legacy price;
+- любой package value в первых четырёх slots остаётся fail-closed group
+  candidate, тогда как пятый slot игнорируется независимо от значения;
+  duplicate source-row/main/package profiles и distinct-name no-merge;
 - PlusBText independent old/target blocks, anchor bounds, exact-L then
   F->E->K-token join, semicolon K, duplicate/dangling/sparse cases;
 - content hash change with stable contract vs structural fingerprint drift;
@@ -136,6 +150,28 @@ concurrency/idempotency проверки в названном suite. Точны
   `LEGACY_RELEASE_ROLLBACK_TARGET_MISSING`. Production promote/rollback/
   roll-forward до API-token lookup/network call fail closed кодом
   `LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED`;
+
+### Import admin reconciliation
+
+Планируемый suite `T-IMPORT-RECONCILIATION` по
+[IMPORT_ADMIN_RECONCILIATION_TZ.md](IMPORT_ADMIN_RECONCILIATION_TZ.md):
+
+- новая append-only migration после актуального номера: fresh/populated upgrade,
+  FK/check/allowed transitions, immutable decisions/assertions/audit;
+- один stable case для одного issue через несколько runs; persistence,
+  disappearance, reopen и supersede проверяются exact version evidence;
+- generic `resolve|dismiss` actionable issue отклоняется на D1/repository/route
+  boundary; typed action проверяет admin/RBAC, CSRF, optimistic version,
+  idempotency и concurrent stale submit;
+- exact course target или `awaiting_upstream`; fuzzy/mismatched target отклонён;
+- invalid email/DOB, family correction, price/duration и duplicate actions
+  сохраняют fail-closed domain semantics;
+- mixed-class batch запрещён, PII canaries отсутствуют в queue/export/audit/log;
+- unresolved blocking cases дают non-zero release verify, а исчезновение issue
+  закрывает case только `resolved_by_reimport`.
+
+Этот suite и migration пока отсутствуют; local `IMPORT-07` parser tests не
+закрывают `IMPORT-08`.
 
 ### D1 integration
 
