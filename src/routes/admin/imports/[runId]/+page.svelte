@@ -43,8 +43,16 @@
 						>
 					</p>
 				{/if}
+				{#if issue.reconciliation_case_id}
+					<p>
+						<a
+							href={`/admin/import-reconciliation?case=${issue.reconciliation_case_id}`}
+							>Typed reconciliation</a
+						>
+					</p>
+				{/if}
 				<pre class="safe-json">{JSON.stringify(issue.safeContext, null, 2)}</pre>
-				{#if issue.status === 'open'}
+				{#if issue.status === 'open' && !issue.reconciliation_case_id}
 					<form method="POST" action="?/decideIssue" class="admin-action-form">
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="issueId" value={issue.id} />

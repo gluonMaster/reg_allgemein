@@ -62,6 +62,25 @@ function validVerification(): LegacyReleaseVerification {
 			accessEnrollments: 1,
 		},
 		issues: { info: 0, warning: 0, error: 0, fatal: 0 },
+		reconciliation: {
+			evidenceId: null,
+			blocking: 0,
+			open: 0,
+			assigned: 0,
+			awaitingUpstream: 0,
+			readyToVerify: 0,
+			byClass: {
+				course_mapping: 0,
+				family_identity: 0,
+				invalid_email: 0,
+				invalid_birth_date: 0,
+				price: 0,
+				duration: 0,
+				duplicate_service: 0,
+				source_consistency: 0,
+			},
+			passed: true,
+		},
 		events: { promote: 1, rollback: 0, rollForward: 0 },
 	};
 }
@@ -77,15 +96,12 @@ describe('legacy release remote command boundary', () => {
 		'verify',
 		'rollback',
 		'roll-forward',
-	] as const)(
-		'requires explicit remote intent for %s',
-		(command) => {
-			expect(() => parseLegacyReleaseArguments([command])).toThrow(
-				'CLI_REMOTE_CONFIRMATION_REQUIRED'
-			);
-			expect(parseLegacyReleaseArguments([command, '--remote'])).toMatchObject({ command });
-		}
-	);
+	] as const)('requires explicit remote intent for %s', (command) => {
+		expect(() => parseLegacyReleaseArguments([command])).toThrow(
+			'CLI_REMOTE_CONFIRMATION_REQUIRED'
+		);
+		expect(parseLegacyReleaseArguments([command, '--remote'])).toMatchObject({ command });
+	});
 
 	it('rejects unknown, duplicate and valued flags before any target access', () => {
 		expect(() => parseLegacyReleaseArguments(['verify', '--remote', '--unknown'])).toThrow(
@@ -130,12 +146,7 @@ describe('legacy release remote command boundary', () => {
 			]).options.get('synthetic-variant')
 		).toBe('candidate');
 		expect(() =>
-			parseLegacyReleaseArguments([
-				'promote',
-				'--remote',
-				'--synthetic-variant',
-				'candidate',
-			])
+			parseLegacyReleaseArguments(['promote', '--remote', '--synthetic-variant', 'candidate'])
 		).toThrow('CLI_ARGUMENT_UNKNOWN');
 		expect(
 			parseLegacyReleaseArguments([
@@ -185,17 +196,17 @@ describe('legacy release remote command boundary', () => {
 			})
 		).toBe('operator.recovery');
 		for (const verifiedBy of Object.values(roles)) {
-			expect(() =>
-				assertIndependentRecoveryVerifier({ ...roles, verifiedBy })
-			).toThrow('LEGACY_RECOVERY_EVIDENCE_OPERATOR_NOT_INDEPENDENT');
+			expect(() => assertIndependentRecoveryVerifier({ ...roles, verifiedBy })).toThrow(
+				'LEGACY_RECOVERY_EVIDENCE_OPERATOR_NOT_INDEPENDENT'
+			);
 		}
 	});
 
 	it('hard-disables production transitions before any remote boundary is needed', () => {
 		for (const command of ['promote', 'rollback', 'roll-forward'] as const) {
-			expect(() =>
-				assertLegacyProductionTransitionBoundary('production', command)
-			).toThrow('LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED');
+			expect(() => assertLegacyProductionTransitionBoundary('production', command)).toThrow(
+				'LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED'
+			);
 			expect(() =>
 				assertLegacyProductionTransitionBoundary('preview', command)
 			).not.toThrow();
@@ -282,6 +293,22 @@ describe('legacy release remote command boundary', () => {
 		{
 			name: 'missing promote event',
 			patch: { events: { promote: 0, rollback: 0, rollForward: 0 } },
+		},
+		{
+			name: 'blocking reconciliation case',
+			patch: {
+				reconciliation: {
+					...validVerification().reconciliation,
+					evidenceId: 'reconciliation-decision:synthetic',
+					blocking: 1,
+					open: 1,
+					byClass: {
+						...validVerification().reconciliation.byClass,
+						invalid_email: 1,
+					},
+					passed: false,
+				},
+			},
 		},
 	] as const)('fails verification closed for $name', ({ patch }) => {
 		const verification = { ...validVerification(), ...patch } as LegacyReleaseVerification;

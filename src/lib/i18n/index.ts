@@ -355,6 +355,7 @@ export const germanCatalog = {
 	'admin.navigationLabel': 'Verwaltungsnavigation',
 	'admin.nav.dashboard': 'Übersicht',
 	'admin.nav.imports': 'Importe',
+	'admin.nav.importReconciliation': 'Import-Abgleich',
 	'admin.nav.reviews': 'Prüfaufgaben',
 	'admin.nav.legacy': 'Frühere Daten',
 	'admin.nav.users': 'Konten',

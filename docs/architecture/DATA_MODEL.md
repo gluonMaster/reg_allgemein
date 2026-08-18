@@ -284,7 +284,7 @@ promotion и требует новой contract version.
 Issues хранят безопасный контекст, достаточный для поиска записи локальным
 инструментом, но не полный PII dump.
 
-### Planned `legacy_reconciliation_cases`, decisions и assertions
+### `legacy_reconciliation_cases`, occurrences, decisions и assertions
 
 `IMPORT-08` требует durable case поверх run-scoped `import_issues`. Stable
 identity связывает academic period, source kind, PII-free source identity digest
@@ -292,13 +292,20 @@ identity связывает academic period, source kind, PII-free source identi
 `open|assigned|awaiting_upstream|ready_to_verify|resolved|superseded`; exact
 first/last-seen run/version и optimistic integer version обязательны.
 
+Migration `0019_legacy_import_reconciliation.sql` реализует case, occurrence
+между run-scoped issue и case, typed decision и terminal assertion. Active
+identity уникальна по period/source/digest/code; identity columns immutable,
+terminal cases retained, а `(case_id, case_version_before)` допускает ровно
+один выигравший transition при гонке администраторов.
+
 Typed decisions, transition assertions и audit append-only. Actionable case не
 переходит terminal через generic `resolve|dismiss`; upstream correction закрывает
 его только новый immutable import как `resolved_by_reimport`. Full planned
 schema, transitions и privacy contract заданы в
 [IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md).
-Эти tables/triggers ещё не реализованы; предполагаемая migration `0019` должна
-быть перепроверена против актуального следующего номера перед созданием.
+Queue/export хранит и возвращает только issue class/code, state, opaque IDs,
+run/version references и aggregate counts; raw source key digest вычисляется до
+case storage и не раскрывается в reconciliation evidence.
 
 ### `legacy_import_release_plans`, `legacy_import_bundle_events`,
 

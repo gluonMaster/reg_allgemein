@@ -450,8 +450,13 @@ Actionable issue не закрывается generic `resolve|dismiss`. Его s
 следующим immutable import, grouping, assignment, audit и PII-minimized UI
 определены в
 [IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md).
-До реализации `IMPORT-08` current issue list является диагностикой, а не
-полноценным операторским workflow; bulk-dismiss запрещён.
+`IMPORT-08` локально реализован migration `0019`, stable manifest reconciliation,
+typed repository/D1 transitions и `/admin/import-reconciliation`. Generic
+closure для linked actionable occurrence запрещён на repository и D1 boundary;
+open blocking counts входят в legacy release verify и блокируют legacy family
+registration extension. Queue/export не выводят raw source values. До отдельного
+preview rehearsal, independent admin review и owner decisions этот workflow не
+является production evidence; bulk-dismiss по-прежнему запрещён.
 
 ## Конкурентность
 

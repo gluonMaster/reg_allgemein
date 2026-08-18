@@ -7,6 +7,7 @@ import {
 	type FamilyCorrectionContributor,
 } from './family-correction-repository';
 import { AdminMutationRepository } from './mutation-repository';
+import { LegacyReconciliationAdminRepository } from './reconciliation-repository';
 import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
 
 export function createAdminConsoleRuntime(
@@ -17,6 +18,7 @@ export function createAdminConsoleRuntime(
 	return {
 		repository: new AdminConsoleRepository(database),
 		mutations: new AdminMutationRepository(database),
+		reconciliation: new LegacyReconciliationAdminRepository(database),
 		familyCorrection: new FamilyCorrectionRepository(
 			database,
 			options.familyCorrectionContributor ?? new ContractFamilyCorrectionContributor(database)

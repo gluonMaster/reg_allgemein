@@ -1,7 +1,8 @@
 # Техническое задание: админский контур сверки повторных импортов
 
-Статус: обязательный Stage-13 scope, реализация отсутствует. Актуально на
-2026-08-17. Нормативное требование — `IMPORT-08`, критерии —
+Статус: обязательный Stage-13 scope реализован локально; external preview,
+independent review и production evidence не выполнены. Актуально на 2026-08-17.
+Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
 
 ## 1. Цель
@@ -189,8 +190,11 @@ entity detail и не копируются в reconciliation audit.
 5. Only after preview evidence may routine current-source production import use
    this queue; real PII is not copied into ordinary preview.
 
-Until steps 1–4 are complete, PR-B17 remains `blocked` and current import issues
-must not be bulk-dismissed.
+Local step 1 и synthetic D1 часть step 2 реализованы migration `0019`,
+`LegacyImportReconciliationRepository`, typed admin repository/routes/UI и
+`T-IMPORT-RECONCILIATION`. Steps 3–4, exact immutable checkpoint и реальные
+owner decisions ещё отсутствуют. Поэтому PR-B17 remains `blocked`, а current
+import issues must not be bulk-dismissed.
 
 ## 11. Готовый implementation prompt
 

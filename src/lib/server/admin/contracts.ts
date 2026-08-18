@@ -36,6 +36,102 @@ export const importIssueDecisionSchema = z.object({
 	idempotencyKey,
 });
 
+export const reconciliationListQuerySchema = z.object({
+	periodId: opaqueId.optional(),
+	sourceKind: z.enum(['access', 'plusbtext']).optional(),
+	issueClass: z
+		.enum([
+			'course_mapping',
+			'family_identity',
+			'invalid_email',
+			'invalid_birth_date',
+			'price',
+			'duration',
+			'duplicate_service',
+			'source_consistency',
+		])
+		.optional(),
+	state: z
+		.enum([
+			'open',
+			'assigned',
+			'awaiting_upstream',
+			'ready_to_verify',
+			'resolved',
+			'superseded',
+		])
+		.optional(),
+	assigneeId: opaqueId.optional(),
+	firstSeenRunId: opaqueId.optional(),
+	lastSeenRunId: opaqueId.optional(),
+	page: z.coerce.number().int().min(1).max(10_000).default(1),
+});
+
+const reconciliationAction = z.enum([
+	'assign',
+	'unassign',
+	'await_upstream',
+	'mark_ready_to_verify',
+	'same_service_duplicate',
+	'distinct_service_proven',
+	'exact_catalog_mapping',
+	'verified_portal_family_link',
+	'typed_child_correction',
+	'typed_family_correction',
+]);
+
+const reconciliationReasonCode = z.enum([
+	'operator_assignment',
+	'operator_unassignment',
+	'upstream_correction_requested',
+	'upstream_correction_reported',
+	'exact_mapping_confirmed',
+	'same_service_confirmed',
+	'distinct_service_evidence_confirmed',
+	'portal_family_link_verified',
+	'child_correction_verified',
+	'family_correction_verified',
+]);
+
+export const reconciliationMutationSchema = z.object({
+	caseId: opaqueId,
+	expectedVersion: z.coerce.number().int().positive(),
+	action: reconciliationAction,
+	reasonCode: reconciliationReasonCode,
+	assigneeId: opaqueId.optional(),
+	targetType: z
+		.enum(['course_group', 'legacy_family', 'legacy_child', 'user', 'family_reassignment'])
+		.optional(),
+	targetId: opaqueId.optional(),
+	confirmation: z.literal('confirmed'),
+	idempotencyKey,
+});
+
+export const reconciliationBatchMutationSchema = z.object({
+	casesJson: z
+		.string()
+		.max(20_000)
+		.transform((value, context) => {
+			try {
+				return z
+					.array(
+						z.object({ caseId: opaqueId, expectedVersion: z.number().int().positive() })
+					)
+					.min(1)
+					.max(50)
+					.parse(JSON.parse(value));
+			} catch {
+				context.addIssue({ code: 'custom', message: 'Invalid reconciliation batch.' });
+				return z.NEVER;
+			}
+		}),
+	action: z.enum(['assign', 'unassign', 'await_upstream', 'mark_ready_to_verify']),
+	reasonCode: reconciliationReasonCode,
+	assigneeId: opaqueId.optional(),
+	confirmation: z.literal('confirmed'),
+	idempotencyKey,
+});
+
 export const reviewDismissalSchema = z.object({
 	taskId: opaqueId,
 	decision: z.enum(['dismiss_name_match', 'dismiss_claim_conflict']),
@@ -99,7 +195,10 @@ export const trialTransitionSchema = z
 		trialId: opaqueId,
 		action: z.enum(['confirm', 'reject', 'cancel', 'attended', 'no_show', 'convert']),
 		sessionId: opaqueId.optional(),
-		confirmedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u).optional(),
+		confirmedDate: z
+			.string()
+			.regex(/^\d{4}-\d{2}-\d{2}$/u)
+			.optional(),
 		reason,
 		confirmation: z.literal('confirmed'),
 		idempotencyKey,

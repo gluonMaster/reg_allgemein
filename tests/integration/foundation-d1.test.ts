@@ -41,6 +41,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0016_legacy_import_release_control.sql',
 			'0017_telegram_delivery_certainty.sql',
 			'0018_legacy_import_release_hardening.sql',
+			'0019_legacy_import_reconciliation.sql',
 		]);
 
 		const result = await context.db
@@ -79,6 +80,9 @@ describe('foundation D1 migration and repositories', () => {
 				'admin_bootstrap_actions',
 				'admin_bootstrap_assertions',
 				'worker_error_buckets',
+				'legacy_reconciliation_cases',
+				'legacy_reconciliation_decisions',
+				'legacy_reconciliation_assertions',
 			])
 		);
 	});

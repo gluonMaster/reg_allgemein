@@ -204,6 +204,12 @@ export class LegacyFamilyVerificationExtension implements PostVerificationExtens
 			WHERE current_version.id = ? AND current_version.import_run_id = ?
 				AND current_version.is_published = 1 AND current_period.is_current = 1
 				AND current_run.status = 'promoted'
+				AND NOT EXISTS (
+					SELECT 1 FROM legacy_reconciliation_cases AS reconciliation_case
+					WHERE reconciliation_case.academic_period_id = current_period.id
+						AND reconciliation_case.blocks_release = 1
+						AND reconciliation_case.state NOT IN ('resolved', 'superseded')
+				)
 		)`;
 		const guardParams = [
 			context.verificationRequestId,

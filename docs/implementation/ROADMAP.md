@@ -413,9 +413,13 @@ case признан upstream error и не получает fuzzy mapping. Ше�
 duplicate buckets и остальные anomaly classes требуют штатного cross-import
 admin contour. Он нормативно зафиксирован как `IMPORT-08`/
 `AC-IMPORT-27`–`AC-IMPORT-31` в
-[отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md), но migration/repository/UI/
-suite ещё отсутствуют, поэтому PR-B17 остаётся blocked. Этот local delta ещё не
-является exact-SHA candidate evidence и ничего не менял remote.
+[отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md). Локальный continuation
+реализует migration `0019`, stable cross-run materialization/reimport evidence,
+typed admin decisions, D1/repository generic-closure denial, assignment/batch,
+PII-free queue/export и release/registration gate с synthetic D1/security tests.
+PR-B17 всё равно остаётся blocked до independent admin cold-read, owner review
+текущих buckets, exact-SHA candidate verification и отдельного authorized
+preview rehearsal. Этот local delta ничего не менял remote.
 
 Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
 candidate добавляет real one-way `bot_api` adapter, strict minimized payload,

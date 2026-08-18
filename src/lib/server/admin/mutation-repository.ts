@@ -221,6 +221,15 @@ export class AdminMutationRepository {
 		requestId: string;
 		now: string;
 	}) {
+		const actionable = await this.db.first<{ case_id: string }>({
+			sql: `SELECT occurrence.case_id
+				FROM legacy_reconciliation_occurrences AS occurrence
+				WHERE occurrence.import_issue_id = ? LIMIT 1`,
+			params: [input.issueId],
+		});
+		if (actionable) {
+			throw new AdminConsoleError('ACTIONABLE_IMPORT_ISSUE_REQUIRES_RECONCILIATION');
+		}
 		const status = input.decision === 'resolve' ? 'resolved' : 'dismissed';
 		return this.execute({
 			actor: input.actor,

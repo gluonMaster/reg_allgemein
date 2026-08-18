@@ -153,7 +153,7 @@ concurrency/idempotency проверки в названном suite. Точны
 
 ### Import admin reconciliation
 
-Планируемый suite `T-IMPORT-RECONCILIATION` по
+Реализованный suite `T-IMPORT-RECONCILIATION` по
 [IMPORT_ADMIN_RECONCILIATION_TZ.md](IMPORT_ADMIN_RECONCILIATION_TZ.md):
 
 - новая append-only migration после актуального номера: fresh/populated upgrade,
@@ -170,8 +170,13 @@ concurrency/idempotency проверки в названном suite. Точны
 - unresolved blocking cases дают non-zero release verify, а исчезновение issue
   закрывает case только `resolved_by_reimport`.
 
-Этот suite и migration пока отсутствуют; local `IMPORT-07` parser tests не
-закрывают `IMPORT-08`.
+Migration `0019`, `tests/integration/legacy-reconciliation-d1.test.ts`,
+`tests/unit/admin-reconciliation-route-security.test.ts`, release verification
+regression и existing parser/occupancy suites покрывают local `IMPORT-08`.
+Populated upgrade дополнительно проходит общий
+`tests/integration/migration-upgrade-d1.test.ts`. External preview rehearsal,
+independent admin cold-read и current-source owner decisions остаются отдельными
+blocked gates и local suite их не заменяет.
 
 ### D1 integration
 

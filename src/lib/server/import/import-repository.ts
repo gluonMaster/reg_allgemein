@@ -2,6 +2,10 @@ import type { SqlDatabaseBoundary, StatementSpec } from '$lib/server/db/database
 import { FoundationRepository } from '$lib/server/db/foundation-repository';
 import { redactSensitive } from '$lib/server/observability/redaction';
 import { hashCanonical } from './canonical';
+import {
+	LegacyImportReconciliationRepository,
+	type ReconciliationGateSummary,
+} from './reconciliation';
 import type {
 	AcademicPeriodRow,
 	ImportDiffSummary,
@@ -196,6 +200,7 @@ export interface LegacyReleaseVerification {
 		accessEnrollments: number;
 	};
 	issues: Record<ImportIssueSeverity, number>;
+	reconciliation: ReconciliationGateSummary;
 	events: { promote: number; rollback: number; rollForward: number };
 }
 
@@ -294,7 +299,8 @@ export function assertLegacyReleaseVerificationReady(
 		verification.issues.error !== 0 ||
 		verification.issues.fatal !== 0 ||
 		!countsMatch ||
-		!statusStateValid
+		!statusStateValid ||
+		!verification.reconciliation.passed
 	) {
 		throw new ImportStorageError('LEGACY_RELEASE_VERIFY_FAILED');
 	}
@@ -344,10 +350,9 @@ function diffMaps(
 	};
 }
 
-function accessVerificationRows(snapshot: LegacyImportSnapshot): Extract<
-	NonNullable<StagedImportResult['verificationRows']>,
-	{ kind: 'access' }
-> {
+function accessVerificationRows(
+	snapshot: LegacyImportSnapshot
+): Extract<NonNullable<StagedImportResult['verificationRows']>, { kind: 'access' }> {
 	const validFamilies = new Set(
 		snapshot.families
 			.filter((family) => family.numberingStatus === 'valid' && family.familyNumberId)
@@ -366,7 +371,8 @@ function accessVerificationRows(snapshot: LegacyImportSnapshot): Extract<
 		children: snapshot.children.length,
 		enrollments: snapshot.enrollments.length,
 		projectedFamilies: validFamilies.size,
-		projectedEmails: snapshot.emails.filter((email) => validFamilies.has(email.stableFamilyKey)).length,
+		projectedEmails: snapshot.emails.filter((email) => validFamilies.has(email.stableFamilyKey))
+			.length,
 		projectedChildren: validChildren.size,
 		projectedEnrollments: snapshot.enrollments.filter(
 			(enrollment) =>
@@ -426,9 +432,11 @@ function promotionResourceKey(sourceKind: ImportSourceKind, academicPeriodId: st
 
 export class ImportRepository {
 	private readonly foundation: FoundationRepository;
+	private readonly reconciliation: LegacyImportReconciliationRepository;
 
 	constructor(private readonly db: SqlDatabaseBoundary) {
 		this.foundation = new FoundationRepository(db);
+		this.reconciliation = new LegacyImportReconciliationRepository(db);
 	}
 
 	async getAcademicPeriod(code: string): Promise<AcademicPeriodRow | null> {
@@ -1032,6 +1040,13 @@ export class ImportRepository {
 					existing?.import_run_id === input.runId &&
 					existing.version_hash_sha256 === input.snapshot.versionHashSha256
 				) {
+					await this.reconciliation.reconcileValidatedImport({
+						academicPeriodId: input.period.id,
+						sourceKind: 'plusbtext',
+						importRunId: input.runId,
+						versionId,
+						now: input.now,
+					});
 					return {
 						runId: input.runId,
 						versionId,
@@ -1214,6 +1229,15 @@ export class ImportRepository {
 					input.runId,
 				],
 			});
+			if (status === 'validated') {
+				await this.reconciliation.reconcileValidatedImport({
+					academicPeriodId: input.period.id,
+					sourceKind: 'plusbtext',
+					importRunId: input.runId,
+					versionId,
+					now: input.now,
+				});
+			}
 			return {
 				runId: input.runId,
 				versionId,
@@ -1392,6 +1416,13 @@ export class ImportRepository {
 					existing?.import_run_id === input.runId &&
 					existing.version_hash_sha256 === snapshot.versionHashSha256
 				) {
+					await this.reconciliation.reconcileValidatedImport({
+						academicPeriodId: input.period.id,
+						sourceKind: 'access',
+						importRunId: input.runId,
+						versionId,
+						now: input.now,
+					});
 					return {
 						runId: input.runId,
 						versionId,
@@ -1757,6 +1788,15 @@ export class ImportRepository {
 					input.runId,
 				],
 			});
+			if (status === 'validated') {
+				await this.reconciliation.reconcileValidatedImport({
+					academicPeriodId: input.period.id,
+					sourceKind: 'access',
+					importRunId: input.runId,
+					versionId,
+					now: input.now,
+				});
+			}
 			return {
 				runId: input.runId,
 				versionId,
@@ -2362,7 +2402,8 @@ export class ImportRepository {
 				existing.access_version_id !== input.accessVersionId ||
 				existing.expected_current_plusbtext_version_id !==
 					input.expectedCurrentPlusBTextVersionId ||
-				existing.expected_current_access_version_id !== input.expectedCurrentAccessVersionId ||
+				existing.expected_current_access_version_id !==
+					input.expectedCurrentAccessVersionId ||
 				existing.planned_by !== input.plannedBy ||
 				existing.staged_by !== input.stagedBy ||
 				existing.verification_contract_json !== JSON.stringify(input.verificationContract)
@@ -2477,6 +2518,7 @@ export class ImportRepository {
 	async verifyLegacyReleasePlan(planId: string): Promise<LegacyReleaseVerification> {
 		const row = await this.db.first<{
 			id: string;
+			academic_period_id: string;
 			status: LegacyReleasePlanRow['status'];
 			verification_contract_json: string;
 			plusbtext_run_status: ImportRunRow['status'];
@@ -2518,7 +2560,7 @@ export class ImportRepository {
 			events_rollback: number;
 			events_roll_forward: number;
 		}>({
-			sql: `SELECT plan.id, plan.status, plan.verification_contract_json,
+			sql: `SELECT plan.id, plan.academic_period_id, plan.status, plan.verification_contract_json,
 				plus_run.status AS plusbtext_run_status,
 				access_run.status AS access_run_status,
 				plus_run.rows_total AS plusbtext_rows_total,
@@ -2600,7 +2642,9 @@ export class ImportRepository {
 		if (!row) throw new ImportStorageError('LEGACY_RELEASE_PLAN_NOT_FOUND');
 		let expected: LegacyReleaseVerificationContract;
 		try {
-			expected = JSON.parse(row.verification_contract_json) as LegacyReleaseVerificationContract;
+			expected = JSON.parse(
+				row.verification_contract_json
+			) as LegacyReleaseVerificationContract;
 			assertVerificationContract(expected);
 		} catch (cause) {
 			throw new ImportStorageError('LEGACY_RELEASE_VERIFICATION_CONTRACT_INVALID', cause);
@@ -2608,6 +2652,7 @@ export class ImportRepository {
 		const foreignKeyViolation = await this.db.first<Record<string, unknown>>({
 			sql: `PRAGMA foreign_key_check`,
 		});
+		const reconciliation = await this.reconciliation.releaseGate(row.academic_period_id);
 		const currentPair =
 			row.current_plusbtext_version_id === row.target_plusbtext_version_id &&
 			row.current_access_version_id === row.target_access_version_id
@@ -2673,6 +2718,7 @@ export class ImportRepository {
 				error: row.issues_error,
 				fatal: row.issues_fatal,
 			},
+			reconciliation,
 			events: {
 				promote: row.events_promote,
 				rollback: row.events_rollback,
@@ -2837,7 +2883,7 @@ export class ImportRepository {
 			const statusColumn = input.action === 'rollback' ? 'rolled_back_at' : 'promoted_at';
 			const statements: StatementSpec[] = [
 				{
-						sql: `INSERT INTO legacy_import_bundle_events
+					sql: `INSERT INTO legacy_import_bundle_events
 						(id, plan_id, action, academic_period_id, plusbtext_version_id,
 						 access_version_id, previous_plusbtext_version_id, previous_access_version_id,
 						 review_digest_sha256, recovery_evidence_digest_sha256,

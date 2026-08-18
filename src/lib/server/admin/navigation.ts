@@ -14,6 +14,12 @@ export interface AdminNavigationItem {
 export const coreAdminNavigation: readonly AdminNavigationItem[] = [
 	{ id: 'dashboard', href: '/admin', labelKey: 'admin.nav.dashboard', order: 10 },
 	{ id: 'imports', href: '/admin/imports', labelKey: 'admin.nav.imports', order: 20 },
+	{
+		id: 'import-reconciliation',
+		href: '/admin/import-reconciliation',
+		labelKey: 'admin.nav.importReconciliation',
+		order: 25,
+	},
 	{ id: 'reviews', href: '/admin/reviews', labelKey: 'admin.nav.reviews', order: 30 },
 	{ id: 'legacy', href: '/admin/legacy', labelKey: 'admin.nav.legacy', order: 40 },
 	{ id: 'users', href: '/admin/users', labelKey: 'admin.nav.users', order: 50 },

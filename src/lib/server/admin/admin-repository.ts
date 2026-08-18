@@ -165,9 +165,13 @@ export class AdminConsoleRepository {
 			safe_context_json: string;
 			status: string;
 			created_at: string;
+			reconciliation_case_id: string | null;
 		}>({
-			sql: `SELECT id, severity, code, source_record_key, safe_context_json,
-				status, created_at FROM import_issues
+			sql: `SELECT issue.id, issue.severity, issue.code, issue.source_record_key,
+				issue.safe_context_json, issue.status, issue.created_at,
+				(SELECT occurrence.case_id FROM legacy_reconciliation_occurrences AS occurrence
+					WHERE occurrence.import_issue_id = issue.id LIMIT 1) AS reconciliation_case_id
+				FROM import_issues AS issue
 			WHERE import_run_id = ? ORDER BY status, severity DESC, code, id LIMIT 200`,
 			params: [runId],
 		});

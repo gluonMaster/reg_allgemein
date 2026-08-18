@@ -212,9 +212,12 @@ Access-price priority и PII-free admin references. Package groups ограни�
 сократил obsolete 1429 warning occurrences/751 enrollment reviews до 160/53;
 это уменьшение false positives, а не автоматическое принятие данных. Active
 unresolved group подтверждён как upstream error и остаётся `awaiting_upstream`.
-Для structural duplicates и остальных actionable classes обязателен `IMPORT-08`
-durable reconciliation contour из tracked TZ; его migration/repository/UI/tests
-пока отсутствуют.
+Для structural duplicates и остальных actionable classes `IMPORT-08` durable
+reconciliation contour из tracked TZ теперь реализован локально migration
+`0019`, stable cases/occurrences, typed admin repository/routes/UI,
+PII-minimized export и release/registration gate. Synthetic D1/security tests
+не заменяют independent admin cold-read, owner decisions и authorized preview
+rehearsal; поэтому PR-B17 остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`, не закрывает PR-B12–PR-B17 или
 PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
