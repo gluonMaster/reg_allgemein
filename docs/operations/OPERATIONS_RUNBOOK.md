@@ -89,8 +89,8 @@ backup/restore.
 
 Resulting local candidate добавляет append-only `0016`–`0021`. Они проходят
 local migration suites, но не применены remote и не входят в current preview
-inventory/evidence; exact `f7e75f9` review был NO-GO, а current `0021`
-remediation ещё uncommitted/unreviewed. До separately authorized apply
+inventory/evidence; exact `f7e75f9` review был NO-GO, а `0021` remediation
+зафиксирована как `b354e582` и ожидает post-commit verification/review. До separately authorized apply
 Telegram/import candidate paths там отсутствуют.
 
 ## 1. Начало смены: health и freshness

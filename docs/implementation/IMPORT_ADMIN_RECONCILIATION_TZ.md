@@ -2,9 +2,11 @@
 
 Статус: обязательный Stage-13 scope реализован локально. Authorized independent
 review exact `f7e75f9` выполнен 2026-08-18 и дал NO-GO с 3 BLOCKER, 5 HIGH и
-2 MEDIUM findings. Они исправлены в текущем worktree через append-only migration
-`0021` и code/tests/docs; полный local verification chain прошёл, но новый
-immutable checkpoint и его independent exact-SHA review ещё отсутствуют.
+2 MEDIUM findings. Они исправлены через append-only migration `0021` и
+code/tests/docs в exact checkpoint
+`b354e5829142e62ca0805adb7c3e9febc68145b6`; pre-commit local verification chain
+прошёл, но fresh post-commit verification и independent exact-SHA review ещё
+отсутствуют.
 External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
@@ -236,8 +238,9 @@ Export применяет тот же полный набор фильтров �
 Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0021`,
 `LegacyImportReconciliationRepository`, typed admin repository/routes/UI и
 `T-IMPORT-RECONCILIATION`. Exact checkpoint `f7e75f9` прошёл full verification,
-но independent review дал NO-GO; последующая remediation существует только в
-текущем worktree. Steps 3–4, новый exact immutable checkpoint/re-review и реальные owner
+но independent review дал NO-GO; последующая remediation зафиксирована как
+exact `b354e582`, но ещё не прошла post-commit verification/re-review. Steps 3–4
+и реальные owner
 decisions ещё отсутствуют. Поэтому PR-B17 remains `blocked`, а current import
 issues must not be bulk-dismissed.
 

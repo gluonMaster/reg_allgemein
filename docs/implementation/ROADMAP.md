@@ -420,12 +420,14 @@ period gate. Его authorized independent review вернул NO-GO с 3 BLOCKE
 5 HIGH и 2 MEDIUM findings: exact candidate/current registration, old-run replay,
 classifier completeness, terminal recurrence, projection drift, atomic/live
 evidence, exact child/pair и full export были недостаточны. Текущий local
-worktree добавляет append-only migration `0021`, exact occurrence gates,
-immutable live evidence и соответствующие import/admin/projection/parser/export
-исправления, но ещё не является immutable/reviewed candidate. PR-B17 остаётся
-blocked. Remediation worktree прошёл полный local chain: check 0/0, Vitest
+worktree remediation зафиксирована как exact
+`b354e5829142e62ca0805adb7c3e9febc68145b6`: append-only migration `0021`, exact
+occurrence gates, immutable live evidence и соответствующие
+import/admin/projection/parser/export исправления. Этот SHA ещё не прошёл fresh
+post-commit verification или independent review. PR-B17 остаётся blocked.
+До commit remediation worktree прошёл полный local chain: check 0/0, Vitest
 66 files/509 tests, Chromium 18/18, build, audit 0, docs 151 links/52 files +
-105 commands и scan 535/535. До нового exact-SHA verification/re-review,
+105 commands и scan 535/535. До fresh exact-SHA verification/re-review,
 independent admin cold-read, owner review текущих buckets и отдельного authorized
 preview rehearsal gate не закрыт. Этот local delta ничего не менял remote.
 

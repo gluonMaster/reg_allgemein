@@ -221,12 +221,13 @@ verification прошла 2026-08-18. Authorized independent review exact
 2 MEDIUM: exact candidate/current registration и old-run replay gates,
 classifier completeness, terminal recurrence, mapping projection drift,
 atomic/live typed evidence, exact child/duplicate semantics и full export были
-недостаточны. Current uncommitted worktree закрывает findings append-only
+недостаточны. Exact remediation commit
+`b354e5829142e62ca0805adb7c3e9febc68145b6` закрывает findings append-only
 migration `0021` и изменениями import/admin/family/cabinet/pricing/parser/export.
-Полный local chain прошёл: check 0/0, Vitest 66 files/509 tests, Chromium 18/18,
-build, production audit 0, docs 151 links/52 files + 105 commands и scan 535/535.
-Но worktree ещё не является immutable exact-SHA evidence и не имеет нового
-independent review; admin cold-read, owner decisions и authorized preview
+Его direct parent worktree прошёл: check 0/0, Vitest 66 files/509 tests,
+Chromium 18/18, build, production audit 0, docs 151 links/52 files + 105 commands
+и scan 535/535. Эти результаты pre-commit; fresh post-commit exact-SHA chain и
+independent review ещё отсутствуют. Admin cold-read, owner decisions и authorized preview
 rehearsal также отсутствуют. Поэтому PR-B17 остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`; local `0016`–`0021` остаются
