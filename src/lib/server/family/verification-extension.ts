@@ -201,6 +201,8 @@ export class LegacyFamilyVerificationExtension implements PostVerificationExtens
 			JOIN academic_periods AS current_period
 				ON current_period.id = current_version.academic_period_id
 			JOIN import_runs AS current_run ON current_run.id = current_version.import_run_id
+			JOIN plusbtext_versions AS current_plusbtext
+				ON current_plusbtext.id = current_version.plusbtext_version_id
 			WHERE current_version.id = ? AND current_version.import_run_id = ?
 				AND current_version.is_published = 1 AND current_period.is_current = 1
 				AND current_run.status = 'promoted'
@@ -209,6 +211,30 @@ export class LegacyFamilyVerificationExtension implements PostVerificationExtens
 					WHERE reconciliation_case.academic_period_id = current_period.id
 						AND reconciliation_case.blocks_release = 1
 						AND reconciliation_case.state NOT IN ('resolved', 'superseded')
+				)
+				AND NOT EXISTS (
+					SELECT 1
+					FROM legacy_reconciliation_occurrences AS occurrence
+					JOIN legacy_reconciliation_cases AS reconciliation_case
+						ON reconciliation_case.id = occurrence.case_id
+					WHERE reconciliation_case.academic_period_id = current_period.id
+						AND reconciliation_case.blocks_release = 1
+						AND (
+							(reconciliation_case.source_kind = 'access'
+								AND occurrence.import_run_id = current_version.import_run_id
+								AND occurrence.version_id = current_version.id)
+							OR
+							(reconciliation_case.source_kind = 'plusbtext'
+								AND occurrence.import_run_id = current_plusbtext.import_run_id
+								AND occurrence.version_id = current_plusbtext.id)
+						)
+						AND NOT EXISTS (
+							SELECT 1
+							FROM legacy_reconciliation_valid_typed_resolutions AS valid
+							WHERE valid.case_id = occurrence.case_id
+								AND valid.source_import_run_id = occurrence.import_run_id
+								AND valid.source_version_id = occurrence.version_id
+						)
 				)
 		)`;
 		const guardParams = [

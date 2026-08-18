@@ -1,11 +1,11 @@
 # Техническое задание: админский контур сверки повторных импортов
 
-Статус: обязательный Stage-13 scope реализован локально. Independent review
-immutable checkpoint `eb35a8c` выполнен 2026-08-18 и дал NO-GO; найденные
-identity, TOCTOU, evidence-binding и atomicity defects исправлены в текущем
-worktree; полный local verification chain прошёл, но новый immutable checkpoint
-и его повторный independent review ещё отсутствуют. External preview и
-production evidence не выполнены.
+Статус: обязательный Stage-13 scope реализован локально. Authorized independent
+review exact `f7e75f9` выполнен 2026-08-18 и дал NO-GO с 3 BLOCKER, 5 HIGH и
+2 MEDIUM findings. Они исправлены в текущем worktree через append-only migration
+`0021` и code/tests/docs; полный local verification chain прошёл, но новый
+immutable checkpoint и его independent exact-SHA review ещё отсутствуют.
+External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
 
@@ -75,6 +75,12 @@ Generic issue decision не является доказательством ис
 же D1 transaction отклонять `promote`, если для academic period существует
 active blocking case. Application pre-check не заменяет этот fence.
 
+Exact-candidate и typed-evidence hardening реализовать следующей append-only
+migration `0021_reconciliation_exact_candidate_evidence.sql`. Она хранит
+immutable evidence binding к case decision/action/target и exact run/version,
+повторно валидирует binding terminal assertion trigger-ом внутри того же D1
+batch и запрещает mutation уже materialized/promoted snapshot evidence.
+
 ### `legacy_reconciliation_cases`
 
 Обязательные поля:
@@ -101,6 +107,13 @@ Append-only typed decision:
 - import/version evidence digests;
 - safe structured metadata allowlist без free-form PII.
 
+### `legacy_reconciliation_evidence_bindings`
+
+Append-only binding хранит case/decision/action/target и exact import run,
+snapshot version, optional source row и exact duplicate pair. Live evidence
+view сверяет binding с immutable snapshot и current domain correction/mapping;
+terminal assertion допустим только при существующем valid live evidence.
+
 ### Assertions и audit
 
 Каждая state mutation выполняется одним D1 batch с decision, audit event и
@@ -114,20 +127,24 @@ stale version, actor mismatch и generic closure actionable case.
 
 После validation и до promotion gate строится PII-free issue manifest.
 
-1. Та же stable identity + issue code присутствует снова: case остаётся open/
-   assigned/awaiting_upstream, обновляется только `last_seen_*`, history
-   append-only.
+1. Та же stable identity + issue code присутствует снова: active case остаётся
+   open/assigned/awaiting_upstream, обновляется только `last_seen_*`, history
+   append-only. Если прежний case уже terminal после typed resolution, recurrence
+   создаёт новый active case и сохраняет прежнюю terminal history.
 2. Case был `ready_to_verify`, но issue остался: case возвращается в `open`,
    создаётся failed-verification decision; portal-side correction не принимается
    как успешная автоматически.
 3. Issue исчез после upstream action: case закрывается только
-   `resolved_by_reimport` с exact prior/current run и version evidence.
+   `resolved_by_reimport` с exact prior/current run и version evidence; current
+   run обязан быть строго позднее последнего materialized occurrence. Replay
+   старого validated run не закрывает более новый case.
 4. Source identity изменилась так, что старый case неприменим: старый получает
    `superseded`, новый создаётся отдельно; silent merge запрещён.
 5. New blocking case удерживает promote/registration enable. Aggregate verify
-   выводит только counts по class/state и opaque evidence ID; migration `0020`
-   повторно проверяет отсутствие такого case атомарно при записи `promote`
-   event, закрывая race между pre-check и lease acquisition.
+   выводит только counts по class/state и opaque evidence ID; migration `0021`
+   атомарно проверяет как active cases периода, так и blocking occurrences exact
+   продвигаемых run/version. Historical resolution или clean соседний run не
+   освобождает candidate; registration аналогично сверяет exact current pair.
 
 ## 6. Typed actions по классам
 
@@ -163,6 +180,8 @@ exact mapping требует отдельной confirmation с preview counts.
 List/export не показывает source label, client name, email, phone, address или
 birth date. Полные данные доступны только через существующую server-authorized
 entity detail и не копируются в reconciliation audit.
+Export применяет тот же полный набор фильтров и порядок, что queue, но выгружает
+весь отфильтрованный результат, а не только текущую страницу.
 
 ## 8. Security и reliability
 
@@ -187,18 +206,21 @@ entity detail и не копируются в reconciliation audit.
 - RBAC, CSRF, inactive admin, stale version, idempotent replay and two-admin race;
 - exact mapping accepted, fuzzy/mismatched mapping rejected;
 - exact mapping reads the case `last_seen_version_id`; status-only/current-
-  projection evidence rejected;
+  projection evidence rejected; evidence revoke/race откатывает terminal batch;
 - child correction must match the case family, source identity and version;
 - duplicate defaults to one occupancy; `distinct_service_proven` requires the
   exact duplicate enrollment pair and two different course assignments;
+  `same_service_duplicate` консолидирует downstream cabinet/pricing projection;
 - invalid email/DOB never creates automatic claim/child;
 - batch rejects mixed/duplicate code/action/version cohorts and rolls the whole
   cohort back on a stale race; completed replay is idempotent;
 - changed-identity successor + predecessor supersede survives ambiguous commit
   as one atomic operation;
 - list/export/audit/error snapshots pass PII canary/redaction tests;
-- unresolved blocking cases make release verify non-zero; resolved-by-reimport
-  produces only safe aggregate evidence.
+- export сохраняет filters и возвращает больше одной UI page;
+- exact bad candidate, old validated replay и registration во время staged
+  correction fail closed; resolved-by-reimport produces only safe aggregate
+  evidence.
 
 ## 10. Acceptance и rollout
 
@@ -211,11 +233,11 @@ entity detail и не копируются в reconciliation audit.
 5. Only after preview evidence may routine current-source production import use
    this queue; real PII is not copied into ordinary preview.
 
-Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0020`,
+Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0021`,
 `LegacyImportReconciliationRepository`, typed admin repository/routes/UI и
-`T-IMPORT-RECONCILIATION`. Exact checkpoint `eb35a8c` прошёл full verification,
-но independent review дал NO-GO; remediation существует только в текущем
-worktree. Steps 3–4, новый exact immutable checkpoint/re-review и реальные owner
+`T-IMPORT-RECONCILIATION`. Exact checkpoint `f7e75f9` прошёл full verification,
+но independent review дал NO-GO; последующая remediation существует только в
+текущем worktree. Steps 3–4, новый exact immutable checkpoint/re-review и реальные owner
 decisions ещё отсутствуют. Поэтому PR-B17 remains `blocked`, а current import
 issues must not be bulk-dismissed.
 

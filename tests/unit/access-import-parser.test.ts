@@ -249,6 +249,33 @@ describe('Access legacy parser', () => {
 		expect(JSON.stringify(duplicate?.safeContext)).not.toContain('Target Group');
 	});
 
+	it('emits one stable exact-pair issue for every pair in a three-slot duplicate bucket', async () => {
+		const plus = await plusSnapshot();
+		const extract = await createSyntheticAccessExtract([
+			createSyntheticAccessRow({
+				Value15: 'Target Group',
+				Value42: 'Target Group',
+				Value43: 'Target Group',
+			}),
+		]);
+		const snapshot = await parseAccessExtract({
+			extract,
+			academicPeriodCode: '2026-2027',
+			plusBTextVersionId: 'plus-version-a',
+			plusBText: plus,
+		});
+		const duplicates = snapshot.issues.filter(
+			(issue) => issue.code === 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS'
+		);
+		expect(duplicates).toHaveLength(3);
+		expect(new Set(duplicates.map((issue) => issue.sourceRecordKey)).size).toBe(3);
+		for (const duplicate of duplicates) {
+			expect(duplicate.safeContext?.relatedEnrollmentIds).toHaveLength(2);
+			expect(new Set(duplicate.safeContext?.relatedEnrollmentIds as string[]).size).toBe(2);
+			expect(JSON.stringify(duplicate.safeContext)).not.toContain('Target Group');
+		}
+	});
+
 	it('keeps invalid family rows as evidence but excludes payment and unstable children', async () => {
 		const plus = await plusSnapshot();
 		const extract = await createSyntheticAccessExtract([

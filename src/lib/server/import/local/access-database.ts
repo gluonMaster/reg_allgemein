@@ -938,26 +938,34 @@ export async function parseAccessExtract(input: {
 	for (const candidates of duplicateServiceGroups.values()) {
 		if (candidates.length < 2) continue;
 		for (const candidate of candidates) candidate.needsAdminReview = true;
-		const sourceRows = new Set(candidates.map((candidate) => candidate.sourceAccessId)).size;
-		const slotKinds = new Set(
-			candidates.map((candidate) =>
-				candidate.sourceSlot === 'main_next' ? 'main' : 'package'
-			)
-		);
-		issues.push(
-			safeIssue({
-				code: 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS',
-				count: candidates.length,
-				sourceRecordKey: candidates[0].sourceRecordKey,
-				context: {
-					distinctSourceRows: sourceRows,
-					slotPattern: [...slotKinds].sort().join('+'),
-					relatedEnrollmentIds: candidates
-						.map((candidate) => candidate.id)
-						.sort((left, right) => left.localeCompare(right)),
-				},
-			})
-		);
+		const ordered = [...candidates].sort((left, right) => left.id.localeCompare(right.id));
+		for (let leftIndex = 0; leftIndex < ordered.length - 1; leftIndex += 1) {
+			for (let rightIndex = leftIndex + 1; rightIndex < ordered.length; rightIndex += 1) {
+				const pair = [ordered[leftIndex], ordered[rightIndex]] as const;
+				const relatedEnrollmentIds = pair.map((candidate) => candidate.id);
+				const slotKinds = new Set(
+					pair.map((candidate) =>
+						candidate.sourceSlot === 'main_next' ? 'main' : 'package'
+					)
+				);
+				issues.push(
+					safeIssue({
+						code: 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS',
+						count: 2,
+						sourceRecordKey: `duplicate-service:${relatedEnrollmentIds.join(':')}`,
+						context: {
+							entityType: 'legacy_enrollment',
+							entityId: pair[0].id,
+							distinctSourceRows: new Set(
+								pair.map((candidate) => candidate.sourceAccessId)
+							).size,
+							slotPattern: [...slotKinds].sort().join('+'),
+							relatedEnrollmentIds,
+						},
+					})
+				);
+			}
+		}
 	}
 
 	const versionHashSha256 = await hashCanonical({

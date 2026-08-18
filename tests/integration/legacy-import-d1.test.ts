@@ -777,7 +777,23 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			.bind(state!.child_id)
 			.run();
 		await context.db
-			.prepare(`UPDATE legacy_enrollments SET price_mode = 'manual_override' WHERE id = ?`)
+			.prepare(
+				`INSERT INTO course_groups
+					(id, academic_period_id, source_offering_key, display_name, lesson_kind,
+					 subject, requires_admin_approval, catalog_status, created_at, updated_at)
+				 VALUES ('course-stale-package-mapping', ?, 'stale-package-mapping',
+					 'Stale package mapping', 'group', 'Synthetic', 0, 'published', ?, ?)`
+			)
+			.bind(period.id, instant(5), instant(5))
+			.run();
+		await context.db
+			.prepare(
+				`UPDATE legacy_enrollments SET price_mode = 'manual_override',
+					course_group_id = 'course-stale-package-mapping',
+					is_active_for_occupancy = 1,
+					represented_by_enrollment_id = 'stale-representation'
+				WHERE id = ?`
+			)
 			.bind(state!.enrollment_id)
 			.run();
 
@@ -795,7 +811,9 @@ describe('versioned Access and PlusBText imports in D1', () => {
 				`SELECT family.claimed_by_user_id, allocation.owner_user_id,
 					child.full_name_override, child.full_name,
 					enrollment.id AS enrollment_id, enrollment.group_name_raw,
-					enrollment.duration_minutes, enrollment.price_mode
+					enrollment.duration_minutes, enrollment.price_mode,
+					enrollment.course_group_id, enrollment.is_active_for_occupancy,
+					enrollment.represented_by_enrollment_id
 				FROM legacy_families AS family
 				JOIN family_number_allocations AS allocation ON allocation.id = family.family_number_id
 				JOIN children AS child ON child.legacy_family_id = family.id
@@ -819,6 +837,9 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			group_name_raw: 'Renamed Package',
 			duration_minutes: 60,
 			price_mode: 'manual_override',
+			course_group_id: null,
+			is_active_for_occupancy: 0,
+			represented_by_enrollment_id: null,
 		});
 		expect(retired).toEqual({ is_current: 0, retired_at: instant(7) });
 

@@ -312,27 +312,37 @@ MVP готов, когда:
   context и не завышают occupancy; разные normalized names, включая day suffix,
   не объединяются.
 - **AC-IMPORT-27.** Повторные import runs создают или переиспользуют один durable
-  reconciliation case по stable source identity + period + issue code. Case с
-  тем же отклонением не дублируется и не закрывается новым run; исчезнувшее после
-  upstream correction отклонение закрывается только как `resolved_by_reimport`
-  с exact previous/current version evidence.
+  reconciliation case по stable source identity + period + issue code в рамках
+  active lifecycle. Terminal typed case при повторном появлении того же
+  отклонения сохраняется, а recurrence создаёт новый active case. Исчезнувшее
+  после upstream correction отклонение закрывается только как
+  `resolved_by_reimport` с exact previous/current version evidence от строго
+  более нового run; replay старого validated run не закрывает case.
 - **AC-IMPORT-28.** Actionable import issue нельзя закрыть generic
   `resolve|dismiss`. Typed action требует current admin, CSRF, reason code,
   optimistic version/idempotency key и append-only audit/assertion; concurrent
-  либо stale submit отклоняется без частичного изменения.
+  либо stale submit отклоняется без частичного изменения. Exact typed evidence
+  связывается с case decision/run/version и повторно валидируется внутри того же
+  atomic D1 batch; отозванное или изменившееся evidence не освобождает gate.
 - **AC-IMPORT-29.** Course/group case принимает только exact catalog target либо
   `awaiting_upstream`; fuzzy/substring/day-insensitive match запрещён. Ошибочная
   source group остаётся исключённой из automatic mapping до исправления Access и
-  подтверждающего reimport.
+  подтверждающего reimport. Изменение source group при новом snapshot заново
+  вычисляет mapping/occupancy и сбрасывает несовместимую representation.
 - **AC-IMPORT-30.** Identity/contact/email/birth-date/price/duration/duplicate
   cases направляют администратора в соответствующий typed tool. Invalid email
   не участвует в claim; invalid birth date не импортируется; duplicate service
-  учитывается один раз, пока отдельность двух услуг не доказана. Batch action
-  разрешена только для одной issue class и одного решения.
+  учитывается один раз, пока отдельность exact пары услуг не доказана; child
+  correction совпадает с exact case family/source/version. Batch action
+  разрешена только для одной issue class и одного решения и атомарна для всего
+  cohort.
 - **AC-IMPORT-31.** Queue/list/export/log содержат только opaque case/family/
   source references, codes, counts, state и timestamps. PII доступна лишь в
-  уже авторизованной entity detail; promotion/registration gates fail-closed при
-  unresolved blocking cases, а retention/cleanup оставляет append-only audit.
+  уже авторизованной entity detail; export применяет текущие filters ко всему
+  результату, а не к одной UI page. Promotion/registration gates fail-closed
+  при active blocking cases и при blocking occurrence exact candidate/current
+  run/version без live valid typed evidence; retention/cleanup оставляет
+  append-only audit.
 
 ## 5. Каталог, capacity и trial
 

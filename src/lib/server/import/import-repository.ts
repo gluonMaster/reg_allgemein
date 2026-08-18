@@ -2148,13 +2148,26 @@ export class ImportRepository {
 					 created_at, updated_at)
 					SELECT enrollment.legacy_enrollment_id, source.id, family.legacy_family_id, child.legacy_child_id, ?,
 						enrollment.source_slot, enrollment.source_record_key,
-						enrollment.group_name_raw, enrollment.group_name_normalized, NULL,
+						enrollment.group_name_raw, enrollment.group_name_normalized,
+						(SELECT mapping.course_group_id FROM course_source_mappings AS mapping
+							WHERE mapping.academic_period_id = ? AND mapping.source_kind = 'access'
+								AND mapping.source_value_normalized = enrollment.group_name_normalized
+								AND mapping.status = 'confirmed' LIMIT 1),
 						enrollment.teacher_name, enrollment.day_raw, enrollment.duration_minutes,
 						enrollment.duration_status,
 						enrollment.status_code_raw, enrollment.lesson_kind,
 						enrollment.contract_kind, enrollment.price_source, enrollment.price_mode,
 						enrollment.planned_price_cents, enrollment.notes_raw,
-						enrollment.needs_admin_review, 0, NULL, ?, 1, NULL, ?, ?
+						enrollment.needs_admin_review,
+						CASE WHEN enrollment.lesson_kind IN ('group', 'dance_group')
+							AND enrollment.contract_kind IN ('yearly', 'monthly')
+							AND upper(trim(coalesce(enrollment.status_code_raw, ''))) <> 'KN'
+							AND EXISTS (SELECT 1 FROM course_source_mappings AS mapping
+								WHERE mapping.academic_period_id = ? AND mapping.source_kind = 'access'
+									AND mapping.source_value_normalized = enrollment.group_name_normalized
+									AND mapping.status = 'confirmed')
+						THEN 1 ELSE 0 END,
+						NULL, ?, 1, NULL, ?, ?
 					FROM legacy_snapshot_enrollments AS enrollment
 					JOIN legacy_snapshot_families AS family
 						ON family.legacy_version_id = enrollment.legacy_version_id
@@ -2170,6 +2183,8 @@ export class ImportRepository {
 					WHERE enrollment.legacy_version_id = ?`,
 				params: [
 					input.academicPeriodId,
+					input.academicPeriodId,
+					input.academicPeriodId,
 					input.runId,
 					input.now,
 					input.now,
@@ -2178,7 +2193,16 @@ export class ImportRepository {
 				],
 			},
 			{
-				sql: `UPDATE legacy_enrollments SET
+					sql: `UPDATE legacy_enrollments SET
+					course_group_id = (SELECT mapping.course_group_id
+						FROM legacy_snapshot_enrollments AS snapshot
+						JOIN course_source_mappings AS mapping
+							ON mapping.academic_period_id = legacy_enrollments.academic_period_id
+							AND mapping.source_kind = 'access'
+							AND mapping.source_value_normalized = snapshot.group_name_normalized
+							AND mapping.status = 'confirmed'
+						WHERE snapshot.legacy_version_id = ?
+							AND snapshot.legacy_enrollment_id = legacy_enrollments.id LIMIT 1),
 					group_name_raw = (SELECT snapshot.group_name_raw FROM legacy_snapshot_enrollments AS snapshot
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
 					group_name_normalized = (SELECT snapshot.group_name_normalized FROM legacy_snapshot_enrollments AS snapshot
@@ -2208,12 +2232,34 @@ export class ImportRepository {
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
 					needs_admin_review = (SELECT snapshot.needs_admin_review FROM legacy_snapshot_enrollments AS snapshot
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id),
+					is_active_for_occupancy = CASE WHEN EXISTS (
+						SELECT 1 FROM legacy_snapshot_enrollments AS snapshot
+						JOIN course_source_mappings AS mapping
+							ON mapping.academic_period_id = legacy_enrollments.academic_period_id
+							AND mapping.source_kind = 'access'
+							AND mapping.source_value_normalized = snapshot.group_name_normalized
+							AND mapping.status = 'confirmed'
+						WHERE snapshot.legacy_version_id = ?
+							AND snapshot.legacy_enrollment_id = legacy_enrollments.id
+							AND snapshot.lesson_kind IN ('group', 'dance_group')
+							AND snapshot.contract_kind IN ('yearly', 'monthly')
+							AND upper(trim(coalesce(snapshot.status_code_raw, ''))) <> 'KN'
+					) THEN 1 ELSE 0 END,
+					represented_by_enrollment_id = CASE WHEN group_name_normalized =
+						(SELECT snapshot.group_name_normalized
+							FROM legacy_snapshot_enrollments AS snapshot
+							WHERE snapshot.legacy_version_id = ?
+								AND snapshot.legacy_enrollment_id = legacy_enrollments.id)
+					THEN represented_by_enrollment_id ELSE NULL END,
 					last_seen_run_id = ?, is_current = 1, retired_at = NULL, updated_at = ?
 					WHERE academic_period_id = ? AND EXISTS (
 						SELECT 1 FROM legacy_snapshot_enrollments AS snapshot
 						WHERE snapshot.legacy_version_id = ? AND snapshot.legacy_enrollment_id = legacy_enrollments.id
 					)`,
 				params: [
+					input.versionId,
+					input.versionId,
+					input.versionId,
 					input.versionId,
 					input.versionId,
 					input.versionId,
@@ -2531,6 +2577,8 @@ export class ImportRepository {
 			access_rows_staged: number;
 			access_rows_promoted: number;
 			access_rows_skipped: number;
+			plusbtext_run_id: string;
+			access_run_id: string;
 			target_plusbtext_version_id: string;
 			target_access_version_id: string;
 			expected_plusbtext_version_id: string | null;
@@ -2561,6 +2609,7 @@ export class ImportRepository {
 			events_roll_forward: number;
 		}>({
 			sql: `SELECT plan.id, plan.academic_period_id, plan.status, plan.verification_contract_json,
+				plan.plusbtext_run_id, plan.access_run_id,
 				plus_run.status AS plusbtext_run_status,
 				access_run.status AS access_run_status,
 				plus_run.rows_total AS plusbtext_rows_total,
@@ -2652,7 +2701,18 @@ export class ImportRepository {
 		const foreignKeyViolation = await this.db.first<Record<string, unknown>>({
 			sql: `PRAGMA foreign_key_check`,
 		});
-		const reconciliation = await this.reconciliation.releaseGate(row.academic_period_id);
+		const reconciliation = await this.reconciliation.releaseGate(row.academic_period_id, [
+			{
+				sourceKind: 'plusbtext',
+				importRunId: row.plusbtext_run_id,
+				versionId: row.target_plusbtext_version_id,
+			},
+			{
+				sourceKind: 'access',
+				importRunId: row.access_run_id,
+				versionId: row.target_access_version_id,
+			},
+		]);
 		const currentPair =
 			row.current_plusbtext_version_id === row.target_plusbtext_version_id &&
 			row.current_access_version_id === row.target_access_version_id

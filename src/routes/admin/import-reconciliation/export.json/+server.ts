@@ -10,21 +10,27 @@ export const GET: RequestHandler = async (event) => {
 		periodId: event.url.searchParams.get('period') || undefined,
 		sourceKind: event.url.searchParams.get('source') || undefined,
 		issueClass: event.url.searchParams.get('class') || undefined,
-		state: event.url.searchParams.get('state') || 'awaiting_upstream',
+		state: event.url.searchParams.get('state') || undefined,
 		assigneeId: event.url.searchParams.get('assignee') || undefined,
 		firstSeenRunId: event.url.searchParams.get('firstRun') || undefined,
 		lastSeenRunId: event.url.searchParams.get('lastRun') || undefined,
-		page: event.url.searchParams.get('page') || '1',
+		page: '1',
 	});
-	const queue = await requestAdminConsoleRuntime(event).reconciliation.list(filters);
+	const items = await requestAdminConsoleRuntime(event).reconciliation.exportList({
+		periodId: filters.periodId,
+		sourceKind: filters.sourceKind,
+		issueClass: filters.issueClass,
+		state: filters.state,
+		assigneeId: filters.assigneeId,
+		firstSeenRunId: filters.firstSeenRunId,
+		lastSeenRunId: filters.lastSeenRunId,
+	});
 	return json(
 		{
-			contract: 'legacy-import-reconciliation-checklist:v1',
+			contract: 'legacy-import-reconciliation-checklist:v2',
 			generatedAt: new Date().toISOString(),
-			page: queue.page,
-			pageSize: queue.pageSize,
-			total: queue.total,
-			items: queue.items.map((item) => ({
+			total: items.length,
+			items: items.map((item) => ({
 				caseId: item.id,
 				periodCode: item.periodCode,
 				sourceKind: item.sourceKind,

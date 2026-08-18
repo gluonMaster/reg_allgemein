@@ -33,6 +33,7 @@ interface ReconciliationCaseRow {
 	state: LegacyReconciliationState;
 	resolution_kind: string | null;
 	version: number;
+	last_seen_run_sequence: number;
 }
 
 export interface ReconciliationGateSummary {
@@ -54,6 +55,7 @@ const ISSUE_CLASS_RULES: ReadonlyArray<{
 		issueClass: 'course_mapping',
 		matches: (code) =>
 			code.startsWith('PLUSB_ENRICHMENT_') ||
+			/^PLUSB_(?:K_|OLD_|TARGET_)/u.test(code) ||
 			code === 'ACCESS_STATUS_NEEDS_REVIEW' ||
 			code === 'PLUSB_WEEKDAY_INVALID' ||
 			code === 'PLUSB_WEEKDAY_MISSING' ||
@@ -64,7 +66,9 @@ const ISSUE_CLASS_RULES: ReadonlyArray<{
 		matches: (code) =>
 			/^ACCESS_(?:FAMILY_ID_|FAMILY_NUMBER_|PARENT_NAME_|FAMILY_CONTACT_CONFLICT|FAMILY_EMAIL_CONFLICT|CONTINUITY_)/u.test(
 				code
-			) || code === 'ACCESS_CHILD_SAME_NAME_MULTIPLE_BIRTH_DATES',
+			) ||
+			code === 'ACCESS_CHILD_SAME_NAME_MULTIPLE_BIRTH_DATES' ||
+			code === 'ACCESS_ACTIVITY_WITHOUT_CHILD',
 	},
 	{ issueClass: 'invalid_email', matches: (code) => code === 'ACCESS_EMAIL_INVALID' },
 	{
@@ -106,7 +110,10 @@ const EMPTY_CLASS_COUNTS: Record<LegacyReconciliationIssueClass, number> = {
 };
 
 export function reconciliationIssueClass(code: string): LegacyReconciliationIssueClass | null {
-	return ISSUE_CLASS_RULES.find((rule) => rule.matches(code))?.issueClass ?? null;
+	return (
+		ISSUE_CLASS_RULES.find((rule) => rule.matches(code))?.issueClass ??
+		(/^(?:ACCESS|PLUSB)_/u.test(code) ? 'source_consistency' : null)
+	);
 }
 
 function safeEntity(safeContextJson: string): {
@@ -260,6 +267,24 @@ export class LegacyImportReconciliationRepository {
 		versionId: string;
 		now: string;
 	}): Promise<void> {
+		const currentRun = await this.db.first<{
+			run_sequence: number;
+			status: string;
+			source_kind: string;
+			academic_period_id: string;
+		}>({
+			sql: `SELECT rowid AS run_sequence, status, source_kind, academic_period_id
+				FROM import_runs WHERE id = ?`,
+			params: [input.importRunId],
+		});
+		if (
+			!currentRun ||
+			!['validated', 'promoted'].includes(currentRun.status) ||
+			currentRun.source_kind !== input.sourceKind ||
+			currentRun.academic_period_id !== input.academicPeriodId
+		) {
+			throw new Error('RECONCILIATION_VALIDATED_IMPORT_REQUIRED');
+		}
 		const issueRows = await this.db.all<ActionableImportIssue>({
 			sql: `SELECT id, code, source_record_key, safe_context_json
 				FROM import_issues WHERE import_run_id = ? ORDER BY code, id`,
@@ -284,14 +309,21 @@ export class LegacyImportReconciliationRepository {
 			if (occurrence) continue;
 
 			const existing = await this.db.first<ReconciliationCaseRow>({
-				sql: `SELECT id, source_identity_digest, issue_code, issue_class, entity_type,
+				sql: `SELECT reconciliation_case.id, reconciliation_case.source_identity_digest,
+					reconciliation_case.issue_code, reconciliation_case.issue_class,
+					reconciliation_case.entity_type,
 					entity_id, last_seen_import_run_id, last_seen_version_id, state,
-					resolution_kind, version
-					FROM legacy_reconciliation_cases
-					WHERE academic_period_id = ? AND source_kind = ?
-						AND source_identity_digest = ? AND issue_code = ?
-					ORDER BY CASE WHEN state NOT IN ('resolved', 'superseded') THEN 0 ELSE 1 END,
-						version DESC, created_at DESC LIMIT 1`,
+					resolution_kind, version, last_run.rowid AS last_seen_run_sequence
+					FROM legacy_reconciliation_cases AS reconciliation_case
+					JOIN import_runs AS last_run
+						ON last_run.id = reconciliation_case.last_seen_import_run_id
+					WHERE reconciliation_case.academic_period_id = ?
+						AND reconciliation_case.source_kind = ?
+						AND reconciliation_case.source_identity_digest = ?
+						AND reconciliation_case.issue_code = ?
+					ORDER BY CASE WHEN reconciliation_case.state NOT IN ('resolved', 'superseded')
+						THEN 0 ELSE 1 END,
+						reconciliation_case.version DESC, reconciliation_case.created_at DESC LIMIT 1`,
 				params: [
 					input.academicPeriodId,
 					input.sourceKind,
@@ -299,10 +331,7 @@ export class LegacyImportReconciliationRepository {
 					issue.code,
 				],
 			});
-			if (
-				existing?.state === 'resolved' &&
-				existing.resolution_kind !== 'resolved_by_reimport'
-			) {
+			if (existing && currentRun.run_sequence <= existing.last_seen_run_sequence) {
 				await this.insertOccurrence({
 					caseId: existing.id,
 					issueId: issue.id,
@@ -362,15 +391,22 @@ export class LegacyImportReconciliationRepository {
 			).slice(0, 40)}`;
 			const supersededCandidate = entity.entityId
 				? await this.db.first<ReconciliationCaseRow>({
-						sql: `SELECT id, source_identity_digest, issue_code, issue_class, entity_type,
+						sql: `SELECT reconciliation_case.id,
+							reconciliation_case.source_identity_digest, reconciliation_case.issue_code,
+							reconciliation_case.issue_class, reconciliation_case.entity_type,
 							entity_id, last_seen_import_run_id, last_seen_version_id, state,
-							resolution_kind, version
-							FROM legacy_reconciliation_cases
-							WHERE academic_period_id = ? AND source_kind = ? AND issue_code = ?
-								AND entity_type = ? AND entity_id = ?
-								AND source_identity_digest <> ?
-								AND state NOT IN ('resolved', 'superseded')
-							ORDER BY updated_at DESC LIMIT 1`,
+							resolution_kind, version, last_run.rowid AS last_seen_run_sequence
+							FROM legacy_reconciliation_cases AS reconciliation_case
+							JOIN import_runs AS last_run
+								ON last_run.id = reconciliation_case.last_seen_import_run_id
+							WHERE reconciliation_case.academic_period_id = ?
+								AND reconciliation_case.source_kind = ?
+								AND reconciliation_case.issue_code = ?
+								AND reconciliation_case.entity_type = ?
+								AND reconciliation_case.entity_id = ?
+								AND reconciliation_case.source_identity_digest <> ?
+								AND reconciliation_case.state NOT IN ('resolved', 'superseded')
+							ORDER BY reconciliation_case.updated_at DESC LIMIT 1`,
 						params: [
 							input.academicPeriodId,
 							input.sourceKind,
@@ -395,13 +431,25 @@ export class LegacyImportReconciliationRepository {
 		}
 
 		const active = await this.db.all<ReconciliationCaseRow>({
-			sql: `SELECT id, source_identity_digest, issue_code, issue_class, entity_type,
+			sql: `SELECT reconciliation_case.id, reconciliation_case.source_identity_digest,
+				reconciliation_case.issue_code, reconciliation_case.issue_class,
+				reconciliation_case.entity_type,
 				entity_id, last_seen_import_run_id, last_seen_version_id, state,
-				resolution_kind, version
-				FROM legacy_reconciliation_cases
-				WHERE academic_period_id = ? AND source_kind = ?
-					AND state = 'ready_to_verify' AND last_seen_import_run_id <> ?`,
-			params: [input.academicPeriodId, input.sourceKind, input.importRunId],
+				resolution_kind, version, last_run.rowid AS last_seen_run_sequence
+				FROM legacy_reconciliation_cases AS reconciliation_case
+				JOIN import_runs AS last_run
+					ON last_run.id = reconciliation_case.last_seen_import_run_id
+				WHERE reconciliation_case.academic_period_id = ?
+					AND reconciliation_case.source_kind = ?
+					AND reconciliation_case.state = 'ready_to_verify'
+					AND reconciliation_case.last_seen_import_run_id <> ?
+					AND last_run.rowid < ?`,
+			params: [
+				input.academicPeriodId,
+				input.sourceKind,
+				input.importRunId,
+				currentRun.run_sequence,
+			],
 		});
 		for (const candidate of active.results) {
 			if (
@@ -413,7 +461,14 @@ export class LegacyImportReconciliationRepository {
 		}
 	}
 
-	async releaseGate(academicPeriodId: string): Promise<ReconciliationGateSummary> {
+	async releaseGate(
+		academicPeriodId: string,
+		candidateVersions: ReadonlyArray<{
+			sourceKind: 'access' | 'plusbtext';
+			importRunId: string;
+			versionId: string;
+		}> = []
+	): Promise<ReconciliationGateSummary> {
 		const [rows, evidence] = await Promise.all([
 			this.db.all<{
 				issue_class: LegacyReconciliationIssueClass;
@@ -454,6 +509,44 @@ export class LegacyImportReconciliationRepository {
 			if (row.state === 'assigned') summary.assigned += row.count;
 			if (row.state === 'awaiting_upstream') summary.awaitingUpstream += row.count;
 			if (row.state === 'ready_to_verify') summary.readyToVerify += row.count;
+		}
+		if (candidateVersions.length > 0) {
+			const candidatePredicate = candidateVersions
+				.map(
+					() =>
+						'(reconciliation_case.source_kind = ? AND occurrence.import_run_id = ? AND occurrence.version_id = ?)'
+				)
+				.join(' OR ');
+			const candidateParams = candidateVersions.flatMap((candidate) => [
+				candidate.sourceKind,
+				candidate.importRunId,
+				candidate.versionId,
+			]);
+			const exact = await this.db.all<{
+				issue_class: LegacyReconciliationIssueClass;
+				count: number;
+			}>({
+				sql: `SELECT reconciliation_case.issue_class, COUNT(*) AS count
+					FROM legacy_reconciliation_occurrences AS occurrence
+					JOIN legacy_reconciliation_cases AS reconciliation_case
+						ON reconciliation_case.id = occurrence.case_id
+					WHERE reconciliation_case.academic_period_id = ?
+						AND reconciliation_case.blocks_release = 1
+						AND reconciliation_case.state IN ('resolved', 'superseded')
+						AND (${candidatePredicate})
+						AND NOT EXISTS (
+							SELECT 1 FROM legacy_reconciliation_valid_typed_resolutions AS valid
+							WHERE valid.case_id = occurrence.case_id
+								AND valid.source_import_run_id = occurrence.import_run_id
+								AND valid.source_version_id = occurrence.version_id
+						)
+					GROUP BY reconciliation_case.issue_class`,
+				params: [academicPeriodId, ...candidateParams],
+			});
+			for (const row of exact.results) {
+				summary.blocking += row.count;
+				summary.byClass[row.issue_class] += row.count;
+			}
 		}
 		summary.passed = summary.blocking === 0;
 		return summary;
@@ -648,13 +741,19 @@ export class LegacyImportReconciliationRepository {
 					resolution_kind = 'resolved_by_reimport', resolved_import_run_id = ?,
 					resolved_at = ?, updated_at = ?, version = version + 1
 					WHERE id = ? AND version = ? AND state = 'ready_to_verify'
-						AND last_seen_import_run_id <> ?`,
+						AND last_seen_import_run_id <> ?
+						AND EXISTS (
+							SELECT 1 FROM import_runs AS current_run
+							JOIN import_runs AS prior_run ON prior_run.id = last_seen_import_run_id
+							WHERE current_run.id = ? AND current_run.rowid > prior_run.rowid
+						)`,
 				params: [
 					input.importRunId,
 					input.now,
 					input.now,
 					input.caseRow.id,
 					input.caseRow.version,
+					input.importRunId,
 					input.importRunId,
 				],
 			},

@@ -413,18 +413,19 @@ case признан upstream error и не получает fuzzy mapping. Ше�
 duplicate buckets и остальные anomaly classes требуют штатного cross-import
 admin contour. Он нормативно зафиксирован как `IMPORT-08`/
 `AC-IMPORT-27`–`AC-IMPORT-31` в
-[отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md). Локальный continuation
-реализует migrations `0019`–`0020`, stable cross-run materialization/reimport
-evidence, typed version/case/pair-bound admin decisions, D1/repository
-generic-closure denial, atomic assignment/batch/supersede, PII-free queue/export
-и transactional release/registration gate с synthetic D1/security tests.
-Independent exact-SHA review commit `eb35a8c` выявил release-blocking identity,
-TOCTOU, evidence-binding и partial-commit defects; поэтому этот SHA получил
-NO-GO. Defects исправлены в текущем local worktree, включая migration `0020`, но
-remediation ещё не является новым immutable/reviewed candidate. PR-B17 остаётся
+[отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md). Exact `f7e75f9` реализовал
+migrations `0019`–`0020`, stable cross-run materialization/reimport evidence,
+typed decisions, atomic batch/supersede, PII-free queue/export и transactional
+period gate. Его authorized independent review вернул NO-GO с 3 BLOCKER,
+5 HIGH и 2 MEDIUM findings: exact candidate/current registration, old-run replay,
+classifier completeness, terminal recurrence, projection drift, atomic/live
+evidence, exact child/pair и full export были недостаточны. Текущий local
+worktree добавляет append-only migration `0021`, exact occurrence gates,
+immutable live evidence и соответствующие import/admin/projection/parser/export
+исправления, но ещё не является immutable/reviewed candidate. PR-B17 остаётся
 blocked. Remediation worktree прошёл полный local chain: check 0/0, Vitest
-65 files/491 tests, Chromium 18/18, build, docs 151 links/52 files + 105
-commands, scan 533/533 и diff check. До нового exact-SHA verification/re-review,
+66 files/509 tests, Chromium 18/18, build, audit 0, docs 151 links/52 files +
+105 commands и scan 535/535. До нового exact-SHA verification/re-review,
 independent admin cold-read, owner review текущих buckets и отдельного authorized
 preview rehearsal gate не закрыт. Этот local delta ничего не менял remote.
 
@@ -454,7 +455,7 @@ Tracked packet этапа:
 - [persistent handoff](handoffs/stage-13.md).
 
 Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed migrations
-`0014`–`0015`, local unapplied candidates `0016`–`0018`,
+`0014`–`0015`, local unapplied candidates `0016`–`0021`,
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
 покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются

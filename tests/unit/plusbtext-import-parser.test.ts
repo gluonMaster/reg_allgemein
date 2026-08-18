@@ -164,6 +164,22 @@ describe('PlusBText allowlisted parser', () => {
 		expect(new Set(durationIssues.map((entry) => entry.sourceRecordKey)).size).toBe(2);
 	});
 
+	it('keeps row-level issue identity stable when unrelated rows are inserted before it', async () => {
+		const target = { k: 'not-an-id', l: 'Stable Target', m: 'Teacher', n: 'Mo', t: '45' };
+		const baseline = await parsePlusBTextWorkbook(
+			createSyntheticPlusBTextWorkbook({ rows: [target] })
+		);
+		const shifted = await parsePlusBTextWorkbook(
+			createSyntheticPlusBTextWorkbook({
+				rows: [{ e: '77', f: 'Unrelated old group' }, target],
+			})
+		);
+		const sourceKey = (snapshot: Awaited<ReturnType<typeof parsePlusBTextWorkbook>>) =>
+			snapshot.issues.find((issue) => issue.code === 'PLUSB_K_TOKEN_INVALID')?.sourceRecordKey;
+		expect(sourceKey(baseline)).toEqual(sourceKey(shifted));
+		expect(sourceKey(baseline)).not.toContain(':row:');
+	});
+
 	it.each([
 		['encrypted/unsupported bytes', Buffer.from('not-a-zip'), 'PLUSB_CONTAINER_UNREADABLE'],
 		[

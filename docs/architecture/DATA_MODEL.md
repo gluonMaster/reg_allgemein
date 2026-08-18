@@ -300,9 +300,11 @@ terminal cases retained, а `(case_id, case_version_before)` допускает 
 
 Row-scoped parser issue обязан иметь детерминированный PII-free
 `source_record_key`; в частности, разные строки/поля PlusBText не используют
-общую aggregate identity. Duplicate Access evidence хранит только exact opaque
-pair `legacy_enrollment_id`, необходимую для проверки typed решения, без group
-label или исходной строки.
+общую aggregate identity. Identity PlusBText строится из allowlisted semantic
+row values и duplicate ordinal, а не из физического номера строки, поэтому
+вставка или перестановка соседних строк её не меняет. Duplicate Access evidence
+хранит только exact opaque pair `legacy_enrollment_id`, необходимую для проверки
+typed решения, без group label или исходной строки.
 
 Typed decisions, transition assertions и audit append-only. Actionable case не
 переходит terminal через generic `resolve|dismiss`; upstream correction закрывает
@@ -320,6 +322,16 @@ course mapping проверяет snapshot enrollment этой версии; chi
 current course assignments. Homogeneous multi-case mutation, а также создание
 successor и supersede predecessor выполняются одним D1 batch, поэтому stale CAS
 не оставляет частично применённый cohort.
+
+Append-only migration `0021_reconciliation_exact_candidate_evidence.sql`
+добавляет immutable `legacy_reconciliation_evidence_bindings` и live views для
+typed evidence. Binding, decision, case transition, audit и terminal assertion
+записываются одним D1 batch; assertion trigger повторно проверяет exact
+run/version, source row/family, mapping, correction или duplicate pair в момент
+commit. Snapshot families/source rows/enrollments становятся immutable после
+materialization reconciliation occurrence либо promotion. Отзыв или изменение
+current projection делает typed evidence невалидным для gate без переписывания
+истории решения.
 
 ### `legacy_import_release_plans`, `legacy_import_bundle_events`,
 
@@ -358,6 +370,13 @@ transactional release fence: D1 trigger на `promote` event проверяет 
 active blocking `legacy_reconciliation_cases` того же academic period внутри
 той же транзакции. Application pre-check остаётся ранней диагностикой, но не
 является единственной защитой от TOCTOU.
+
+Migration `0021` заменяет period-only promotion check exact-candidate fence:
+каждый blocking occurrence именно продвигаемых run/version обязан либо
+отсутствовать, либо иметь live valid typed resolution для того же case decision.
+Historical terminal case или clean replay другого run не освобождает candidate;
+параллельно сохраняется запрет любого active blocking case периода. Registration
+проверяет тем же правилом exact current Access и published PlusBText versions.
 
 Protected ignored recovery-evidence artifact не является D1 substitute или
 произвольным digest: он связывает exact environment/account/database/plan/review/

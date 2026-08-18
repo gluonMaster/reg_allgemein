@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from '$lib/server/auth/session';
 
 const mocks = vi.hoisted(() => ({
 	list: vi.fn(),
+	exportList: vi.fn(),
 	detail: vi.fn(),
 	mutate: vi.fn(),
 	batchMutate: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock('$lib/server/admin/runtime', () => ({
 	requestAdminConsoleRuntime: () => ({
 		reconciliation: {
 			list: mocks.list,
+			exportList: mocks.exportList,
 			detail: mocks.detail,
 			mutate: mocks.mutate,
 			batchMutate: mocks.batchMutate,
@@ -25,6 +27,7 @@ vi.mock('$lib/server/admin/runtime', () => ({
 }));
 
 import * as route from '../../src/routes/admin/import-reconciliation/+page.server';
+import * as exportRoute from '../../src/routes/admin/import-reconciliation/export.json/+server';
 
 const admin: AuthenticatedUser = {
 	id: 'reconciliation-route-admin',
@@ -62,6 +65,7 @@ describe('/admin/import-reconciliation mutation boundary', () => {
 	beforeEach(() => {
 		mocks.mutate.mockReset().mockResolvedValue({ replayed: false });
 		mocks.batchMutate.mockReset().mockResolvedValue(undefined);
+		mocks.exportList.mockReset().mockResolvedValue([]);
 	});
 
 	it('rejects anonymous, parent, missing CSRF, forged action and missing confirmation', async () => {
@@ -101,5 +105,45 @@ describe('/admin/import-reconciliation mutation boundary', () => {
 		const result = await route.actions.mutate(event({ user: admin, fields: valid }) as never);
 		expect(result).toMatchObject({ status: 409, data: { success: false } });
 		expect(JSON.stringify(result)).not.toContain('pii-canary@example.invalid');
+	});
+
+	it('exports every repository result for the current filters without PII fields', async () => {
+		mocks.exportList.mockResolvedValueOnce([
+			{
+				id: 'case-export-1',
+				periodCode: '2026-export',
+				sourceKind: 'access',
+				issueCode: 'ACCESS_EMAIL_INVALID',
+				issueClass: 'invalid_email',
+				state: 'awaiting_upstream',
+				firstImportRunId: 'run-export-first',
+				lastSeenImportRunId: 'run-export-last',
+				version: 2,
+			},
+		]);
+		const url = new URL(
+			'https://portal.example.test/admin/import-reconciliation/export.json?period=period-export&source=access&class=invalid_email&state=awaiting_upstream&assignee=admin-export&firstRun=run-export-first&lastRun=run-export-last&page=9'
+		);
+		const response = await exportRoute.GET({
+			url,
+			locals: { user: admin, requestId: 'export-request' },
+		} as never);
+		const payload = await response.json();
+		expect(mocks.exportList).toHaveBeenCalledWith({
+			periodId: 'period-export',
+			sourceKind: 'access',
+			issueClass: 'invalid_email',
+			state: 'awaiting_upstream',
+			assigneeId: 'admin-export',
+			firstSeenRunId: 'run-export-first',
+			lastSeenRunId: 'run-export-last',
+		});
+		expect(payload).toMatchObject({
+			contract: 'legacy-import-reconciliation-checklist:v2',
+			total: 1,
+			items: [{ caseId: 'case-export-1', issueCode: 'ACCESS_EMAIL_INVALID' }],
+		});
+		expect(JSON.stringify(payload)).not.toContain('pii-canary@example.invalid');
+		expect(response.headers.get('cache-control')).toBe('no-store');
 	});
 });

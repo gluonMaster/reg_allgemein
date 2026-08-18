@@ -54,7 +54,7 @@ export async function seedCurrentLegacySnapshot(input: {
 				 promoted_at, finished_at, rows_total, rows_staged, rows_promoted,
 				 rows_skipped, safe_summary_json, error_code, created_at, updated_at)
 			 VALUES (?, ?, ?, 'synthetic-claim-fixture', ?, 'synthetic-contract', 1, ?,
-				 '{}', ?, ?, 1, NULL, 'promoted', ?, ?, ?, ?, 1, 1, 1, 0, '{}', NULL, ?, ?)`,
+				 '{}', ?, ?, 1, NULL, 'validated', ?, ?, ?, ?, 1, 1, 1, 0, '{}', NULL, ?, ?)`,
 			run.id,
 			run.kind,
 			periodId,
@@ -314,6 +314,17 @@ export async function seedCurrentLegacySnapshot(input: {
 			);
 		}
 	}
+
+	// Build the immutable snapshot while its run is validated, then expose it as
+	// promoted only after every snapshot/projection row has been staged.
+	push(
+		`UPDATE import_runs
+		 SET status = 'promoted', updated_at = ?
+		 WHERE id IN (?, ?)`,
+		now,
+		plusRunId,
+		accessRunId
+	);
 
 	await input.db.batch(statements);
 	return { legacyVersionId, accessRunId, periodId };

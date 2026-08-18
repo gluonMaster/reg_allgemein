@@ -104,6 +104,12 @@ export class CabinetRepository {
 				WHERE child.owner_user_id = ? AND child.is_current = 1
 					AND legacy.is_current = 1 AND legacy.is_active_for_occupancy = 1
 					AND NOT EXISTS (
+						SELECT 1
+						FROM legacy_reconciliation_valid_typed_resolutions AS duplicate_resolution
+						WHERE duplicate_resolution.action = 'same_service_duplicate'
+							AND duplicate_resolution.peer_enrollment_id = legacy.id
+					)
+					AND NOT EXISTS (
 						SELECT 1 FROM enrollments AS represented
 						WHERE represented.id = legacy.represented_by_enrollment_id
 							AND represented.status = 'active'

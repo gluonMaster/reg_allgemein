@@ -96,18 +96,36 @@
 		return entityType === 'legacy_enrollment' ? '/admin/catalog' : null;
 	}
 
+	function exportHref(filters: PageData['filters']): string {
+		const params = new URLSearchParams();
+		for (const [name, value] of [
+			['period', filters.periodId],
+			['source', filters.sourceKind],
+			['class', filters.issueClass],
+			['state', filters.state],
+			['assignee', filters.assigneeId],
+			['firstRun', filters.firstSeenRunId],
+			['lastRun', filters.lastSeenRunId],
+		] as const) {
+			if (value) params.set(name, value);
+		}
+		const query = params.toString();
+		return `/admin/import-reconciliation/export.json${query ? `?${query}` : ''}`;
+	}
+
 	let selectedEntityLink = $derived(
 		data.selected
 			? entityLink(data.selected.item.entityType, data.selected.item.entityId)
 			: null
 	);
+	let exportUrl = $derived(exportHref(data.filters));
 </script>
 
 <section class="admin-section">
 	<h2>Import-Abgleich</h2>
 	<p>PII-freie Arbeitsliste für wiederkehrende Importprobleme und den Release-Gate.</p>
 	<p>
-		<a href="/admin/import-reconciliation/export.json"
+		<a href={exportUrl}
 			>PII-freie Upstream-Checkliste exportieren</a
 		>
 	</p>

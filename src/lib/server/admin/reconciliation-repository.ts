@@ -104,6 +104,20 @@ interface ReconciliationTransition {
 	state: LegacyReconciliationState;
 	assignedTo: string | null;
 	resolutionKind: string | null;
+	typedEvidence?: TypedEvidenceContext;
+}
+
+interface TypedEvidenceContext {
+	evidenceRefKind:
+		| 'course_source_mapping'
+		| 'family_claim'
+		| 'child_correction'
+		| 'family_reassignment'
+		| 'duplicate_pair';
+	evidenceRefId: string;
+	sourceRowId?: string;
+	anchorEnrollmentId?: string;
+	peerEnrollmentId?: string;
 }
 
 const PAGE_SIZE = 50;
@@ -203,6 +217,29 @@ function expiry(now: string): string {
 	return new Date(Date.parse(now) + 30 * 24 * 60 * 60 * 1000).toISOString();
 }
 
+function listPredicate(filters: Omit<ReconciliationListFilters, 'page'>): {
+	predicate: string;
+	params: unknown[];
+} {
+	const where: string[] = ['1 = 1'];
+	const params: unknown[] = [];
+	for (const [value, sql] of [
+		[filters.periodId, 'reconciliation_case.academic_period_id = ?'],
+		[filters.sourceKind, 'reconciliation_case.source_kind = ?'],
+		[filters.issueClass, 'reconciliation_case.issue_class = ?'],
+		[filters.state, 'reconciliation_case.state = ?'],
+		[filters.assigneeId, 'reconciliation_case.assigned_to = ?'],
+		[filters.firstSeenRunId, 'reconciliation_case.first_import_run_id = ?'],
+		[filters.lastSeenRunId, 'reconciliation_case.last_seen_import_run_id = ?'],
+	] as const) {
+		if (value) {
+			where.push(sql);
+			params.push(value);
+		}
+	}
+	return { predicate: where.join(' AND '), params };
+}
+
 export class LegacyReconciliationAdminRepository {
 	constructor(private readonly db: DatabaseBoundary) {}
 
@@ -213,23 +250,7 @@ export class LegacyReconciliationAdminRepository {
 		pageSize: number;
 		summary: Array<{ issueClass: string; state: string; count: number; blocking: number }>;
 	}> {
-		const where: string[] = ['1 = 1'];
-		const params: unknown[] = [];
-		for (const [value, sql] of [
-			[filters.periodId, 'reconciliation_case.academic_period_id = ?'],
-			[filters.sourceKind, 'reconciliation_case.source_kind = ?'],
-			[filters.issueClass, 'reconciliation_case.issue_class = ?'],
-			[filters.state, 'reconciliation_case.state = ?'],
-			[filters.assigneeId, 'reconciliation_case.assigned_to = ?'],
-			[filters.firstSeenRunId, 'reconciliation_case.first_import_run_id = ?'],
-			[filters.lastSeenRunId, 'reconciliation_case.last_seen_import_run_id = ?'],
-		] as const) {
-			if (value) {
-				where.push(sql);
-				params.push(value);
-			}
-		}
-		const predicate = where.join(' AND ');
+		const { predicate, params } = listPredicate(filters);
 		const [rows, count, summary] = await Promise.all([
 			this.db.all<CaseRow>({
 				sql: `SELECT reconciliation_case.id, reconciliation_case.academic_period_id,
@@ -280,6 +301,34 @@ export class LegacyReconciliationAdminRepository {
 				blocking: row.blocking,
 			})),
 		};
+	}
+
+	async exportList(
+		filters: Omit<ReconciliationListFilters, 'page'>
+	): Promise<ReconciliationCaseListItem[]> {
+		const { predicate, params } = listPredicate(filters);
+		const rows = await this.db.all<CaseRow>({
+			sql: `SELECT reconciliation_case.id, reconciliation_case.academic_period_id,
+				period.code AS period_code, reconciliation_case.source_kind,
+				reconciliation_case.source_identity_digest,
+				reconciliation_case.issue_code, reconciliation_case.issue_class,
+				reconciliation_case.entity_type, reconciliation_case.entity_id,
+				reconciliation_case.first_import_run_id,
+				reconciliation_case.last_seen_import_run_id,
+				reconciliation_case.last_seen_version_id, reconciliation_case.state,
+				reconciliation_case.blocks_release, reconciliation_case.resolution_kind,
+				reconciliation_case.assigned_to, reconciliation_case.updated_at,
+				reconciliation_case.version
+				FROM legacy_reconciliation_cases AS reconciliation_case
+				JOIN academic_periods AS period ON period.id = reconciliation_case.academic_period_id
+				WHERE ${predicate}
+				ORDER BY reconciliation_case.blocks_release DESC,
+					CASE reconciliation_case.state WHEN 'open' THEN 0 WHEN 'assigned' THEN 1
+						WHEN 'awaiting_upstream' THEN 2 WHEN 'ready_to_verify' THEN 3 ELSE 4 END,
+					reconciliation_case.updated_at DESC, reconciliation_case.id`,
+			params,
+		});
+		return rows.results.map(mapCase);
 	}
 
 	async detail(caseId: string): Promise<{
@@ -468,7 +517,7 @@ export class LegacyReconciliationAdminRepository {
 			targetType: input.targetType ?? null,
 			targetId: input.targetId ?? null,
 		});
-		return [
+		const statements: StatementSpec[] = [
 			{
 				sql: `INSERT INTO idempotency_records
 					(id, scope, key_hash, request_hash, result_ref, status,
@@ -512,6 +561,34 @@ export class LegacyReconciliationAdminRepository {
 					input.now,
 				],
 			},
+			...(transition.typedEvidence
+				? [
+						{
+							sql: `INSERT INTO legacy_reconciliation_evidence_bindings
+								(decision_id, case_id, case_version, action, evidence_ref_kind,
+								 evidence_ref_id, target_type, target_id, source_import_run_id,
+								 source_version_id, source_row_id, anchor_enrollment_id,
+								 peer_enrollment_id, created_at)
+							VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+							params: [
+								decisionId,
+								row.id,
+								row.version + 1,
+								input.action,
+								transition.typedEvidence.evidenceRefKind,
+								transition.typedEvidence.evidenceRefId,
+								input.targetType!,
+								input.targetId!,
+								row.last_seen_import_run_id,
+								row.last_seen_version_id,
+								transition.typedEvidence.sourceRowId ?? null,
+								transition.typedEvidence.anchorEnrollmentId ?? null,
+								transition.typedEvidence.peerEnrollmentId ?? null,
+								input.now,
+							],
+						} satisfies StatementSpec,
+					]
+				: []),
 			{
 				sql: `UPDATE legacy_reconciliation_cases SET state = ?, assigned_to = ?,
 					resolution_kind = ?, resolved_import_run_id = NULL, resolved_at = ?,
@@ -581,6 +658,7 @@ export class LegacyReconciliationAdminRepository {
 				],
 			},
 		];
+		return statements;
 	}
 
 	private async transitionFor(
@@ -624,11 +702,12 @@ export class LegacyReconciliationAdminRepository {
 			throw new AdminConsoleError('RECONCILIATION_ACTION_NOT_ALLOWED');
 		}
 
-		await this.assertTypedEvidence(row, input);
+		const typedEvidence = await this.assertTypedEvidence(row, input);
 		return {
 			state: 'resolved',
 			assignedTo: null,
 			resolutionKind: input.action,
+			typedEvidence,
 		};
 	}
 
@@ -639,12 +718,11 @@ export class LegacyReconciliationAdminRepository {
 			targetType?: ReconciliationEvidenceTargetType;
 			targetId?: string;
 		}
-	): Promise<void> {
-		if (input.action === 'same_service_duplicate') return;
+	): Promise<TypedEvidenceContext> {
 		if (!input.targetType || !input.targetId) {
 			throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_REQUIRED');
 		}
-		let evidence: { id: string } | null = null;
+		let evidence: TypedEvidenceContext | null = null;
 		if (input.action === 'exact_catalog_mapping') {
 			if (
 				!EXACT_CATALOG_MAPPING_CODES.has(row.issue_code) ||
@@ -654,8 +732,8 @@ export class LegacyReconciliationAdminRepository {
 			) {
 				throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_MISMATCH');
 			}
-			evidence = await this.db.first<{ id: string }>({
-				sql: `SELECT snapshot.id FROM legacy_snapshot_enrollments AS snapshot
+			const rowEvidence = await this.db.first<{ id: string }>({
+				sql: `SELECT mapping.id FROM legacy_snapshot_enrollments AS snapshot
 					JOIN course_source_mappings AS mapping
 						ON mapping.academic_period_id = ?
 						AND mapping.course_group_id = ?
@@ -670,6 +748,9 @@ export class LegacyReconciliationAdminRepository {
 					row.entity_id,
 				],
 			});
+			if (rowEvidence) {
+				evidence = { evidenceRefKind: 'course_source_mapping', evidenceRefId: rowEvidence.id };
+			}
 		} else if (input.action === 'verified_portal_family_link') {
 			if (
 				input.targetType !== 'user' ||
@@ -678,13 +759,16 @@ export class LegacyReconciliationAdminRepository {
 			) {
 				throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_MISMATCH');
 			}
-			evidence = await this.db.first<{ id: string }>({
-				sql: `SELECT family.id FROM legacy_families AS family
+			const rowEvidence = await this.db.first<{ id: string }>({
+				sql: `SELECT claim.id FROM legacy_families AS family
 					JOIN family_claims AS claim ON claim.legacy_family_id = family.id
 						AND claim.user_id = ? AND claim.status = 'claimed'
 					WHERE family.id = ? AND family.claimed_by_user_id = ?`,
 				params: [input.targetId, row.entity_id, input.targetId],
 			});
+			if (rowEvidence) {
+				evidence = { evidenceRefKind: 'family_claim', evidenceRefId: rowEvidence.id };
+			}
 		} else if (input.action === 'typed_child_correction') {
 			if (
 				input.targetType !== 'legacy_child' ||
@@ -694,8 +778,12 @@ export class LegacyReconciliationAdminRepository {
 			) {
 				throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_MISMATCH');
 			}
-			const candidates = await this.db.all<{ id: string; source_record_key: string }>({
-				sql: `SELECT correction.child_id AS id, source.source_record_key
+			const candidates = await this.db.all<{
+				id: string;
+				source_row_id: string;
+				source_record_key: string;
+			}>({
+				sql: `SELECT correction.id, source.id AS source_row_id, source.source_record_key
 					FROM child_correction_requests AS correction
 					JOIN audit_events AS audit ON audit.target_kind = 'child_correction'
 						AND audit.target_id = correction.id
@@ -707,7 +795,9 @@ export class LegacyReconciliationAdminRepository {
 					JOIN legacy_snapshot_source_rows AS source
 						ON source.legacy_version_id = family.legacy_version_id
 						AND source.stable_family_key = family.stable_family_key
-					WHERE correction.child_id = ? AND correction.status = 'approved'`,
+					WHERE correction.child_id = ? AND correction.status = 'approved'
+						AND trim(CAST(json_extract(source.source_values_json, '$.Value4') AS TEXT))
+							IN (trim(child.source_full_name), trim(correction.requested_full_name))`,
 				params: [
 					row.entity_id,
 					row.last_seen_version_id,
@@ -722,7 +812,11 @@ export class LegacyReconciliationAdminRepository {
 					sourceRecordKey: candidate.source_record_key,
 				});
 				if (digest === row.source_identity_digest) {
-					evidence = { id: candidate.id };
+					evidence = {
+						evidenceRefKind: 'child_correction',
+						evidenceRefId: candidate.id,
+						sourceRowId: candidate.source_row_id,
+					};
 					break;
 				}
 			}
@@ -730,7 +824,7 @@ export class LegacyReconciliationAdminRepository {
 			if (input.targetType !== 'family_reassignment' || !row.entity_id) {
 				throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_MISMATCH');
 			}
-			evidence = await this.db.first<{ id: string }>({
+			const rowEvidence = await this.db.first<{ id: string }>({
 				sql: `SELECT reassignment.id FROM family_reassignments AS reassignment
 					JOIN legacy_families AS family ON family.id = ?
 					JOIN audit_events AS audit ON audit.target_kind = 'family_reassignment'
@@ -741,7 +835,16 @@ export class LegacyReconciliationAdminRepository {
 							(reassignment.from_family_number_id, reassignment.to_family_number_id)`,
 				params: [row.entity_id, input.targetId],
 			});
-		} else if (input.action === 'distinct_service_proven') {
+			if (rowEvidence) {
+				evidence = {
+					evidenceRefKind: 'family_reassignment',
+					evidenceRefId: rowEvidence.id,
+				};
+			}
+		} else if (
+			input.action === 'same_service_duplicate' ||
+			input.action === 'distinct_service_proven'
+		) {
 			if (
 				input.targetType !== 'legacy_enrollment' ||
 				row.issue_code !== 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS' ||
@@ -780,15 +883,9 @@ export class LegacyReconciliationAdminRepository {
 			) {
 				throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_MISMATCH');
 			}
-			evidence = await this.db.first<{ id: string }>({
-				sql: `SELECT duplicate.legacy_enrollment_id AS id
-					FROM legacy_snapshot_enrollments AS anchor
-					JOIN legacy_snapshot_enrollments AS duplicate
-						ON duplicate.legacy_version_id = anchor.legacy_version_id
-						AND duplicate.source_child_key = anchor.source_child_key
-						AND duplicate.group_name_normalized = anchor.group_name_normalized
-						AND duplicate.legacy_enrollment_id <> anchor.legacy_enrollment_id
-					JOIN legacy_enrollments AS anchor_current
+			const distinctCoursePredicate =
+				input.action === 'distinct_service_proven'
+					? `JOIN legacy_enrollments AS anchor_current
 						ON anchor_current.id = anchor.legacy_enrollment_id
 						AND anchor_current.is_current = 1
 					JOIN legacy_enrollments AS duplicate_current
@@ -801,20 +898,42 @@ export class LegacyReconciliationAdminRepository {
 					JOIN course_groups AS duplicate_course
 						ON duplicate_course.id = duplicate_current.course_group_id
 						AND duplicate_course.academic_period_id = ?
-						AND duplicate_course.catalog_status IN ('published', 'needs_review')
+						AND duplicate_course.catalog_status IN ('published', 'needs_review')`
+					: '';
+			const rowEvidence = await this.db.first<{ id: string }>({
+				sql: `SELECT duplicate.legacy_enrollment_id AS id
+					FROM legacy_snapshot_enrollments AS anchor
+					JOIN legacy_snapshot_enrollments AS duplicate
+						ON duplicate.legacy_version_id = anchor.legacy_version_id
+						AND duplicate.source_child_key = anchor.source_child_key
+						AND duplicate.group_name_normalized = anchor.group_name_normalized
+						AND duplicate.legacy_enrollment_id <> anchor.legacy_enrollment_id
+					${distinctCoursePredicate}
 					WHERE anchor.legacy_version_id = ? AND anchor.legacy_enrollment_id = ?
 						AND duplicate.legacy_enrollment_id = ?
-						AND anchor_course.id <> duplicate_course.id`,
-				params: [
-					row.academic_period_id,
-					row.academic_period_id,
-					row.last_seen_version_id,
-					row.entity_id,
-					input.targetId,
-				],
+						${input.action === 'distinct_service_proven' ? 'AND anchor_course.id <> duplicate_course.id' : ''}`,
+				params:
+					input.action === 'distinct_service_proven'
+						? [
+								row.academic_period_id,
+								row.academic_period_id,
+								row.last_seen_version_id,
+								row.entity_id,
+								input.targetId,
+							]
+						: [row.last_seen_version_id, row.entity_id, input.targetId],
 			});
+			if (rowEvidence) {
+				evidence = {
+					evidenceRefKind: 'duplicate_pair',
+					evidenceRefId: rowEvidence.id,
+					anchorEnrollmentId: row.entity_id,
+					peerEnrollmentId: input.targetId,
+				};
+			}
 		}
 		if (!evidence) throw new AdminConsoleError('RECONCILIATION_TYPED_EVIDENCE_MISMATCH');
+		return evidence;
 	}
 
 	private async mutationContext(input: {

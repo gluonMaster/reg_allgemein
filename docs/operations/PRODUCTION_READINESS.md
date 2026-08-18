@@ -216,21 +216,20 @@ unresolved group подтверждён как upstream error и остаётс�
 reconciliation contour из tracked TZ теперь реализован локально migration
 `0019`, stable cases/occurrences, typed admin repository/routes/UI,
 PII-minimized export и release/registration gate. Fresh post-commit exact-SHA
-verification прошла 2026-08-18, но authorized independent review вернул NO-GO:
-row identity, promotion TOCTOU, typed evidence binding и multi-case atomicity
-были недостаточны. Commit `4c1c78d4aa7e4eceeb0facdc79feedce38b8a7f0`
-закрывает эти findings и добавляет append-only migration `0020` с
-transactional promotion fence, но его fresh post-commit chain не прошёл:
-один двухпериодный D1 test воспроизводимо занял около 25 секунд при общем
-15-секундном лимите. Current worktree меняет только индивидуальный timeout
-этого теста на 45 секунд. На нём полный chain прошёл: check 0/0, Vitest 65
-files/491 tests, Chromium 18/18, build, docs 151 links/52 files + 105 commands,
-scan 533/533 и diff check. Dirty worktree не создаёт immutable evidence.
-Новый commit, fresh exact-SHA verification, independent re-review, admin
-cold-read, owner decisions и authorized preview rehearsal отсутствуют; поэтому
-PR-B17 остаётся blocked.
+verification прошла 2026-08-18. Authorized independent review exact
+`f7e75f9b6281c44b3152c65061ab974e87153f09` вернул NO-GO с 3 BLOCKER, 5 HIGH и
+2 MEDIUM: exact candidate/current registration и old-run replay gates,
+classifier completeness, terminal recurrence, mapping projection drift,
+atomic/live typed evidence, exact child/duplicate semantics и full export были
+недостаточны. Current uncommitted worktree закрывает findings append-only
+migration `0021` и изменениями import/admin/family/cabinet/pricing/parser/export.
+Полный local chain прошёл: check 0/0, Vitest 66 files/509 tests, Chromium 18/18,
+build, production audit 0, docs 151 links/52 files + 105 commands и scan 535/535.
+Но worktree ещё не является immutable exact-SHA evidence и не имеет нового
+independent review; admin cold-read, owner decisions и authorized preview
+rehearsal также отсутствуют. Поэтому PR-B17 остаётся blocked.
 
-Это не меняет deployed preview `0001`–`0015`; local `0016`–`0020` остаются
+Это не меняет deployed preview `0001`–`0015`; local `0016`–`0021` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или
 PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
 

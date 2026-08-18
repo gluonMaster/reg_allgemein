@@ -532,12 +532,18 @@ export async function parsePlusBTextWorkbook(input: Buffer): Promise<PlusBTextIm
 	const issues: ImportIssueDraft[] = [];
 	const oldWork: Array<Omit<PlusBTextOldGroupDraft, 'storageKey' | 'recordHashSha256'>> = [];
 	const targetWork: Array<Omit<PlusBTextTargetDraft, 'storageKey' | 'recordHashSha256'>> = [];
+	const semanticIssueKeyByRow = new Map<number, string>();
+	const semanticRowOccurrences = new Map<string, number>();
 	for (let index = 1; index < rows.length; index += 1) {
 		const sourceRowNumber = index + 1;
 		const row = rows[index] ?? [];
 		const values = Object.fromEntries(
 			ALLOWLIST.map((column) => [column, cellText(row[columnNumber(column) - 1])])
 		) as Record<AllowlistedColumn, string>;
+		const semanticDigest = await hashCanonical({ sheet: SHEET_NAME, values });
+		const semanticOccurrence = (semanticRowOccurrences.get(semanticDigest) ?? 0) + 1;
+		semanticRowOccurrences.set(semanticDigest, semanticOccurrence);
+		semanticIssueKeyByRow.set(sourceRowNumber, `${semanticDigest}:${semanticOccurrence}`);
 
 		if (values.E || values.F) {
 			const oldGroupId = parsePositiveInteger(values.E);
@@ -653,6 +659,16 @@ export async function parsePlusBTextWorkbook(input: Buffer): Promise<PlusBTextIm
 		);
 	if ([...targetNameCounts.values()].some((count) => count > 1))
 		issues.push(issue({ code: 'PLUSB_TARGET_NAME_DUPLICATE' }));
+
+	for (const importIssue of issues) {
+		const physicalKey = /^plusbtext:PlusBText:row:(\d+):field:(.+)$/u.exec(
+			importIssue.sourceRecordKey ?? ''
+		);
+		if (!physicalKey) continue;
+		const semanticKey = semanticIssueKeyByRow.get(Number(physicalKey[1]));
+		if (!semanticKey) continue;
+		importIssue.sourceRecordKey = `plusbtext:${SHEET_NAME}:record:${semanticKey}:field:${physicalKey[2]}`;
+	}
 
 	const oldOrdinals = duplicateOrdinals(oldWork, (old) =>
 		JSON.stringify([old.oldGroupId, old.groupNameNormalized])

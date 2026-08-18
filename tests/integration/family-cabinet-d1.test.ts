@@ -716,6 +716,83 @@ describe('stage 06 atomic family claim and parent cabinet', () => {
 		});
 	});
 
+	it('blocks registration against an exact published occurrence closed only by another import', async () => {
+		const snapshot = await seedCurrentLegacySnapshot({
+			db: context.db,
+			families: [
+				{
+					sequence: 4199,
+					emails: ['exact.blocked@example.test'],
+					childName: 'Blocked Child',
+					groupName: 'Blocked Group',
+				},
+			],
+		});
+		await context.db.batch([
+			context.db
+				.prepare(
+					`INSERT INTO import_issues
+						(id, import_run_id, severity, code, source_record_key,
+						 safe_context_json, status, created_at)
+					 VALUES ('registration-exact-issue', ?, 'warning', 'ACCESS_EMAIL_INVALID',
+						 'access:registration:exact', '{}', 'open', ?)`
+				)
+				.bind(snapshot.accessRunId, currentTime),
+			context.db
+				.prepare(
+					`INSERT INTO legacy_reconciliation_cases
+						(id, academic_period_id, source_kind, source_identity_digest,
+						 issue_code, issue_class, entity_type, entity_id,
+						 first_import_run_id, last_seen_import_run_id, last_seen_version_id,
+						 state, blocks_release, resolution_kind, resolved_import_run_id,
+						 created_at, updated_at, resolved_at, version)
+					 VALUES ('registration-exact-case', ?, 'access', ?, 'ACCESS_EMAIL_INVALID',
+						 'invalid_email', 'source_record', NULL, ?, ?, ?, 'resolved', 1,
+						 'resolved_by_reimport', ?, ?, ?, ?, 2)`
+				)
+				.bind(
+					snapshot.periodId,
+					'a'.repeat(64),
+					snapshot.accessRunId,
+					snapshot.accessRunId,
+					snapshot.legacyVersionId,
+					snapshot.accessRunId,
+					currentTime,
+					currentTime,
+					currentTime
+				),
+			context.db
+				.prepare(
+					`INSERT INTO legacy_reconciliation_occurrences
+						(id, case_id, import_issue_id, import_run_id, version_id,
+						 evidence_digest_sha256, created_at)
+					 VALUES ('registration-exact-occurrence', 'registration-exact-case',
+						 'registration-exact-issue', ?, ?, ?, ?)`
+				)
+				.bind(snapshot.accessRunId, snapshot.legacyVersionId, 'b'.repeat(64), currentTime),
+		]);
+		await register({
+			email: 'exact.blocked@example.test',
+			requestId: 'registration-exact-blocked-register',
+		});
+		const token = await nextToken('/auth/verify', 'exact.blocked@example.test');
+		await expect(
+			authService.verifyEmail({
+				token,
+				requestId: 'registration-exact-blocked-verify',
+				requestSubject: 'registration-exact-blocked-verify',
+			})
+		).rejects.toThrow(/assertion_passed/);
+		expect(
+			await context.db
+				.prepare(
+					`SELECT email_verified_at, family_number_id FROM users
+					 WHERE email_normalized = 'exact.blocked@example.test'`
+				)
+				.first()
+		).toEqual({ email_verified_at: null, family_number_id: null });
+	}, 45_000);
+
 	it('enforces owner-scoped child writes, duplicate confirmation, correction overrides, and payment summaries', async () => {
 		const seeded = await seedCurrentLegacySnapshot({
 			db: context.db,

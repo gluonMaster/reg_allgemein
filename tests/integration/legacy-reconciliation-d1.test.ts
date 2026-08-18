@@ -2,6 +2,8 @@ import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
 import { AdminMutationRepository } from '$lib/server/admin/mutation-repository';
 import { LegacyReconciliationAdminRepository } from '$lib/server/admin/reconciliation-repository';
 import { LegacyImportReconciliationRepository } from '$lib/server/import/reconciliation';
+import { CabinetRepository } from '$lib/server/cabinet/cabinet-repository';
+import { PricingRepository } from '$lib/server/pricing/pricing-repository';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
@@ -82,10 +84,16 @@ async function insertAdmin(db: D1Database, id: string): Promise<void> {
 
 async function insertRun(
 	db: D1Database,
-	input: { runId: string; versionId: string; marker: string }
+	input: {
+		runId: string;
+		versionId: string;
+		marker: string;
+		periodId?: string;
+		insertVersion?: boolean;
+	}
 ) {
 	const digest = input.marker.repeat(64);
-	await db.batch([
+	const statements = [
 		db
 			.prepare(
 				`INSERT INTO import_runs
@@ -97,16 +105,37 @@ async function insertRun(
 				 VALUES (?, 'access', ?, 'synthetic-redacted', ?, 'access-synthetic', 1, ?,
 					 '{}', ?, ?, 1, 'validated', ?, ?, 1, 1, '{}', ?, ?)`
 			)
-			.bind(input.runId, PERIOD_ID, digest, digest, digest, digest, NOW, NOW, NOW, NOW),
-		db
-			.prepare(
+			.bind(
+				input.runId,
+				input.periodId ?? PERIOD_ID,
+				digest,
+				digest,
+				digest,
+				digest,
+				NOW,
+				NOW,
+				NOW,
+				NOW
+			),
+	];
+	if (input.insertVersion !== false) {
+		statements.push(
+			db.prepare(
 				`INSERT INTO legacy_versions
 					(id, academic_period_id, import_run_id, plusbtext_version_id,
 					 version_hash_sha256, created_at)
 				 VALUES (?, ?, ?, ?, ?, ?)`
+			).bind(
+				input.versionId,
+				input.periodId ?? PERIOD_ID,
+				input.runId,
+				PLUS_VERSION_ID,
+				digest,
+				NOW
 			)
-			.bind(input.versionId, PERIOD_ID, input.runId, PLUS_VERSION_ID, digest, NOW),
-	]);
+		);
+	}
+	await db.batch(statements);
 }
 
 async function insertIssue(
@@ -517,20 +546,18 @@ describe('legacy import reconciliation in D1', () => {
 			})
 		).rejects.toMatchObject({ code: 'RECONCILIATION_BATCH_COHORT_MISMATCH' });
 
-		await adminRepository.mutate({
-			actor,
-			caseId: duplicateCase.id,
-			expectedVersion: duplicateCase.version,
-			action: 'same_service_duplicate',
-			reasonCode: 'same_service_confirmed',
-			idempotencyKey: 'reconciliation-duplicate-same-service',
-			requestId: 'request-reconciliation-duplicate-same-service',
-			now: instant(14),
-		});
-		expect((await adminRepository.detail(duplicateCase.id)).item).toMatchObject({
-			state: 'resolved',
-			resolutionKind: 'same_service_duplicate',
-		});
+		await expect(
+			adminRepository.mutate({
+				actor,
+				caseId: duplicateCase.id,
+				expectedVersion: duplicateCase.version,
+				action: 'same_service_duplicate',
+				reasonCode: 'same_service_confirmed',
+				idempotencyKey: 'reconciliation-duplicate-same-service',
+				requestId: 'request-reconciliation-duplicate-same-service',
+				now: instant(14),
+			})
+		).rejects.toMatchObject({ code: 'RECONCILIATION_TYPED_EVIDENCE_REQUIRED' });
 		await expect(
 			adminRepository.mutate({
 				actor,
@@ -547,19 +574,24 @@ describe('legacy import reconciliation in D1', () => {
 		).rejects.toMatchObject({ code: 'RECONCILIATION_TYPED_EVIDENCE_MISMATCH' });
 	});
 
-	it('materializes separate row-level PlusBText cases and scopes the summary filters', async () => {
-		await insertIssue(context.db, {
-			issueId: 'issue-plus-duration-row-2',
-			runId: PLUS_RUN_ID,
-			sourceKey: 'plusbtext:PlusBText:row:2:field:T',
-			code: 'PLUSB_DURATION_MISSING',
-		});
-		await insertIssue(context.db, {
-			issueId: 'issue-plus-duration-row-3',
-			runId: PLUS_RUN_ID,
-			sourceKey: 'plusbtext:PlusBText:row:3:field:T',
-			code: 'PLUSB_DURATION_MISSING',
-		});
+	it('materializes separate row-level PlusBText cases and exports beyond one filtered page', async () => {
+		await context.db.batch(
+			Array.from({ length: 55 }, (_, index) =>
+				context.db
+					.prepare(
+						`INSERT INTO import_issues
+							(id, import_run_id, severity, code, source_record_key,
+							 safe_context_json, status, created_at)
+						 VALUES (?, ?, 'warning', 'PLUSB_DURATION_MISSING', ?, '{}', 'open', ?)`
+					)
+					.bind(
+						`issue-plus-duration-${index}`,
+						PLUS_RUN_ID,
+						`plusbtext:PlusBText:record:${index}:field:T`,
+						instant(16)
+					)
+			)
+		);
 		await new LegacyImportReconciliationRepository(db).reconcileValidatedImport({
 			academicPeriodId: PERIOD_ID,
 			sourceKind: 'plusbtext',
@@ -568,18 +600,22 @@ describe('legacy import reconciliation in D1', () => {
 			now: instant(16),
 		});
 
-		const queue = await new LegacyReconciliationAdminRepository(db).list({
+		const adminRepository = new LegacyReconciliationAdminRepository(db);
+		const queue = await adminRepository.list({
 			sourceKind: 'plusbtext',
 			page: 1,
 		});
 		expect(queue.items.filter((item) => item.issueCode === 'PLUSB_DURATION_MISSING')).toHaveLength(
-			2
+			50
 		);
-		expect(queue.total).toBe(2);
+		expect(queue.total).toBe(55);
 		expect(queue.summary).toEqual([
-			expect.objectContaining({ issueClass: 'duration', state: 'open', count: 2, blocking: 2 }),
+			expect.objectContaining({ issueClass: 'duration', state: 'open', count: 55, blocking: 55 }),
 		]);
-	});
+		const exported = await adminRepository.exportList({ sourceKind: 'plusbtext' });
+		expect(exported).toHaveLength(55);
+		expect(exported.every((item) => item.issueCode === 'PLUSB_DURATION_MISSING')).toBe(true);
+	}, 45_000);
 
 	it('enforces the reconciliation release fence inside the promotion transaction', async () => {
 		await expect(
@@ -678,6 +714,14 @@ describe('legacy import reconciliation in D1', () => {
 		).items;
 		const mappingCase = cases.find((item) => item.issueCode === 'PLUSB_ENRICHMENT_UNRESOLVED')!;
 		const statusCase = cases.find((item) => item.issueCode === 'ACCESS_STATUS_NEEDS_REVIEW')!;
+		await expect(
+			context.db
+				.prepare(
+					`UPDATE legacy_snapshot_enrollments SET group_name_normalized = 'tampered'
+					 WHERE id = 'snapshot-mapping-current'`
+				)
+				.run()
+		).rejects.toThrow(/validated legacy snapshot is immutable/);
 
 		await expect(
 			adminRepository.mutate({
@@ -693,6 +737,39 @@ describe('legacy import reconciliation in D1', () => {
 				now: instant(19),
 			})
 		).rejects.toMatchObject({ code: 'RECONCILIATION_ACTION_NOT_ALLOWED' });
+		const racingRepository = new LegacyReconciliationAdminRepository(
+			new BeforeBatchDatabaseBoundary(context.db, async () => {
+				await context.db
+					.prepare(
+						`UPDATE course_source_mappings SET status = 'rejected', updated_at = ?
+						 WHERE id = 'mapping-version-bound'`
+					)
+					.bind(instant(19))
+					.run();
+			})
+		);
+		await expect(
+			racingRepository.mutate({
+				actor: adminActor(),
+				caseId: mappingCase.id,
+				expectedVersion: mappingCase.version,
+				action: 'exact_catalog_mapping',
+				reasonCode: 'exact_mapping_confirmed',
+				targetType: 'course_group',
+				targetId: 'course-mapping-version-bound',
+				idempotencyKey: 'mapping-version-race-denied',
+				requestId: 'request-mapping-version-race-denied',
+				now: instant(19),
+			})
+		).rejects.toThrow(/typed evidence invalid/);
+		expect((await adminRepository.detail(mappingCase.id)).item.state).toBe('open');
+		await context.db
+			.prepare(
+				`UPDATE course_source_mappings SET status = 'confirmed', updated_at = ?
+				 WHERE id = 'mapping-version-bound'`
+			)
+			.bind(instant(19))
+			.run();
 		await adminRepository.mutate({
 			actor: adminActor(),
 			caseId: mappingCase.id,
@@ -709,6 +786,31 @@ describe('legacy import reconciliation in D1', () => {
 			state: 'resolved',
 			resolutionKind: 'exact_catalog_mapping',
 		});
+		expect(
+			await context.db
+				.prepare(
+					`SELECT COUNT(*) AS count
+					 FROM legacy_reconciliation_valid_typed_resolutions WHERE case_id = ?`
+				)
+				.bind(mappingCase.id)
+				.first()
+		).toEqual({ count: 1 });
+		await context.db
+			.prepare(
+				`UPDATE course_source_mappings SET status = 'rejected', updated_at = ?
+				 WHERE id = 'mapping-version-bound'`
+			)
+			.bind(instant(20))
+			.run();
+		expect(
+			await context.db
+				.prepare(
+					`SELECT COUNT(*) AS count
+					 FROM legacy_reconciliation_valid_typed_resolutions WHERE case_id = ?`
+				)
+				.bind(mappingCase.id)
+				.first()
+		).toEqual({ count: 0 });
 	});
 
 	it('binds child correction evidence to the exact source row family and version', async () => {
@@ -753,11 +855,13 @@ describe('legacy import reconciliation in D1', () => {
 					.prepare(
 						`INSERT INTO children
 							(id, legacy_family_id, family_number_id, origin, source_child_key,
-							 source_full_name, source_full_name_normalized, source_birth_date,
-							 full_name, full_name_normalized, birth_date, last_seen_run_id,
-							 is_current, created_at, updated_at)
-						 VALUES (?, ?, ?, 'legacy', ?, 'Synthetic Child', 'synthetic child',
-							 '2015-01-01', 'Synthetic Child', 'synthetic child', '2015-01-01',
+						 source_full_name, source_full_name_normalized, source_birth_date,
+						 full_name_override, birth_date_override,
+						 full_name, full_name_normalized, birth_date, last_seen_run_id,
+						 is_current, created_at, updated_at)
+					 VALUES (?, ?, ?, 'legacy', ?, 'Synthetic Child', 'synthetic child',
+						 '2015-01-01', 'Synthetic Child', '2015-01-01',
+						 'Synthetic Child', 'synthetic child', '2015-01-01',
 							 'run-reconciliation-child-link', 1, ?, ?)`
 					)
 					.bind(
@@ -787,7 +891,8 @@ describe('legacy import reconciliation in D1', () => {
 						 source_access_id, source_record_key, stable_family_key, source_child_key,
 						 source_hash_sha256, source_values_json, created_at)
 					 VALUES ('snapshot-source-child-a', ?, 'snapshot-source-child-a', 'legacy_1',
-						 601, 'access:child-link:a', 'stable-family-child-a', NULL, ?, '{}', ?)`
+						 601, 'access:child-link:a', 'stable-family-child-a', NULL, ?,
+						 '{"Value4":"Synthetic Child"}', ?)`
 				)
 				.bind('version-reconciliation-child-link', '8'.repeat(64), instant(20)),
 			...['a', 'b'].flatMap((suffix) => [
@@ -824,6 +929,44 @@ describe('legacy import reconciliation in D1', () => {
 					),
 			]),
 		]);
+		await context.db.batch([
+			context.db
+				.prepare(
+					`INSERT INTO children
+						(id, legacy_family_id, family_number_id, origin, source_child_key,
+						 source_full_name, source_full_name_normalized, source_birth_date,
+						 full_name_override, birth_date_override, full_name,
+						 full_name_normalized, birth_date, last_seen_run_id, is_current,
+						 created_at, updated_at)
+					 VALUES ('legacy-child-link-sibling', 'legacy-family-child-a',
+						 'family-number-child-a', 'legacy', 'source-child-link-sibling',
+						 'Other Child', 'other child', '2016-02-02', 'Other Child',
+						 '2016-02-02', 'Other Child', 'other child', '2016-02-02',
+						 'run-reconciliation-child-link', 1, ?, ?)`
+				)
+				.bind(instant(20), instant(20)),
+			context.db
+				.prepare(
+					`INSERT INTO child_correction_requests
+						(id, child_id, requested_by, requested_full_name,
+						 requested_full_name_normalized, requested_birth_date, status,
+						 reviewed_by, reviewed_at, decision_reason, created_at, updated_at)
+					 VALUES ('child-correction-link-sibling', 'legacy-child-link-sibling',
+						 'reconciliation-admin-a', 'Other Child', 'other child', '2016-02-02',
+						 'approved', 'reconciliation-admin-a', ?, 'synthetic approval', ?, ?)`
+				)
+				.bind(instant(20), instant(20), instant(20)),
+			context.db
+				.prepare(
+					`INSERT INTO audit_events
+						(id, actor_user_id, actor_kind, action, target_kind, target_id,
+						 request_id, safe_diff_json, created_at)
+					 VALUES ('audit-child-correction-link-sibling', 'reconciliation-admin-a',
+						 'user', 'child.legacy_correction_approved', 'child_correction',
+						 'child-correction-link-sibling', 'request-child-link-sibling', '{}', ?)`
+				)
+				.bind(instant(20)),
+		]);
 		await insertIssue(context.db, {
 			issueId: 'issue-child-link-a',
 			runId: 'run-reconciliation-child-link',
@@ -857,6 +1000,13 @@ describe('legacy import reconciliation in D1', () => {
 				...baseInput,
 				targetId: 'legacy-child-link-b',
 				idempotencyKey: 'child-link-unrelated-denied',
+			})
+		).rejects.toMatchObject({ code: 'RECONCILIATION_TYPED_EVIDENCE_MISMATCH' });
+		await expect(
+			adminRepository.mutate({
+				...baseInput,
+				targetId: 'legacy-child-link-sibling',
+				idempotencyKey: 'child-link-same-family-sibling-denied',
 			})
 		).rejects.toMatchObject({ code: 'RECONCILIATION_TYPED_EVIDENCE_MISMATCH' });
 		await adminRepository.mutate({
@@ -1040,6 +1190,108 @@ describe('legacy import reconciliation in D1', () => {
 			state: 'resolved',
 			resolutionKind: 'distinct_service_proven',
 		});
+
+		await insertRun(context.db, {
+			runId: 'run-reconciliation-distinct-service-recurrence',
+			versionId: 'version-reconciliation-distinct-service-recurrence',
+			marker: 'e',
+		});
+		for (const [index, suffix] of ['a', 'b'].entries()) {
+			await context.db
+				.prepare(
+					`INSERT INTO legacy_snapshot_enrollments
+						(id, legacy_version_id, legacy_enrollment_id, source_access_id,
+						 stable_family_key, source_child_key, source_slot, source_record_key,
+						 group_name_raw, group_name_normalized, needs_admin_review,
+						 record_hash_sha256, created_at)
+					 VALUES (?, 'version-reconciliation-distinct-service-recurrence', ?, ?,
+						 'stable-family-distinct', 'source-child-distinct', ?, ?,
+						 'Shared Label', 'shared label', 1, ?, ?)`
+				)
+				.bind(
+					`snapshot-enrollment-distinct-recurrence-${suffix}`,
+					`legacy-enrollment-distinct-${suffix}`,
+					711 + index,
+					index === 0 ? 'main_next' : 'package_1',
+					`access:distinct:${suffix}`,
+					(index ? 'f' : 'e').repeat(64),
+					instant(24)
+				)
+				.run();
+		}
+		await insertIssue(context.db, {
+			issueId: 'issue-distinct-service-pair-recurrence',
+			runId: 'run-reconciliation-distinct-service-recurrence',
+			sourceKey: 'access:distinct:a',
+			code: 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS',
+			safeContext: {
+				entityType: 'legacy_enrollment',
+				entityId: 'legacy-enrollment-distinct-a',
+				relatedEnrollmentIds: [
+					'legacy-enrollment-distinct-a',
+					'legacy-enrollment-distinct-b',
+				],
+			},
+		});
+		await importer.reconcileValidatedImport({
+			academicPeriodId: PERIOD_ID,
+			sourceKind: 'access',
+			importRunId: 'run-reconciliation-distinct-service-recurrence',
+			versionId: 'version-reconciliation-distinct-service-recurrence',
+			now: instant(24),
+		});
+		const recurrent = (
+			await adminRepository.list({
+				lastSeenRunId: 'run-reconciliation-distinct-service-recurrence',
+				page: 1,
+			})
+		).items[0];
+		expect(recurrent).toMatchObject({ state: 'open', version: 1 });
+		expect(recurrent.id).not.toBe(duplicateCase.id);
+		expect((await adminRepository.detail(duplicateCase.id)).item.state).toBe('resolved');
+		await context.db.batch([
+			context.db
+				.prepare(
+					`UPDATE users SET family_number_id = 'family-number-distinct',
+						family_assignment_status = 'assigned', family_version = 1
+					 WHERE id = 'reconciliation-admin-a'`
+				),
+			context.db
+				.prepare(
+					`UPDATE children SET owner_user_id = 'reconciliation-admin-a'
+					 WHERE id = 'legacy-child-distinct'`
+				),
+			context.db
+				.prepare(
+					`UPDATE legacy_enrollments SET course_group_id = 'course-distinct-a',
+						lesson_kind = 'group', contract_kind = 'yearly', price_source = 'yearly',
+						price_mode = 'rule_derived', planned_price_cents = 1000,
+						needs_admin_review = 0, is_active_for_occupancy = 1
+					 WHERE id IN ('legacy-enrollment-distinct-a', 'legacy-enrollment-distinct-b')`
+				),
+		]);
+		await adminRepository.mutate({
+			actor: adminActor(),
+			caseId: recurrent.id,
+			expectedVersion: recurrent.version,
+			action: 'same_service_duplicate',
+			reasonCode: 'same_service_confirmed',
+			targetType: 'legacy_enrollment',
+			targetId: 'legacy-enrollment-distinct-b',
+			idempotencyKey: 'same-service-exact-pair-accepted',
+			requestId: 'request-same-service-exact-pair-accepted',
+			now: instant(25),
+		});
+		expect(
+			(await new CabinetRepository(db).listActivities('reconciliation-admin-a', '2026-08-17'))
+				.filter((activity) => activity.id.startsWith('legacy-enrollment-distinct'))
+				.map((activity) => activity.id)
+		).toEqual(['legacy-enrollment-distinct-a']);
+		expect(
+			(await new PricingRepository(db).listRepricingTargets('course-distinct-a', '2026-08-17'))
+				.filter((target) => target.id.startsWith('legacy-enrollment-distinct'))
+				.map((target) => target.id)
+		).toEqual(['legacy-enrollment-distinct-a']);
 	});
 
 	it('rolls a homogeneous batch back on a concurrent case change and supports atomic replay', async () => {
@@ -1201,5 +1453,131 @@ describe('legacy import reconciliation in D1', () => {
 		).items;
 		expect(successor).toHaveLength(1);
 		expect(successor[0].state).toBe('open');
+	});
+
+	it('requires a later reimport and blocks replay of the exact bad candidate', async () => {
+		const periodId = 'period-reconciliation-exact-candidate';
+		await context.db
+			.prepare(
+				`INSERT INTO academic_periods
+					(id, code, display_name, starts_on, ends_on, is_current, created_at)
+				 VALUES (?, '2027-exact-candidate', 'Exact candidate',
+					'2027-08-01', '2028-07-31', 0, ?)`
+			)
+			.bind(periodId, instant(30))
+			.run();
+		await insertRun(context.db, {
+			runId: 'run-reconciliation-clean-older',
+			versionId: 'version-reconciliation-clean-older',
+			marker: 'c',
+			periodId,
+			insertVersion: false,
+		});
+		const importer = new LegacyImportReconciliationRepository(db);
+		const adminRepository = new LegacyReconciliationAdminRepository(db);
+		await importer.reconcileValidatedImport({
+			academicPeriodId: periodId,
+			sourceKind: 'access',
+			importRunId: 'run-reconciliation-clean-older',
+			versionId: 'version-reconciliation-clean-older',
+			now: instant(30),
+		});
+		await insertRun(context.db, {
+			runId: 'run-reconciliation-bad-candidate',
+			versionId: 'version-reconciliation-bad-candidate',
+			marker: 'd',
+			periodId,
+			insertVersion: false,
+		});
+		await insertIssue(context.db, {
+			issueId: 'issue-reconciliation-bad-candidate',
+			runId: 'run-reconciliation-bad-candidate',
+			sourceKey: 'access:exact-candidate:row',
+		});
+		await importer.reconcileValidatedImport({
+			academicPeriodId: periodId,
+			sourceKind: 'access',
+			importRunId: 'run-reconciliation-bad-candidate',
+			versionId: 'version-reconciliation-bad-candidate',
+			now: instant(31),
+		});
+		const badCase = (await adminRepository.list({ periodId, page: 1 })).items[0];
+		await adminRepository.mutate({
+			actor: adminActor(),
+			caseId: badCase.id,
+			expectedVersion: badCase.version,
+			action: 'await_upstream',
+			reasonCode: 'upstream_correction_requested',
+			idempotencyKey: 'exact-candidate-await',
+			requestId: 'request-exact-candidate-await',
+			now: instant(32),
+		});
+		await adminRepository.mutate({
+			actor: adminActor(),
+			caseId: badCase.id,
+			expectedVersion: badCase.version + 1,
+			action: 'mark_ready_to_verify',
+			reasonCode: 'upstream_correction_reported',
+			idempotencyKey: 'exact-candidate-ready',
+			requestId: 'request-exact-candidate-ready',
+			now: instant(33),
+		});
+
+		await importer.reconcileValidatedImport({
+			academicPeriodId: periodId,
+			sourceKind: 'access',
+			importRunId: 'run-reconciliation-clean-older',
+			versionId: 'version-reconciliation-clean-older',
+			now: instant(34),
+		});
+		expect((await adminRepository.detail(badCase.id)).item).toMatchObject({
+			state: 'ready_to_verify',
+			lastSeenImportRunId: 'run-reconciliation-bad-candidate',
+		});
+
+		await insertRun(context.db, {
+			runId: 'run-reconciliation-clean-newer',
+			versionId: 'version-reconciliation-clean-newer',
+			marker: 'f',
+			periodId,
+			insertVersion: false,
+		});
+		await importer.reconcileValidatedImport({
+			academicPeriodId: periodId,
+			sourceKind: 'access',
+			importRunId: 'run-reconciliation-clean-newer',
+			versionId: 'version-reconciliation-clean-newer',
+			now: instant(35),
+		});
+		expect((await adminRepository.detail(badCase.id)).item).toMatchObject({
+			state: 'resolved',
+			resolutionKind: 'resolved_by_reimport',
+		});
+		expect(
+			await importer.releaseGate(periodId, [
+				{
+					sourceKind: 'access',
+					importRunId: 'run-reconciliation-bad-candidate',
+					versionId: 'version-reconciliation-bad-candidate',
+				},
+			])
+		).toMatchObject({ blocking: 1, passed: false });
+		await expect(
+			context.db
+				.prepare(
+					`INSERT INTO legacy_version_promotion_events
+						(id, source_kind, academic_period_id, version_id, previous_version_id,
+						 import_run_id, action, fencing_token, created_at)
+					 VALUES ('exact-bad-candidate-promotion', 'access', ?, ?, NULL, ?,
+						 'promote', 1, ?)`
+				)
+				.bind(
+					periodId,
+					'version-reconciliation-bad-candidate',
+					'run-reconciliation-bad-candidate',
+					instant(36)
+				)
+				.run()
+		).rejects.toThrow(/reconciliation release gate blocked/);
 	});
 });
