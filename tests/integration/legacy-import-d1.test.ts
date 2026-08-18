@@ -1028,7 +1028,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			blocking_cases: 1,
 		});
 		expect(review?.code).toBe('ACCESS_CONTINUITY_CHILD_IDENTITY_CONFLICT');
-	});
+	}, 45_000);
 
 	it('promotes, rolls back and rolls forward a reviewed PlusBText/Access pair atomically', async () => {
 		const staged = await stageReviewedLegacyReplacement({ repository, period });

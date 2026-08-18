@@ -218,14 +218,17 @@ reconciliation contour из tracked TZ теперь реализован лок�
 PII-minimized export и release/registration gate. Fresh post-commit exact-SHA
 verification прошла 2026-08-18, но authorized independent review вернул NO-GO:
 row identity, promotion TOCTOU, typed evidence binding и multi-case atomicity
-были недостаточны. Current local remediation закрывает эти findings, добавляет
-append-only migration `0020` с transactional promotion fence и проходит
-focused synthetic suite, но ещё не является immutable/reviewed candidate.
-Полный worktree chain также прошёл: check 0/0, Vitest 65 files/491 tests,
-Chromium 18/18, build, docs 151 links/52 files + 105 commands, scan 533/533 и
-diff check. Это не создаёт immutable evidence. Independent re-review нового SHA,
-admin cold-read, owner decisions и authorized preview rehearsal отсутствуют;
-поэтому PR-B17 остаётся blocked.
+были недостаточны. Commit `4c1c78d4aa7e4eceeb0facdc79feedce38b8a7f0`
+закрывает эти findings и добавляет append-only migration `0020` с
+transactional promotion fence, но его fresh post-commit chain не прошёл:
+один двухпериодный D1 test воспроизводимо занял около 25 секунд при общем
+15-секундном лимите. Current worktree меняет только индивидуальный timeout
+этого теста на 45 секунд. На нём полный chain прошёл: check 0/0, Vitest 65
+files/491 tests, Chromium 18/18, build, docs 151 links/52 files + 105 commands,
+scan 533/533 и diff check. Dirty worktree не создаёт immutable evidence.
+Новый commit, fresh exact-SHA verification, independent re-review, admin
+cold-read, owner decisions и authorized preview rehearsal отсутствуют; поэтому
+PR-B17 остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`; local `0016`–`0020` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или
