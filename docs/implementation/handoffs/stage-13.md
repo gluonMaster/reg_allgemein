@@ -82,16 +82,16 @@ stored-log remediation проверены 2026-08-12.
 
 | Область     | Evidence                                                                                                                                                                                           | Остаточный gate                                                                                                               |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Empty D1    | deployed preview `0001`–`0015`, pending 0; resulting local candidate suite includes unapplied `0016`–`0018`                                                                                        | authorized remote candidate apply, production migration и isolated restore                                                    |
-| Upgraded D1 | historical populated `0013 → 0015` plus current local suffix upgrade through `0018` and selector rejection                                                                                         | remote apply, isolated backup/restore + rollback rehearsal                                                                    |
+| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0020`                                                                                                  | new immutable/reviewed candidate, authorized remote apply, production migration и isolated restore                            |
+| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0020`                                                            | full post-remediation verification, remote apply, isolated backup/restore + rollback rehearsal                                |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                                                                                                                                   | production resources/policy и isolated restore                                                                                |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed                                                                                                  | remote manual/dedupe/failure rehearsal                                                                                        |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed                                                                                                        | remote clean-room/least-privilege/zero-admin recovery drill                                                                   |
-| Imports     | exact candidate parser/full local evidence; current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed; independent exact-SHA review passed | exact-target remote bundle lifecycle, synthetic preview/no-PII, first-import restore and authorized current production import |
+| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `eb35a8c` review returned NO-GO; remediation passes focused 41/41 and full 491/491 | new immutable/reviewed SHA, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
-разрешённый restore. Local candidates `0016`–`0018` не применены remote и не
+разрешённый restore. Local migrations `0016`–`0020` не применены remote и не
 входят в deployed evidence.
 
 ## Feature flags и fail-closed production paths
@@ -748,12 +748,12 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 | Gate                              | Статус                         | Evidence / next action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Owner                                             |
 | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Local implementation/traceability | `blocked` for resulting commit | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed full local verification/independent exact-SHA review. The current `IMPORT-07`/`IMPORT-08` worktree maps 101/101 IDs and 185 bullets and implements the reconciliation contour, but still needs the full local chain recorded below, an authorized immutable commit, exact-SHA verification and independent review; historical preview evidence was not transferred                                                                                         | Independent exact-SHA reviewer + release operator |
+| Local implementation/traceability | `blocked` after exact review NO-GO | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower verification/review. Expanded `eb35a8c` maps 101/101 IDs and 185 bullets and passed full verification, but its authorized independent review returned NO-GO. Current remediation adds migration `0020`; focused 41/41 and the full worktree chain pass, but it is not immutable or independently re-reviewed                                                                                                                         | Release operator + separately authorized independent reviewer |
 | Dependency security               | `passed`                       | immutable `200268f`: clean install, full audit 0, full release verification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | dependency/security owner                         |
 | Environment/origin/R2 isolation   | `blocked`                      | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Cloudflare/security owner                         |
 | Scheduled monitoring              | `passed`                       | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | operations owner/account contact                  |
 | Admin bootstrap/recovery          | `blocked`                      | local one-shot passed; remote clean-room and recovery drill                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | security/operations owner                         |
-| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. Owner questions are closed; one group awaits upstream correction. `IMPORT-08` is locally implemented and synthetically tested, but the six duplicate buckets/remaining real classes have not been exercised through it. Independent admin cold-read, exact candidate, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any authorized current-data import remain absent | import/admin/data/backup/privacy owners           |
+| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. `eb35a8c` IMPORT-08 review found row-identity, release-race, evidence-binding and atomicity blockers; the local `0019`–`0020` remediation passes focused and full local verification. The six duplicate buckets/remaining real classes have not been exercised through it. New immutable exact-SHA review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
 | Public auth/email                 | `feature_disabled`             | scoped key/secrets installed; enablement, real-token and delivery smoke absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | auth/provider owner                               |
 | Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                              | provider/privacy/reliability/operations owners    |
 | Upload                            | `feature_disabled`             | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | storage/security/legal owner                      |
@@ -788,13 +788,11 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 ## Следующие действия
 
-1. Finish the current local import gate: record the full verification chain,
-   then obtain separate permission for an immutable commit and exact-SHA
-   independent review. After that, exercise the one upstream group correction
-   and six duplicate buckets through the implemented contour with data/admin
-   owner authorization. Run exact-SHA full verification plus
-   independent review. Exact `a590d1f` remains historical 99/175 evidence and
-   cannot cover the new 101/185 worktree.
+1. Create one immutable remediation commit under separate permission. Then run
+   a fresh exact-SHA verification; only after that obtain
+   separate permission for a new independent read-only exact-SHA review. Exact
+   `eb35a8c` is a rejected checkpoint; `a590d1f` remains historical 99/175
+   evidence and neither verdict covers the remediation.
 2. Before any candidate apply, prepare and independently review the protected
    exact-target preview control config and obtain separate authorization for
    backup/isolated restore, deploy and migrations. Do not combine these
@@ -811,10 +809,9 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
    review. Для PR-A14 закрыть disabled-upload mutation, оставшиеся
    enrollment/group-service и guessed/admin-purpose variants; preview matrix
    также требует отдельного разрешения.
-6. На exact SHA commit, содержащего эту ревизию, выполнить clean-clone
-   `npm ci`, full audit и полный `npm run release:verify`; только после этого
-   переносить local evidence на immutable-candidate gate. Push/deploy остаются
-   отдельными явно разрешаемыми действиями.
+6. После разрешённого remediation commit выполнить fresh exact-SHA full chain;
+   только после этого переносить local evidence на immutable-candidate gate.
+   Push/deploy остаются отдельными явно разрешаемыми действиями.
 7. Поддерживать independent uptime monitor для `/_health/operations` и
    периодически повторять delivery test; real-token Turnstile, synthetic email
    delivery/reply и другие provider sends требуют отдельных разрешений.
@@ -928,14 +925,52 @@ checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
   - `npm run release:scan` — passed, 532/532 text files, no prohibited
     artifacts/high-confidence secrets/high-confidence PII identifiers;
   - `git diff --check` — passed.
-- Current worktree intentionally remains dirty at parent `d6118d1`. No commit,
-  amend, push, tag, remote migration, import, deploy, provider send, secret or
-  feature mutation was performed. Deployed preview remains historical
+- The user created immutable commit
+  `eb35a8c63c53c4edf44bb257a2dae641c63715cf` (`feat: add durable legacy import
+  reconciliation`). A fresh post-commit exact-SHA verification on 2026-08-18
+  passed in 584.2 s: `npm run check` (0/0), `npm test` (65 files / 483 tests),
+  `npm run test:e2e` (18 Chromium tests), `npm run build`, `npm run docs:check`
+  (151 links / 52 files and 105 commands), `npm run release:scan` (532/532),
+  and `git diff --check`. HEAD remained exact and the worktree remained clean.
+  Authorized independent exact-SHA review was subsequently performed and
+  returned NO-GO; see the remediation checkpoint below.
+- No amend, push, tag, remote migration, import, deploy, provider send, secret
+  or feature mutation was performed by Codex. Deployed preview remains historical
   `200268f` / Worker version `sha256:f4cd52e14dbd`; remote D1
-  still has `0001`–`0015`, while local `0016`–`0019` remain pending.
-- Overall deployment remains `NO-GO`: PR-B17 still needs an independent admin
-  cold-read and authorized owner exercise of the one upstream group/six
-  duplicate buckets; exact-SHA review, protected preview migration/synthetic
-  rehearsal, restore evidence and every production/provider/legal gate remain
-  blocked. The next mutation requires separate exact permission; commit is the
-  first such boundary for this local delta.
+  still has `0001`–`0015`, while local `0016`–`0020` remain pending.
+- Overall deployment remains `NO-GO`: PR-B17 needs a new immutable remediation
+  checkpoint and independent review, admin cold-read and authorized owner
+  exercise of the one upstream group/six duplicate buckets; protected preview
+  migration/synthetic rehearsal, restore evidence and every production/provider/
+  legal gate remain blocked. Every remote mutation still requires its own exact
+  permission.
+
+## Continuation 2026-08-18: exact review NO-GO and remediation
+
+- User authorized an independent read-only review of exact
+  `eb35a8c63c53c4edf44bb257a2dae641c63715cf`. The reviewer found 6 HIGH,
+  2 MEDIUM and 1 LOW issues; local `IMPORT-08` gate verdict was NO-GO.
+- Remediation in the current worktree:
+  - deterministic PII-free source identities distinguish separate row-level
+    PlusBText issues;
+  - append-only `0020_reconciliation_release_fence.sql` rejects a promote event
+    atomically when an active blocking reconciliation case exists;
+  - catalog, child and duplicate decisions bind respectively to case version,
+    family/source identity and the exact duplicate enrollment pair;
+  - homogeneous multi-case mutation and successor/predecessor supersede are
+    atomic, CAS-safe and idempotently reconciled after ambiguous commit;
+  - list summary uses the same filters as rows.
+- Focused synthetic verification passed 4 files / 41 tests. It includes the
+  D1 promotion trigger, version-bound mapping, case-bound child correction,
+  exact duplicate-pair proof, full batch rollback/replay, atomic supersede and
+  parser source-identity evidence.
+- The first full regression correctly exposed five legacy fixtures whose old
+  promotion assumptions conflicted with the new D1 fence. Irrelevant fixtures
+  were made clean; collision and continuity tests now assert promotion denial
+  and unchanged canonical state. Final required worktree chain passed:
+  `npm run check` 0/0, `npm test` 65 files/491 tests, `npm run test:e2e` 18/18,
+  build, docs 151 links/52 files + 105 commands, release scan 533/533 and
+  `git diff --check`.
+- HEAD remains `eb35a8c`; the remediation worktree is intentionally dirty and
+  uncommitted. No amend/push/tag, remote migration/import/deploy, config/secret
+  mutation, provider call/send, production or official-site action occurred.

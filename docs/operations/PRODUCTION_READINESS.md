@@ -205,7 +205,7 @@ rows через unapplied candidates `0016` (legacy release control), `0017`
 `0018` сохраняет grandfathered `0016` plans как immutable evidence, но
 fail-closes их lifecycle при `NULL` actors/legacy `{}` contract и требует новый
 hardened plan.
-Текущий worktree дополнительно реализует `IMPORT-07`: owner-approved
+Immutable checkpoint `eb35a8c` дополнительно реализует `IMPORT-07`: owner-approved
 `O/R/S/T` crosswalk, versioned safe name normalization, hourly exceptions,
 Access-price priority и PII-free admin references. Package groups ограничены
 первыми четырьмя slots, `AO/AT` всегда исключены. Read-only current-source rerun
@@ -215,11 +215,20 @@ unresolved group подтверждён как upstream error и остаётс�
 Для structural duplicates и остальных actionable classes `IMPORT-08` durable
 reconciliation contour из tracked TZ теперь реализован локально migration
 `0019`, stable cases/occurrences, typed admin repository/routes/UI,
-PII-minimized export и release/registration gate. Synthetic D1/security tests
-не заменяют independent admin cold-read, owner decisions и authorized preview
-rehearsal; поэтому PR-B17 остаётся blocked.
+PII-minimized export и release/registration gate. Fresh post-commit exact-SHA
+verification прошла 2026-08-18, но authorized independent review вернул NO-GO:
+row identity, promotion TOCTOU, typed evidence binding и multi-case atomicity
+были недостаточны. Current local remediation закрывает эти findings, добавляет
+append-only migration `0020` с transactional promotion fence и проходит
+focused synthetic suite, но ещё не является immutable/reviewed candidate.
+Полный worktree chain также прошёл: check 0/0, Vitest 65 files/491 tests,
+Chromium 18/18, build, docs 151 links/52 files + 105 commands, scan 533/533 и
+diff check. Это не создаёт immutable evidence. Independent re-review нового SHA,
+admin cold-read, owner decisions и authorized preview rehearsal отсутствуют;
+поэтому PR-B17 остаётся blocked.
 
-Это не меняет deployed preview `0001`–`0015`, не закрывает PR-B12–PR-B17 или
+Это не меняет deployed preview `0001`–`0015`; local `0016`–`0020` остаются
+unapplied. Работа не закрывает PR-B12–PR-B17 или
 PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
 
 ## Обязательная non-production валидация

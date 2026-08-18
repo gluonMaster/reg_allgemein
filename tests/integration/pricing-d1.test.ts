@@ -13,7 +13,11 @@ import {
 import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import { PricingRepository } from '$lib/server/pricing/pricing-repository';
 import { PricingService } from '$lib/server/pricing/pricing-service';
-import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
+import {
+	applyTestD1Migrations,
+	createMigratedTestD1,
+	type TestD1Context,
+} from '../helpers/d1';
 import {
 	createSyntheticPlusBTextWorkbook,
 	createSyntheticPriceWorkbook,
@@ -321,7 +325,7 @@ describe('stage 04 pricing and occupancy in D1', () => {
 	});
 
 	it('maps explicitly, dedupes occupancy, persists/revalidates quotes and audits confirmations', async () => {
-		context = await createMigratedTestD1();
+		context = await createMigratedTestD1({ through: '0019' });
 		const db = new DatabaseBoundary(context.db);
 		const imports = new ImportRepository(db);
 		const period = await imports.ensureAcademicPeriod({
@@ -333,6 +337,7 @@ describe('stage 04 pricing and occupancy in D1', () => {
 			now: instant(0),
 		});
 		const sources = await importPricingSources({ repository: imports, period });
+		await applyTestD1Migrations(context.db, { after: '0019', through: '0020' });
 		const courses = await db.all<{ id: string; display_name: string }>({
 			sql: `SELECT id, display_name FROM course_groups WHERE academic_period_id = ?`,
 			params: [period.id],

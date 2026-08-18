@@ -42,6 +42,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0017_telegram_delivery_certainty.sql',
 			'0018_legacy_import_release_hardening.sql',
 			'0019_legacy_import_reconciliation.sql',
+			'0020_reconciliation_release_fence.sql',
 		]);
 
 		const result = await context.db

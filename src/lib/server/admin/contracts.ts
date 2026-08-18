@@ -100,7 +100,14 @@ export const reconciliationMutationSchema = z.object({
 	reasonCode: reconciliationReasonCode,
 	assigneeId: opaqueId.optional(),
 	targetType: z
-		.enum(['course_group', 'legacy_family', 'legacy_child', 'user', 'family_reassignment'])
+		.enum([
+			'course_group',
+			'legacy_family',
+			'legacy_child',
+			'legacy_enrollment',
+			'user',
+			'family_reassignment',
+		])
 		.optional(),
 	targetId: opaqueId.optional(),
 	confirmation: z.literal('confirmed'),

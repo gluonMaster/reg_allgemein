@@ -418,6 +418,11 @@ function issue(input: {
 	return {
 		severity: input.severity ?? 'warning',
 		code: input.code,
+		...(input.row
+			? {
+					sourceRecordKey: `plusbtext:${SHEET_NAME}:row:${input.row}:field:${input.field ?? 'row'}`,
+				}
+			: {}),
 		safeContext: {
 			...(input.row ? { rowNumber: input.row } : {}),
 			...(input.field ? { field: input.field } : {}),

@@ -241,6 +241,7 @@
 						><option value=""></option><option value="course_group">course_group</option
 						><option value="legacy_family">legacy_family</option><option
 							value="legacy_child">legacy_child</option
+						><option value="legacy_enrollment">legacy_enrollment</option
 						><option value="user">user</option><option value="family_reassignment"
 							>family_reassignment</option
 						></select

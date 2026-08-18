@@ -228,6 +228,27 @@ describe('Access legacy parser', () => {
 		);
 	});
 
+	it('keeps opaque references for the exact two-enrollment duplicate bucket', async () => {
+		const plus = await plusSnapshot();
+		const extract = await createSyntheticAccessExtract([
+			createSyntheticAccessRow({ Value15: 'Target Group', Value42: 'Target Group' }),
+		]);
+		const snapshot = await parseAccessExtract({
+			extract,
+			academicPeriodCode: '2026-2027',
+			plusBTextVersionId: 'plus-version-a',
+			plusBText: plus,
+		});
+		const duplicate = snapshot.issues.find(
+			(issue) => issue.code === 'ACCESS_CHILD_GROUP_DUPLICATE_SLOTS'
+		);
+
+		expect(duplicate?.safeContext?.relatedEnrollmentIds).toEqual(
+			snapshot.enrollments.map((enrollment) => enrollment.id).sort()
+		);
+		expect(JSON.stringify(duplicate?.safeContext)).not.toContain('Target Group');
+	});
+
 	it('keeps invalid family rows as evidence but excludes payment and unstable children', async () => {
 		const plus = await plusSnapshot();
 		const extract = await createSyntheticAccessExtract([

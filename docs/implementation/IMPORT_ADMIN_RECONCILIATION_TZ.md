@@ -1,7 +1,11 @@
 # Техническое задание: админский контур сверки повторных импортов
 
-Статус: обязательный Stage-13 scope реализован локально; external preview,
-independent review и production evidence не выполнены. Актуально на 2026-08-17.
+Статус: обязательный Stage-13 scope реализован локально. Independent review
+immutable checkpoint `eb35a8c` выполнен 2026-08-18 и дал NO-GO; найденные
+identity, TOCTOU, evidence-binding и atomicity defects исправлены в текущем
+worktree; полный local verification chain прошёл, но новый immutable checkpoint
+и его повторный independent review ещё отсутствуют. External preview и
+production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
 
@@ -36,7 +40,7 @@ rows. Он либо применяет уже разрешённую portal-side
 - Duplicate child/group считается один раз для occupancy, пока отдельность услуг
   не доказана typed решением.
 
-## 3. Что уже есть и чего не хватает
+## 3. Исходный gap и current local contour
 
 Есть:
 
@@ -46,7 +50,8 @@ rows. Он либо применяет уже разрешённую portal-side
 - `/admin/legacy` и review queue имеют family/claim correction actions;
 - D1 хранит immutable import runs, source versions и audit events.
 
-Не хватает:
+До `IMPORT-08` не хватало следующих элементов; current local contour их
+реализует, но это не закрывает immutable-review и external gates:
 
 - stable case между несколькими import runs;
 - typed outcome, связанного с фактической коррекцией;
@@ -56,14 +61,19 @@ rows. Он либо применяет уже разрешённую portal-side
 - запрета generic `resolve/dismiss` для actionable codes;
 - автоматического reopen/supersede и release-gate summary.
 
-До реализации generic issue decision не является доказательством исправления и
-не должен закрывать blocking/actionable class.
+Generic issue decision не является доказательством исправления и не должен
+закрывать blocking/actionable class.
 
 ## 4. D1-модель
 
 Реализовать новой append-only migration
 `0019_legacy_import_reconciliation.sql`. Номер является планом и должен быть
 перепроверен перед созданием; уже применённые migrations не менять.
+
+После independent review добавить отдельную append-only migration
+`0020_reconciliation_release_fence.sql`: trigger на promotion event обязан в той
+же D1 transaction отклонять `promote`, если для academic period существует
+active blocking case. Application pre-check не заменяет этот fence.
 
 ### `legacy_reconciliation_cases`
 
@@ -94,8 +104,11 @@ Append-only typed decision:
 ### Assertions и audit
 
 Каждая state mutation выполняется одним D1 batch с decision, audit event и
-terminal assertion. D1 triggers запрещают update/delete evidence, invalid state
-transition, stale version, actor mismatch и generic closure actionable case.
+terminal assertion. Homogeneous batch action коммитит весь cohort одним D1
+batch; stale CAS откатывает все case changes. Создание changed-identity successor
+и supersede predecessor также атомарны и безопасно reconciled после ambiguous
+commit. D1 triggers запрещают update/delete evidence, invalid state transition,
+stale version, actor mismatch и generic closure actionable case.
 
 ## 5. Reconciliation при новом импорте
 
@@ -112,25 +125,27 @@ transition, stale version, actor mismatch и generic closure actionable case.
 4. Source identity изменилась так, что старый case неприменим: старый получает
    `superseded`, новый создаётся отдельно; silent merge запрещён.
 5. New blocking case удерживает promote/registration enable. Aggregate verify
-   выводит только counts по class/state и opaque evidence ID.
+   выводит только counts по class/state и opaque evidence ID; migration `0020`
+   повторно проверяет отсутствие такого case атомарно при записи `promote`
+   event, закрывая race между pre-check и lease acquisition.
 
 ## 6. Typed actions по классам
 
 | Класс                          | Разрешённые действия                                                                              | Запрещено                                                       |
 | ------------------------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Course/group mapping           | открыть existing catalog tool; выбрать exact target; либо `awaiting_upstream`                     | fuzzy/substring/day-insensitive mapping, свободный target label |
+| Course/group mapping           | открыть existing catalog tool; выбрать exact target, привязанный к snapshot enrollment из `last_seen_version_id`; либо `awaiting_upstream` | fuzzy/substring/day-insensitive mapping, status-only evidence, свободный target label |
 | Parent/family/contact identity | открыть authorized family correction; либо upstream correction                                    | менять immutable source snapshot, auto-merge по похожему имени  |
 | Invalid email                  | upstream correction или verified portal identity + однозначный audited family link                | automatic claim по invalid legacy email                         |
-| Invalid/missing birth date     | upstream correction или отдельная typed child reconciliation после valid portal input             | импортировать нераспознанное значение как дату                  |
+| Invalid/missing birth date     | upstream correction или typed child reconciliation того же case family/source/version после valid portal input | импортировать нераспознанное значение как дату или использовать unrelated child |
 | Price/duration                 | upstream Access/PlusBText correction; позднее — только versioned period/service-bound override    | generic dismiss или неограниченная special price                |
-| Duplicate child/group          | `same_service_duplicate` либо `distinct_service_proven` с distinct stable service/course evidence | двойной occupancy без доказательства                            |
+| Duplicate child/group          | `same_service_duplicate` либо `distinct_service_proven` для exact opaque duplicate-enrollment pair с двумя distinct course assignments | arbitrary course evidence или двойной occupancy без доказательства |
 | Family/identity conflict       | assignment + entity detail + typed correction/upstream                                            | показывать PII в queue/export/audit                             |
 | Value48/source consistency     | только upstream correction + reimport                                                             | portal-side подмена source ID                                   |
 
 Batch action разрешена только для одного `issue_code`, одного action/reason и
-совместимой state/version cohort. Identity, duplicate и course-target decisions
-по умолчанию individual; массовое exact mapping требует отдельной confirmation с
-preview counts.
+совместимой state/version cohort и выполняется атомарно для всего cohort.
+Identity, duplicate и course-target decisions по умолчанию individual; массовое
+exact mapping требует отдельной confirmation с preview counts.
 
 ## 7. Admin UI
 
@@ -171,10 +186,16 @@ entity detail и не копируются в reconciliation audit.
 - actionable generic resolve/dismiss rejected at repository and route boundary;
 - RBAC, CSRF, inactive admin, stale version, idempotent replay and two-admin race;
 - exact mapping accepted, fuzzy/mismatched mapping rejected;
-- duplicate defaults to one occupancy; `distinct_service_proven` requires exact
-  evidence;
+- exact mapping reads the case `last_seen_version_id`; status-only/current-
+  projection evidence rejected;
+- child correction must match the case family, source identity and version;
+- duplicate defaults to one occupancy; `distinct_service_proven` requires the
+  exact duplicate enrollment pair and two different course assignments;
 - invalid email/DOB never creates automatic claim/child;
-- batch rejects mixed code/action/version;
+- batch rejects mixed/duplicate code/action/version cohorts and rolls the whole
+  cohort back on a stale race; completed replay is idempotent;
+- changed-identity successor + predecessor supersede survives ambiguous commit
+  as one atomic operation;
 - list/export/audit/error snapshots pass PII canary/redaction tests;
 - unresolved blocking cases make release verify non-zero; resolved-by-reimport
   produces only safe aggregate evidence.
@@ -190,11 +211,13 @@ entity detail и не копируются в reconciliation audit.
 5. Only after preview evidence may routine current-source production import use
    this queue; real PII is not copied into ordinary preview.
 
-Local step 1 и synthetic D1 часть step 2 реализованы migration `0019`,
+Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0020`,
 `LegacyImportReconciliationRepository`, typed admin repository/routes/UI и
-`T-IMPORT-RECONCILIATION`. Steps 3–4, exact immutable checkpoint и реальные
-owner decisions ещё отсутствуют. Поэтому PR-B17 remains `blocked`, а current
-import issues must not be bulk-dismissed.
+`T-IMPORT-RECONCILIATION`. Exact checkpoint `eb35a8c` прошёл full verification,
+но independent review дал NO-GO; remediation существует только в текущем
+worktree. Steps 3–4, новый exact immutable checkpoint/re-review и реальные owner
+decisions ещё отсутствуют. Поэтому PR-B17 remains `blocked`, а current import
+issues must not be bulk-dismissed.
 
 ## 11. Готовый implementation prompt
 

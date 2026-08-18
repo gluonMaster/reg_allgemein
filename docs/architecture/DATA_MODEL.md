@@ -298,6 +298,12 @@ identity уникальна по period/source/digest/code; identity columns imm
 terminal cases retained, а `(case_id, case_version_before)` допускает ровно
 один выигравший transition при гонке администраторов.
 
+Row-scoped parser issue обязан иметь детерминированный PII-free
+`source_record_key`; в частности, разные строки/поля PlusBText не используют
+общую aggregate identity. Duplicate Access evidence хранит только exact opaque
+pair `legacy_enrollment_id`, необходимую для проверки typed решения, без group
+label или исходной строки.
+
 Typed decisions, transition assertions и audit append-only. Actionable case не
 переходит terminal через generic `resolve|dismiss`; upstream correction закрывает
 его только новый immutable import как `resolved_by_reimport`. Full planned
@@ -306,6 +312,14 @@ schema, transitions и privacy contract заданы в
 Queue/export хранит и возвращает только issue class/code, state, opaque IDs,
 run/version references и aggregate counts; raw source key digest вычисляется до
 case storage и не раскрывается в reconciliation evidence.
+
+Typed correction evidence привязывается к `last_seen_version_id` case. Exact
+course mapping проверяет snapshot enrollment этой версии; child correction
+дополнительно сверяет family/source identity; `distinct_service_proven`
+доказывает именно две enrollment записи duplicate occurrence и две разные
+current course assignments. Homogeneous multi-case mutation, а также создание
+successor и supersede predecessor выполняются одним D1 batch, поэтому stale CAS
+не оставляет частично применённый cohort.
 
 ### `legacy_import_release_plans`, `legacy_import_bundle_events`,
 
@@ -338,6 +352,12 @@ Pair pointers, Access projection, run statuses, release status, source events и
 audit меняются одним D1 batch. Детерминированные run/version/plan IDs и read-back
 event/current state дают явное reconciliation после ambiguous remote write;
 mixed state не принимается за успех.
+
+Append-only migration `0020_reconciliation_release_fence.sql` добавляет
+transactional release fence: D1 trigger на `promote` event проверяет отсутствие
+active blocking `legacy_reconciliation_cases` того же academic period внутри
+той же транзакции. Application pre-check остаётся ранней диагностикой, но не
+является единственной защитой от TOCTOU.
 
 Protected ignored recovery-evidence artifact не является D1 substitute или
 произвольным digest: он связывает exact environment/account/database/plan/review/

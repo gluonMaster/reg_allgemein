@@ -154,6 +154,14 @@ describe('PlusBText allowlisted parser', () => {
 				'PLUSB_TARGET_NAME_DUPLICATE',
 			])
 		);
+		const durationIssues = snapshot.issues.filter((entry) =>
+			entry.code.startsWith('PLUSB_DURATION_')
+		);
+		expect(durationIssues).toHaveLength(2);
+		expect(durationIssues.every((entry) => entry.sourceRecordKey?.startsWith('plusbtext:'))).toBe(
+			true
+		);
+		expect(new Set(durationIssues.map((entry) => entry.sourceRecordKey)).size).toBe(2);
 	});
 
 	it.each([

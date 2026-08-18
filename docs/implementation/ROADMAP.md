@@ -414,12 +414,19 @@ duplicate buckets и остальные anomaly classes требуют штат�
 admin contour. Он нормативно зафиксирован как `IMPORT-08`/
 `AC-IMPORT-27`–`AC-IMPORT-31` в
 [отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md). Локальный continuation
-реализует migration `0019`, stable cross-run materialization/reimport evidence,
-typed admin decisions, D1/repository generic-closure denial, assignment/batch,
-PII-free queue/export и release/registration gate с synthetic D1/security tests.
-PR-B17 всё равно остаётся blocked до independent admin cold-read, owner review
-текущих buckets, exact-SHA candidate verification и отдельного authorized
-preview rehearsal. Этот local delta ничего не менял remote.
+реализует migrations `0019`–`0020`, stable cross-run materialization/reimport
+evidence, typed version/case/pair-bound admin decisions, D1/repository
+generic-closure denial, atomic assignment/batch/supersede, PII-free queue/export
+и transactional release/registration gate с synthetic D1/security tests.
+Independent exact-SHA review commit `eb35a8c` выявил release-blocking identity,
+TOCTOU, evidence-binding и partial-commit defects; поэтому этот SHA получил
+NO-GO. Defects исправлены в текущем local worktree, включая migration `0020`, но
+remediation ещё не является новым immutable/reviewed candidate. PR-B17 остаётся
+blocked. Remediation worktree прошёл полный local chain: check 0/0, Vitest
+65 files/491 tests, Chromium 18/18, build, docs 151 links/52 files + 105
+commands, scan 533/533 и diff check. До нового exact-SHA verification/re-review,
+independent admin cold-read, owner review текущих buckets и отдельного authorized
+preview rehearsal gate не закрыт. Этот local delta ничего не менял remote.
 
 Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
 candidate добавляет real one-way `bot_api` adapter, strict minimized payload,

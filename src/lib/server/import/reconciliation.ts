@@ -389,17 +389,9 @@ export class LegacyImportReconciliationRepository {
 				entityType: entity.entityType,
 				entityId: entity.entityId,
 				sourceIdentityDigest,
+				supersededCandidate,
 				...input,
 			});
-			if (supersededCandidate) {
-				await this.supersedeCase({
-					caseRow: supersededCandidate,
-					successorCaseId: caseId,
-					importRunId: input.importRunId,
-					versionId: input.versionId,
-					now: input.now,
-				});
-			}
 		}
 
 		const active = await this.db.all<ReconciliationCaseRow>({
@@ -475,6 +467,7 @@ export class LegacyImportReconciliationRepository {
 		entityType: string;
 		entityId: string | null;
 		sourceIdentityDigest: string;
+		supersededCandidate: ReconciliationCaseRow | null;
 		academicPeriodId: string;
 		sourceKind: 'access' | 'plusbtext';
 		importRunId: string;
@@ -487,7 +480,7 @@ export class LegacyImportReconciliationRepository {
 			importRunId: input.importRunId,
 			versionId: input.versionId,
 		});
-		await this.db.batch([
+		const statements: StatementSpec[] = [
 			{
 				sql: `INSERT INTO legacy_reconciliation_cases
 					(id, academic_period_id, source_kind, source_identity_digest, issue_code,
@@ -537,7 +530,19 @@ export class LegacyImportReconciliationRepository {
 				}),
 				now: input.now,
 			}),
-		]);
+		];
+		if (input.supersededCandidate) {
+			statements.push(
+				...(await this.supersedeStatements({
+					caseRow: input.supersededCandidate,
+					successorCaseId: input.caseId,
+					importRunId: input.importRunId,
+					versionId: input.versionId,
+					now: input.now,
+				}))
+			);
+		}
+		await this.db.batch(statements);
 	}
 
 	private async touchExistingCase(input: {
@@ -657,13 +662,13 @@ export class LegacyImportReconciliationRepository {
 		]);
 	}
 
-	private async supersedeCase(input: {
+	private async supersedeStatements(input: {
 		caseRow: ReconciliationCaseRow;
 		successorCaseId: string;
 		importRunId: string;
 		versionId: string;
 		now: string;
-	}): Promise<void> {
+	}): Promise<StatementSpec[]> {
 		const evidence = await systemEvidence({
 			action: 'supersede_source_identity',
 			caseId: input.caseRow.id,
@@ -685,7 +690,7 @@ export class LegacyImportReconciliationRepository {
 			now: input.now,
 			assertionKind: 'state_transition',
 		});
-		await this.db.batch([
+		return [
 			...evidenceRows.slice(0, -1),
 			{
 				sql: `UPDATE legacy_reconciliation_cases SET state = 'superseded',
@@ -695,7 +700,7 @@ export class LegacyImportReconciliationRepository {
 				params: [input.successorCaseId, input.now, input.caseRow.id, input.caseRow.version],
 			},
 			evidenceRows[evidenceRows.length - 1],
-		]);
+		];
 	}
 
 	private async insertOccurrence(input: {

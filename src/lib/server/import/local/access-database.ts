@@ -67,7 +67,7 @@ function safeIssue(input: {
 	sourceRecordKey?: string;
 	field?: string;
 	count?: number;
-	context?: Record<string, string | number | boolean | null>;
+	context?: Record<string, string | number | boolean | null | readonly string[]>;
 	severity?: ImportIssueDraft['severity'];
 	blocksPromotion?: boolean;
 }): ImportIssueDraft {
@@ -952,6 +952,9 @@ export async function parseAccessExtract(input: {
 				context: {
 					distinctSourceRows: sourceRows,
 					slotPattern: [...slotKinds].sort().join('+'),
+					relatedEnrollmentIds: candidates
+						.map((candidate) => candidate.id)
+						.sort((left, right) => left.localeCompare(right)),
 				},
 			})
 		);

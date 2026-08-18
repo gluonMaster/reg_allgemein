@@ -607,7 +607,16 @@ describe('versioned Access and PlusBText imports in D1', () => {
 	});
 
 	it('promotes allowlisted legacy state and keeps PII out of status/issues', async () => {
-		const plus = await stagePlus({ repository, period, now: instant(1) });
+		const plus = await stagePlus({
+			repository,
+			period,
+			rows: [
+				{ e: '10', f: 'Old Group' },
+				{ k: '10', l: 'Target Group', m: 'Teacher A', n: 'Mo', t: '90' },
+				{ l: 'Second Group', m: 'Teacher B', n: 'Di', t: '60' },
+			],
+			now: instant(1),
+		});
 		await repository.promote(plus.runId, instant(2));
 		expect(await repository.promote(plus.runId, instant(2))).toMatchObject({ outcome: 'noop' });
 		const access = await stageAccess({
@@ -617,7 +626,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 				createSyntheticAccessRow({ Value19: 'O/V', Value20: '' }),
 				createSyntheticAccessRow({
 					ID: 102,
-					Value15: 'Target Group',
+					Value15: 'Second Group',
 					Value42: null,
 					Value48: '102',
 				}),
@@ -711,6 +720,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 					Value1: '1. 5000',
 					Value4: 'Other Child',
 					Value5: '2015-01-02',
+					Value9: 'other-family@example.test',
 					Value48: '102',
 				}),
 			],
@@ -830,7 +840,7 @@ describe('versioned Access and PlusBText imports in D1', () => {
 		});
 	});
 
-	it('promotes collision evidence without creating a canonical orphan', async () => {
+	it('blocks collision release without creating a canonical orphan', async () => {
 		const plus = await stagePlus({ repository, period, now: instant(1) });
 		await repository.promote(plus.runId, instant(2));
 		await context.db
@@ -850,7 +860,9 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			rows: [createSyntheticAccessRow()],
 			now: instant(3),
 		});
-		await repository.promote(access.runId, instant(4));
+		await expect(repository.promote(access.runId, instant(4))).rejects.toMatchObject({
+			code: 'PROMOTION_FAILED',
+		});
 
 		const counts = await context.db
 			.prepare(
@@ -858,10 +870,22 @@ describe('versioned Access and PlusBText imports in D1', () => {
 					(SELECT COUNT(*) FROM legacy_families) AS families,
 					(SELECT COUNT(*) FROM children) AS children,
 					(SELECT COUNT(*) FROM legacy_enrollments) AS enrollments,
-					(SELECT COUNT(*) FROM legacy_source_rows
-						WHERE is_current = 1 AND legacy_family_id IS NULL AND child_id IS NULL) AS evidence`
+					(SELECT COUNT(*) FROM legacy_source_rows) AS canonical_source_rows,
+					(SELECT COUNT(*) FROM legacy_snapshot_source_rows
+						WHERE legacy_version_id = ?) AS snapshot_source_rows,
+					(SELECT COUNT(*) FROM legacy_reconciliation_cases
+						WHERE issue_code = 'ACCESS_FAMILY_NUMBER_COLLISION'
+							AND state = 'open' AND blocks_release = 1) AS blocking_cases`
 			)
-			.first<{ families: number; children: number; enrollments: number; evidence: number }>();
+			.bind(access.versionId)
+			.first<{
+				families: number;
+				children: number;
+				enrollments: number;
+				canonical_source_rows: number;
+				snapshot_source_rows: number;
+				blocking_cases: number;
+			}>();
 		const issue = await context.db
 			.prepare(
 				`SELECT code, safe_context_json FROM import_issues
@@ -870,14 +894,21 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			.bind(access.runId)
 			.first<{ code: string; safe_context_json: string }>();
 
-		expect(counts).toEqual({ families: 0, children: 0, enrollments: 0, evidence: 1 });
+		expect(counts).toEqual({
+			families: 0,
+			children: 0,
+			enrollments: 0,
+			canonical_source_rows: 0,
+			snapshot_source_rows: 1,
+			blocking_cases: 1,
+		});
 		expect(issue).toEqual({
 			code: 'ACCESS_FAMILY_NUMBER_COLLISION',
 			safe_context_json: '{}',
 		});
 	});
 
-	it('inherits an unconflicted claim across periods and quarantines child continuity conflicts', async () => {
+	it('inherits an unconflicted claim and blocks a child continuity conflict before publication', async () => {
 		const plusFirst = await stagePlus({ repository, period, now: instant(1) });
 		await repository.promote(plusFirst.runId, instant(2));
 		const accessFirst = await stageAccess({
@@ -963,7 +994,9 @@ describe('versioned Access and PlusBText imports in D1', () => {
 			],
 			now: instant(11),
 		});
-		await repository.promote(conflict.runId, instant(12));
+		await expect(repository.promote(conflict.runId, instant(12))).rejects.toMatchObject({
+			code: 'PROMOTION_FAILED',
+		});
 		const state = await context.db
 			.prepare(
 				`SELECT family.claimed_by_user_id, family.continuity_status,
@@ -971,7 +1004,10 @@ describe('versioned Access and PlusBText imports in D1', () => {
 					(SELECT COUNT(*) FROM children WHERE legacy_family_id = family.id
 						AND owner_user_id = 'stable-owner') AS owned_child_count,
 					(SELECT COUNT(*) FROM children WHERE legacy_family_id = family.id
-						AND owner_user_id IS NULL) AS quarantined_child_count
+						AND owner_user_id IS NULL) AS quarantined_child_count,
+					(SELECT COUNT(*) FROM legacy_reconciliation_cases
+						WHERE issue_code = 'ACCESS_CONTINUITY_CHILD_IDENTITY_CONFLICT'
+							AND state = 'open' AND blocks_release = 1) AS blocking_cases
 				FROM legacy_families AS family`
 			)
 			.first<Record<string, unknown>>();
@@ -985,10 +1021,11 @@ describe('versioned Access and PlusBText imports in D1', () => {
 
 		expect(state).toMatchObject({
 			claimed_by_user_id: 'stable-owner',
-			continuity_status: 'needs_review',
-			child_count: 2,
+			continuity_status: 'stable',
+			child_count: 1,
 			owned_child_count: 1,
-			quarantined_child_count: 1,
+			quarantined_child_count: 0,
+			blocking_cases: 1,
 		});
 		expect(review?.code).toBe('ACCESS_CONTINUITY_CHILD_IDENTITY_CONFLICT');
 	});
