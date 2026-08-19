@@ -44,6 +44,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0019_legacy_import_reconciliation.sql',
 			'0020_reconciliation_release_fence.sql',
 			'0021_reconciliation_exact_candidate_evidence.sql',
+			'0022_reconciliation_completion_downstream_fence.sql',
 		]);
 
 		const result = await context.db
@@ -86,6 +87,7 @@ describe('foundation D1 migration and repositories', () => {
 				'legacy_reconciliation_decisions',
 				'legacy_reconciliation_assertions',
 				'legacy_reconciliation_evidence_bindings',
+				'legacy_reconciliation_materializations',
 			])
 		);
 	});

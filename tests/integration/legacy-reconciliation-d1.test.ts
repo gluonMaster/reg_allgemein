@@ -295,7 +295,7 @@ describe('legacy import reconciliation in D1', () => {
 					"UPDATE import_issues SET status = 'dismissed' WHERE id = 'issue-reconciliation-1'"
 				)
 				.run()
-		).rejects.toThrow(/typed reconciliation/);
+		).rejects.toThrow(/typed reconciliation|materialized import issues are immutable/);
 
 		const caseId = first.items[0].id;
 		const awaitingInput = {
@@ -639,6 +639,65 @@ describe('legacy import reconciliation in D1', () => {
 		).toEqual({ count: 0 });
 	});
 
+	it('fails closed when validation finishes before reconciliation materialization', async () => {
+		const periodId = 'period-reconciliation-incomplete-materialization';
+		await context.db
+			.prepare(
+				`INSERT INTO academic_periods
+					(id, code, display_name, starts_on, ends_on, is_current, created_at)
+				 VALUES (?, '2028-incomplete-materialization', 'Incomplete materialization',
+					'2028-08-01', '2029-07-31', 0, ?)`
+			)
+			.bind(periodId, instant(17))
+			.run();
+		await insertRun(context.db, {
+			runId: 'run-reconciliation-incomplete-materialization',
+			versionId: 'version-reconciliation-incomplete-materialization',
+			marker: '0',
+			periodId,
+		});
+		await insertIssue(context.db, {
+			issueId: 'issue-reconciliation-incomplete-materialization',
+			runId: 'run-reconciliation-incomplete-materialization',
+			sourceKey: 'access:incomplete-materialization:row',
+		});
+
+		expect(
+			await new LegacyImportReconciliationRepository(db).releaseGate(periodId, [
+				{
+					sourceKind: 'access',
+					importRunId: 'run-reconciliation-incomplete-materialization',
+					versionId: 'version-reconciliation-incomplete-materialization',
+				},
+			])
+		).toMatchObject({ blocking: 1, passed: false });
+		await expect(
+			context.db
+				.prepare(
+					`INSERT INTO legacy_reconciliation_materializations
+						(source_kind, academic_period_id, import_run_id, version_id,
+						 actionable_issue_count, occurrence_count, completed_at)
+					 VALUES ('access', ?, 'run-reconciliation-incomplete-materialization',
+						'version-reconciliation-incomplete-materialization', 1, 1, ?)`
+				)
+				.bind(periodId, instant(17))
+				.run()
+		).rejects.toThrow(/materialization incomplete/);
+		await expect(
+			context.db
+				.prepare(
+					`INSERT INTO legacy_version_promotion_events
+						(id, source_kind, academic_period_id, version_id, previous_version_id,
+						 import_run_id, action, fencing_token, created_at)
+					 VALUES ('incomplete-materialization-promotion', 'access', ?,
+						'version-reconciliation-incomplete-materialization', NULL,
+						'run-reconciliation-incomplete-materialization', 'promote', 1, ?)`
+				)
+				.bind(periodId, instant(17))
+				.run()
+		).rejects.toThrow(/reconciliation release gate blocked/);
+	});
+
 	it('binds exact catalog evidence to the case version and denies status-only mapping', async () => {
 		await insertRun(context.db, {
 			runId: 'run-reconciliation-mapping-version',
@@ -890,8 +949,9 @@ describe('legacy import reconciliation in D1', () => {
 						(id, legacy_version_id, legacy_source_row_id, source_namespace,
 						 source_access_id, source_record_key, stable_family_key, source_child_key,
 						 source_hash_sha256, source_values_json, created_at)
-					 VALUES ('snapshot-source-child-a', ?, 'snapshot-source-child-a', 'legacy_1',
-						 601, 'access:child-link:a', 'stable-family-child-a', NULL, ?,
+						 VALUES ('snapshot-source-child-a', ?, 'snapshot-source-child-a', 'legacy_1',
+							 601, 'access:child-link:a', 'stable-family-child-a',
+							 'source-child-link-a', ?,
 						 '{"Value4":"Synthetic Child"}', ?)`
 				)
 				.bind('version-reconciliation-child-link', '8'.repeat(64), instant(20)),
@@ -940,8 +1000,8 @@ describe('legacy import reconciliation in D1', () => {
 						 created_at, updated_at)
 					 VALUES ('legacy-child-link-sibling', 'legacy-family-child-a',
 						 'family-number-child-a', 'legacy', 'source-child-link-sibling',
-						 'Other Child', 'other child', '2016-02-02', 'Other Child',
-						 '2016-02-02', 'Other Child', 'other child', '2016-02-02',
+						 'Synthetic Child', 'synthetic child', '2016-02-02', 'Synthetic Child',
+						 '2016-02-02', 'Synthetic Child', 'synthetic child', '2016-02-02',
 						 'run-reconciliation-child-link', 1, ?, ?)`
 				)
 				.bind(instant(20), instant(20)),
@@ -952,7 +1012,7 @@ describe('legacy import reconciliation in D1', () => {
 						 requested_full_name_normalized, requested_birth_date, status,
 						 reviewed_by, reviewed_at, decision_reason, created_at, updated_at)
 					 VALUES ('child-correction-link-sibling', 'legacy-child-link-sibling',
-						 'reconciliation-admin-a', 'Other Child', 'other child', '2016-02-02',
+						 'reconciliation-admin-a', 'Synthetic Child', 'synthetic child', '2016-02-02',
 						 'approved', 'reconciliation-admin-a', ?, 'synthetic approval', ?, ?)`
 				)
 				.bind(instant(20), instant(20), instant(20)),
@@ -1252,13 +1312,34 @@ describe('legacy import reconciliation in D1', () => {
 		await context.db.batch([
 			context.db
 				.prepare(
-					`UPDATE users SET family_number_id = 'family-number-distinct',
-						family_assignment_status = 'assigned', family_version = 1
-					 WHERE id = 'reconciliation-admin-a'`
-				),
+					`INSERT INTO users
+						(id, email, email_normalized, password_hash, email_verified_at, role,
+						 is_blocked, account_status, first_name, last_name,
+						 first_name_normalized, last_name_normalized, family_assignment_status,
+						 family_version, privacy_notice_version,
+						 privacy_accepted_at, session_version, created_at, updated_at)
+					 VALUES ('duplicate-parent', 'duplicate-parent@example.invalid',
+						'duplicate-parent@example.invalid', 'synthetic-not-used', ?, 'parent',
+						0, 'active', 'Duplicate', 'Parent', 'duplicate', 'parent',
+						'pending_verification', 0, 'notice-v1', ?, 1, ?, ?)`
+				)
+				.bind(instant(24), instant(24), instant(24), instant(24)),
 			context.db
 				.prepare(
-					`UPDATE children SET owner_user_id = 'reconciliation-admin-a'
+					`UPDATE family_number_allocations SET owner_user_id = 'duplicate-parent',
+						updated_at = ? WHERE id = 'family-number-distinct'`
+				)
+				.bind(instant(24)),
+			context.db
+				.prepare(
+					`UPDATE users SET family_number_id = 'family-number-distinct',
+						family_assignment_status = 'assigned', family_version = 1,
+						updated_at = ? WHERE id = 'duplicate-parent'`
+				)
+				.bind(instant(24)),
+			context.db
+				.prepare(
+					`UPDATE children SET owner_user_id = 'duplicate-parent'
 					 WHERE id = 'legacy-child-distinct'`
 				),
 			context.db
@@ -1269,6 +1350,85 @@ describe('legacy import reconciliation in D1', () => {
 						needs_admin_review = 0, is_active_for_occupancy = 1
 					 WHERE id IN ('legacy-enrollment-distinct-a', 'legacy-enrollment-distinct-b')`
 				),
+			context.db
+				.prepare(
+					`INSERT INTO price_review_batches
+						(id, course_group_id, reason_code, old_active_count, new_active_count,
+						 price_version_id, effective_on, earliest_effective_from,
+						 calculation_snapshot_json, calculation_snapshot_hash, dedupe_key,
+						 status, created_at, updated_at)
+					 VALUES ('duplicate-peer-price-batch', 'course-distinct-a',
+						'synthetic_duplicate_regression', 2, 1, NULL, '2026-08-17',
+						'2026-08-17', '{}', ?, 'duplicate-peer-price-batch',
+						'draft', ?, ?)`
+				)
+				.bind('a'.repeat(64), instant(24), instant(24)),
+			context.db
+				.prepare(
+					`INSERT INTO price_review_items
+						(id, batch_id, version, public_reference, legacy_enrollment_id, user_id,
+						 old_base_price_cents, old_price_cents, new_base_price_cents,
+						 new_final_price_cents, old_price_source, new_price_source,
+						 old_price_mode, new_price_mode, target_state_hash,
+						 expected_active_count, effective_on, decision_code, decision_json,
+						 terms_snapshot_json, item_hash, acceptance_text_version, dedupe_key,
+						 status, sent_at, response_deadline, final_admin_confirmed_at,
+						 final_admin_confirmed_by, final_admin_confirmation_reason,
+						 scheduled_for, applied_at, created_at, updated_at)
+					 VALUES ('duplicate-peer-price-item', 'duplicate-peer-price-batch', 1,
+						'duplicate-peer-price-item', 'legacy-enrollment-distinct-b',
+						'duplicate-parent', 1000, 1000, 1200, 1200, 'excel_yearly',
+						'system_rule', 'rule_derived', 'rule_derived', ?, 2, '2026-08-17',
+						'synthetic_duplicate_regression', '{}', '{}', ?, 'acceptance-v1',
+						'duplicate-peer-price-item', 'applied', ?, '2026-08-31', ?,
+						'reconciliation-admin-a', 'synthetic final confirmation',
+						'2026-08-17', ?, ?, ?)`
+				)
+				.bind(
+					'b'.repeat(64),
+					'c'.repeat(64),
+					instant(24),
+					instant(24),
+					instant(24),
+					instant(24),
+					instant(24)
+				),
+		]);
+		await expect(
+			adminRepository.mutate({
+				actor: adminActor(),
+				caseId: recurrent.id,
+				expectedVersion: recurrent.version,
+				action: 'same_service_duplicate',
+				reasonCode: 'same_service_confirmed',
+				targetType: 'legacy_enrollment',
+				targetId: 'legacy-enrollment-distinct-b',
+				idempotencyKey: 'same-service-applied-price-denied',
+				requestId: 'request-same-service-applied-price-denied',
+				now: instant(25),
+			})
+		).rejects.toThrow(/duplicate peer has applied price review/);
+		await context.db.batch([
+			context.db
+				.prepare("DELETE FROM price_review_items WHERE id = 'duplicate-peer-price-item'"),
+			context.db
+				.prepare(
+					`INSERT INTO price_review_items
+						(id, batch_id, version, public_reference, legacy_enrollment_id, user_id,
+						 old_base_price_cents, old_price_cents, new_base_price_cents,
+						 new_final_price_cents, old_price_source, new_price_source,
+						 old_price_mode, new_price_mode, target_state_hash,
+						 expected_active_count, effective_on, decision_code, decision_json,
+						 terms_snapshot_json, item_hash, acceptance_text_version, dedupe_key,
+						 status, sent_at, response_deadline, created_at, updated_at)
+					 VALUES ('duplicate-peer-price-item', 'duplicate-peer-price-batch', 1,
+						'duplicate-peer-price-item', 'legacy-enrollment-distinct-b',
+						'duplicate-parent', 1000, 1000, 1200, 1200, 'excel_yearly',
+						'system_rule', 'rule_derived', 'rule_derived', ?, 2, '2026-08-17',
+						'synthetic_duplicate_regression', '{}', '{}', ?, 'acceptance-v1',
+						'duplicate-peer-price-item', 'sent', ?, '2026-08-31', ?, ?)`
+				)
+				.bind('b'.repeat(64), 'c'.repeat(64), instant(25), instant(25), instant(25)),
 		]);
 		await adminRepository.mutate({
 			actor: adminActor(),
@@ -1283,7 +1443,7 @@ describe('legacy import reconciliation in D1', () => {
 			now: instant(25),
 		});
 		expect(
-			(await new CabinetRepository(db).listActivities('reconciliation-admin-a', '2026-08-17'))
+			(await new CabinetRepository(db).listActivities('duplicate-parent', '2026-08-17'))
 				.filter((activity) => activity.id.startsWith('legacy-enrollment-distinct'))
 				.map((activity) => activity.id)
 		).toEqual(['legacy-enrollment-distinct-a']);
@@ -1292,6 +1452,20 @@ describe('legacy import reconciliation in D1', () => {
 				.filter((target) => target.id.startsWith('legacy-enrollment-distinct'))
 				.map((target) => target.id)
 		).toEqual(['legacy-enrollment-distinct-a']);
+		expect(
+			await context.db
+				.prepare("SELECT status FROM price_review_items WHERE id = 'duplicate-peer-price-item'")
+				.first()
+		).toEqual({ status: 'superseded' });
+		expect(
+			await context.db
+				.prepare(
+					`SELECT COUNT(*) AS count FROM audit_events
+					 WHERE action = 'price_review.item.superseded_by_legacy_duplicate'
+						AND target_id = 'duplicate-peer-price-item'`
+				)
+				.first()
+		).toEqual({ count: 1 });
 	});
 
 	it('rolls a homogeneous batch back on a concurrent case change and supports atomic replay', async () => {
@@ -1471,7 +1645,6 @@ describe('legacy import reconciliation in D1', () => {
 			versionId: 'version-reconciliation-clean-older',
 			marker: 'c',
 			periodId,
-			insertVersion: false,
 		});
 		const importer = new LegacyImportReconciliationRepository(db);
 		const adminRepository = new LegacyReconciliationAdminRepository(db);
@@ -1487,7 +1660,6 @@ describe('legacy import reconciliation in D1', () => {
 			versionId: 'version-reconciliation-bad-candidate',
 			marker: 'd',
 			periodId,
-			insertVersion: false,
 		});
 		await insertIssue(context.db, {
 			issueId: 'issue-reconciliation-bad-candidate',
@@ -1540,7 +1712,6 @@ describe('legacy import reconciliation in D1', () => {
 			versionId: 'version-reconciliation-clean-newer',
 			marker: 'f',
 			periodId,
-			insertVersion: false,
 		});
 		await importer.reconcileValidatedImport({
 			academicPeriodId: periodId,

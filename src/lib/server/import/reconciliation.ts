@@ -290,6 +290,9 @@ export class LegacyImportReconciliationRepository {
 				FROM import_issues WHERE import_run_id = ? ORDER BY code, id`,
 			params: [input.importRunId],
 		});
+		const actionableIssueCount = issueRows.results.filter(
+			(issue) => reconciliationIssueClass(issue.code) !== null
+		).length;
 		const currentIdentities = new Set<string>();
 
 		for (const issue of issueRows.results) {
@@ -459,6 +462,24 @@ export class LegacyImportReconciliationRepository {
 			}
 			await this.resolveByReimport({ caseRow: candidate, ...input });
 		}
+
+		await this.db.batch([
+			{
+				sql: `INSERT OR IGNORE INTO legacy_reconciliation_materializations
+					(source_kind, academic_period_id, import_run_id, version_id,
+					 actionable_issue_count, occurrence_count, completed_at)
+					VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				params: [
+					input.sourceKind,
+					input.academicPeriodId,
+					input.importRunId,
+					input.versionId,
+					actionableIssueCount,
+					actionableIssueCount,
+					input.now,
+				],
+			},
+		]);
 	}
 
 	async releaseGate(
@@ -535,7 +556,7 @@ export class LegacyImportReconciliationRepository {
 						AND reconciliation_case.state IN ('resolved', 'superseded')
 						AND (${candidatePredicate})
 						AND NOT EXISTS (
-							SELECT 1 FROM legacy_reconciliation_valid_typed_resolutions AS valid
+							SELECT 1 FROM legacy_reconciliation_strict_typed_resolutions AS valid
 							WHERE valid.case_id = occurrence.case_id
 								AND valid.source_import_run_id = occurrence.import_run_id
 								AND valid.source_version_id = occurrence.version_id
@@ -547,6 +568,24 @@ export class LegacyImportReconciliationRepository {
 				summary.blocking += row.count;
 				summary.byClass[row.issue_class] += row.count;
 			}
+			const materializations = await Promise.all(
+				candidateVersions.map((candidate) =>
+					this.db.first<{ source_kind: string }>({
+						sql: `SELECT source_kind FROM legacy_reconciliation_materializations
+							WHERE source_kind = ? AND academic_period_id = ?
+								AND import_run_id = ? AND version_id = ?`,
+						params: [
+							candidate.sourceKind,
+							academicPeriodId,
+							candidate.importRunId,
+							candidate.versionId,
+						],
+					})
+				)
+			);
+			const incompleteMaterializations = materializations.filter((row) => row === null).length;
+			summary.blocking += incompleteMaterializations;
+			summary.byClass.source_consistency += incompleteMaterializations;
 		}
 		summary.passed = summary.blocking === 0;
 		return summary;

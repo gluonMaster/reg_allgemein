@@ -501,7 +501,7 @@ export class PricingRepository {
 				AND legacy.lesson_kind IN ('group', 'dance_group')
 				AND NOT EXISTS (
 					SELECT 1
-					FROM legacy_reconciliation_valid_typed_resolutions AS duplicate_resolution
+					FROM legacy_reconciliation_strict_typed_resolutions AS duplicate_resolution
 					WHERE duplicate_resolution.action = 'same_service_duplicate'
 						AND duplicate_resolution.peer_enrollment_id = legacy.id
 				)

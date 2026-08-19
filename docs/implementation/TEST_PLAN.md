@@ -156,9 +156,10 @@ concurrency/idempotency проверки в названном suite. Точны
 Реализованный suite `T-IMPORT-RECONCILIATION` по
 [IMPORT_ADMIN_RECONCILIATION_TZ.md](IMPORT_ADMIN_RECONCILIATION_TZ.md):
 
-- append-only migrations `0019`–`0021`: fresh/populated upgrade,
+- append-only migrations `0019`–`0022`: fresh/populated upgrade,
   FK/check/allowed transitions, immutable decisions/assertions/audit и atomic
-  promotion fence при active blocking case и exact candidate occurrence;
+  promotion fence при missing completion marker, active blocking case и exact
+  candidate occurrence;
 - один stable case для одного issue через несколько runs; persistence,
   disappearance, terminal recurrence, old-run replay и supersede проверяются
   exact version evidence и строгим порядком runs;
@@ -170,26 +171,31 @@ concurrency/idempotency проверки в названном suite. Точны
   откатывает весь terminal batch и снимает valid-resolution gate evidence;
 - invalid email/DOB, family correction, price/duration и duplicate actions
   сохраняют fail-closed domain semantics; child evidence совпадает с case
-  family/source/version, а distinct-service доказывает exact duplicate pair;
+  family/source/version/`source_child_key` и отвергает same-name sibling, а
+  distinct-service доказывает exact duplicate pair;
 - mixed/duplicate cohort запрещён; concurrent stale case откатывает весь batch,
   successful replay идемпотентен, changed-identity successor/supersede атомарен;
 - row-level PlusBText issues получают разные PII-free source identities, а
   их semantic identity переживает вставку/перестановку соседних строк; duplicate
   Access issue сохраняет каждую exact opaque enrollment pair;
-- `same_service_duplicate` удаляет peer из cabinet/pricing projections, а
-  `distinct_service_proven` требует exact pair и разные current mappings;
+- `same_service_duplicate` удаляет peer из cabinet/pricing projections,
+  атомарно supersede-ит mutable in-flight price-review item и fail-closed при
+  applied peer; `distinct_service_proven` требует exact pair и разные current
+  mappings;
 - PII canaries отсутствуют в queue/export/audit/log; export сохраняет filters и
   выгружает весь результат за пределами первой UI page;
-- exact bad candidate, active case и registration current pair fail closed, а
-  исчезновение issue закрывает case только `resolved_by_reimport`.
+- exact bad candidate, active case и registration current pair fail closed;
+  crash после `validated` до materialization не создаёт completion marker и
+  блокирует promotion/registration, а исчезновение issue закрывает case только
+  `resolved_by_reimport`.
 
-Migrations `0019`–`0021`, `tests/integration/legacy-reconciliation-d1.test.ts`,
+Migrations `0019`–`0022`, `tests/integration/legacy-reconciliation-d1.test.ts`,
 `tests/unit/admin-reconciliation-route-security.test.ts`, release verification
 regression и parser/occupancy suites покрывают local `IMPORT-08`. Focused D1
 suite отдельно проверяет scoped summary filters, version-bound mapping,
-case-bound child correction, exact duplicate pair/downstream consolidation,
-atomic evidence race/batch rollback, exact-candidate registration/promotion,
-atomic supersede reconciliation и promotion trigger.
+case/source-child-bound correction, exact duplicate pair/downstream price-review
+consolidation, atomic evidence race/batch rollback, completion-marker
+registration/promotion, atomic supersede reconciliation и promotion trigger.
 Populated upgrade дополнительно проходит общий
 `tests/integration/migration-upgrade-d1.test.ts`. External preview rehearsal,
 independent admin cold-read и current-source owner decisions остаются отдельными

@@ -414,22 +414,21 @@ duplicate buckets и остальные anomaly classes требуют штат�
 admin contour. Он нормативно зафиксирован как `IMPORT-08`/
 `AC-IMPORT-27`–`AC-IMPORT-31` в
 [отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md). Exact `f7e75f9` реализовал
-migrations `0019`–`0020`, stable cross-run materialization/reimport evidence,
-typed decisions, atomic batch/supersede, PII-free queue/export и transactional
-period gate. Его authorized independent review вернул NO-GO с 3 BLOCKER,
-5 HIGH и 2 MEDIUM findings: exact candidate/current registration, old-run replay,
-classifier completeness, terminal recurrence, projection drift, atomic/live
-evidence, exact child/pair и full export были недостаточны. Текущий local
-worktree remediation зафиксирована как exact
-`b354e5829142e62ca0805adb7c3e9febc68145b6`: append-only migration `0021`, exact
-occurrence gates, immutable live evidence и соответствующие
-import/admin/projection/parser/export исправления. Этот SHA ещё не прошёл fresh
-post-commit verification или independent review. PR-B17 остаётся blocked.
-До commit remediation worktree прошёл полный local chain: check 0/0, Vitest
-66 files/509 tests, Chromium 18/18, build, audit 0, docs 151 links/52 files +
-105 commands и scan 535/535. До fresh exact-SHA verification/re-review,
-independent admin cold-read, owner review текущих buckets и отдельного authorized
-preview rehearsal gate не закрыт. Этот local delta ничего не менял remote.
+migrations `0019`–`0020`; его review findings были исправлены в `b354e582`/
+`0021`, а documentation descendant `017c0d32` прошёл fresh full chain. Новый
+authorized review exact evidence seal
+`8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` вернул NO-GO с 2 BLOCKER и 2 HIGH:
+crash-window между `validated` и reconciliation, неоднозначный current SHA,
+same-name sibling evidence и in-flight duplicate price review. Текущий local
+worktree добавляет append-only migration `0022`, exact completion marker,
+strict source-child identity и atomic downstream price-review fence. Targeted
+local evidence прошло: reconciliation 10/10, family/cabinet 9/9, legacy import
+13/13, price review 6/6 и check 0/0. После исправления трёх найденных full-suite
+regressions полный local worktree chain также прошёл: 66/66 files, 511/511
+Vitest, Chromium 18/18, build, audit 0, docs/scan/diff. Worktree ещё не является
+immutable remediation checkpoint и не имеет fresh exact-SHA verification/re-review.
+PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
+buckets и authorized preview rehearsal также отсутствуют. Remote не менялся.
 
 Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
 candidate добавляет real one-way `bot_api` adapter, strict minimized payload,
@@ -457,7 +456,7 @@ Tracked packet этапа:
 - [persistent handoff](handoffs/stage-13.md).
 
 Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed migrations
-`0014`–`0015`, local unapplied candidates `0016`–`0021`,
+`0014`–`0015`, local unapplied candidates `0016`–`0022`,
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
 покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются

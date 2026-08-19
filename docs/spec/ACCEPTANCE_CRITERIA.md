@@ -318,6 +318,11 @@ MVP готов, когда:
   после upstream correction отклонение закрывается только как
   `resolved_by_reimport` с exact previous/current version evidence от строго
   более нового run; replay старого validated run не закрывает case.
+  Переход run в `validated` сам по себе не завершает reconciliation: promotion
+  и registration требуют immutable exact run/version completion marker,
+  записанный только после materialization всех actionable `ACCESS_*|PLUSB_*`
+  issues и равенства issue/occurrence counts. Crash до marker fail-closed;
+  поздняя mutation materialized issues запрещена.
 - **AC-IMPORT-28.** Actionable import issue нельзя закрыть generic
   `resolve|dismiss`. Typed action требует current admin, CSRF, reason code,
   optimistic version/idempotency key и append-only audit/assertion; concurrent
@@ -333,16 +338,18 @@ MVP готов, когда:
   cases направляют администратора в соответствующий typed tool. Invalid email
   не участвует в claim; invalid birth date не импортируется; duplicate service
   учитывается один раз, пока отдельность exact пары услуг не доказана; child
-  correction совпадает с exact case family/source/version. Batch action
-  разрешена только для одной issue class и одного решения и атомарна для всего
-  cohort.
+  correction совпадает с exact case family/source/version и `source_child_key`,
+  поэтому same-name/different-DOB sibling не закрывает case. Подтверждение
+  `same_service_duplicate` атомарно supersede-ит незавершённый peer price-review
+  и блокируется, если peer price review уже applied. Batch action разрешена
+  только для одной issue class и одного решения и атомарна для всего cohort.
 - **AC-IMPORT-31.** Queue/list/export/log содержат только opaque case/family/
   source references, codes, counts, state и timestamps. PII доступна лишь в
   уже авторизованной entity detail; export применяет текущие filters ко всему
   результату, а не к одной UI page. Promotion/registration gates fail-closed
-  при active blocking cases и при blocking occurrence exact candidate/current
-  run/version без live valid typed evidence; retention/cleanup оставляет
-  append-only audit.
+  при отсутствии completion marker, active blocking cases и blocking occurrence
+  exact candidate/current run/version без live valid typed evidence;
+  retention/cleanup оставляет append-only audit.
 
 ## 5. Каталог, capacity и trial
 

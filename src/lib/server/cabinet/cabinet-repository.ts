@@ -105,7 +105,7 @@ export class CabinetRepository {
 					AND legacy.is_current = 1 AND legacy.is_active_for_occupancy = 1
 					AND NOT EXISTS (
 						SELECT 1
-						FROM legacy_reconciliation_valid_typed_resolutions AS duplicate_resolution
+						FROM legacy_reconciliation_strict_typed_resolutions AS duplicate_resolution
 						WHERE duplicate_resolution.action = 'same_service_duplicate'
 							AND duplicate_resolution.peer_enrollment_id = legacy.id
 					)

@@ -213,24 +213,22 @@ Access-price priority и PII-free admin references. Package groups ограни�
 это уменьшение false positives, а не автоматическое принятие данных. Active
 unresolved group подтверждён как upstream error и остаётся `awaiting_upstream`.
 Для structural duplicates и остальных actionable classes `IMPORT-08` durable
-reconciliation contour из tracked TZ теперь реализован локально migration
-`0019`, stable cases/occurrences, typed admin repository/routes/UI,
-PII-minimized export и release/registration gate. Fresh post-commit exact-SHA
-verification прошла 2026-08-18. Authorized independent review exact
-`f7e75f9b6281c44b3152c65061ab974e87153f09` вернул NO-GO с 3 BLOCKER, 5 HIGH и
-2 MEDIUM: exact candidate/current registration и old-run replay gates,
-classifier completeness, terminal recurrence, mapping projection drift,
-atomic/live typed evidence, exact child/duplicate semantics и full export были
-недостаточны. Exact remediation commit
-`b354e5829142e62ca0805adb7c3e9febc68145b6` закрывает findings append-only
-migration `0021` и изменениями import/admin/family/cabinet/pricing/parser/export.
-Его direct parent worktree прошёл: check 0/0, Vitest 66 files/509 tests,
-Chromium 18/18, build, production audit 0, docs 151 links/52 files + 105 commands
-и scan 535/535. Эти результаты pre-commit; fresh post-commit exact-SHA chain и
-independent review ещё отсутствуют. Admin cold-read, owner decisions и authorized preview
-rehearsal также отсутствуют. Поэтому PR-B17 остаётся blocked.
+reconciliation contour из tracked TZ реализован локально migrations
+`0019`–`0021`, stable cases/occurrences, typed admin repository/routes/UI,
+PII-minimized export и release/registration gate. Documentation descendant
+`017c0d32` прошёл fresh exact-SHA chain, но authorized independent review exact
+evidence seal `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` вернул NO-GO с 2 BLOCKER и
+2 HIGH: incomplete materialization после `validated`, ambiguous release SHA,
+same-name sibling evidence и surviving duplicate price-review peer. Текущий
+worktree закрывает runtime findings append-only migration `0022`, exact
+completion marker, strict source-child identity и atomic downstream
+price-review fence. Targeted suites прошли, но worktree ещё не immutable и не
+имеет fresh exact-SHA verification/re-review. Полный local worktree chain прошёл:
+check 0/0, 66/66 files и 511/511 Vitest, Chromium 18/18, build, audit 0 и
+docs/scan/diff. Admin cold-read, owner decisions и authorized preview rehearsal
+также отсутствуют. Поэтому PR-B17 остаётся blocked.
 
-Это не меняет deployed preview `0001`–`0015`; local `0016`–`0021` остаются
+Это не меняет deployed preview `0001`–`0015`; local `0016`–`0022` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или
 PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
 

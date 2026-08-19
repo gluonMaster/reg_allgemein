@@ -13,11 +13,7 @@ import {
 import { OccupancyRepository } from '$lib/server/pricing/occupancy-repository';
 import { PricingRepository } from '$lib/server/pricing/pricing-repository';
 import { PricingService } from '$lib/server/pricing/pricing-service';
-import {
-	applyTestD1Migrations,
-	createMigratedTestD1,
-	type TestD1Context,
-} from '../helpers/d1';
+import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 import {
 	createSyntheticPlusBTextWorkbook,
 	createSyntheticPriceWorkbook,
@@ -157,7 +153,7 @@ async function importPricingSources(input: {
 	const plusBytes = createSyntheticPlusBTextWorkbook({
 		rows: [
 			{ l: 'Kunst Sa', m: 'Teacher A', n: 'Sa', t: '90' },
-			{ l: 'Musik Mo', m: 'Teacher B', n: 'Mo', t: null },
+			{ l: 'Musik Mo', m: 'Teacher B', n: 'Mo', t: '90' },
 		],
 	});
 	const plus = await parsePlusBTextWorkbook(plusBytes);
@@ -325,7 +321,7 @@ describe('stage 04 pricing and occupancy in D1', () => {
 	});
 
 	it('maps explicitly, dedupes occupancy, persists/revalidates quotes and audits confirmations', async () => {
-		context = await createMigratedTestD1({ through: '0019' });
+		context = await createMigratedTestD1();
 		const db = new DatabaseBoundary(context.db);
 		const imports = new ImportRepository(db);
 		const period = await imports.ensureAcademicPeriod({
@@ -337,7 +333,15 @@ describe('stage 04 pricing and occupancy in D1', () => {
 			now: instant(0),
 		});
 		const sources = await importPricingSources({ repository: imports, period });
-		await applyTestD1Migrations(context.db, { after: '0019', through: '0021' });
+		// Pricing still has to support historical published rows with an absent
+		// duration. Current imports cannot create that state because IMPORT-08 now
+		// blocks PLUSB_DURATION_MISSING before promotion.
+		await context.db
+			.prepare(
+				`UPDATE plusbtext_targets SET duration_minutes = NULL, duration_status = 'missing'
+				 WHERE group_name_normalized = 'musik mo'`
+			)
+			.run();
 		const courses = await db.all<{ id: string; display_name: string }>({
 			sql: `SELECT id, display_name FROM course_groups WHERE academic_period_id = ?`,
 			params: [period.id],

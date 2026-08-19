@@ -206,6 +206,20 @@ export class LegacyFamilyVerificationExtension implements PostVerificationExtens
 			WHERE current_version.id = ? AND current_version.import_run_id = ?
 				AND current_version.is_published = 1 AND current_period.is_current = 1
 				AND current_run.status = 'promoted'
+				AND EXISTS (
+					SELECT 1 FROM legacy_reconciliation_materializations AS materialization
+					WHERE materialization.source_kind = 'access'
+						AND materialization.academic_period_id = current_period.id
+						AND materialization.import_run_id = current_version.import_run_id
+						AND materialization.version_id = current_version.id
+				)
+				AND EXISTS (
+					SELECT 1 FROM legacy_reconciliation_materializations AS materialization
+					WHERE materialization.source_kind = 'plusbtext'
+						AND materialization.academic_period_id = current_period.id
+						AND materialization.import_run_id = current_plusbtext.import_run_id
+						AND materialization.version_id = current_plusbtext.id
+				)
 				AND NOT EXISTS (
 					SELECT 1 FROM legacy_reconciliation_cases AS reconciliation_case
 					WHERE reconciliation_case.academic_period_id = current_period.id
@@ -230,7 +244,7 @@ export class LegacyFamilyVerificationExtension implements PostVerificationExtens
 						)
 						AND NOT EXISTS (
 							SELECT 1
-							FROM legacy_reconciliation_valid_typed_resolutions AS valid
+							FROM legacy_reconciliation_strict_typed_resolutions AS valid
 							WHERE valid.case_id = occurrence.case_id
 								AND valid.source_import_run_id = occurrence.import_run_id
 								AND valid.source_version_id = occurrence.version_id

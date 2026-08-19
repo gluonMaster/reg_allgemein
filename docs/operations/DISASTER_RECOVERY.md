@@ -57,7 +57,7 @@ non-production environment и критического smoke. Production restore
 
 | Назначение                   | Binding         | Restore target                     |
 | ---------------------------- | --------------- | ---------------------------------- |
-| Runtime database             | `DB`; deployed preview `0001`–`0015`, local unapplied candidate `0016`–`0021` | новая isolated non-production D1 |
+| Runtime database             | `DB`; deployed preview `0001`–`0015`, local unapplied candidate `0016`–`0022` | новая isolated non-production D1 |
 | Retained/approved archive    | `R2_ARCHIVE`    | новый private EU archive bucket    |
 | Quarantine/transient objects | `R2_QUARANTINE` | новый private EU quarantine bucket |
 
@@ -71,7 +71,7 @@ backup/restore gate остаётся `blocked`.
 Candidate migrations `0016_legacy_import_release_control.sql`,
 `0017_telegram_delivery_certainty.sql` и
 `0018_legacy_import_release_hardening.sql`, а также reconciliation migrations
-`0019`–`0021` проходят только local empty/upgrade tests. Они не применены в
+`0019`–`0022` проходят только local empty/upgrade tests. Они не применены в
 preview/production и не меняют приведённый deployed inventory до отдельно
 разрешённого apply.
 
@@ -301,8 +301,8 @@ scope известны; write/external paths contained; database/security owners
 - если damage нельзя безопасно исправить — восстановить D1/R2 в isolated env и
   запросить отдельное production restore approval.
 
-Весь local candidate set `0001`–`0021`, включая deployed Stage-13 migrations
-`0014`–`0015` и unapplied `0016`–`0021`, проходит local empty tests;
+Весь local candidate set `0001`–`0022`, включая deployed Stage-13 migrations
+`0014`–`0015` и unapplied `0016`–`0022`, проходит local empty tests;
 representative populated upgrade применяет весь suffix после `0013`. Recovery
 compatibility всё равно не доказана без отдельно разрешённого remote apply,
 isolated backup/restore и code-rollback rehearsal.

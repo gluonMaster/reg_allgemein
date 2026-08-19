@@ -716,9 +716,45 @@ describe('stage 06 atomic family claim and parent cabinet', () => {
 		});
 	});
 
+	it('blocks registration while the published pair lacks reconciliation completion markers', async () => {
+		await seedCurrentLegacySnapshot({
+			db: context.db,
+			materializeReconciliation: false,
+			families: [
+				{
+					sequence: 4198,
+					emails: ['incomplete.reconciliation@example.test'],
+					childName: 'Incomplete Child',
+					groupName: 'Incomplete Group',
+				},
+			],
+		});
+		await register({
+			email: 'incomplete.reconciliation@example.test',
+			requestId: 'registration-incomplete-reconciliation-register',
+		});
+		const token = await nextToken('/auth/verify', 'incomplete.reconciliation@example.test');
+		await expect(
+			authService.verifyEmail({
+				token,
+				requestId: 'registration-incomplete-reconciliation-verify',
+				requestSubject: 'registration-incomplete-reconciliation-verify',
+			})
+		).rejects.toThrow(/assertion_passed/);
+		expect(
+			await context.db
+				.prepare(
+					`SELECT email_verified_at, family_number_id FROM users
+					 WHERE email_normalized = 'incomplete.reconciliation@example.test'`
+				)
+				.first()
+		).toEqual({ email_verified_at: null, family_number_id: null });
+	}, 45_000);
+
 	it('blocks registration against an exact published occurrence closed only by another import', async () => {
 		const snapshot = await seedCurrentLegacySnapshot({
 			db: context.db,
+			materializeReconciliation: false,
 			families: [
 				{
 					sequence: 4199,
@@ -770,6 +806,32 @@ describe('stage 06 atomic family claim and parent cabinet', () => {
 						 'registration-exact-issue', ?, ?, ?, ?)`
 				)
 				.bind(snapshot.accessRunId, snapshot.legacyVersionId, 'b'.repeat(64), currentTime),
+			context.db
+				.prepare(
+					`INSERT INTO legacy_reconciliation_materializations
+						(source_kind, academic_period_id, import_run_id, version_id,
+						 actionable_issue_count, occurrence_count, completed_at)
+					 VALUES ('access', ?, ?, ?, 1, 1, ?)`
+				)
+				.bind(
+					snapshot.periodId,
+					snapshot.accessRunId,
+					snapshot.legacyVersionId,
+					currentTime
+				),
+			context.db
+				.prepare(
+					`INSERT INTO legacy_reconciliation_materializations
+						(source_kind, academic_period_id, import_run_id, version_id,
+						 actionable_issue_count, occurrence_count, completed_at)
+					 VALUES ('plusbtext', ?, ?, ?, 0, 0, ?)`
+				)
+				.bind(
+					snapshot.periodId,
+					snapshot.plusRunId,
+					snapshot.plusVersionId,
+					currentTime
+				),
 		]);
 		await register({
 			email: 'exact.blocked@example.test',

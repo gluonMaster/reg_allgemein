@@ -134,27 +134,21 @@ describe('stage 06A administrative console in D1', () => {
 			db: context.db,
 			families: [{ sequence: 6101, emails: ['legacy.private@example.test'] }],
 			now: NOW,
+			syntheticAccessIssues: [
+				{
+					id: 'unsafe-context-issue',
+					code: 'SYNTHETIC_SAFE_SCAN',
+					sourceRecordKey: 'access:synthetic:1',
+					safeContext: {
+						localPath: 'C:\\clients\\private.accdb',
+						email: 'client@example.test',
+						rowNumber: 7,
+						entityType: 'legacy_family',
+						entityId: `legacy_family_${'a'.repeat(32)}`,
+					},
+				},
+			],
 		});
-		await context.db
-			.prepare(
-				`INSERT INTO import_issues
-					(id, import_run_id, severity, code, source_record_key,
-					 safe_context_json, status, created_at)
-				 VALUES ('unsafe-context-issue', ?, 'warning', 'SYNTHETIC_SAFE_SCAN',
-					 'access:synthetic:1', ?, 'open', ?)`
-			)
-			.bind(
-				seeded.accessRunId,
-				JSON.stringify({
-					localPath: 'C:\\clients\\private.accdb',
-					email: 'client@example.test',
-					rowNumber: 7,
-					entityType: 'legacy_family',
-					entityId: `legacy_family_${'a'.repeat(32)}`,
-				}),
-				NOW
-			)
-			.run();
 
 		const repository = new AdminConsoleRepository(db);
 		const detail = await repository.importRunDetail(seeded.accessRunId);
@@ -255,16 +249,13 @@ describe('stage 06A administrative console in D1', () => {
 				},
 			],
 			now: NOW,
+			syntheticAccessIssues: [
+				{
+					id: 'typed-import-issue',
+					code: 'SYNTHETIC_AMBIGUITY',
+				},
+			],
 		});
-		await context.db
-			.prepare(
-				`INSERT INTO import_issues
-					(id, import_run_id, severity, code, safe_context_json, status, created_at)
-				 VALUES ('typed-import-issue', ?, 'warning', 'SYNTHETIC_AMBIGUITY',
-					 '{}', 'open', ?)`
-			)
-			.bind(seeded.accessRunId, NOW)
-			.run();
 		await mutations.decideImportIssue({
 			actor: adminActor(),
 			issueId: 'typed-import-issue',

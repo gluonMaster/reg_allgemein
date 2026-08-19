@@ -317,7 +317,8 @@ case storage и не раскрывается в reconciliation evidence.
 
 Typed correction evidence привязывается к `last_seen_version_id` case. Exact
 course mapping проверяет snapshot enrollment этой версии; child correction
-дополнительно сверяет family/source identity; `distinct_service_proven`
+дополнительно сверяет family/source identity и exact `source_child_key`, поэтому
+same-name/different-DOB sibling не является evidence; `distinct_service_proven`
 доказывает именно две enrollment записи duplicate occurrence и две разные
 current course assignments. Homogeneous multi-case mutation, а также создание
 successor и supersede predecessor выполняются одним D1 batch, поэтому stale CAS
@@ -332,6 +333,16 @@ commit. Snapshot families/source rows/enrollments становятся immutable
 materialization reconciliation occurrence либо promotion. Отзыв или изменение
 current projection делает typed evidence невалидным для gate без переписывания
 истории решения.
+
+Append-only migration `0022_reconciliation_completion_downstream_fence.sql`
+добавляет `legacy_reconciliation_materializations`: один immutable completion
+marker на exact source kind/run/version с равными actionable issue/occurrence
+counts. Marker создаётся последним после reconciliation; promotion и family
+registration требуют marker для exact Access/PlusBText pair, а `import_issues`
+после marker immutable. Strict typed-evidence views добавляют exact child key.
+Valid `same_service_duplicate` в той же D1 transaction supersede-ит mutable
+peer `price_review_items` и пишет PII-free audit; наличие applied peer item
+блокирует решение до отдельной финансовой сверки.
 
 ### `legacy_import_release_plans`, `legacy_import_bundle_events`,
 
@@ -377,6 +388,9 @@ Migration `0021` заменяет period-only promotion check exact-candidate fe
 Historical terminal case или clean replay другого run не освобождает candidate;
 параллельно сохраняется запрет любого active blocking case периода. Registration
 проверяет тем же правилом exact current Access и published PlusBText versions.
+Migration `0022` добавляет prerequisite completion marker, поэтому пустое
+множество occurrences после crash между `validated` и reconciliation больше не
+может трактоваться как clean candidate.
 
 Protected ignored recovery-evidence artifact не является D1 substitute или
 произвольным digest: он связывает exact environment/account/database/plan/review/
@@ -1375,6 +1389,10 @@ apply conditional-transaction повторно требуют active account, qu
 active enrollment на effective date, exact current old price/mode, matching
 new count/version/rule и отсутствие newer open/applied item. Любой mismatch
 ставит `superseded`, сохраняет response evidence и не меняет enrollment.
+Legacy peer, подтверждённый typed решением `same_service_duplicate`, также
+исключается из accept/final-confirm/apply target assertions. Незавершённый item
+supersede-ится атомарно вместе с reconciliation evidence; applied item требует
+отдельной сверки и блокирует duplicate resolution.
 
 ### `price_change_acceptances`
 

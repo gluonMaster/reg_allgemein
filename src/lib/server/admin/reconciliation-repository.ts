@@ -795,6 +795,8 @@ export class LegacyReconciliationAdminRepository {
 					JOIN legacy_snapshot_source_rows AS source
 						ON source.legacy_version_id = family.legacy_version_id
 						AND source.stable_family_key = family.stable_family_key
+						AND child.source_child_key IS NOT NULL
+						AND source.source_child_key = child.source_child_key
 					WHERE correction.child_id = ? AND correction.status = 'approved'
 						AND trim(CAST(json_extract(source.source_values_json, '$.Value4') AS TEXT))
 							IN (trim(child.source_full_name), trim(correction.requested_full_name))`,

@@ -216,6 +216,11 @@ function targetAssertion(
 				AND legacy.is_active_for_occupancy = 1
 				AND legacy.represented_by_enrollment_id IS NULL
 				AND legacy.needs_admin_review = 0
+				AND NOT EXISTS (
+					SELECT 1 FROM legacy_reconciliation_strict_typed_resolutions AS resolution
+					WHERE resolution.action = 'same_service_duplicate'
+						AND resolution.peer_enrollment_id = legacy.id
+				)
 				AND COALESCE((SELECT assignment.base_price_cents
 					FROM legacy_service_price_assignments assignment
 					WHERE assignment.legacy_enrollment_id = legacy.id

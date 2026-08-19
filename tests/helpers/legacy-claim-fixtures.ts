@@ -21,7 +21,21 @@ export async function seedCurrentLegacySnapshot(input: {
 	db: D1Database;
 	families: SyntheticLegacyFamily[];
 	now?: string;
-}): Promise<{ legacyVersionId: string; accessRunId: string; periodId: string }> {
+	materializeReconciliation?: boolean;
+	syntheticAccessIssues?: Array<{
+		id: string;
+		severity?: 'info' | 'warning' | 'error' | 'fatal';
+		code: `SYNTHETIC_${string}`;
+		sourceRecordKey?: string;
+		safeContext?: Record<string, unknown>;
+	}>;
+}): Promise<{
+	legacyVersionId: string;
+	accessRunId: string;
+	plusVersionId: string;
+	plusRunId: string;
+	periodId: string;
+}> {
 	const now = input.now ?? '2026-07-17T09:00:00.000Z';
 	const suffix = crypto.randomUUID();
 	const periodId = `period-${suffix}`;
@@ -315,6 +329,41 @@ export async function seedCurrentLegacySnapshot(input: {
 		}
 	}
 
+	for (const issue of input.syntheticAccessIssues ?? []) {
+		push(
+			`INSERT INTO import_issues
+				(id, import_run_id, severity, code, source_record_key,
+				 safe_context_json, status, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, 'open', ?)`,
+			issue.id,
+			accessRunId,
+			issue.severity ?? 'warning',
+			issue.code,
+			issue.sourceRecordKey ?? null,
+			JSON.stringify(issue.safeContext ?? {}),
+			now
+		);
+	}
+
+	if (input.materializeReconciliation !== false) {
+		for (const source of [
+			{ kind: 'plusbtext', runId: plusRunId, versionId: plusVersionId },
+			{ kind: 'access', runId: accessRunId, versionId: legacyVersionId },
+		] as const) {
+			push(
+				`INSERT INTO legacy_reconciliation_materializations
+					(source_kind, academic_period_id, import_run_id, version_id,
+					 actionable_issue_count, occurrence_count, completed_at)
+				 VALUES (?, ?, ?, ?, 0, 0, ?)`,
+				source.kind,
+				periodId,
+				source.runId,
+				source.versionId,
+				now
+			);
+		}
+	}
+
 	// Build the immutable snapshot while its run is validated, then expose it as
 	// promoted only after every snapshot/projection row has been staged.
 	push(
@@ -327,5 +376,5 @@ export async function seedCurrentLegacySnapshot(input: {
 	);
 
 	await input.db.batch(statements);
-	return { legacyVersionId, accessRunId, periodId };
+	return { legacyVersionId, accessRunId, plusVersionId, plusRunId, periodId };
 }

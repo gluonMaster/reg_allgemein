@@ -87,10 +87,10 @@ preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датиро�
 2026-08-11. Initial 14/14 не является текущим migration inventory и не доказывает
 backup/restore.
 
-Resulting local candidate добавляет append-only `0016`–`0021`. Они проходят
+Resulting local candidate добавляет append-only `0016`–`0022`. Они проходят
 local migration suites, но не применены remote и не входят в current preview
-inventory/evidence; exact `f7e75f9` review был NO-GO, а `0021` remediation
-зафиксирована как `b354e582` и ожидает post-commit verification/review. До separately authorized apply
+inventory/evidence; exact `8c6e2a` review был NO-GO, а current `0022`
+remediation ещё не зафиксирована и ожидает full verification/review. До separately authorized apply
 Telegram/import candidate paths там отсутствуют.
 
 ## 1. Начало смены: health и freshness

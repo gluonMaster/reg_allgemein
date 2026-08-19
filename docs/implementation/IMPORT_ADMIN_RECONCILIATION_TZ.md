@@ -1,12 +1,13 @@
 # Техническое задание: админский контур сверки повторных импортов
 
 Статус: обязательный Stage-13 scope реализован локально. Authorized independent
-review exact `f7e75f9` выполнен 2026-08-18 и дал NO-GO с 3 BLOCKER, 5 HIGH и
-2 MEDIUM findings. Они исправлены через append-only migration `0021` и
-code/tests/docs в exact checkpoint
-`b354e5829142e62ca0805adb7c3e9febc68145b6`; pre-commit local verification chain
-прошёл, но fresh post-commit verification и independent exact-SHA review ещё
-отсутствуют.
+review exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` выполнен 2026-08-18 и
+дал NO-GO с 2 BLOCKER и 2 HIGH findings: incomplete reconciliation
+materialization, ambiguous release SHA, same-name sibling evidence и
+неинвалидированный duplicate price-review peer. Текущий worktree исправляет
+runtime findings append-only migration `0022` и code/tests/docs. Full local
+worktree chain прошёл, но immutable remediation checkpoint, fresh exact-SHA
+verification и новый independent review ещё отсутствуют.
 External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
@@ -83,6 +84,16 @@ immutable evidence binding к case decision/action/target и exact run/version,
 повторно валидирует binding terminal assertion trigger-ом внутри того же D1
 batch и запрещает mutation уже materialized/promoted snapshot evidence.
 
+Completion/downstream hardening реализовать append-only migration
+`0022_reconciliation_completion_downstream_fence.sql`. После полного прохода
+всех actionable `ACCESS_*|PLUSB_*` issues repository записывает immutable exact
+run/version marker с проверенными issue/occurrence counts. Marker является
+последним шагом materialization; без него promotion и registration fail closed,
+а поздняя mutation `import_issues` запрещена. Migration также усиливает child
+evidence exact `source_child_key` и атомарно supersede-ит незавершённый
+price-review peer для `same_service_duplicate`; уже `applied` peer блокирует
+решение до отдельной финансовой сверки.
+
 ### `legacy_reconciliation_cases`
 
 Обязательные поля:
@@ -143,10 +154,12 @@ stale version, actor mismatch и generic closure actionable case.
 4. Source identity изменилась так, что старый case неприменим: старый получает
    `superseded`, новый создаётся отдельно; silent merge запрещён.
 5. New blocking case удерживает promote/registration enable. Aggregate verify
-   выводит только counts по class/state и opaque evidence ID; migration `0021`
-   атомарно проверяет как active cases периода, так и blocking occurrences exact
-   продвигаемых run/version. Historical resolution или clean соседний run не
-   освобождает candidate; registration аналогично сверяет exact current pair.
+   выводит только counts по class/state и opaque evidence ID; migrations
+   `0021`–`0022` атомарно проверяют completion marker, active cases периода и
+   blocking occurrences exact продвигаемых run/version. Historical resolution,
+   clean соседний run или crash после `validated` до materialization не
+   освобождает candidate; registration аналогично сверяет markers и exact
+   current pair.
 
 ## 6. Typed actions по классам
 
@@ -155,9 +168,9 @@ stale version, actor mismatch и generic closure actionable case.
 | Course/group mapping           | открыть existing catalog tool; выбрать exact target, привязанный к snapshot enrollment из `last_seen_version_id`; либо `awaiting_upstream` | fuzzy/substring/day-insensitive mapping, status-only evidence, свободный target label |
 | Parent/family/contact identity | открыть authorized family correction; либо upstream correction                                    | менять immutable source snapshot, auto-merge по похожему имени  |
 | Invalid email                  | upstream correction или verified portal identity + однозначный audited family link                | automatic claim по invalid legacy email                         |
-| Invalid/missing birth date     | upstream correction или typed child reconciliation того же case family/source/version после valid portal input | импортировать нераспознанное значение как дату или использовать unrelated child |
+| Invalid/missing birth date     | upstream correction или typed child reconciliation того же case family/source/version и exact `source_child_key` после valid portal input | импортировать нераспознанное значение как дату, использовать unrelated либо same-name/different-DOB sibling |
 | Price/duration                 | upstream Access/PlusBText correction; позднее — только versioned period/service-bound override    | generic dismiss или неограниченная special price                |
-| Duplicate child/group          | `same_service_duplicate` либо `distinct_service_proven` для exact opaque duplicate-enrollment pair с двумя distinct course assignments | arbitrary course evidence или двойной occupancy без доказательства |
+| Duplicate child/group          | `same_service_duplicate` либо `distinct_service_proven` для exact opaque duplicate-enrollment pair с двумя distinct course assignments; same-service решение supersede-ит mutable peer price review, но fail-closed при уже applied peer | arbitrary course evidence, двойной occupancy или второй financial apply без доказательства |
 | Family/identity conflict       | assignment + entity detail + typed correction/upstream                                            | показывать PII в queue/export/audit                             |
 | Value48/source consistency     | только upstream correction + reimport                                                             | portal-side подмена source ID                                   |
 
@@ -209,10 +222,13 @@ Export применяет тот же полный набор фильтров �
 - exact mapping accepted, fuzzy/mismatched mapping rejected;
 - exact mapping reads the case `last_seen_version_id`; status-only/current-
   projection evidence rejected; evidence revoke/race откатывает terminal batch;
-- child correction must match the case family, source identity and version;
+- child correction must match the case family, source identity, version and
+  exact `source_child_key`; same-name/different-DOB sibling is rejected;
 - duplicate defaults to one occupancy; `distinct_service_proven` requires the
   exact duplicate enrollment pair and two different course assignments;
-  `same_service_duplicate` консолидирует downstream cabinet/pricing projection;
+  `same_service_duplicate` консолидирует downstream cabinet/pricing projection,
+  supersede-ит sent/accepted/scheduled peer price review и отклоняется при уже
+  applied peer;
 - invalid email/DOB never creates automatic claim/child;
 - batch rejects mixed/duplicate code/action/version cohorts and rolls the whole
   cohort back on a stale race; completed replay is idempotent;
@@ -223,6 +239,9 @@ Export применяет тот же полный набор фильтров �
 - exact bad candidate, old validated replay и registration во время staged
   correction fail closed; resolved-by-reimport produces only safe aggregate
   evidence.
+- crash/termination после `validated`, но до reconciliation completion, не
+  создаёт marker и блокирует release/registration; marker нельзя подделать при
+  несовпадающих actionable issue/occurrence counts.
 
 ## 10. Acceptance и rollout
 
