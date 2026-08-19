@@ -94,8 +94,10 @@ inventory/evidence; exact `8c6e2a` review был NO-GO. Immutable runtime anchor
 `b2e8548f` прошёл short gates, затем independent review вернул NO-GO с
 1 BLOCKER/1 MEDIUM. Exact docs/test remediation anchor `4ac6a491` закрывает
 findings, не меняет `src`/`migrations` и прошёл proportional exact-SHA gates.
-Финальный review target — SELF следующего docs-only seal; до его commit/short
-gates и separately authorized re-review exact candidate отсутствует. До separately authorized apply
+Финальный review target `2bedc73c9b39a4cb43296046986a3f48e039b022`
+является прямым docs-only потомком `4ac6a491`, не меняет
+`src`/`migrations`/`tests` и прошёл exact short gates. До его separately
+authorized independent review local release gate остаётся NO-GO. До separately authorized apply
 Telegram/import candidate paths там отсутствуют.
 
 ## 1. Начало смены: health и freshness

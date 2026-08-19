@@ -11,8 +11,10 @@ documentation-only review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
 разрешённый independent read-only re-review exact `b2e8548f` вернул NO-GO с
 1 BLOCKER и 1 MEDIUM. Exact docs/test remediation anchor
 `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9` закрывает findings и прошёл
-proportional exact-SHA gates. Финальный review target — SELF следующего прямого
-docs-only seal; до его commit exact candidate отсутствует.
+proportional exact-SHA gates. Финальный review target
+`2bedc73c9b39a4cb43296046986a3f48e039b022` является его прямым docs-only
+потомком, не меняет `src`/`migrations`/`tests` и прошёл exact short gates.
+Independent review этого SHA ещё не разрешён и не выполнялся.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -39,7 +41,7 @@ stored-log remediation проверены 2026-08-12.
   checkpoint. It is narrower historical provenance, not the current candidate.
   Current immutable runtime anchor is `abb93f25`; `b2e8548f` is its rejected
   review seal. Exact docs/test remediation anchor is `4ac6a491`; final review
-  target is SELF of the next direct docs-only seal.
+  target is exact docs-only seal `2bedc73c`.
 - Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
   Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
@@ -92,12 +94,12 @@ stored-log remediation проверены 2026-08-12.
 
 | Область     | Evidence                                                                                                                                                                                           | Остаточный gate                                                                                                               |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0022`; exact runtime anchor `abb93f25` and remediation anchor `4ac6a491` are immutable/verified; `b2e8548f` review is NO-GO | docs-only SELF seal/short gates and new independent review, authorized remote apply, production migration и isolated restore |
-| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0022`; exact runtime full chain and remediation proportional gates passed | docs-only SELF seal/short gates and new independent review, remote apply, isolated backup/restore + rollback rehearsal       |
+| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0022`; exact runtime anchor `abb93f25`, remediation anchor `4ac6a491` and final docs-only review seal `2bedc73c` are immutable/verified; `b2e8548f` review is NO-GO | independent exact `2bedc73c` review, authorized remote apply, production migration и isolated restore |
+| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0022`; exact runtime/remediation verification and final seal short gates passed | independent exact `2bedc73c` review, remote apply, isolated backup/restore + rollback rehearsal       |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                                                                                                                                   | production resources/policy и isolated restore                                                                                |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed                                                                                                  | remote manual/dedupe/failure rehearsal                                                                                        |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed                                                                                                        | remote clean-room/least-privilege/zero-admin recovery drill                                                                   |
-| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` and `b2e8548f` reviews returned NO-GO; runtime anchor `abb93f25` passed full verification and docs/test remediation anchor `4ac6a491` passed proportional exact-SHA gates | docs-only SELF seal/short gates and new independent review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
+| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` and `b2e8548f` reviews returned NO-GO; runtime anchor `abb93f25` passed full verification, docs/test remediation anchor `4ac6a491` passed proportional gates and final review seal `2bedc73c` passed short gates | independent exact `2bedc73c` review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
@@ -759,12 +761,12 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 | Gate                              | Статус                         | Evidence / next action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Owner                                             |
 | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Local implementation/traceability | `blocked` pending SELF seal/review | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower review. Exact `8c6e2a` was rejected with 2 BLOCKER/2 HIGH; exact `b2e8548f` with 1 BLOCKER/1 MEDIUM. Runtime anchor `abb93f25` passed the full chain; exact docs/test remediation anchor `4ac6a491` passed proportional gates. Final review target is SELF of the next direct docs-only seal | Release operator + user-created SELF seal/short gates + separately authorized independent reviewer |
+| Local implementation/traceability | `blocked` pending independent review | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower review. Exact `8c6e2a` was rejected with 2 BLOCKER/2 HIGH; exact `b2e8548f` with 1 BLOCKER/1 MEDIUM. Runtime anchor `abb93f25` passed the full chain; docs/test remediation anchor `4ac6a491` passed proportional gates. Final exact docs-only review seal `2bedc73c` passed short gates | Separate user authorization + independent exact `2bedc73c` reviewer |
 | Dependency security               | `passed`                       | immutable `200268f`: clean install, full audit 0, full release verification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | dependency/security owner                         |
 | Environment/origin/R2 isolation   | `blocked`                      | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Cloudflare/security owner                         |
 | Scheduled monitoring              | `passed`                       | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | operations owner/account contact                  |
 | Admin bootstrap/recovery          | `blocked`                      | local one-shot passed; remote clean-room and recovery drill                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | security/operations owner                         |
-| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection. Exact remediation anchor `4ac6a491` covers all mutable peer states and stale downstream denial and passed proportional gates. SELF seal review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
+| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection. Exact remediation anchor `4ac6a491` covers all mutable peer states and stale downstream denial and passed proportional gates. Exact `2bedc73c` review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
 | Public auth/email                 | `feature_disabled`             | scoped key/secrets installed; enablement, real-token and delivery smoke absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | auth/provider owner                               |
 | Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and historical exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                   | provider/privacy/reliability/operations owners    |
 | Upload                            | `feature_disabled`             | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | storage/security/legal owner                      |
@@ -799,18 +801,19 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 ## Следующие действия
 
-1. Пользователь создаёт прямой docs-only commit из текущего handoff worktree.
-   Его SHA является SELF final review seal; до commit exact review candidate
-   отсутствует. Не называть `a590d1f`, `abb93f25`, rejected `b2e8548f` или
-   remediation anchor `4ac6a491` финальным review seal.
-2. На новом exact SELF SHA выполнить short verification: docs/scan/diff,
-   direct-parent/docs-only/runtime-empty provenance, final HEAD/status и
-   отсутствие `.dev.vars.e2e`. Full/focused chain `4ac6a491` не повторять без
-   нового `src`/`migrations`/`tests` diff.
-3. Отдельно запросить разрешение пользователя на новый independent read-only
-   exact-SHA review. Review ничего не меняет локально/удалённо и возвращает
-   findings с severity/file/line/test gap и итог GO/NO-GO. Exact `8c6e2a` и
-   `b2e8548f` остаются rejected checkpoints; `4ac6a491` — remediation anchor.
+1. В новой сессии открыть и полностью выполнить
+   `docs/prompts/stage-13-continue-deployment-after-2bedc73c.md`. Подтвердить
+   exact review target `2bedc73c9b39a4cb43296046986a3f48e039b022`, его прямого
+   родителя `4ac6a491`, docs-only/runtime-empty diff и отсутствие более нового
+   runtime diff. Этот documentation handoff может быть отдельным потомком и не
+   меняет зафиксированный review target.
+2. Не повторять full/focused chain `4ac6a491` без нового
+   `src`/`migrations`/`tests` diff. Exact `2bedc73c` short gates уже прошли.
+3. Отдельно запросить разрешение пользователя ровно на один independent
+   read-only review exact `2bedc73c`. Review ничего не меняет локально/удалённо
+   и возвращает findings с severity/file/line/test gap и итог GO/NO-GO. Exact
+   `8c6e2a` и `b2e8548f` остаются rejected checkpoints; `4ac6a491` — remediation
+   anchor.
 4. После независимого GO подготовить и независимо проверить protected
    exact-target preview control, затем раздельно запросить backup/isolated
    restore, deploy и migration permissions. Не объединять их с import, secret
@@ -1213,3 +1216,27 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
   authorized independent review.
 - No remote/provider/production/official-site action occurred; overall status
   remains NO-GO.
+
+## Continuation 2026-08-19: final review seal `2bedc73c`
+
+- The user created exact docs-only commit
+  `2bedc73c9b39a4cb43296046986a3f48e039b022`
+  (`docs: seal 4ac6a491 review remediation`) with direct parent
+  `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`. Clean exact HEAD/worktree and
+  ancestry were confirmed.
+- The exact diff changes only the eight canonical Stage-13/readiness documents;
+  `src`, `migrations` and `tests` have an empty diff. The SELF record therefore
+  resolves unambiguously to `2bedc73c`; historical `a590d1f`, runtime anchor
+  `abb93f25`, rejected seal `b2e8548f` and remediation anchor `4ac6a491` are not
+  the final review target.
+- Exact short gates passed: docs 151 links/52 files plus 105 commands, release
+  scan 536/536, commit diff check, final HEAD/status and `.dev.vars.e2e`
+  absence. Full/focused runtime gates were not repeated because the diff from
+  `4ac6a491` is empty for `src`/`migrations`/`tests`.
+- Independent review has deliberately not been started. The next session must
+  use `docs/prompts/stage-13-continue-deployment-after-2bedc73c.md`, establish
+  provenance and request separate user authorization for exactly one read-only
+  independent review of `2bedc73c` with no remote/provider/production access.
+- No remote D1/Worker/R2/config mutation, provider call/send, production deploy,
+  DNS/CMS or official-site action occurred. Overall status remains NO-GO until
+  independent GO and all separately scoped external gates.

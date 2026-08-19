@@ -435,8 +435,10 @@ mutable/stale duplicate price-review paths. Current local docs/test remediation
 зафиксировано exact anchor `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`,
 закрывает оба findings и прошло focused reconciliation D1 10/10, check 0/0,
 docs/scan/diff и final provenance gates. `src`/`migrations` не менялись.
-Финальный review target — SELF следующего docs-only seal; до его commit exact
-review candidate отсутствует.
+Финальный review target
+`2bedc73c9b39a4cb43296046986a3f48e039b022` — прямой docs-only потомок
+`4ac6a491`; его exact short gates прошли. Independent review ещё не разрешён и
+не выполнялся.
 PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
 buckets и authorized preview rehearsal также отсутствуют. Remote не менялся.
 

@@ -235,9 +235,11 @@ exact anchor `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`: она выравнив
 stale dispatch/final-confirm/apply denial без нового outbox/apply evidence.
 Exact anchor прошёл focused D1 10/10,
 check 0/0, docs/scan/diff и final provenance gates без `src`/`migrations` diff.
-Финальный review target определяется как SELF следующего docs-only seal. До
-его commit/short gates, нового separately authorized review, admin cold-read,
-owner decisions и authorized preview rehearsal PR-B17 остаётся blocked.
+Финальный review target
+`2bedc73c9b39a4cb43296046986a3f48e039b022` является прямым docs-only потомком
+`4ac6a491`, не меняет `src`/`migrations`/`tests` и прошёл exact short gates. До
+его separately authorized independent review, admin cold-read, owner decisions
+и authorized preview rehearsal PR-B17 остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`; local `0016`–`0022` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или

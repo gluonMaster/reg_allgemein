@@ -13,8 +13,10 @@ runtime-empty review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
 mutable/stale price-review test matrix. Exact remediation anchor
 `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9` закрывает эти findings в docs/test,
 не меняет `src`/`migrations` и прошёл proportional exact-SHA verification.
-Финальный independent-review seal определяется как SELF следующего docs-only
-commit; до его фиксации exact review target отсутствует.
+Финальный independent-review seal
+`2bedc73c9b39a4cb43296046986a3f48e039b022` является его прямым docs-only
+потомком, не меняет `src`/`migrations`/`tests` и прошёл exact short gates.
+Independent review этого SHA ещё не разрешён и не выполнялся.
 External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
@@ -272,8 +274,8 @@ remediation выравнивает provenance и data-driven проверяет 
 `sent`/`accepted_by_parent`/`scheduled`, stale dispatch/final-confirm/apply и
 отсутствие новых outbox/apply evidence. Exact remediation anchor `4ac6a491`
 прошёл focused D1 10/10, check 0/0, docs/scan/diff и final provenance gates.
-До user-created docs-only SELF seal, его short-gate verification, нового
-separately authorized review, steps 3–4 и реальных owner decisions PR-B17
+Exact docs-only review seal `2bedc73c` прошёл short gates. До его separately
+authorized independent review, steps 3–4 и реальных owner decisions PR-B17
 remains `blocked`, а current import issues must not be bulk-dismissed.
 
 ## 11. Готовый implementation prompt
