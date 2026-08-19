@@ -426,8 +426,14 @@ local evidence прошло: reconciliation 10/10, family/cabinet 9/9, legacy im
 13/13, price review 6/6 и check 0/0. После исправления трёх найденных full-suite
 regressions exact runtime remediation anchor
 `abb93f25a7d9ce80bdef6f204e75cabf635f9453` прошёл fresh full chain: 66/66 files,
-511/511 Vitest, Chromium 18/18, build, audit 0, docs/scan/diff. SELF documentation
-seal и independent re-review ещё отсутствуют.
+511/511 Vitest, Chromium 18/18, build, audit 0, docs/scan/diff. Direct
+documentation-only runtime-empty review seal
+`b2e8548f63ae62e33d519d61e0ac729085801052` прошёл clean exact short gates;
+separately authorized independent re-review вернул NO-GO с 1 BLOCKER и
+1 MEDIUM: contradictory current-candidate provenance и неполное покрытие
+mutable/stale duplicate price-review paths. Current local docs/test remediation
+закрывает оба findings, а focused reconciliation D1 suite проходит 10/10, но
+нового immutable candidate ещё нет.
 PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
 buckets и authorized preview rehearsal также отсутствуют. Remote не менялся.
 

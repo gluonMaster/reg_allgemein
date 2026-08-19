@@ -6,8 +6,12 @@ review exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` выполнен 2026-08
 materialization, ambiguous release SHA, same-name sibling evidence и
 неинвалидированный duplicate price-review peer. Exact runtime remediation anchor
 `abb93f25a7d9ce80bdef6f204e75cabf635f9453` исправляет findings append-only
-migration `0022` и прошёл fresh exact-SHA full chain. SELF documentation seal и
-новый independent review ещё отсутствуют.
+migration `0022` и прошёл fresh exact-SHA full chain. Direct documentation-only
+runtime-empty review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
+прошёл clean exact short gates; его independent review вернул NO-GO с
+1 BLOCKER и 1 MEDIUM из-за contradictory release provenance и неполного
+mutable/stale price-review test matrix. Current docs/test remediation закрывает
+эти findings локально, но ещё не является immutable candidate.
 External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
@@ -257,11 +261,16 @@ Export применяет тот же полный набор фильтров �
 Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0021`,
 `LegacyImportReconciliationRepository`, typed admin repository/routes/UI и
 `T-IMPORT-RECONCILIATION`. Exact checkpoint `f7e75f9` прошёл full verification,
-но independent review дал NO-GO; последующая remediation зафиксирована как
-exact `b354e582`, но ещё не прошла post-commit verification/re-review. Steps 3–4
-и реальные owner
-decisions ещё отсутствуют. Поэтому PR-B17 remains `blocked`, а current import
-issues must not be bulk-dismissed.
+но independent review дал NO-GO; последующие `b354e582`/`0021` и
+`abb93f25`/`0022` закрыли findings. Exact runtime anchor `abb93f25` прошёл fresh
+full chain, а direct runtime-empty review seal `b2e8548f` — exact short gates.
+Independent review `b2e8548f` вернул NO-GO с 1 BLOCKER/1 MEDIUM. Current local
+remediation выравнивает provenance и data-driven проверяет supersession
+`sent`/`accepted_by_parent`/`scheduled`, stale dispatch/final-confirm/apply и
+отсутствие новых outbox/apply evidence. До user-created commit, proportional
+exact-SHA verification, нового separately authorized review, steps 3–4 и
+реальных owner decisions PR-B17 remains `blocked`, а current import issues must
+not be bulk-dismissed.
 
 ## 11. Готовый implementation prompt
 

@@ -225,8 +225,17 @@ completion marker, strict source-child identity и atomic downstream
 price-review fence. Exact runtime remediation anchor
 `abb93f25a7d9ce80bdef6f204e75cabf635f9453` прошёл fresh full chain: check 0/0,
 66/66 files и 511/511 Vitest, Chromium 18/18, build, audit 0 и docs/scan/diff.
-SELF documentation seal/re-review, admin cold-read, owner decisions и authorized
-preview rehearsal отсутствуют. Поэтому PR-B17 остаётся blocked.
+Direct documentation-only runtime-empty review seal
+`b2e8548f63ae62e33d519d61e0ac729085801052` прошёл clean exact short gates.
+Его separately authorized independent re-review вернул NO-GO с 1 BLOCKER и
+1 MEDIUM: contradictory release provenance и неполное regression evidence для
+mutable/stale duplicate price-review paths. Current local docs/test remediation
+выравнивает provenance и добавляет data-driven `sent`/`accepted_by_parent`/
+`scheduled` supersession плюс stale dispatch/final-confirm/apply denial без
+нового outbox/apply evidence; focused suite проходит 10/10. До user-created
+commit, proportional exact-SHA verification, нового separately authorized
+review, admin cold-read, owner decisions и authorized preview rehearsal PR-B17
+остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`; local `0016`–`0022` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или

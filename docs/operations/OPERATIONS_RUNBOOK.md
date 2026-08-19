@@ -89,8 +89,12 @@ backup/restore.
 
 Resulting local candidate добавляет append-only `0016`–`0022`. Они проходят
 local migration suites, но не применены remote и не входят в current preview
-inventory/evidence; exact `8c6e2a` review был NO-GO, а current `0022`
-remediation ещё не зафиксирована и ожидает full verification/review. До separately authorized apply
+inventory/evidence; exact `8c6e2a` review был NO-GO. Immutable runtime anchor
+`abb93f25` содержит `0022` и прошёл fresh full chain; его docs-only seal
+`b2e8548f` прошёл short gates, затем independent review вернул NO-GO с
+1 BLOCKER/1 MEDIUM. Current docs/test remediation ещё не зафиксирована, поэтому
+exact current candidate отсутствует и требуется proportional exact-SHA
+verification и separately authorized re-review. До separately authorized apply
 Telegram/import candidate paths там отсутствуют.
 
 ## 1. Начало смены: health и freshness

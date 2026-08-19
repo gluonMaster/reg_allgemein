@@ -4,6 +4,7 @@ import { LegacyReconciliationAdminRepository } from '$lib/server/admin/reconcili
 import { LegacyImportReconciliationRepository } from '$lib/server/import/reconciliation';
 import { CabinetRepository } from '$lib/server/cabinet/cabinet-repository';
 import { PricingRepository } from '$lib/server/pricing/pricing-repository';
+import { PriceReviewRepository } from '$lib/server/price-reviews/price-review-repository';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
@@ -1375,12 +1376,12 @@ describe('legacy import reconciliation in D1', () => {
 						 status, sent_at, response_deadline, final_admin_confirmed_at,
 						 final_admin_confirmed_by, final_admin_confirmation_reason,
 						 scheduled_for, applied_at, created_at, updated_at)
-					 VALUES ('duplicate-peer-price-item', 'duplicate-peer-price-batch', 1,
-						'duplicate-peer-price-item', 'legacy-enrollment-distinct-b',
+					 VALUES ('duplicate-peer-price-item-applied', 'duplicate-peer-price-batch', 1,
+						'duplicate-peer-price-item-applied', 'legacy-enrollment-distinct-b',
 						'duplicate-parent', 1000, 1000, 1200, 1200, 'excel_yearly',
 						'system_rule', 'rule_derived', 'rule_derived', ?, 2, '2026-08-17',
 						'synthetic_duplicate_regression', '{}', '{}', ?, 'acceptance-v1',
-						'duplicate-peer-price-item', 'applied', ?, '2026-08-31', ?,
+						'duplicate-peer-price-item-applied', 'applied', ?, '2026-08-31', ?,
 						'reconciliation-admin-a', 'synthetic final confirmation',
 						'2026-08-17', ?, ?, ?)`
 				)
@@ -1408,28 +1409,113 @@ describe('legacy import reconciliation in D1', () => {
 				now: instant(25),
 			})
 		).rejects.toThrow(/duplicate peer has applied price review/);
+		const mutablePriceReviewItems = [
+			{
+				suffix: 'sent',
+				hashMarker: 'd',
+				status: 'sent',
+				version: 1,
+				effectiveOn: '2026-08-17',
+				respondedAt: null,
+				confirmedAt: null,
+				confirmedBy: null,
+				confirmationReason: null,
+				scheduledFor: null,
+			},
+			{
+				suffix: 'accepted',
+				hashMarker: 'e',
+				status: 'accepted_by_parent',
+				version: 2,
+				effectiveOn: '2026-08-18',
+				respondedAt: instant(25),
+				confirmedAt: null,
+				confirmedBy: null,
+				confirmationReason: null,
+				scheduledFor: null,
+			},
+			{
+				suffix: 'scheduled',
+				hashMarker: 'f',
+				status: 'scheduled',
+				version: 3,
+				effectiveOn: '2026-08-19',
+				respondedAt: instant(25),
+				confirmedAt: instant(25),
+				confirmedBy: 'reconciliation-admin-a',
+				confirmationReason: 'synthetic final confirmation',
+				scheduledFor: '2026-08-19',
+			},
+		] as const;
 		await context.db.batch([
-			context.db
-				.prepare("DELETE FROM price_review_items WHERE id = 'duplicate-peer-price-item'"),
+			context.db.prepare(
+				"DELETE FROM price_review_items WHERE id = 'duplicate-peer-price-item-applied'"
+			),
 			context.db
 				.prepare(
-					`INSERT INTO price_review_items
-						(id, batch_id, version, public_reference, legacy_enrollment_id, user_id,
-						 old_base_price_cents, old_price_cents, new_base_price_cents,
-						 new_final_price_cents, old_price_source, new_price_source,
-						 old_price_mode, new_price_mode, target_state_hash,
-						 expected_active_count, effective_on, decision_code, decision_json,
-						 terms_snapshot_json, item_hash, acceptance_text_version, dedupe_key,
-						 status, sent_at, response_deadline, created_at, updated_at)
-					 VALUES ('duplicate-peer-price-item', 'duplicate-peer-price-batch', 1,
-						'duplicate-peer-price-item', 'legacy-enrollment-distinct-b',
-						'duplicate-parent', 1000, 1000, 1200, 1200, 'excel_yearly',
-						'system_rule', 'rule_derived', 'rule_derived', ?, 2, '2026-08-17',
-						'synthetic_duplicate_regression', '{}', '{}', ?, 'acceptance-v1',
-						'duplicate-peer-price-item', 'sent', ?, '2026-08-31', ?, ?)`
+					`UPDATE price_review_batches SET status = 'pending_notification_approval',
+					updated_at = ? WHERE id = 'duplicate-peer-price-batch'`
 				)
-				.bind('b'.repeat(64), 'c'.repeat(64), instant(25), instant(25), instant(25)),
+				.bind(instant(25)),
+			context.db
+				.prepare(
+					`UPDATE price_review_batches
+					 SET status = 'notifications_approved', notification_approved_at = ?,
+						notification_approved_by = 'reconciliation-admin-a', updated_at = ?
+					 WHERE id = 'duplicate-peer-price-batch'`
+				)
+				.bind(instant(25), instant(25)),
+			...mutablePriceReviewItems.map((item) =>
+				context.db
+					.prepare(
+						`INSERT INTO price_review_items
+							(id, batch_id, version, public_reference, legacy_enrollment_id, user_id,
+							 old_base_price_cents, old_price_cents, new_base_price_cents,
+							 new_final_price_cents, old_price_source, new_price_source,
+							 old_price_mode, new_price_mode, target_state_hash,
+							 expected_active_count, effective_on, decision_code, decision_json,
+							 terms_snapshot_json, item_hash, acceptance_text_version, dedupe_key,
+							 status, sent_at, response_deadline, responded_at,
+							 final_admin_confirmed_at, final_admin_confirmed_by,
+							 final_admin_confirmation_reason, scheduled_for, applied_at,
+							 created_at, updated_at)
+						 VALUES (?, 'duplicate-peer-price-batch', ?, ?,
+							'legacy-enrollment-distinct-b', 'duplicate-parent', 1000, 1000,
+							1200, 1200, 'excel_yearly', 'system_rule', 'rule_derived',
+							'rule_derived', ?, 2, ?, 'synthetic_duplicate_regression', '{}',
+							'{}', ?, 'acceptance-v1', ?, ?, ?, '2026-08-31', ?, ?, ?, ?, ?,
+							NULL, ?, ?)`
+					)
+					.bind(
+						`duplicate-peer-price-item-${item.suffix}`,
+						item.version,
+						`duplicate-peer-price-item-${item.suffix}`,
+						'b'.repeat(64),
+						item.effectiveOn,
+						item.hashMarker.repeat(64),
+						`duplicate-peer-price-item-${item.suffix}`,
+						item.status,
+						instant(25),
+						item.respondedAt,
+						item.confirmedAt,
+						item.confirmedBy,
+						item.confirmationReason,
+						item.scheduledFor,
+						instant(25),
+						instant(25)
+					)
+			),
 		]);
+		const priceReviewRepository = new PriceReviewRepository(db);
+		const staleItems = Object.fromEntries(
+			await Promise.all(
+				mutablePriceReviewItems.map(async ({ suffix }) => [
+					suffix,
+					await priceReviewRepository.getItemById(`duplicate-peer-price-item-${suffix}`),
+				])
+			)
+		);
+		expect(Object.values(staleItems).every(Boolean)).toBe(true);
 		await adminRepository.mutate({
 			actor: adminActor(),
 			caseId: recurrent.id,
@@ -1454,18 +1540,68 @@ describe('legacy import reconciliation in D1', () => {
 		).toEqual(['legacy-enrollment-distinct-a']);
 		expect(
 			await context.db
-				.prepare("SELECT status FROM price_review_items WHERE id = 'duplicate-peer-price-item'")
-				.first()
-		).toEqual({ status: 'superseded' });
+				.prepare(
+					`SELECT status, COUNT(*) AS count FROM price_review_items
+					 WHERE id LIKE 'duplicate-peer-price-item-%' GROUP BY status`
+				)
+				.all()
+		).toMatchObject({ results: [{ status: 'superseded', count: 3 }] });
 		expect(
 			await context.db
 				.prepare(
 					`SELECT COUNT(*) AS count FROM audit_events
 					 WHERE action = 'price_review.item.superseded_by_legacy_duplicate'
-						AND target_id = 'duplicate-peer-price-item'`
+						AND target_id LIKE 'duplicate-peer-price-item-%'`
 				)
 				.first()
-		).toEqual({ count: 1 });
+		).toEqual({ count: 3 });
+
+		const evidenceCount = async () =>
+			context.db
+				.prepare(
+					`SELECT
+						(SELECT COUNT(*) FROM price_review_outbox_events
+						 WHERE source_id LIKE 'duplicate-peer-price-item-%') AS outbox_count,
+						(SELECT COUNT(*) FROM price_change_apply_events
+						 WHERE price_review_item_id LIKE 'duplicate-peer-price-item-%') AS apply_count`
+				)
+				.first();
+		const evidenceBeforeStaleActions = await evidenceCount();
+		await expect(
+			priceReviewRepository.dispatchBatch({
+				admin: adminActor(),
+				batchId: 'duplicate-peer-price-batch',
+				items: [
+					{
+						item: staleItems.sent!,
+						cabinetUrl: 'https://portal.example.invalid/cabinet/price-reviews/stale',
+						responseDeadline: '2026-08-31',
+					},
+				],
+				idempotencyKey: 'stale-dispatch-after-duplicate-supersede',
+				requestId: 'request-stale-dispatch-after-duplicate-supersede',
+				now: instant(26),
+			})
+		).rejects.toThrow(/PRICE_REVIEW_DISPATCH_REJECTED/);
+		await expect(
+			priceReviewRepository.scheduleAcceptedItem({
+				admin: adminActor(),
+				item: staleItems.accepted!,
+				scheduledFor: '2026-08-18',
+				reason: 'synthetic stale final confirmation',
+				idempotencyKey: 'stale-final-confirmation-after-duplicate-supersede',
+				requestId: 'request-stale-final-confirmation-after-duplicate-supersede',
+				now: instant(26),
+			})
+		).rejects.toThrow(/PRICE_REVIEW_FINAL_CONFIRMATION_REJECTED/);
+		await expect(
+			priceReviewRepository.applyScheduledItem({
+				item: staleItems.scheduled!,
+				evidenceHash: 'd'.repeat(64),
+				now: instant(26),
+			})
+		).rejects.toThrow(/PRICE_REVIEW_APPLY_REJECTED/);
+		expect(await evidenceCount()).toEqual(evidenceBeforeStaleActions);
 	});
 
 	it('rolls a homogeneous batch back on a concurrent case change and supports atomic replay', async () => {

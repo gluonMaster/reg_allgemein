@@ -5,9 +5,12 @@
 Статус этапа: `in_progress` — exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956`
 получил authorized independent `IMPORT-08` review `NO-GO` с 2 BLOCKER и 2 HIGH.
 Exact runtime remediation anchor `abb93f25a7d9ce80bdef6f204e75cabf635f9453`
-с append-only migration `0022` прошёл fresh exact-SHA full chain. Финальный review
-target определяется как SELF — documentation-only commit, содержащий этот record;
-его immutable SHA, short gates и independent re-review ещё отсутствуют.
+с append-only migration `0022` прошёл fresh exact-SHA full chain. Immutable
+documentation-only review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
+является его прямым runtime-empty потомком и прошёл exact short gates. Отдельно
+разрешённый independent read-only re-review exact `b2e8548f` вернул NO-GO с
+1 BLOCKER и 1 MEDIUM. Current local docs/test remediation закрывает
+provenance/test findings, но ещё не является immutable candidate.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -28,11 +31,13 @@ stored-log remediation проверены 2026-08-12.
 - Предыдущий handoff: [stage-12.md](stage-12.md).
 - Operational contract:
   [PRODUCTION_READINESS.md](../../operations/PRODUCTION_READINESS.md).
-- Exact deploy/runtime candidate for the Access/Telegram readiness expansion:
+- Historical Access/Telegram readiness candidate:
   `a590d1f08110c20b6f7b45294cb91a7be7b5a8e3`. Its parent `ca4ef8f` contains
   the Access OLE date fix; `a590d1f` adds only the tracked 2026-08-17 deployment
-  checkpoint. Historical `c5712d0`/`8f247e5` evidence remains provenance, not
-  the current candidate.
+  checkpoint. It is narrower historical provenance, not the current candidate.
+  Current immutable runtime anchor is `abb93f25`; `b2e8548f` is its rejected
+  review seal, and no exact current candidate exists until remediation is
+  committed and verified.
 - Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
   Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
@@ -85,12 +90,12 @@ stored-log remediation проверены 2026-08-12.
 
 | Область     | Evidence                                                                                                                                                                                           | Остаточный gate                                                                                                               |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0022`                                                                                                  | new immutable/reviewed candidate, authorized remote apply, production migration и isolated restore                            |
-| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0022`                                                            | full post-remediation verification, remote apply, isolated backup/restore + rollback rehearsal                                |
+| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0022`; exact runtime anchor/seal are immutable and locally verified; `b2e8548f` review is NO-GO | committed/verified remediation and new independent review, authorized remote apply, production migration и isolated restore |
+| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0022`; exact runtime full chain passed; `b2e8548f` review is NO-GO | committed/verified remediation and new independent review, remote apply, isolated backup/restore + rollback rehearsal       |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                                                                                                                                   | production resources/policy и isolated restore                                                                                |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed                                                                                                  | remote manual/dedupe/failure rehearsal                                                                                        |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed                                                                                                        | remote clean-room/least-privilege/zero-admin recovery drill                                                                   |
-| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` review returned NO-GO; runtime remediation anchor `abb93f25` passed fresh exact-SHA full verification | SELF seal/re-review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
+| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` review returned NO-GO; runtime remediation anchor `abb93f25` passed fresh exact-SHA full verification and review seal `b2e8548f` passed short gates, then its independent review returned NO-GO 1 BLOCKER/1 MEDIUM | committed/verified docs/test remediation and new independent review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
@@ -103,7 +108,7 @@ migration — совместимый code rollback, новая forward-fix migra
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | Public registration                   | `AUTH_PUBLIC_ENABLED=false`                                                                                                                              | `feature_disabled`                                             |
 | Email                                 | `EMAIL_PROVIDER=disabled`                                                                                                                                | `feature_disabled`                                             |
-| Telegram                              | deployed preview uses `TELEGRAM_PROVIDER=disabled`; exact `a590d1f` `bot_api` candidate passed local verification/independent review but is not deployed | `feature_disabled`; external provider/rehearsal gate `blocked` |
+| Telegram                              | deployed preview uses `TELEGRAM_PROVIDER=disabled`; historical exact `a590d1f` `bot_api` candidate passed local verification/independent review but is not deployed | `feature_disabled`; external provider/rehearsal gate `blocked` |
 | Document upload                       | `DOCUMENT_UPLOAD_ENABLED=false`                                                                                                                          | `feature_disabled`                                             |
 | Contract rendering/send               | `CONTRACT_RENDERER=disabled`, `CONTRACT_SEND_ENABLED=false`                                                                                              | `feature_disabled`                                             |
 | Online media grant                    | `MEDIA_ONLINE_GRANT_ENABLED=false`                                                                                                                       | `feature_disabled`                                             |
@@ -666,8 +671,9 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 - Parent `ca4ef8f50ea0ffc1139c2ec3d286cbdb7e4158ec` adds strict Access OLE
   Automation date-serial handling and passed exact-SHA clean-clone `npm ci` plus
-  full `release:verify` in 556.4 s. Exact deploy/runtime candidate `a590d1f`
-  then passed full clean-worktree `release:verify` in 522.9 s: check 0/0,
+  full `release:verify` in 556.4 s. At that historical checkpoint, exact
+  deploy/runtime candidate `a590d1f` then passed full clean-worktree
+  `release:verify` in 522.9 s: check 0/0,
   Vitest 63 files/472 tests, Chromium 18/18, build, production audit 0, docs 143
   links/51 files plus 105 commands and scan 522/522.
 - Independent read-only exact-SHA review of `a590d1f` found no code HIGH/BLOCKER
@@ -751,14 +757,14 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 | Gate                              | Статус                         | Evidence / next action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Owner                                             |
 | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Local implementation/traceability | `blocked` pending SELF seal/re-review | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower verification/review. Exact evidence seal `8c6e2a` was reviewed independently and rejected with 2 BLOCKER/2 HIGH. Exact runtime remediation anchor `abb93f25` passed the fresh full chain; the SELF documentation seal and independent re-review remain absent | Release operator + separately authorized independent reviewer |
+| Local implementation/traceability | `blocked` pending immutable remediation | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower verification/review. Exact evidence seal `8c6e2a` was rejected with 2 BLOCKER/2 HIGH. Exact runtime anchor `abb93f25` passed the full chain; runtime-empty seal `b2e8548f` passed short gates, then its review returned NO-GO with 1 BLOCKER/1 MEDIUM. Current docs/test remediation is mutable, so no exact current candidate exists | Release operator + user-created commit/proportional verification + separately authorized independent reviewer |
 | Dependency security               | `passed`                       | immutable `200268f`: clean install, full audit 0, full release verification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | dependency/security owner                         |
 | Environment/origin/R2 isolation   | `blocked`                      | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Cloudflare/security owner                         |
 | Scheduled monitoring              | `passed`                       | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | operations owner/account contact                  |
 | Admin bootstrap/recovery          | `blocked`                      | local one-shot passed; remote clean-room and recovery drill                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | security/operations owner                         |
-| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact `8c6e2a` review found a missing reconciliation-completion fence, same-name sibling ambiguity and stale downstream price-review paths. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection and passed its full chain. SELF re-review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
+| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection and passed its full chain. Exact `b2e8548f` review returned NO-GO 1 BLOCKER/1 MEDIUM. Current data-driven test remediation covers mutable peer supersession and stale downstream denial, but is not committed; new review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
 | Public auth/email                 | `feature_disabled`             | scoped key/secrets installed; enablement, real-token and delivery smoke absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | auth/provider owner                               |
-| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                              | provider/privacy/reliability/operations owners    |
+| Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and historical exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                   | provider/privacy/reliability/operations owners    |
 | Upload                            | `feature_disabled`             | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | storage/security/legal owner                      |
 | Contract/statutory/media          | `feature_disabled`             | production renderer/templates/legal assessment absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | contract/legal/privacy owners                     |
 | Backup/restore/RPO/RTO            | `blocked`                      | inputs/mechanism/isolated rehearsal absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | data/backup/operations owners                     |
@@ -791,27 +797,28 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 ## Следующие действия
 
-1. Получить созданный пользователем documentation-only SELF commit, содержащий
-   этот release record, и подтвердить его как clean exact HEAD и runtime-empty
-   descendant exact `abb93f25`.
-2. Выполнить exact short gates SELF (`docs:check`, `release:scan`, diff/status),
-   затем отдельно запросить новый independent read-only review этого SHA. Exact
-   `8c6e2a` остаётся rejected checkpoint и не покрывает remediation.
-3. После независимого GO подготовить и независимо проверить protected
+1. Пользователь создаёт новый commit из текущей docs/test remediation. До этого
+   exact current candidate отсутствует; не называть `a590d1f`, `abb93f25` или
+   rejected `b2e8548f` current deploy/review candidate.
+2. На новом exact SHA выполнить proportional verification: focused
+   reconciliation D1, `npm run check`, docs/scan/diff и provenance/runtime-diff
+   gates. Full chain `abb93f25` не повторять без нового runtime diff.
+3. Отдельно запросить разрешение пользователя на новый independent read-only
+   exact-SHA review. Review ничего не меняет локально/удалённо и возвращает
+   findings с severity/file/line/test gap и итог GO/NO-GO. Exact `8c6e2a` и
+   `b2e8548f` остаются rejected checkpoints.
+4. После независимого GO подготовить и независимо проверить protected
    exact-target preview control, затем раздельно запросить backup/isolated
    restore, deploy и migration permissions. Не объединять их с import, secret
    mutation или provider send.
-4. Продолжить безопасный local PR-A12 scope только для оставшихся lifecycles:
+5. Продолжить безопасный local PR-A12 scope только для оставшихся lifecycles:
    register/verify/claim, funded Nachhilfe upload/document review, enabled
    contract accept/form/activate, price admin-send и scheduled apply; preview/
    provider authenticated rehearsal требует отдельного разрешения.
-5. Для PR-A13 провести literal/manual zoom, assistive-technology и glyph/font
+6. Для PR-A13 провести literal/manual zoom, assistive-technology и glyph/font
    review. Для PR-A14 закрыть disabled-upload mutation, оставшиеся
    enrollment/group-service и guessed/admin-purpose variants; preview matrix
    также требует отдельного разрешения.
-6. После GO independent review подготовить protected exact-target preview
-   control и запрашивать remote backup/deploy/migration/import actions строго
-   раздельно. Push/deploy остаются отдельно разрешаемыми действиями.
 7. Поддерживать independent uptime monitor для `/_health/operations` и
    периодически повторять delivery test; real-token Turnstile, synthetic email
    delivery/reply и другие provider sends требуют отдельных разрешений.
@@ -875,9 +882,9 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 ## Итог worktree
 
-- Current deploy/runtime candidate is
+- At this historical 2026-08-17 checkpoint, the deploy/runtime candidate was
   `a590d1f08110c20b6f7b45294cb91a7be7b5a8e3 docs: record preview deployment
-checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
+  checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
   candidate local verification and independent PR-A16 review passed on
   2026-08-17. Every remote/external gate remains pending.
 - The historical deployed preview still runs exact `200268f` as Worker version
@@ -1093,7 +1100,7 @@ checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
   as current. HIGH findings were same-name sibling child evidence without exact
   `source_child_key`, and an already-created peer price-review item surviving a
   later `same_service_duplicate` decision.
-- The current mutable worktree adds append-only migration `0022`, exact
+- At that checkpoint, the mutable worktree added append-only migration `0022`, exact
   reconciliation materialization markers for promotion/registration, strict
   typed child evidence, and atomic downstream price-review supersession with
   rejection when a peer item is already applied. Runtime repositories and
@@ -1132,3 +1139,50 @@ checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
   ambiguity, the final review target is defined as SELF: the documentation-only
   commit containing this record. It must be a runtime-empty descendant of
   `abb93f25`, pass exact short gates, and receive separately authorized review.
+
+## Continuation 2026-08-19: immutable review seal `b2e8548f`
+
+- The user created exact documentation-only commit
+  `b2e8548f63ae62e33d519d61e0ac729085801052`
+  (`docs: seal abb93f25 stage 13 verification`) with direct parent
+  `abb93f25a7d9ce80bdef6f204e75cabf635f9453`. Its diff changes exactly the six
+  canonical Stage-13/readiness documents recorded in the commit; `src`,
+  `migrations` and `tests` have an empty diff.
+- Clean exact HEAD and worktree were confirmed. Exact short gates passed: docs
+  151 links/52 files plus 105 commands in 2.31 s; release scan 536/536 in
+  3.37 s; `git diff --check` in 0.08 s; final HEAD/status, runtime-empty diff,
+  SELF-record count and absence of `.dev.vars.e2e` passed.
+- These short gates supplement, rather than repeat, the full exact runtime chain
+  already recorded for `abb93f25`. No remote/provider/production/official-site
+  action occurred.
+- A new session must continue with
+  `docs/prompts/stage-13-continue-deployment-after-b2e8548f.md`. Its first
+  decision gate is separate user authorization for an independent read-only
+  re-review of exact `b2e8548f`; at this checkpoint that review had not yet been
+  performed. The following continuation records its NO-GO result. Remote
+  deployment remains prohibited until GO and separately scoped remote approvals.
+
+## Continuation 2026-08-19: exact `b2e8548f` review NO-GO and remediation
+
+- The user separately authorized one independent read-only review of exact
+  `b2e8548f63ae62e33d519d61e0ac729085801052`. The reviewer touched no files and
+  performed no remote action. Verdict: `NO-GO`, 1 BLOCKER and 1 MEDIUM.
+- BLOCKER: contradictory release provenance still called historical
+  `a590d1f08110c20b6f7b45294cb91a7be7b5a8e3` the current candidate and two
+  runbooks described immutable `abb93f25`/`0022` as mutable/uncommitted. This
+  could direct an operator to the wrong SHA.
+- MEDIUM: the exact duplicate reconciliation D1 test covered only a `sent`
+  mutable price-review peer and did not exercise `accepted_by_parent`,
+  `scheduled`, or stale dispatch/final-confirm/apply attempts after supersede.
+- Current local remediation consistently treats `a590d1f` as historical,
+  `abb93f25` as the immutable runtime anchor and `b2e8548f` as rejected. It adds
+  data-driven atomic supersession for all three mutable statuses and proves the
+  stale downstream actions fail closed without new outbox/apply evidence.
+  Focused `tests/integration/legacy-reconciliation-d1.test.ts` passes 10/10;
+  proportional worktree gates also pass: check 0/0, docs 151 links/52 files plus
+  105 commands, release scan 536/536 and diff check.
+- Current remediation changes documentation and tests only; `src` and
+  `migrations` remain unchanged. It is mutable and has no exact candidate SHA.
+  The next gate is a user-created commit, proportional exact-SHA verification,
+  then separately authorized independent review. No remote/provider/production/
+  official-site action occurred; overall status remains NO-GO.
