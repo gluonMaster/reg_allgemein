@@ -222,11 +222,11 @@ evidence seal `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` вернул NO-GO с 2
 same-name sibling evidence и surviving duplicate price-review peer. Текущий
 worktree закрывает runtime findings append-only migration `0022`, exact
 completion marker, strict source-child identity и atomic downstream
-price-review fence. Targeted suites прошли, но worktree ещё не immutable и не
-имеет fresh exact-SHA verification/re-review. Полный local worktree chain прошёл:
-check 0/0, 66/66 files и 511/511 Vitest, Chromium 18/18, build, audit 0 и
-docs/scan/diff. Admin cold-read, owner decisions и authorized preview rehearsal
-также отсутствуют. Поэтому PR-B17 остаётся blocked.
+price-review fence. Exact runtime remediation anchor
+`abb93f25a7d9ce80bdef6f204e75cabf635f9453` прошёл fresh full chain: check 0/0,
+66/66 files и 511/511 Vitest, Chromium 18/18, build, audit 0 и docs/scan/diff.
+SELF documentation seal/re-review, admin cold-read, owner decisions и authorized
+preview rehearsal отсутствуют. Поэтому PR-B17 остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`; local `0016`–`0022` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или

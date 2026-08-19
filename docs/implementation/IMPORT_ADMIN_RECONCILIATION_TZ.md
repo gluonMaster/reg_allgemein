@@ -4,10 +4,10 @@
 review exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` выполнен 2026-08-18 и
 дал NO-GO с 2 BLOCKER и 2 HIGH findings: incomplete reconciliation
 materialization, ambiguous release SHA, same-name sibling evidence и
-неинвалидированный duplicate price-review peer. Текущий worktree исправляет
-runtime findings append-only migration `0022` и code/tests/docs. Full local
-worktree chain прошёл, но immutable remediation checkpoint, fresh exact-SHA
-verification и новый independent review ещё отсутствуют.
+неинвалидированный duplicate price-review peer. Exact runtime remediation anchor
+`abb93f25a7d9ce80bdef6f204e75cabf635f9453` исправляет findings append-only
+migration `0022` и прошёл fresh exact-SHA full chain. SELF documentation seal и
+новый independent review ещё отсутствуют.
 External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.

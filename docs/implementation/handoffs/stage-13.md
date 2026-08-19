@@ -1,13 +1,13 @@
 # Handoff этапа 13: hardening и production readiness
 
-Ревизия: 2026-08-18.
+Ревизия: 2026-08-19.
 
-Статус этапа: `in_progress` — documentation descendant `017c0d32` прошёл fresh
-exact-SHA verification, а exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956`
+Статус этапа: `in_progress` — exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956`
 получил authorized independent `IMPORT-08` review `NO-GO` с 2 BLOCKER и 2 HIGH.
-Текущий изменённый worktree содержит append-only migration `0022`, runtime/test
-remediation и green full local worktree chain; immutable candidate и fresh
-exact-SHA chain ещё отсутствуют.
+Exact runtime remediation anchor `abb93f25a7d9ce80bdef6f204e75cabf635f9453`
+с append-only migration `0022` прошёл fresh exact-SHA full chain. Финальный review
+target определяется как SELF — documentation-only commit, содержащий этот record;
+его immutable SHA, short gates и independent re-review ещё отсутствуют.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -90,7 +90,7 @@ stored-log remediation проверены 2026-08-12.
 | R2 split    | local guards + два отдельных private EU preview buckets verified                                                                                                                                   | production resources/policy и isolated restore                                                                                |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed                                                                                                  | remote manual/dedupe/failure rehearsal                                                                                        |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed                                                                                                        | remote clean-room/least-privilege/zero-admin recovery drill                                                                   |
-| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `f7e75f9` review returned NO-GO; remediation is committed as `b354e582` and passed pre-commit full 509/509 | fresh exact-SHA verification/review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
+| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` review returned NO-GO; runtime remediation anchor `abb93f25` passed fresh exact-SHA full verification | SELF seal/re-review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
@@ -751,12 +751,12 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 | Gate                              | Статус                         | Evidence / next action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Owner                                             |
 | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Local implementation/traceability | `blocked` pending remediation commit/exact verification | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower verification/review. Exact `017c0d32` passed its fresh full chain; its docs-only descendant `8c6e2a` was reviewed independently and rejected with 2 BLOCKER/2 HIGH. The current `0022` remediation worktree passes the full local chain but remains mutable and unreviewed | Release operator + separately authorized independent reviewer |
+| Local implementation/traceability | `blocked` pending SELF seal/re-review | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower verification/review. Exact evidence seal `8c6e2a` was reviewed independently and rejected with 2 BLOCKER/2 HIGH. Exact runtime remediation anchor `abb93f25` passed the fresh full chain; the SELF documentation seal and independent re-review remain absent | Release operator + separately authorized independent reviewer |
 | Dependency security               | `passed`                       | immutable `200268f`: clean install, full audit 0, full release verification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | dependency/security owner                         |
 | Environment/origin/R2 isolation   | `blocked`                      | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Cloudflare/security owner                         |
 | Scheduled monitoring              | `passed`                       | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | operations owner/account contact                  |
 | Admin bootstrap/recovery          | `blocked`                      | local one-shot passed; remote clean-room and recovery drill                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | security/operations owner                         |
-| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact `8c6e2a` review found a missing reconciliation-completion fence, same-name sibling ambiguity and stale downstream price-review paths. Current append-only `0022` remediation binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection. The worktree is not immutable; full-chain and independent re-review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
+| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact `8c6e2a` review found a missing reconciliation-completion fence, same-name sibling ambiguity and stale downstream price-review paths. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection and passed its full chain. SELF re-review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
 | Public auth/email                 | `feature_disabled`             | scoped key/secrets installed; enablement, real-token and delivery smoke absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | auth/provider owner                               |
 | Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                              | provider/privacy/reliability/operations owners    |
 | Upload                            | `feature_disabled`             | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | storage/security/legal owner                      |
@@ -791,11 +791,12 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 ## Следующие действия
 
-1. Завершить full local chain для `0022` remediation, затем получить созданный
-   пользователем immutable commit и повторить fresh exact-SHA full chain.
-2. Только после green exact-SHA chain отдельно запросить новый independent
-   read-only review этого SHA. Exact `8c6e2a` остаётся rejected checkpoint и не
-   покрывает текущую remediation.
+1. Получить созданный пользователем documentation-only SELF commit, содержащий
+   этот release record, и подтвердить его как clean exact HEAD и runtime-empty
+   descendant exact `abb93f25`.
+2. Выполнить exact short gates SELF (`docs:check`, `release:scan`, diff/status),
+   затем отдельно запросить новый independent read-only review этого SHA. Exact
+   `8c6e2a` остаётся rejected checkpoint и не покрывает remediation.
 3. После независимого GO подготовить и независимо проверить protected
    exact-target preview control, затем раздельно запросить backup/isolated
    restore, deploy и migration permissions. Не объединять их с import, secret
@@ -1114,3 +1115,20 @@ checkpoint`; its parent `ca4ef8f` contains the Access parser fix. Exact
   followed by fresh exact-SHA verification and a
   separately authorized independent re-review; no parent SHA is called the
   current candidate.
+
+## Continuation 2026-08-19: exact runtime anchor `abb93f25`
+
+- The user created immutable runtime remediation commit
+  `abb93f25a7d9ce80bdef6f204e75cabf635f9453`
+  (`fix: close reconciliation completion and downstream fences`). Clean exact
+  HEAD, expected 26-file scope and absence of `.dev.vars.e2e` were confirmed.
+- The exact SHA passed: check 0/0 in 45.12 s; Vitest 66 files/511 tests in
+  361.42 s; Chromium 18/18 in 189.57 s; production build in 19.34 s;
+  production audit 0 in 1.83 s; docs 151 links/52 files plus 105 commands in
+  2.31 s; release scan 536/536 in 3.54 s; diff and final exact HEAD/status checks
+  passed. HEAD remained exact and the worktree remained clean.
+- No remote D1/Worker/config mutation, provider call/send, production deploy or
+  official-site action occurred. To avoid repeating the prior release-SHA
+  ambiguity, the final review target is defined as SELF: the documentation-only
+  commit containing this record. It must be a runtime-empty descendant of
+  `abb93f25`, pass exact short gates, and receive separately authorized review.

@@ -424,9 +424,10 @@ worktree добавляет append-only migration `0022`, exact completion marke
 strict source-child identity и atomic downstream price-review fence. Targeted
 local evidence прошло: reconciliation 10/10, family/cabinet 9/9, legacy import
 13/13, price review 6/6 и check 0/0. После исправления трёх найденных full-suite
-regressions полный local worktree chain также прошёл: 66/66 files, 511/511
-Vitest, Chromium 18/18, build, audit 0, docs/scan/diff. Worktree ещё не является
-immutable remediation checkpoint и не имеет fresh exact-SHA verification/re-review.
+regressions exact runtime remediation anchor
+`abb93f25a7d9ce80bdef6f204e75cabf635f9453` прошёл fresh full chain: 66/66 files,
+511/511 Vitest, Chromium 18/18, build, audit 0, docs/scan/diff. SELF documentation
+seal и independent re-review ещё отсутствуют.
 PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
 buckets и authorized preview rehearsal также отсутствуют. Remote не менялся.
 
