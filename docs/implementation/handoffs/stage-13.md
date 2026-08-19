@@ -9,8 +9,10 @@ Exact runtime remediation anchor `abb93f25a7d9ce80bdef6f204e75cabf635f9453`
 documentation-only review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
 является его прямым runtime-empty потомком и прошёл exact short gates. Отдельно
 разрешённый independent read-only re-review exact `b2e8548f` вернул NO-GO с
-1 BLOCKER и 1 MEDIUM. Current local docs/test remediation закрывает
-provenance/test findings, но ещё не является immutable candidate.
+1 BLOCKER и 1 MEDIUM. Exact docs/test remediation anchor
+`4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9` закрывает findings и прошёл
+proportional exact-SHA gates. Финальный review target — SELF следующего прямого
+docs-only seal; до его commit exact candidate отсутствует.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -36,8 +38,8 @@ stored-log remediation проверены 2026-08-12.
   the Access OLE date fix; `a590d1f` adds only the tracked 2026-08-17 deployment
   checkpoint. It is narrower historical provenance, not the current candidate.
   Current immutable runtime anchor is `abb93f25`; `b2e8548f` is its rejected
-  review seal, and no exact current candidate exists until remediation is
-  committed and verified.
+  review seal. Exact docs/test remediation anchor is `4ac6a491`; final review
+  target is SELF of the next direct docs-only seal.
 - Preview D1 migration выполнена отдельно разрешённой операцией 2026-08-10.
   Production, remote import/send, DNS/CMS и официальный сайт не изменялись.
 
@@ -90,12 +92,12 @@ stored-log remediation проверены 2026-08-12.
 
 | Область     | Evidence                                                                                                                                                                                           | Остаточный gate                                                                                                               |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0022`; exact runtime anchor/seal are immutable and locally verified; `b2e8548f` review is NO-GO | committed/verified remediation and new independent review, authorized remote apply, production migration и isolated restore |
-| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0022`; exact runtime full chain passed; `b2e8548f` review is NO-GO | committed/verified remediation and new independent review, remote apply, isolated backup/restore + rollback rehearsal       |
+| Empty D1    | deployed preview `0001`–`0015`, pending 0; local foundation suite includes unapplied `0016`–`0022`; exact runtime anchor `abb93f25` and remediation anchor `4ac6a491` are immutable/verified; `b2e8548f` review is NO-GO | docs-only SELF seal/short gates and new independent review, authorized remote apply, production migration и isolated restore |
+| Upgraded D1 | historical populated `0013 → 0015` plus hardened suffix evidence through `0018`; focused reconciliation evidence applies `0019`–`0022`; exact runtime full chain and remediation proportional gates passed | docs-only SELF seal/short gates and new independent review, remote apply, isolated backup/restore + rollback rehearsal       |
 | R2 split    | local guards + два отдельных private EU preview buckets verified                                                                                                                                   | production resources/policy и isolated restore                                                                                |
 | Scheduler   | Local guards + preview automatic delivery/freshness for all nine jobs и внешний HEAD alert passed                                                                                                  | remote manual/dedupe/failure rehearsal                                                                                        |
 | Bootstrap   | clean/invalid/replay/concurrent/upgrade, exact-ID selector isolation и result checks passed                                                                                                        | remote clean-room/least-privilege/zero-admin recovery drill                                                                   |
-| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` review returned NO-GO; runtime remediation anchor `abb93f25` passed fresh exact-SHA full verification and review seal `b2e8548f` passed short gates, then its independent review returned NO-GO 1 BLOCKER/1 MEDIUM | committed/verified docs/test remediation and new independent review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
+| Imports     | current Access sanitized profile 1703 rows/21 of 21 required fields/v1 compatible; current PlusBText v1 confirmed. Exact `8c6e2a` and `b2e8548f` reviews returned NO-GO; runtime anchor `abb93f25` passed full verification and docs/test remediation anchor `4ac6a491` passed proportional exact-SHA gates | docs-only SELF seal/short gates and new independent review, exact-target remote lifecycle, synthetic preview/no-PII and first-import restore |
 
 Applied migrations `0001`–`0015` нельзя переписывать. Recovery после применённой
 migration — совместимый code rollback, новая forward-fix migration либо отдельно
@@ -757,12 +759,12 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 | Gate                              | Статус                         | Evidence / next action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Owner                                             |
 | --------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Local implementation/traceability | `blocked` pending immutable remediation | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower verification/review. Exact evidence seal `8c6e2a` was rejected with 2 BLOCKER/2 HIGH. Exact runtime anchor `abb93f25` passed the full chain; runtime-empty seal `b2e8548f` passed short gates, then its review returned NO-GO with 1 BLOCKER/1 MEDIUM. Current docs/test remediation is mutable, so no exact current candidate exists | Release operator + user-created commit/proportional verification + separately authorized independent reviewer |
+| Local implementation/traceability | `blocked` pending SELF seal/review | PR-A06 historical audit covered 91/91 MVP IDs and 166 acceptance bullets/37 stable untagged mappings. Historical exact candidate `a590d1f` maps 99/99 IDs and 175 bullets and passed its narrower review. Exact `8c6e2a` was rejected with 2 BLOCKER/2 HIGH; exact `b2e8548f` with 1 BLOCKER/1 MEDIUM. Runtime anchor `abb93f25` passed the full chain; exact docs/test remediation anchor `4ac6a491` passed proportional gates. Final review target is SELF of the next direct docs-only seal | Release operator + user-created SELF seal/short gates + separately authorized independent reviewer |
 | Dependency security               | `passed`                       | immutable `200268f`: clean install, full audit 0, full release verification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | dependency/security owner                         |
 | Environment/origin/R2 isolation   | `blocked`                      | preview Worker/D1/private EU R2 verified; custom/production origin/resources absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Cloudflare/security owner                         |
 | Scheduled monitoring              | `passed`                       | preview Cron + external 5-minute HEAD monitor; DOWN→UP test delivery/recovery confirmed 2026-08-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | operations owner/account contact                  |
 | Admin bootstrap/recovery          | `blocked`                      | local one-shot passed; remote clean-room and recovery drill                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | security/operations owner                         |
-| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection and passed its full chain. Exact `b2e8548f` review returned NO-GO 1 BLOCKER/1 MEDIUM. Current data-driven test remediation covers mutable peer supersession and stale downstream denial, but is not committed; new review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
+| Current legacy import             | `blocked`                      | Fresh current-source sanitized parse and local `IMPORT-07` implementation reduce obsolete 1429/751 noise to 160 issue occurrences/53 enrollment reviews while retaining fail-closed records and safe admin references. One group awaits upstream correction. Exact runtime anchor `abb93f25` binds promotion/registration to exact materialization, child correction to exact `source_child_key`, and duplicate resolution to atomic peer supersession/applied-item rejection. Exact remediation anchor `4ac6a491` covers all mutable peer states and stale downstream denial and passed proportional gates. SELF seal review, admin cold-read, protected preview control, synthetic no-PII remote lifecycle, first-import restore and any current-data import remain absent | import/admin/data/backup/privacy owners           |
 | Public auth/email                 | `feature_disabled`             | scoped key/secrets installed; enablement, real-token and delivery smoke absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | auth/provider owner                               |
 | Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and historical exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                   | provider/privacy/reliability/operations owners    |
 | Upload                            | `feature_disabled`             | preview private-EU R2 split passed; controlled AV/training/legal/production evidence absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | storage/security/legal owner                      |
@@ -797,16 +799,18 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 
 ## Следующие действия
 
-1. Пользователь создаёт новый commit из текущей docs/test remediation. До этого
-   exact current candidate отсутствует; не называть `a590d1f`, `abb93f25` или
-   rejected `b2e8548f` current deploy/review candidate.
-2. На новом exact SHA выполнить proportional verification: focused
-   reconciliation D1, `npm run check`, docs/scan/diff и provenance/runtime-diff
-   gates. Full chain `abb93f25` не повторять без нового runtime diff.
+1. Пользователь создаёт прямой docs-only commit из текущего handoff worktree.
+   Его SHA является SELF final review seal; до commit exact review candidate
+   отсутствует. Не называть `a590d1f`, `abb93f25`, rejected `b2e8548f` или
+   remediation anchor `4ac6a491` финальным review seal.
+2. На новом exact SELF SHA выполнить short verification: docs/scan/diff,
+   direct-parent/docs-only/runtime-empty provenance, final HEAD/status и
+   отсутствие `.dev.vars.e2e`. Full/focused chain `4ac6a491` не повторять без
+   нового `src`/`migrations`/`tests` diff.
 3. Отдельно запросить разрешение пользователя на новый independent read-only
    exact-SHA review. Review ничего не меняет локально/удалённо и возвращает
    findings с severity/file/line/test gap и итог GO/NO-GO. Exact `8c6e2a` и
-   `b2e8548f` остаются rejected checkpoints.
+   `b2e8548f` остаются rejected checkpoints; `4ac6a491` — remediation anchor.
 4. После независимого GO подготовить и независимо проверить protected
    exact-target preview control, затем раздельно запросить backup/isolated
    restore, deploy и migration permissions. Не объединять их с import, secret
@@ -1174,15 +1178,38 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 - MEDIUM: the exact duplicate reconciliation D1 test covered only a `sent`
   mutable price-review peer and did not exercise `accepted_by_parent`,
   `scheduled`, or stale dispatch/final-confirm/apply attempts after supersede.
-- Current local remediation consistently treats `a590d1f` as historical,
+- At this checkpoint, local remediation consistently treated `a590d1f` as historical,
   `abb93f25` as the immutable runtime anchor and `b2e8548f` as rejected. It adds
   data-driven atomic supersession for all three mutable statuses and proves the
   stale downstream actions fail closed without new outbox/apply evidence.
   Focused `tests/integration/legacy-reconciliation-d1.test.ts` passes 10/10;
   proportional worktree gates also pass: check 0/0, docs 151 links/52 files plus
   105 commands, release scan 536/536 and diff check.
-- Current remediation changes documentation and tests only; `src` and
-  `migrations` remain unchanged. It is mutable and has no exact candidate SHA.
-  The next gate is a user-created commit, proportional exact-SHA verification,
-  then separately authorized independent review. No remote/provider/production/
-  official-site action occurred; overall status remains NO-GO.
+- At this checkpoint remediation changed documentation and tests only; `src`
+  and `migrations` remained unchanged. It was mutable and had no exact candidate
+  SHA. The following continuation records its immutable anchor and verification.
+
+## Continuation 2026-08-19: exact remediation anchor `4ac6a491`
+
+- The user created exact commit
+  `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`
+  (`test: close b2e8548f reconciliation review findings`) with direct parent
+  `b2e8548f63ae62e33d519d61e0ac729085801052`. Clean HEAD/worktree and exact
+  ancestry were confirmed. Its nine-file diff changes eight canonical docs and
+  `tests/integration/legacy-reconciliation-d1.test.ts`; `src` and `migrations`
+  have an empty diff.
+- Exact proportional gates passed: focused reconciliation D1 10/10 in 90.86 s;
+  check 0/0 in 37 s; docs 151 links/52 files plus 105 commands in 3.2 s;
+  main-worktree release scan 536/536 in 4.4 s including existing build output;
+  diff/final HEAD/status, empty `src`/`migrations` diff and `.dev.vars.e2e`
+  absence passed. A later isolated clean detached recurrence independently
+  passed focused D1 10/10, check 0/0, docs 151/52 plus 105 commands, release
+  scan 406/406 tracked files, diff/final HEAD/status and runtime-env absence.
+- This commit is the immutable docs/test remediation anchor, not the final
+  review seal. To prevent another self-referential provenance ambiguity, final
+  review target is defined as SELF of the next direct documentation-only commit
+  containing this record. That seal must have direct parent `4ac6a491`, an empty
+  `src`/`migrations`/`tests` diff, and pass exact short gates before separately
+  authorized independent review.
+- No remote/provider/production/official-site action occurred; overall status
+  remains NO-GO.

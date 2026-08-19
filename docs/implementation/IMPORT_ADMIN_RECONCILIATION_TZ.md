@@ -10,8 +10,11 @@ migration `0022` и прошёл fresh exact-SHA full chain. Direct documentatio
 runtime-empty review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
 прошёл clean exact short gates; его independent review вернул NO-GO с
 1 BLOCKER и 1 MEDIUM из-за contradictory release provenance и неполного
-mutable/stale price-review test matrix. Current docs/test remediation закрывает
-эти findings локально, но ещё не является immutable candidate.
+mutable/stale price-review test matrix. Exact remediation anchor
+`4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9` закрывает эти findings в docs/test,
+не меняет `src`/`migrations` и прошёл proportional exact-SHA verification.
+Финальный independent-review seal определяется как SELF следующего docs-only
+commit; до его фиксации exact review target отсутствует.
 External preview и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
@@ -267,10 +270,11 @@ full chain, а direct runtime-empty review seal `b2e8548f` — exact short gates
 Independent review `b2e8548f` вернул NO-GO с 1 BLOCKER/1 MEDIUM. Current local
 remediation выравнивает provenance и data-driven проверяет supersession
 `sent`/`accepted_by_parent`/`scheduled`, stale dispatch/final-confirm/apply и
-отсутствие новых outbox/apply evidence. До user-created commit, proportional
-exact-SHA verification, нового separately authorized review, steps 3–4 и
-реальных owner decisions PR-B17 remains `blocked`, а current import issues must
-not be bulk-dismissed.
+отсутствие новых outbox/apply evidence. Exact remediation anchor `4ac6a491`
+прошёл focused D1 10/10, check 0/0, docs/scan/diff и final provenance gates.
+До user-created docs-only SELF seal, его short-gate verification, нового
+separately authorized review, steps 3–4 и реальных owner decisions PR-B17
+remains `blocked`, а current import issues must not be bulk-dismissed.
 
 ## 11. Готовый implementation prompt
 

@@ -229,13 +229,15 @@ Direct documentation-only runtime-empty review seal
 `b2e8548f63ae62e33d519d61e0ac729085801052` прошёл clean exact short gates.
 Его separately authorized independent re-review вернул NO-GO с 1 BLOCKER и
 1 MEDIUM: contradictory release provenance и неполное regression evidence для
-mutable/stale duplicate price-review paths. Current local docs/test remediation
-выравнивает provenance и добавляет data-driven `sent`/`accepted_by_parent`/
-`scheduled` supersession плюс stale dispatch/final-confirm/apply denial без
-нового outbox/apply evidence; focused suite проходит 10/10. До user-created
-commit, proportional exact-SHA verification, нового separately authorized
-review, admin cold-read, owner decisions и authorized preview rehearsal PR-B17
-остаётся blocked.
+mutable/stale duplicate price-review paths. Docs/test remediation зафиксирована
+exact anchor `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`: она выравнивает provenance,
+добавляет data-driven `sent`/`accepted_by_parent`/`scheduled` supersession и
+stale dispatch/final-confirm/apply denial без нового outbox/apply evidence.
+Exact anchor прошёл focused D1 10/10,
+check 0/0, docs/scan/diff и final provenance gates без `src`/`migrations` diff.
+Финальный review target определяется как SELF следующего docs-only seal. До
+его commit/short gates, нового separately authorized review, admin cold-read,
+owner decisions и authorized preview rehearsal PR-B17 остаётся blocked.
 
 Это не меняет deployed preview `0001`–`0015`; local `0016`–`0022` остаются
 unapplied. Работа не закрывает PR-B12–PR-B17 или

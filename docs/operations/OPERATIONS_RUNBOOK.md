@@ -92,9 +92,10 @@ local migration suites, но не применены remote и не входят
 inventory/evidence; exact `8c6e2a` review был NO-GO. Immutable runtime anchor
 `abb93f25` содержит `0022` и прошёл fresh full chain; его docs-only seal
 `b2e8548f` прошёл short gates, затем independent review вернул NO-GO с
-1 BLOCKER/1 MEDIUM. Current docs/test remediation ещё не зафиксирована, поэтому
-exact current candidate отсутствует и требуется proportional exact-SHA
-verification и separately authorized re-review. До separately authorized apply
+1 BLOCKER/1 MEDIUM. Exact docs/test remediation anchor `4ac6a491` закрывает
+findings, не меняет `src`/`migrations` и прошёл proportional exact-SHA gates.
+Финальный review target — SELF следующего docs-only seal; до его commit/short
+gates и separately authorized re-review exact candidate отсутствует. До separately authorized apply
 Telegram/import candidate paths там отсутствуют.
 
 ## 1. Начало смены: health и freshness

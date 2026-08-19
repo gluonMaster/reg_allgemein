@@ -432,8 +432,11 @@ documentation-only runtime-empty review seal
 separately authorized independent re-review вернул NO-GO с 1 BLOCKER и
 1 MEDIUM: contradictory current-candidate provenance и неполное покрытие
 mutable/stale duplicate price-review paths. Current local docs/test remediation
-закрывает оба findings, а focused reconciliation D1 suite проходит 10/10, но
-нового immutable candidate ещё нет.
+зафиксировано exact anchor `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`,
+закрывает оба findings и прошло focused reconciliation D1 10/10, check 0/0,
+docs/scan/diff и final provenance gates. `src`/`migrations` не менялись.
+Финальный review target — SELF следующего docs-only seal; до его commit exact
+review candidate отсутствует.
 PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
 buckets и authorized preview rehearsal также отсутствуют. Remote не менялся.
 
