@@ -1,6 +1,6 @@
 # Канонический контракт production readiness
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-20.
 
 Этот документ задаёт обязательные deliverables, release gates и доказательства
 для доведения портала до production. Он не является готовой инструкцией по
@@ -199,9 +199,11 @@ authorized synthetic preview smoke и PR-F15 destination/rotation/recovery drill
 Пока реализация/evidence отсутствует, row остаётся `blocked`, даже если source
 profile известен или provider flag `disabled`.
 
-На ревизию 2026-08-14 local worktree реализует code/migrations boundary этих
-rows через unapplied candidates `0016` (legacy release control), `0017`
-(Telegram delivery certainty) и `0018` (legacy role/count/cleanup hardening).
+На ревизию 2026-08-20 code/migrations boundary этих rows реализован migrations
+`0016`–`0022`; весь набор применён только к preview D1 после protected backup и
+isolated restore прежнего состояния. Это schema evidence, а не provider/import
+lifecycle evidence: Worker, flags/secrets, external send и import transitions не
+изменялись.
 `0018` сохраняет grandfathered `0016` plans как immutable evidence, но
 fail-closes их lifecycle при `NULL` actors/legacy `{}` contract и требует новый
 hardened plan.
@@ -237,13 +239,17 @@ Exact anchor прошёл focused D1 10/10,
 check 0/0, docs/scan/diff и final provenance gates без `src`/`migrations` diff.
 Финальный review target
 `2bedc73c9b39a4cb43296046986a3f48e039b022` является прямым docs-only потомком
-`4ac6a491`, не меняет `src`/`migrations`/`tests` и прошёл exact short gates. До
-его separately authorized independent review, admin cold-read, owner decisions
-и authorized preview rehearsal PR-B17 остаётся blocked.
+`4ac6a491`, не меняет `src`/`migrations`/`tests`, прошёл exact short gates и
+separately authorized independent review с итогом GO. Оставшийся MEDIUM не
+открывает runtime bypass. До admin cold-read, owner decisions и authorized
+import lifecycle rehearsal PR-B17 остаётся blocked.
 
-Это не меняет deployed preview `0001`–`0015`; local `0016`–`0022` остаются
-unapplied. Работа не закрывает PR-B12–PR-B17 или
-PR-F12–PR-F15 и не является разрешением на remote migration/import/send.
+Отдельно разрешённые recovery и migration gates 2026-08-20 изменили только
+preview recovery resources и source preview D1: protected `0001`–`0015` restore
+прошёл, затем exact `0016`–`0022` применены с ledger 22/22, полным candidate
+schema inventory и 0 FK violations. Worker deploy, import lifecycle и provider
+send не выполнялись. Это не закрывает PR-B12–PR-B17 или PR-F12–PR-F15 и не
+является разрешением на любой следующий remote gate.
 
 ## Обязательная non-production валидация
 

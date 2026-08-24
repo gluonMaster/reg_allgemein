@@ -1,6 +1,6 @@
 # Целевая модель данных D1
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-20.
 
 Документ задает логическую модель и обязательные инварианты. Конкретные SQL-
 миграции создаются поэтапно и могут добавлять технические поля, но не должны
@@ -1527,10 +1527,10 @@ computed `next_attempt_at` и сохраняется даже при missing/inv
 destination policy, а не только из producer default.
 
 Migration `0017_telegram_delivery_certainty.sql` реализует эту модель;
-`0016_legacy_import_release_control.sql` и
-`0018_legacy_import_release_hardening.sql` реализуют legacy release control.
-Все три являются локальными append-only candidate migrations и не считаются
-применёнными в deployed preview, где подтверждены только `0001`–`0015`.
+`0016_legacy_import_release_control.sql`,
+`0018_legacy_import_release_hardening.sql` и reconciliation suffix `0019`–`0022`
+реализуют hardened legacy release control. Весь append-only set `0001`–`0022`
+применён в deployed preview D1 2026-08-20; ledger/schema/FK verification passed.
 
 Email claim повторяет recipient/account/token predicates в conditional `UPDATE`,
 а не доверяет предварительному candidate `SELECT`. Privacy closure меняет

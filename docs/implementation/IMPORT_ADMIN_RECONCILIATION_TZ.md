@@ -16,8 +16,10 @@ mutable/stale price-review test matrix. Exact remediation anchor
 Финальный independent-review seal
 `2bedc73c9b39a4cb43296046986a3f48e039b022` является его прямым docs-only
 потомком, не меняет `src`/`migrations`/`tests` и прошёл exact short gates.
-Independent review этого SHA ещё не разрешён и не выполнялся.
-External preview и production evidence не выполнены.
+Separately authorized independent review этого SHA завершён с итогом GO; один
+MEDIUM test-evidence gap не открывает runtime bypass. Migrations `0019`–`0022`
+применены к preview D1 и прошли schema/FK verification, но remote reconciliation
+lifecycle, admin cold-read и production evidence не выполнены.
 Нормативное требование — `IMPORT-08`, критерии —
 `AC-IMPORT-27`–`AC-IMPORT-31`.
 
@@ -263,7 +265,7 @@ Export применяет тот же полный набор фильтров �
 5. Only after preview evidence may routine current-source production import use
    this queue; real PII is not copied into ordinary preview.
 
-Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0021`,
+Local step 1 и synthetic D1 часть step 2 реализованы migrations `0019`–`0022`,
 `LegacyImportReconciliationRepository`, typed admin repository/routes/UI и
 `T-IMPORT-RECONCILIATION`. Exact checkpoint `f7e75f9` прошёл full verification,
 но independent review дал NO-GO; последующие `b354e582`/`0021` и
@@ -274,9 +276,10 @@ remediation выравнивает provenance и data-driven проверяет 
 `sent`/`accepted_by_parent`/`scheduled`, stale dispatch/final-confirm/apply и
 отсутствие новых outbox/apply evidence. Exact remediation anchor `4ac6a491`
 прошёл focused D1 10/10, check 0/0, docs/scan/diff и final provenance gates.
-Exact docs-only review seal `2bedc73c` прошёл short gates. До его separately
-authorized independent review, steps 3–4 и реальных owner decisions PR-B17
-remains `blocked`, а current import issues must not be bulk-dismissed.
+Exact docs-only review seal `2bedc73c` прошёл short gates и separately authorized
+independent review с итогом GO. Preview schema `0019`–`0022` применена; до step 3,
+synthetic lifecycle части step 4 и реальных owner decisions PR-B17 remains
+`blocked`, а current import issues must not be bulk-dismissed.
 
 ## 11. Готовый implementation prompt
 

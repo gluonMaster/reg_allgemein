@@ -1,6 +1,6 @@
 # Roadmap реализации MVP
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-20.
 
 Roadmap определяет порядок и quality gates, но не является источником
 бизнес-правил. Каждый этап читает [спецификацию](../spec/MVP_SPEC.md),
@@ -379,7 +379,7 @@ Nachhilfe upload/document review, enabled contract lifecycle, price admin-send
 и scheduled apply; disabled upload mutation, оставшиеся enrollment/group-service
 и guessed/admin-purpose permission variants; literal/manual zoom,
 assistive-technology/glyph review и preview/provider authenticated evidence.
-Provider/manual smoke, job-specific alerts, restore rehearsal и внешние release
+Provider/manual smoke, job-specific alerts, post-apply recovery rehearsal и внешние release
 inputs также отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
@@ -397,12 +397,15 @@ failed-stage cleanup evidence, recovery-bound atomic promote/
 rollback/roll-forward и aggregate verify. Это реализуют candidate migrations
 `0016` и `0018`; populated-upgrade tests сохраняют прежние unhardened plans как
 immutable evidence, но запрещают их lifecycle и требуют новый hardened plan.
-Deployed preview остаётся на `0001`–`0015`.
+Deployed preview D1 содержит `0001`–`0022`, pending 0; schema/object/FK
+verification после remote apply 2026-08-20 прошла.
 Production transitions намеренно fail closed ещё до API-token lookup/network,
 пока remote transaction evidence отсутствует.
 Это не делает environment gate `passed`: remote preview plan/stage/promotion не
 выполнялись, реальная remote D1 batch atomicity/timeout reconciliation не
-доказана, recovery point/restore не проверены, а production import не разрешён.
+доказана, post-apply restore/forward-fix rehearsal не выполнена, а production
+import не разрешён. Pre/post apply Time Travel points и protected backup с
+isolated restore прежнего `0001`–`0015` состояния сохранены.
 Access normalization `IMPORT-07` локально переведена на exact `O/R/S/T`
 crosswalk, parent-name normalizer v2, hourly duration semantics, invalid email/
 DOB fail-closed и traceable family issues. Owner decision ограничивает package
@@ -437,10 +440,11 @@ mutable/stale duplicate price-review paths. Current local docs/test remediation
 docs/scan/diff и final provenance gates. `src`/`migrations` не менялись.
 Финальный review target
 `2bedc73c9b39a4cb43296046986a3f48e039b022` — прямой docs-only потомок
-`4ac6a491`; его exact short gates прошли. Independent review ещё не разрешён и
-не выполнялся.
+`4ac6a491`; его exact short gates и separately authorized independent review
+прошли с итогом GO. Оставшийся MEDIUM не открывает runtime bypass.
 PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
-buckets и authorized preview rehearsal также отсутствуют. Remote не менялся.
+buckets и authorized import lifecycle rehearsal также отсутствуют. В remote
+изменена только preview D1 schema `0016`–`0022`; Worker и R2 не менялись.
 
 Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
 candidate добавляет real one-way `bot_api` adapter, strict minimized payload,
@@ -453,9 +457,10 @@ post-`dispatch_started` crash в `delivery_unknown` без provider send/retry.
 Синтаксически валидный Bot API `ok=false` `408|425|5xx` является conclusive
 retryable; `429` сохраняет destination cooldown даже без usable `retry_after`;
 transport/timeout/unreadable/oversized/malformed, ambiguous envelope,
-invalid/mismatched success и post-send-D1 uncertainty — ambiguous. Ни migration,
-ни secret/config, ни external preflight/send не
-применялись; PR-F12–PR-F15 остаются `blocked`.
+invalid/mismatched success и post-send-D1 uncertainty — ambiguous. Migration
+`0017` применена в preview D1, но secret/config, external preflight/send,
+failure/alert и operator-resolution rehearsal не выполнялись; PR-F12–PR-F15
+остаются `blocked`.
 
 Tracked packet этапа:
 
@@ -467,8 +472,8 @@ Tracked packet этапа:
 - [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md);
 - [persistent handoff](handoffs/stage-13.md).
 
-Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed migrations
-`0014`–`0015`, local unapplied candidates `0016`–`0022`,
+Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed preview migrations
+`0014`–`0022` (полный ledger `0001`–`0022`, pending 0),
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
 покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются

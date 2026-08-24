@@ -1,6 +1,6 @@
 # Ежедневная эксплуатация и реагирование
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-20.
 
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
 handler и manual operations реализованы и локально протестированы; независимый
@@ -81,24 +81,25 @@ freshness, monitoring migration/smoke и independent aggregate HEAD alert
 delivery/recovery подтверждены. R2 restore, authenticated manual run и
 job-specific failure rehearsal остаются `blocked`.
 
-Current preview D1 inventory — migrations `0001`–`0015`, pending 0. Initial
+Current preview D1 inventory — migrations `0001`–`0022`, pending 0. Initial
 preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датированным
 историческим evidence; append-only `0015_worker_monitoring.sql` была применена
 2026-08-11. Initial 14/14 не является текущим migration inventory и не доказывает
 backup/restore.
 
-Resulting local candidate добавляет append-only `0016`–`0022`. Они проходят
-local migration suites, но не применены remote и не входят в current preview
-inventory/evidence; exact `8c6e2a` review был NO-GO. Immutable runtime anchor
+Resulting candidate добавил append-only `0016`–`0022`; после protected backup и
+успешного isolated restore прежнего состояния `0001`–`0015` они применены к
+preview D1 2026-08-20. Remote ledger/schema/FK verification прошла, pre/post
+Time Travel points сохранены; exact `8c6e2a` review был NO-GO. Immutable runtime anchor
 `abb93f25` содержит `0022` и прошёл fresh full chain; его docs-only seal
 `b2e8548f` прошёл short gates, затем independent review вернул NO-GO с
 1 BLOCKER/1 MEDIUM. Exact docs/test remediation anchor `4ac6a491` закрывает
 findings, не меняет `src`/`migrations` и прошёл proportional exact-SHA gates.
 Финальный review target `2bedc73c9b39a4cb43296046986a3f48e039b022`
 является прямым docs-only потомком `4ac6a491`, не меняет
-`src`/`migrations`/`tests` и прошёл exact short gates. До его separately
-authorized independent review local release gate остаётся NO-GO. До separately authorized apply
-Telegram/import candidate paths там отсутствуют.
+`src`/`migrations`/`tests`, прошёл exact short gates и separately authorized
+independent review с итогом GO; оставшийся MEDIUM не открывает runtime bypass.
+Worker deploy и Telegram/import lifecycle не выполнялись.
 
 ## 1. Начало смены: health и freshness
 
@@ -242,7 +243,8 @@ bookmark/pre-import backup, successful isolated restore to no-current state и
 `import:legacy:recovery-evidence:remote`. Ordinary preview uses only built-in
 `synthetic_preview` sources. Real current Access/PlusBText data never enters
 ordinary preview and requires separate data/privacy plus exact mutation
-permission. Candidate migrations `0016`/`0018` не применены в deployed preview;
+permission. Candidate migrations `0016`–`0022` применены в deployed preview,
+но ни один remote plan/stage/review/promote/rollback transition не выполнялся;
 production transitions пока fail closed.
 
 ## 3. Проверить outbox retry/dead

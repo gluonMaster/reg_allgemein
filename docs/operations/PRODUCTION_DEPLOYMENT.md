@@ -1,6 +1,6 @@
 # Развёртывание портала регистрации
 
-Ревизия: 2026-08-14.
+Ревизия: 2026-08-24.
 
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Локальная
 реализация Stage 13 не заменяет clean-room rehearsal и закрытие release gates из
@@ -32,32 +32,104 @@ Placeholder в угловых скобках, например `<PREVIEW_CONFIG>
 и локальные upstream paths не копируются в терминальный transcript или
 checklist.
 
+### Непрерывный multi-session deployment protocol
+
+Цель Stage 13 — не выполнение одного изолированного deploy-шага, а
+последовательное доведение самостоятельного портала регистрации до полностью
+функционального production-состояния с закрытыми release gates. Эта цель
+сохраняется при каждой передаче между сессиями. Конкретный continuation prompt
+задаёт ближайший безопасный gate, но не превращает его в конечную цель: после
+успешного шага агент обновляет evidence и продолжает к следующему разрешённому
+prerequisite, пока не возникнет участие владельца, stop condition или
+необходимость новой сессии.
+
+Перед каждой remote mutation, provider send, irreversible security action,
+production gate и независимым review агент обязан оценить достаточность
+контекста. Новая сессия требуется, если история уже сжималась, точное remote
+состояние нельзя уверенно восстановить из текущего transcript и handoff,
+следующий ответственный шаг требует clean-room reasoning либо должна измениться
+роль независимого оператора. До остановки агент:
+
+1. выполняет только допустимую read-only reconciliation фактического состояния;
+2. обновляет Stage 13 handoff, readiness checklist и соответствующий runbook,
+   указывая UTC-время, завершённые gates, exact следующий gate, stop/rollback
+   состояние и сознательно не затронутый scope;
+3. создаёт self-contained ignored continuation prompt, который заново фиксирует
+   общую цель до функционального production, обязательные источники истины,
+   permissions, exact targets, проверяемые prerequisites и rollover protocol;
+4. запускает применимые documentation/diff checks и сообщает владельцу точный
+   путь prompt и одну команду-поручение для новой сессии.
+
+Обычная длина работы сама по себе не является поводом дробить безопасные local и
+read-only шаги. Если требуется участие владельца, агент простым языком объясняет
+причину, даёт точные последовательные действия, ожидаемый результат и отдельно
+указывает, какие пароли, OTP, cookies или tokens нельзя передавать агенту. После
+ответа работа продолжается к общей цели, а не считается завершённой на этом
+human gate.
+
+Общая цель не расширяет разрешения автоматически. Production deploy/migration,
+реальный PII import, external provider sends, secrets/Access/flags, DNS/CMS и
+официальный сайт остаются отдельными exact-scope gates согласно этой инструкции
+и текущему прямому поручению владельца. Безопасные local preparation и read-only
+проверки не следует искусственно разбивать на микрогейты.
+
 ## Текущее состояние реализации
 
 | Объект                              | Фактическое состояние                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Gate                                                                                                                                                                                                                                                 |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Local config                        | `wrangler.local.toml`: `DB`, отдельные `R2_ARCHIVE`/`R2_QUARANTINE`; local config/storage/contract tests проходят                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | local evidence `passed`; environment gates отдельно                                                                                                                                                                                                  |
 | Example production config           | `wrangler.example.toml`: отдельные archive/quarantine bindings с `jurisdiction = "eu"`, без real IDs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | production resources/rehearsal `blocked`                                                                                                                                                                                                             |
-| Preview Worker/D1 (2026-08-12)      | `reg-allgemein-preview`: immutable `200268f` развёрнут как version `sha256:f4cd52e14dbd`; D1 migrations `0001`–`0015`, pending 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | preview runtime/migrations `passed`; production/custom origin `blocked`                                                                                                                                                                              |
-| Раздельные R2                       | runtime guards и два отдельных private EU preview bucket проверены                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | preview split `passed`; production/restore `blocked`                                                                                                                                                                                                 |
-| Последняя migration                 | `0015_worker_monitoring.sql`; clean/populated `0013` → `0015` tests и preview apply `0001`–`0015`, pending 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | apply evidence есть; protected restore `blocked`                                                                                                                                                                                                     |
+| Preview Worker/D1 (2026-08-21)      | В ignored exact preview config явно установлено `preview_urls = false`; fresh build и strict dry-run прошли. Один authorized strict redeploy создал version `…76ee` и перевёл её на 100%. Previous compatible `…4154` и retained stopped candidate `…1500` остаются inactive. D1 сохранила exact ledger `0001`–`0022`, pending 0, FK 0 и empty business state                                                                                                                                                                                                                                                      | exact preview Worker deploy/post-deploy gate `passed`; production/custom origin remain `blocked`                                                                                                                                                       |
+| Preview Access (2026-08-21)         | Canonical preview `workers.dev` hostname остаётся закрыт Cloudflare Access: anonymous/invalid получают `302`, valid service token — root `200`, health `204` с `no-store`/`noindex`. Versioned Preview URL retained `…1500` до change отвечала anonymous `200`; после deploy с `preview_urls = false` URL retained `…1500` и new `…76ee` обе отвечают anonymous `404`, поэтому прежний Access bypass закрыт. Точные URL и full version IDs остаются только в protected evidence                                                                                                  | полный Worker preview perimeter и exact deploy smoke `passed`; service-token rotation остаётся отдельной hygiene action                                                                                                                               |
+| Раздельные R2                       | runtime guards и два отдельных private EU preview bucket проверены; current empty state восстановлен в две distinct private EU restore buckets                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | preview split/current-empty restore `passed`; production/non-empty mechanism `blocked`                                                                                                                                                               |
+| Последняя migration                 | `0022_reconciliation_completion_downstream_fence.sql`; reviewed `0016`–`0022` applied 2026-08-20, exact ledger 22/22, pending 0, 130 candidate objects present, 18 new tables empty, required columns/constraint present, FK violations 0. Exact Worker deploy/rollback/redeploy не изменили D1                                                                                                                                                                                                                                                                                                                              | preview apply и compatible Worker rollback `passed`; migration forward-fix/restore decision remains separate                                                                                                                                          |
 | Scheduled jobs/Cron                 | два UTC trigger доставили все девять jobs; UptimeRobot 5-minute `HEAD` aggregate monitor доставил DOWN→UP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | automatic/aggregate `passed`; manual/failure/job-specific alerts `blocked`                                                                                                                                                                           |
 | Manual operations page              | `/admin/operations`: RBAC, CSRF, allowlist, confirmation, idempotency, history и audit покрыты local tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | authenticated remote manual/failure rehearsal `blocked`                                                                                                                                                                                              |
 | First-admin CLI                     | `npm run admin:bootstrap` и local unit/integration tests реализованы; exact target guard и one-shot seal проверены                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | remote exercise и post-consume recovery `blocked`                                                                                                                                                                                                    |
 | Release helpers                     | immutable `200268f`: clean `npm ci`, full и production-only audit по 0 advisories, `release:verify` passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | local gate `passed`; environment gates отдельно                                                                                                                                                                                                      |
 | Stored Worker logs (2026-08-12)     | bounded export version `62b3cac4…`: 60/60 outcomes `ok`; exact 404/health probes корректны, `UNEXPECTED_SERVER_ERROR` отсутствует                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | preview observability `passed`; production evidence `blocked`                                                                                                                                                                                        |
-| Email/Telegram adapters             | Resend adapter/domain/scoped key/Worker secret подготовлены, но provider disabled. Deployed preview и baseline `c5712d0` допускают для Telegram только disabled/fake; resulting `bot_api` candidate ещё не верифицирован и не развернут                                                                                                                                                                                                                                                                                                                                                                             | оба delivery path `feature_disabled`; Telegram PR-F12–PR-F15 `blocked`                                                                                                                                                                               |
-| Current legacy import               | Access read-only profile: 1703 rows, 21/21 required fields, `access-tblkartei:v1` compatible. PlusBText is also v1-compatible; the earlier mismatch was a parser sanitizer defect. `IMPORT-07` owner rules, including four package slots and unconditional AO/AT exclusion, reduce obsolete 1429/751 warning/review counts to 160 issue occurrences/53 enrollment reviews. Exact `8c6e2a` review rejected the `0019`–`0021` lineage with 2 BLOCKER/2 HIGH. Immutable runtime anchor `abb93f25` adds append-only `0022` exact reconciliation-completion, source-child and downstream duplicate price-review fences and passed its full exact-SHA chain. Its docs-only seal `b2e8548f` passed short gates, then independent review returned NO-GO with 1 BLOCKER/1 MEDIUM. Exact docs/test remediation anchor `4ac6a491` closes those findings and passed proportional gates. Final review target `2bedc73c` is its direct docs-only child with empty `src`/`migrations`/`tests` diff and passed exact short gates | PR-B06/B07/B12–B17 remain `blocked`; separately authorized independent review of exact `2bedc73c`, one upstream group correction, six duplicate buckets/remaining cases, independent admin review and all remote evidence remain open; no remote command or PII import performed |
+| Email/Telegram adapters             | Resend adapter/domain/scoped key/Worker secret подготовлены, но provider disabled. Exact candidate Worker `…76ee` deployed; его `bot_api` implementation ранее прошло local/exact independent verification, migration `0017` deployed, но Telegram secrets отсутствуют и provider rehearsal не выполнялся                                                                                                                                                                                                                                                                                                                                 | оба delivery path `feature_disabled`; Telegram PR-F12–PR-F15 `blocked`                                                                                                                                                                               |
+| Current legacy import               | Access read-only profile: 1703 rows, 21/21 required fields, `access-tblkartei:v1` compatible. PlusBText is v1-compatible. `IMPORT-07` owner rules reduce obsolete 1429/751 warning/review counts to 160 issue occurrences/53 enrollment reviews. Runtime anchor `abb93f25`, remediation anchor `4ac6a491` and final review seal `2bedc73c` passed their recorded gates; independent exact `2bedc73c` review returned local GO. Schema prerequisites `0016`–`0022` are deployed, but no import plan/stage/review/promote/rollback/roll-forward command or PII import was performed | PR-B06/B07/B12–B17 remain `blocked`; one upstream group correction, six duplicate buckets/remaining cases, independent admin review and separately authorized synthetic remote lifecycle remain open |
 | Production uploads                  | runtime запрещает включение                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `feature_disabled`                                                                                                                                                                                                                                   |
 | Production contract send            | runtime запрещает включение                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `feature_disabled`                                                                                                                                                                                                                                   |
 | Online media grant                  | fail-closed flag                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `feature_disabled`                                                                                                                                                                                                                                   |
 | Public statutory contract functions | fail-closed flag                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `feature_disabled`                                                                                                                                                                                                                                   |
 
 Preview evidence не авторизует новую remote mutation или production deploy.
-Public auth/real-token, remote authenticated browser, provider delivery, Browser
-Run, manual dedupe/failure, job-specific alerts, bootstrap, production resources/
-custom origin, restore и legal/privacy approval gates остаются незакрытыми,
-поэтому текущий production verdict — **NO-GO**.
+Cloudflare Access perimeter и service-auth root probe не включают portal public
+auth и не заменяют ручной OTP/browser lifecycle. Portal real-token, provider
+delivery, Browser Run, manual dedupe/failure, job-specific alerts, bootstrap,
+production resources/custom origin, restore и legal/privacy approval gates
+остаются незакрытыми, поэтому текущий production verdict — **NO-GO**.
+
+## Защита preview через Cloudflare Access
+
+- Access application привязана только к точному preview `workers.dev` hostname;
+  остальные Workers, preview deployments, zones и официальный сайт она не
+  охватывает.
+- Ручной вход использует One-time PIN и Allow policy ровно для двух утверждённых
+  тестовых principals: отдельного клиента и отдельного администратора. Значения
+  адресов не дублируются в tracked evidence. Policy session действует 168 часов
+  (7 дней); она переопределяет 24-hour application/organization defaults.
+- Автоматические проверки используют отдельную Service Auth policy и отдельный
+  service token. Его одноразовый secret хранится DPAPI-encrypted вне репозитория,
+  не выводится в terminal/docs и истекает `2026-09-18T15:55:23Z`.
+- Policy inventory содержит только `non_identity` для exact service token и
+  `allow` для двух exact emails с обязательным OTP; `bypass` отсутствует.
+- Проверка 2026-08-19: anonymous `302` в Access, login page `200` с email form,
+  valid service token получает Worker `200`, invalid token не достигает Worker;
+  owner отдельно подтвердил успешный OTP login клиента и администратора. После
+  human smoke manual policy увеличена с 24h до 168h; уже выданный token сохраняет
+  исходный expiry, новый 168-hour срок применяется после следующего login.
+- Все portal feature flags сохранили предыдущее fail-closed состояние. Этот шаг
+  не выполнял Worker deploy, D1 migration/write, R2 mutation, provider send,
+  production или official-site action.
+
+После завершения настройки оператор отзывает временный Cloudflare API token в
+dashboard и только после подтверждения удаляет его локальную DPAPI-копию.
+Service token сохраняется до окончания автоматических preview-проверок, затем
+удаляется либо ротируется. Rollback Access perimeter — удалить exact application
+и service token; это отдельная явно разрешаемая provider mutation.
 
 ## Release inputs и доступы
 
@@ -190,7 +262,9 @@ target resource IDs/names, но secrets устанавливаются толь�
 `R2_ARCHIVE`/`R2_QUARANTINE` закреплены в local/example config и runtime contract.
 Локальные config, request-contract, privacy и storage tests проверяют разделение;
 два разных private preview bucket с EU jurisdiction и выключенными public/
-`r2.dev` endpoints подтверждены. Production buckets и isolated restore ещё не
+`r2.dev` endpoints подтверждены. Две distinct private EU restore buckets созданы
+и 2026-08-20 воспроизвели exact current empty state `0 objects / 0 B` без Worker
+binding. Production buckets и reusable future non-empty restore mechanism ещё не
 созданы/не проверены. Один provider bucket под двумя bindings этому gate не
 соответствует.
 
@@ -365,9 +439,10 @@ procedure.
 Этот раздел является обязательным gate, а не утверждением готовой реализации.
 На deployed preview и baseline `c5712d0` действует
 `TELEGRAM_PROVIDER=disabled`; local candidate реализует selector `bot_api`, adapter,
-durable `delivery_unknown` и operator resolution actions, но ещё не прошёл
-immutable candidate/target-pinned preview evidence sequence, поэтому PR-F12–PR-F15 имеют
-`blocked`.
+durable `delivery_unknown` и operator resolution actions. Immutable candidate
+review и preview schema migration `0017` прошли, но exact candidate Worker deploy,
+target-pinned provider preflight/send/failure/alert/operator rehearsal не
+выполнялись, поэтому PR-F12–PR-F15 имеют `blocked`.
 
 **Prerequisites:** provider/privacy approval, владелец bot account и exact bureau
 chat подтверждены out-of-band; bot не используется для parent identity, inbound
@@ -503,8 +578,8 @@ npm run db:migrations:local
 **Ожидаемый безопасный результат:** все local candidate migrations от
 `0001_foundation.sql` до `0022_reconciliation_completion_downstream_fence.sql`
 применены по одному разу. Clean-D1 coverage проверяет последовательный набор
-`0001`–`0022`, включая deployed operations/monitoring `0014`–`0015` и unapplied
-remote candidate migrations `0016`–`0022`.
+`0001`–`0022`, включая deployed preview operations/monitoring `0014`–`0015` и
+release/reconciliation migrations `0016`–`0022`.
 
 **Проверка:** targeted foundation D1 test проходит локально. Это не заменяет
 полный immutable `npm run release:verify` и remote restore evidence.
@@ -543,15 +618,16 @@ transition для `NULL` actors/legacy `{}` contract fail-closed; дальней
 
 Датированное initial preview apply 2026-08-10 (`0001`–`0014`, 14/14, pending 0)
 сохраняется как историческое evidence именно той точки. После него append-only
-`0015_worker_monitoring.sql` применена 2026-08-11; текущий preview inventory —
-`0001`–`0015`, pending 0. Исторические 14/14 нельзя использовать как current
-schema inventory или как restore rehearsal. `0016`–`0018` — только local
-candidate; их remote preview apply требует отдельного разрешения, pre-migration
-recovery point и post-apply verification.
+`0015_worker_monitoring.sql` применена 2026-08-11. Перед следующим apply
+2026-08-20 защищённый `0001`–`0015` export был восстановлен в isolated EU D1;
+затем отдельно разрешённые `0016`–`0022` применены к exact source preview D1.
+Текущий inventory — exact `0001`–`0022`, pending 0, all candidate objects present,
+new tables empty и FK violations 0. Исторические 14/14 или pre-apply restore
+нельзя выдавать за post-apply rollback/forward-fix drill.
 
 **Stop condition:** нет restore rehearsal, нет representative fixture, target
-не preview, command просит применить неизвестную migration. Сейчас gate
-`blocked`; production команду не выполнять.
+не preview, command просит применить неизвестную migration. Preview apply gate
+`passed` 2026-08-20; production команду и повторный apply не выполнять.
 
 **Rollback/recovery:** applied migrations не переписывать и не удалять. Выбрать
 совместимый code rollback, forward-fix migration либо отдельно разрешённый
@@ -560,13 +636,24 @@ restore по [DISASTER_RECOVERY.md](DISASTER_RECOVERY.md).
 ## 7. Bootstrap первого администратора
 
 **Prerequisites:** для resulting candidate schema through migration `0022` и
-audited bootstrap mechanism реализованы; deployed preview пока through `0015`,
-поэтому candidate bootstrap там не запускается;
+audited bootstrap mechanism реализованы; preview schema подтверждена through
+`0022`;
 target user уже подтверждён безопасным out-of-band способом;
 target не сохраняет parent-side child/claim/correction/trial/request/enrollment/
 contract/price-review/message/privacy state (пустая FamilyID allocation
 допустима и проверяется server-side);
 получено двухстороннее approval; значение user ID не попадает в evidence.
+
+На clean preview D1 ordinary registration не является способом обойти import
+gate. Email verification и legacy-family guard выполняются атомарно; без ровно
+одного current promoted snapshot verification fail-closed и user не становится
+eligible bootstrap target. Поэтому для текущего empty preview сначала выполняют
+отдельно разрешённый synthetic/no-PII lifecycle из § 8 до verified current
+promoted snapshot, затем включают approved preview auth/email path, регистрируют
+контролируемые accounts и лишь после этого возвращаются к § 7. Альтернатива
+допустима только как специально реализованная и reviewed out-of-band
+provisioning procedure; ad hoc/direct SQL запрещён и всё равно не заменяет
+current snapshot для полного registration-cycle smoke.
 
 **Точная local команда:**
 
@@ -626,10 +713,10 @@ Resulting local candidate содержит exact-target remote CLI из
 [import pipeline](IMPORT_PIPELINE.md): `plan`, local/read-only `confirmation`,
 `stage`, `review`, `recovery-evidence`, `promote`, `verify`, `rollback`,
 `roll-forward`. Это не
-разрешение на запуск и не environment evidence. Deployed preview остаётся на
-migrations `0001`–`0015`; candidate migrations `0016`–`0018` локальны и не
-применены. Production transitions дополнительно fail closed до отдельно
-зафиксированного remote transaction evidence.
+разрешение на запуск и не lifecycle evidence. Preview D1 содержит migrations
+`0001`–`0022`, но ни одна import-команда не выполнялась. Production transitions
+дополнительно fail closed до отдельно зафиксированного remote transaction
+evidence.
 
 Current sanitized source inventory: актуальный Access snapshot ранее проверен
 неисполняющим allowlisted parser — 1703 rows, 21/21 required fields,
@@ -782,16 +869,38 @@ production credentials/PII отсутствуют; legacy-import rehearsal ис�
 только deterministic synthetic/no-PII bundle; remote preview deploy, import
 stage/promote/rollback и provider send разрешаются раздельно exact scope.
 
+На checkpoint 2026-08-20 ближайший разрешаемый отдельно scope уже:
+развернуть exact reviewed Worker candidate поверх применённой preview schema
+`0001`–`0022` и выполнить только post-deploy read-only smoke. До mutation нужно
+подтвердить пустой `src`/`migrations`/`tests` diff от final review seal
+`2bedc73c`, unchanged ignored `wrangler.preview.toml` SHA-256
+`d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`, exact
+account/Worker/D1/R2/origin binding, active previous Worker version и D1 pending
+0. Config остаётся source of truth; неожиданный remote var/binding/cron — stop,
+а не основание автоматически использовать `--keep-vars`.
+
 **Команды:**
 
 ```powershell
 npm run build
-npx wrangler deploy --config <PREVIEW_CONFIG>
+node node_modules/wrangler/bin/wrangler.js deploy --dry-run --strict --config wrangler.preview.toml
+# Только после отдельного прямого разрешения exact deploy gate:
+node node_modules/wrangler/bin/wrangler.js deploy --strict --config wrangler.preview.toml --message "stage-13 exact protected preview Worker candidate"
 ```
 
 **Ожидаемый безопасный результат:** опубликован только preview Worker;
 `PORTAL_PUBLIC_ORIGIN` равен preview HTTPS origin; cookies host-only; providers
-fake/disabled; real sends невозможны.
+disabled; real sends невозможны. `wrangler deploy` создаёт новую version и сразу
+переводит её на 100% traffic, поэтому exact previous version ID и rollback
+совместимость фиксируются в protected evidence до команды deploy.
+
+Минимальный post-deploy check этого узкого gate: новая version одна обслуживает
+100% traffic; anonymous/invalid-token запрос Worker не достигает; valid Access
+service token получает root `200` и operations health `HEAD 204`; registration
+остаётся service-unavailable/fail-closed; D1 ledger остаётся `0001`–`0022`,
+pending 0, FK/business empty-state invariants не меняются; два R2 bindings,
+оба Cron и secret-name inventory сохраняются. POST, OTP, bootstrap, import,
+provider send и feature enablement в этот smoke не входят.
 
 **Проверка:** synthetic register → cabinet → request/trial → contract → price
 review → message → privacy closure; cross-user/RBAC/CSRF; German keyboard/mobile;
@@ -813,7 +922,10 @@ failure, bootstrap, synthetic remote-import/first-import restore и Telegram Bot
 API smoke части остаются `blocked`.
 
 **Rollback/recovery:** отключить affected feature; rollback preview Worker к
-известной совместимой version либо исправить forward. D1/R2 не удалять.
+известной совместимой version либо исправить forward. Для текущего exact gate
+rollback возвращает только захваченную до deploy Worker version и не откатывает
+D1 down; если rollback не был явно pre-authorized, сначала containment и
+отдельное разрешение. D1/R2 не удалять и migrations `0001`–`0022` не менять.
 
 ## 11. Production deploy и post-deploy smoke
 
@@ -920,9 +1032,110 @@ site surfaces по отдельной site change procedure. Это не отк�
 несуществующей команде production-ready объявлять нельзя. Документированный
 план не является разрешением на remote действие. Preview Worker/D1/private EU
 R2/automatic Cron/aggregate alert/public browser/stored-log evidence уже есть.
-Authenticated/provider/Browser Run/manual-failure/job-specific alert/bootstrap,
-restore rehearsal с утверждёнными RPO/RTO, production resources/custom origin,
-approved PlusBText contract/current target-pinned legacy import with first-import
+One-off protected preview D1 и current-empty-R2 isolated restore также пройдены
+2026-08-20. Authenticated/provider/Browser Run/manual-failure/job-specific alert/
+bootstrap, approved RPO/RTO/cadence/retention, reusable non-empty R2 restore,
+full application restore smoke, production resources/custom origin, approved
+PlusBText contract/current target-pinned legacy import with first-import
 restore, Telegram Bot API adapter/ambiguous-delivery/operator smoke, production
 provider adapters и legal/privacy/template approvals отсутствуют;
 production verdict остаётся **NO-GO**.
+
+## Continuation 2026-08-20: exact preview Worker deploy stop и rollback
+
+- Перед единственной mutation exact account suffix `…8fc0`, historical active
+  Worker version `…4154`/100%, materialized config, bindings, expected secret
+  names, два Cron, observability, D1 `0001`–`0022`, private empty EU R2 и
+  canonical Access boundary прошли remote read-only preflight. Full IDs и
+  rollback target сохранены только в ignored/current-user-only
+  `imports/preview-worker-deploy-evidence-20260820.json`.
+- Единственная разрешённая команда `wrangler deploy --strict` завершилась
+  успешно и создала одну candidate version с suffix `…1500` на 100% traffic.
+  Version vars/bindings/secrets/assets/browser/handlers, два remote Cron,
+  observability, отсутствие routes/custom domains, canonical root/assets/health,
+  disabled registration, D1 и обе R2 прошли post-deploy checks.
+- Автоматически включённая versioned Preview URL candidate ответила anonymous
+  `200`, хотя canonical Worker hostname продолжал отдавать Access `302`. Это
+  `ACCESS_BYPASS_VERSION_PREVIEW` и документированный stop condition. Response
+  body, точный URL и полный version ID не записывались в tracked docs.
+- Заранее разрешённый exact rollback вернул только captured previous compatible
+  Worker version `…4154` на 100%. Повторные deployment/version, canonical Access
+  root `200`, health `204`, D1 pending 0 / ledger 22 / FK 0 / empty business
+  state подтвердили rollback. Migrations, D1/R2 data, Access, flags/secrets,
+  bootstrap/import, providers, production, DNS/CMS и официальный сайт не
+  менялись.
+- Rollback не удаляет inactive candidate version и не отключает её versioned
+  Preview URL; anonymous `200` сохраняется. Поэтому новый exact deploy нельзя
+  повторять, а следующий gate ограничен отдельно разрешённой защитой всех Worker
+  previews через Access либо явным `preview_urls = false` с соответствующей
+  change/redeploy procedure. Общий production verdict остаётся **NO-GO**.
+
+## Continuation 2026-08-21: Preview URLs disabled и exact candidate redeploy
+
+- Пользователь отдельно разрешил только явное отключение versioned Preview URLs,
+  один повторный exact candidate deploy на 100% и read-only post-checks. В
+  ignored `wrangler.preview.toml` добавлено только `preview_urls = false`; новый
+  config SHA-256 —
+  `b6fffb07d4c1e6654c657b2adb9a2e16acf4ed73b72cbead7465fe0908d08959`.
+- Exact provenance сохранился: HEAD `82ca91e3`, review seal `2bedc73c` ancestor,
+  committed/worktree runtime diff для `src`/`migrations`/`tests` пуст. Fresh
+  `npm run build` и `wrangler deploy --dry-run --strict` завершились exit 0.
+- Remote preflight подтвердил account suffix `…8fc0`, active compatible
+  `…4154`/100%, retained candidate `…1500`, exact vars/bindings/three secret
+  names/handlers, D1 22/22 pending 0/FK 0/empty business state, две private EU
+  R2 `0 objects / 0 B` и canonical Access `302`/root `200`/health `204`. До
+  change retained versioned Preview URL всё ещё отвечала anonymous `200`.
+- Ровно один `wrangler deploy --strict` завершился exit 0, создал version
+  `…76ee`, перевёл её на 100% и сохранил два Cron `* * * * *` и
+  `*/15 * * * *`. Remote version vars/fail-closed flags/bindings/secrets/
+  assets/browser/fetch+scheduled/compatibility совпали с config.
+- После deploy canonical Access сохранил anonymous/invalid `302`, login page,
+  valid root `200` и health `204`/empty/`no-store`/`noindex`. Registration page
+  осталась `200` с service-unavailable text, disabled submit и без Turnstile
+  lifecycle; POST/provider calls не выполнялись.
+- Versioned routes retained `…1500` и new `…76ee` обе вернули anonymous `404`;
+  прежний `ACCESS_BYPASS_VERSION_PREVIEW` закрыт. Cloudflare version metadata
+  продолжает показывать `has_preview=true`, поэтому gate опирается на explicit
+  config и две фактические routing probes, а не на это metadata-поле.
+- D1 повторно имеет ledger 22/max 22/pending 0/FK 0/empty business state; обе R2
+  остаются private EU `0 objects / 0 B`, без custom domain и с disabled
+  `r2.dev`. Stop condition не сработал, rollback не требовался и не выполнялся.
+- Full IDs и sanitized checks сохранены только в protected ignored/current-user-
+  only `imports/preview-worker-deploy-evidence-20260821.json`; credentials,
+  cookies, headers, PII и response bodies туда не записывались.
+- Final local gates passed: `npm run check` — 0 errors/warnings, `npm test` —
+  66 files/511 tests, fresh `npm run build`, `npm run docs:check` — 151 links/
+  52 files и 106 command lines, `npm run release:scan` — 536/536 files,
+  `git diff --check`. Финальная remote reconciliation сохранила `…76ee` на
+  100%, canonical anonymous `302` и обе versioned routes `404`.
+- Exact preview deploy gate теперь **GO**. Общий production verdict остаётся
+  **NO-GO**; следующий отдельный gate — clean-room preview admin bootstrap/
+  recovery, без его запуска в этом continuation.
+
+### Continuation 2026-08-24: bootstrap preflight stopped before mutation
+
+- Exact preview D1 read-only preflight подтвердил `22` migrations, `0` FK
+  violations, `admin_bootstrap_control.status=available` и нулевые users,
+  active admins/sessions, bootstrap actions/assertions/audit.
+- Bootstrap не запускался: eligible verified active parent отсутствует, а
+  supported remote synthetic-user provisioning procedure не реализована.
+  `AUTH_PUBLIC_ENABLED=false` и `EMAIL_PROVIDER=disabled`; direct SQL является
+  stop condition, а их изменение относится к отдельному provider/feature/deploy
+  scope.
+- Дополнительно current dedicated preview config использует `database_id`, но
+  reviewed preview bootstrap guard требует `preview_database_id`; текущая exact
+  command поэтому fail-closed до сети с `CLI_DATABASE_TARGET_MISMATCH`.
+- Recovery/replay не выполнялись, one-shot control не consumed. До следующей
+  попытки нужны согласованный exact config contract для dedicated preview
+  topology и approved target-creation path.
+- Проверка runtime после preflight уточнила порядок dependencies: email
+  verification в текущем public auth path атомарно требует ровно один current
+  promoted legacy snapshot. В empty preview такой snapshot отсутствует, поэтому
+  обычная регистрация сейчас откатится и не создаст eligible target. Следующий
+  безопасный порядок: исправить/review exact preview CLI/config contract;
+  выполнить отдельно разрешённый synthetic import/recovery lifecycle из § 8;
+  только после успешного current-snapshot gate включать preview auth/email,
+  создавать контролируемые accounts и выполнять one-shot bootstrap.
+- Продолжение оформлено как multi-session deployment program, а не отдельный
+  bootstrap task: после каждого gate работа движется к полностью функциональному
+  production при сохранении всех отдельных permissions и stop conditions.
