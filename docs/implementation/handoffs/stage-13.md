@@ -1939,3 +1939,27 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
   continuity; `npm run release:scan` — 544/544; `git diff --check` и focused
   Prettier check. Следующий локальный шаг — immutable remediation candidate,
   exact-SHA повтор gates и отдельный role-specific read-only review prompt.
+
+## Continuation 2026-08-24: immutable academic-period remediation anchor
+
+- Создан immutable local remediation anchor
+  `723e94715c2764f829bf718c49989428fa3c169a` с direct parent exact rejected
+  candidate `73d41ab855cfd670f24b6791563e335f6828e446`. Exact diff — 14 files,
+  817 additions/144 deletions: девять canonical/test-plan/traceability/
+  readiness/runbook/handoff docs, `package.json`, два academic-period scripts и
+  два academic-period test files. Migration, `src`, deploy config, production
+  resource или application route не изменялись.
+- Clean exact `723e947…` повторно прошёл всю обязательную цепочку: focused 4
+  files/33 tests; `npm run check` — 0 errors/warnings; полный `npm test` — 68
+  files/530 tests; `npm run build`; `npm run docs:check` — 163 links/55 files,
+  109 executable commands и continuity; `npm run release:scan` — 544/544;
+  `git diff --check`. Worktree после exact-SHA chain был clean.
+- Actual ignored protected preview config повторно проверен value-free:
+  target/config summary полностью `true`, Git-ignore и current-user-only ACL
+  сохранены, child selector/vars/secrets отсутствуют. Ни account/resource ID,
+  ни credential в tracked evidence не записаны.
+- `723e947…` является только кандидатом на отдельный independent read-only
+  review, а не GO. Даже будущий GO не разрешает `db:period:remote`: отдельно
+  отсутствуют display name, inclusive dates, current, operator, canonical
+  timestamp и exact permission на одну preview D1 mutation. Remote reconcile,
+  D1 write и любые прочие remote actions не выполнялись.

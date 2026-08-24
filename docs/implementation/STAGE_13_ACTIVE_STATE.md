@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-24T16:41:24Z
+updated_utc: 2026-08-24T16:53:37Z
 reviewed_candidate: 8362ffa875dde563519d91482e5aa5c8d6a2eca5
-last_completed_gate: phase-b-academic-period-boundary-local-remediation
-next_gate: phase-b-academic-period-boundary-immutable-candidate-review
+last_completed_gate: phase-b-academic-period-boundary-immutable-candidate-verification
+next_gate: phase-b-academic-period-boundary-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -34,6 +34,13 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Последний закрытый gate
 
+- Immutable remediation anchor
+  `723e94715c2764f829bf718c49989428fa3c169a` создан непосредственным потомком
+  rejected `73d41ab855cfd670f24b6791563e335f6828e446`. Exact diff содержит 14
+  ожидаемых файлов, 817 additions/144 deletions и не содержит migration,
+  application route либо production/deploy change. Clean exact SHA повторно
+  прошёл всю обязательную gate-цепочку. Ближайший gate — отдельный independent
+  read-only review; кандидат не является GO и не разрешает D1 mutation.
 - Все 1 BLOCKER/2 HIGH finding academic-period candidate `73d41ab…` исправлены
   локально. Actual ignored `wrangler.preview.toml` безопасно дополнен account ID
   из существующего protected read-only control; value-free recheck подтверждает
@@ -159,12 +166,12 @@ condition и rollback. После успешного gate агент сам пе
 
 ## Проверка continuity worktree
 
-- Local remediation прошла обязательную worktree-цепочку: focused 4 файла/33
-  tests; `npm run check` — 0 errors/warnings; полный `npm test` — 68 файлов,
-  530/530 tests; `npm run build` — passed; `npm run docs:check` — 163 links/55
-  files, 109 executable commands и continuity passed; `npm run release:scan` —
-  544/544; `git diff --check` и focused Prettier check — passed. Immutable
-  candidate seal и повтор exact-SHA gates выполняются перед independent review.
+- Exact remediation anchor `723e947…` повторно прошёл обязательную clean
+  exact-SHA цепочку: focused 4 файла/33 tests; `npm run check` — 0
+  errors/warnings; полный `npm test` — 68 файлов, 530/530 tests; `npm run build`
+  — passed; `npm run docs:check` — 163 links/55 files, 109 executable commands и
+  continuity passed; `npm run release:scan` — 544/544; `git diff --check` —
+  passed. Следующий gate — отдельный role-specific independent read-only review.
 - Independent review exact candidate `73d41ab…`/parent `920c3ee…` подтвердил
   clean exact 14-file diff. Focused review suite прошла 4 файла/24 tests;
   `npm run check` — 0 errors/warnings; полный `npm test` — 68 файлов, 521/521;
