@@ -16,7 +16,7 @@
 		"test:integration": "vitest run tests/integration",
 		"test:e2e": "playwright test",
 		"test:watch": "vitest",
-		"docs:check": "tsx scripts/check-doc-links.ts && tsx scripts/check-doc-commands.ts",
+		"docs:check": "tsx scripts/check-doc-links.ts && tsx scripts/check-doc-commands.ts && tsx scripts/check-stage13-continuity.ts",
 		"release:scan": "tsx scripts/release-scan.ts",
 		"release:verify": "npm run check && npm test && npm run test:e2e && npm run build && npm audit --omit=dev && npm run docs:check && npm run release:scan",
 		"admin:bootstrap": "tsx scripts/bootstrap-admin.ts",

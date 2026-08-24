@@ -1,6 +1,6 @@
 # Документация проекта
 
-Актуально на 2026-08-17. Документация разделена по назначению, чтобы требования,
+Актуально на 2026-08-24. Документация разделена по назначению, чтобы требования,
 архитектура и рабочие материалы не конкурировали как источники истины.
 
 ## С чего начинать
@@ -59,8 +59,10 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 | Этапы реализации                            | [implementation/ROADMAP.md](implementation/ROADMAP.md)                                               |
 | Стратегия тестирования                      | [implementation/TEST_PLAN.md](implementation/TEST_PLAN.md)                                           |
 | Stage-13 traceability                       | [implementation/STAGE_13_TRACEABILITY.md](implementation/STAGE_13_TRACEABILITY.md)                   |
+| Активный Stage-13 operational checkpoint    | [implementation/STAGE_13_ACTIVE_STATE.md](implementation/STAGE_13_ACTIVE_STATE.md)                   |
 | Persistent handoff этапов                   | [implementation/handoffs/README.md](implementation/handoffs/README.md)                               |
 | Текущий stage-13 handoff                    | [implementation/handoffs/stage-13.md](implementation/handoffs/stage-13.md)                           |
+| Постоянная команда продолжения Stage 13      | [prompts/stage-13-continue-deployment.md](prompts/stage-13-continue-deployment.md)                    |
 
 При конфликте общего документа с тематическим действует тематический документ.
 `architecture/DECISIONS.md` объясняет причину решения, но актуальное поведение
@@ -75,7 +77,9 @@ read-only источников. Сами файлы с PII, Office metadata, б�
 Reference-файл не становится требованием сам по себе: найденное поведение нужно
 явно зафиксировать в каноническом документе и покрыть тестом.
 
-Локальные операционные промпты допустимы как необязательная помощь агенту и
-игнорируются Git. Полный scope каждого этапа должен оставаться воспроизводимым
-по roadmap, спецификации, тематическим документам и persistent handoff без
-доступа к таким промптам.
+Локальные одноразовые операционные промпты допустимы как необязательная помощь
+агенту и игнорируются Git. Исключение — обезличенный постоянный entry-point
+Stage 13, который только направляет к tracked operational checkpoint и
+каноническим документам. Полный scope каждого этапа должен оставаться
+воспроизводимым по roadmap, спецификации, тематическим документам и persistent
+handoff без доступа к локальным одноразовым промптам.

@@ -40,6 +40,8 @@ KindElternDaten*
 # Stage-by-stage agent prompts are local working aids. Canonical requirements,
 # stage scopes and acceptance criteria remain in tracked documentation.
 /docs/prompts/**
+!/docs/prompts/README.md
+!/docs/prompts/stage-13-continue-deployment.md
 
 # One-off review/audit prompts are also local working aids and are not project
 # documentation or implementation-stage sources of truth.

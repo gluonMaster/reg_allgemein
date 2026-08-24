@@ -1741,3 +1741,47 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
   candidate commit и независимого review. Ближайший gate — разрешённый local
   candidate commit, после которого нужен отдельный reviewer/session protocol;
   разрешение на commit не является разрешением на synthetic import mutation.
+
+## Continuation 2026-08-24: exact D1-contract review GO and durable continuity
+
+- Phase A candidate был committed как exact
+  `8362ffa875dde563519d91482e5aa5c8d6a2eca5` (`fix: align dedicated preview D1
+  target contract`) поверх `adb7b70b77c8b39fb0d9d71efe9946739c4f1964`.
+  Independent role-specific review полностью выполнил
+  `docs/prompts/stage-13-independent-review-dedicated-preview-d1-contract.md` и
+  вернул **GO**: provenance, exact 10-file scope, Wrangler 4.120.1 semantics,
+  exact-target guards, protected ignored configs/ACL и code/security review
+  прошли.
+- Review был строго read-only и не являлся Phase B approval. Ни protected
+  provenance, ни remote Worker/D1/R2/Access/flags/secrets/providers/import/
+  bootstrap/production state не менялись.
+- Fresh review gates: `npm run check` — 0 errors/warnings; `npm test` — 66 files,
+  512/512 tests; `npm run build`; `npm run docs:check` — 151 links/52 files и
+  106 executable command lines; `npm run release:scan` — 536/536;
+  candidate-range `git diff --check` — passed. Worktree после review был clean.
+- Обнаружен continuity defect: прежний
+  `docs/prompts/stage-13-continue-deployment.md` всё ещё описывал SHA `d6118d1`
+  и состояние 2026-08-17, а рядом находились несколько конкурирующих ignored
+  continuation snapshots. Они не могли надёжно переносить постоянную цель и
+  заставляли новые сессии повторять уже закрытые gates.
+- В текущем documentation/automation worktree введён tracked обезличенный
+  operational checkpoint `docs/implementation/STAGE_13_ACTIVE_STATE.md` и
+  постоянный tracked entry-point
+  `docs/prompts/stage-13-continue-deployment.md`. Остальные одноразовые prompts
+  остаются ignored, чтобы infrastructure details/PII не попадали в Git.
+  `scripts/check-stage13-continuity.ts`, включённый в `npm run docs:check`,
+  проверяет Git visibility, отсутствие email-like PII, evergreen prompt без
+  pinned SHA, schema active-state, существование reviewed commit и совпадение
+  candidate evidence в handoff/checklist.
+- Ближайший незакрытый gate больше не Phase A review: нужно отдельно
+  синхронизировать protected Phase B control provenance с reviewed candidate,
+  подготовить fresh recovery point/exact scope и затем через независимые роли
+  выполнить synthetic/no-PII import lifecycle до ровно одного current promoted
+  snapshot. Remote writes этим documentation update не разрешены.
+- Continuity worktree verification: `npm run check`, `npm run build`,
+  `npm run docs:check`, `npm run release:scan` (540/540) и `git diff --check`
+  passed. Параллельный `npm test` дал 507/512 с пятью timeout-only D1 failures
+  за 443 s и без assertion failures; все пять затем прошли при последовательной
+  targeted перепроверке (legacy-import 1/1 внутри 13/13 файла, messaging 3/3,
+  price-review 1/1). Full-suite run поэтому честно не помечается зелёным, но
+  targeted evidence не обнаружило regression от documentation/continuity scope.
