@@ -1841,3 +1841,101 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
   после GO отдельно требуются data-owner values для code/display/dates/current
   и exact разрешение на одну preview D1 provisioning mutation; оно не разрешает
   последующие import transitions или recovery writes.
+
+## Continuation 2026-08-24: academic-period independent NO-GO
+
+- Exact candidate `73d41ab855cfd670f24b6791563e335f6828e446` с direct
+  parent `920c3ee8fe240cfd889d66d637fb46b8ecb93938` и clean 14-file
+  diff прошёл отдельно порученный independent read-only review. Verdict —
+  **NO-GO**: 1 BLOCKER и 2 HIGH. Никакой remote/protected mutation review не
+  выполнял.
+- BLOCKER: actual ignored preview Wrangler config value-free имеет ожидаемые
+  `APP_ENV=preview`, один DB binding, exact D1 UUID и не содержит selector, но
+  его account target не является допустимым exact 32-hex account ID. Runtime
+  guard останавливается с `CLI_ACCOUNT_ID_INVALID`; доступного env override нет.
+  До безопасного заполнения exact account ID из authorised local/read-only
+  Cloudflare context confirmation/apply boundary практически неисполняема.
+- HIGH: controlled SQL использует `INSERT OR IGNORE` отдельно для period и audit,
+  а terminal assertion проверяется клиентом уже после выполнения statements.
+  Independent reproduction exact rendered SQL с заранее занятым несовместимым
+  deterministic audit ID получил `1 period / 0 valid audit`. Remediation должна
+  отсечь конфликт до period insert либо обеспечить настоящий server-side atomic
+  rollback и закрепить case migrated D1 integration test.
+- HIGH: malformed/truncated JSON после dispatch write-команды сейчас даёт
+  `ACADEMIC_PERIOD_REMOTE_RESULT_INVALID`, хотя commit мог состояться. Отдельного
+  SELECT-only reconcile action/entrypoint нет, а runbook не содержит исполнимой
+  exact reconciliation команды. Remediation должна классифицировать такую
+  неопределённость как `ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS`, добавить
+  exact-argument `applied|not_applied|conflict` reconciliation и покрыть
+  timeout/malformed before/after-commit scenarios.
+- Review gates были зелёными, но не перекрывают findings: focused 4 files/24
+  tests; `npm run check` — 0 errors/warnings; полный `npm test` — 68 files,
+  521/521; `npm run build`; `npm run docs:check` — 162 links/55 files, 108
+  commands и continuity; `npm run release:scan` — 544/544; candidate
+  `git diff --check` — passed. Worktree после review был exact и clean.
+- Владелец уточнил period code `2026-2027`. Display name, inclusive dates,
+  current flag, operator/timestamp и отдельное разрешение на preview D1 write
+  не утверждены этим уточнением. Ближайший gate — local remediation всех трёх
+  findings в Goal, новый immutable candidate и отдельный independent read-only
+  review. `db:period:remote`, import transitions и любые прочие remote mutations
+  до этого запрещены.
+- Для следующей основной сессии подготовлен local Git-ignored role prompt
+  `docs/prompts/stage-13-remediate-academic-period-boundary.md`. Канонические
+  `IMPORT-09`/`AC-IMPORT-32`, test plan, traceability, active state, readiness и
+  runbook stop condition синхронизированы с NO-GO. Проверка documentation
+  checkpoint: standalone `npm run check` — 0 errors/warnings; полный `npm test`
+  — 68 files/521 tests; `npm run build`, `npm run docs:check`, `npm run
+  release:scan` и `git diff --check` — passed. Отдельная transient ошибка
+  первого `npm run check` была вызвана одновременной генерацией `.svelte-kit`
+  параллельным build; последовательный повтор полностью зелёный.
+
+## Continuation 2026-08-24: academic-period NO-GO remediation
+
+- Remediation выполнялась строго против exact failed candidate
+  `73d41ab855cfd670f24b6791563e335f6828e446` / direct parent
+  `920c3ee8fe240cfd889d66d637fb46b8ecb93938`. Canonical `IMPORT-09` и
+  `AC-IMPORT-32` сохраняют правило atomic exact pair и обязательный SELECT-only
+  reconcile после любой post-dispatch uncertainty; open business question не
+  преобразовывался в правило.
+- BLOCKER actual config закрыт из существующего authorized protected local
+  control `imports/legacy-preview-control.json`: в ignored
+  `wrangler.preview.toml` добавлен только exact account target. После изменения
+  target value-free проходит Git-ignore, current-user owner/ACL-only,
+  `APP_ENV=preview`, один exact `DB` binding, valid 32-hex account shape, valid
+  D1 UUID shape и отсутствие selector; generated child config имеет no vars,
+  no secrets и no resource selector. Account/resource values, token, cookie и
+  secret не выводились и в tracked evidence не записывались.
+- Write boundary теперь отправляет три statements одной D1 batch: conditional
+  deterministic audit insert, conditional period insert, зависящий от успешной
+  вставки audit или exact replay, и terminal exact-state SELECT. D1 batch
+  rollback и fail-closed preconditions не допускают partial business state.
+  Preoccupied incompatible deterministic audit ID оставляет исходный audit
+  неизменным и не создаёт period; exact replay сохраняет `1 period / 1 audit`.
+- Child Wrangler timeout ограничен 30 секундами. Dispatch rejection,
+  timeout/transport loss, malformed/truncated/non-JSON stdout и invalid result
+  shape после write классифицируются только как
+  `ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS`; write автоматически не
+  повторяется.
+- Добавлен `db:period:reconcile:remote`. Он требует те же exact inputs и
+  digest-bound confirmation, строит ровно один SELECT и возвращает только
+  `applied|not_applied|conflict`. Runbook требует сохранить byte-exact
+  timestamp/confirmation/arguments: `applied` запрещает replay, `not_applied`
+  требует stop и отдельного решения до любого write, `conflict` запрещает
+  write/direct SQL и требует расследования.
+- Focused verification прошла: 4 файла/33 tests. Она включает missing/invalid
+  account fail-closed, value-free config output, SELECT-only SQL, deterministic
+  audit-ID collision без partial period, injected full-batch rollback, timeout
+  before/after commit и malformed-after-commit reconcile. Standalone `npm run
+  check` завершился с 0 errors/warnings. Полные gates, immutable candidate и
+  отдельный independent review следуют дальше.
+- Никакой D1/R2/Worker/Access/secret/flag/provider/import/bootstrap/production/
+  DNS/CMS/official-site remote mutation, remote reconcile или send не
+  выполнялись. Owner-approved только code `2026-2027`; display name, inclusive
+  dates, current, operator, timestamp и отдельное разрешение на одну preview D1
+  write остаются заблокированными даже после будущего independent GO.
+- Полная обязательная worktree-проверка также прошла: `npm run check` — 0
+  errors/warnings; полный `npm test` — 68 файлов/530 tests; `npm run build`;
+  `npm run docs:check` — 163 links/55 files, 109 executable commands и
+  continuity; `npm run release:scan` — 544/544; `git diff --check` и focused
+  Prettier check. Следующий локальный шаг — immutable remediation candidate,
+  exact-SHA повтор gates и отдельный role-specific read-only review prompt.

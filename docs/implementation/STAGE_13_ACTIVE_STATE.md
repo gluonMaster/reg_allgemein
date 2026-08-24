@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-24T14:50:03Z
+updated_utc: 2026-08-24T16:41:24Z
 reviewed_candidate: 8362ffa875dde563519d91482e5aa5c8d6a2eca5
-last_completed_gate: phase-b-academic-period-boundary-local-implementation
-next_gate: phase-b-academic-period-boundary-independent-review
+last_completed_gate: phase-b-academic-period-boundary-local-remediation
+next_gate: phase-b-academic-period-boundary-immutable-candidate-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -34,6 +34,29 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Последний закрытый gate
 
+- Все 1 BLOCKER/2 HIGH finding academic-period candidate `73d41ab…` исправлены
+  локально. Actual ignored `wrangler.preview.toml` безопасно дополнен account ID
+  из существующего protected read-only control; value-free recheck подтверждает
+  current-user-only ACL, Git-ignore, `APP_ENV=preview`, один exact `DB` binding,
+  valid account/D1 shapes, отсутствие selector и отсутствие child vars/secrets.
+  Значения account/resource ID в evidence не записывались.
+- Period и deterministic audit теперь создаются одной atomic D1 batch с
+  fail-closed preconditions. Несовместимый заранее занятый audit ID не оставляет
+  period; injected failure второго statement откатывает audit. Любая
+  post-dispatch transport/result uncertainty имеет единый ambiguous code и
+  bounded child timeout.
+- Добавлен `db:period:reconcile:remote`: один SELECT-only exact-argument query с
+  той же confirmation возвращает `applied|not_applied|conflict`. Focused suite
+  прошёл 4 файла/33 tests, включая timeout before/after commit и malformed after
+  commit. Remote D1 write/read, deploy или provider action не выполнялись.
+- Exact candidate `73d41ab855cfd670f24b6791563e335f6828e446` с direct
+  parent `920c3ee8fe240cfd889d66d637fb46b8ecb93938` прошёл независимый
+  read-only review с verdict **NO-GO**: 1 BLOCKER и 2 HIGH. Actual ignored
+  preview config не проходит account-ID guard; SQL допускает partial
+  `period / no valid audit` при конфликте deterministic audit ID; malformed
+  post-dispatch result не классифицируется как ambiguous и отсутствует
+  SELECT-only exact-argument reconciliation entrypoint. Никакой remote mutation
+  review не выполнял.
 - Protected ignored Phase B control локально repin-нут на independently reviewed
   candidate/reviewer SHA `8362ffa875dde563519d91482e5aa5c8d6a2eca5` без remote
   mutation. Selector остаётся exact deployed `database_id`; current-user ACL и
@@ -80,10 +103,13 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Точная цепочка до full manual preview
 
-1. Независимо проверить подготовленную local exact-target границу provisioning
-   approved current academic period. Затем получить exact owner permission и
-   выполнить только эту идемпотентную audited preview D1 запись; direct SQL
-   запрещён. Код/display/dates/current должны быть явно утверждены data owner.
+1. Создать новый immutable candidate из local remediation всех 1 BLOCKER/2 HIGH
+   finding candidate `73d41ab…` и получить отдельный independent read-only GO.
+   Reviewer обязан проверить actual config value-free, atomic period/audit
+   denial и SELECT-only exact-argument reconciliation. Только затем
+   запросить exact owner values/permission на одну preview D1 запись; direct SQL
+   запрещён. Владелец подтвердил code `2026-2027`, но display/dates/current
+   остаются отдельными explicit inputs.
 2. Создать no-write baseline plan и fresh plan-bound recovery point.
 3. В отдельных независимых ролях выполнить разрешённый synthetic/no-PII import
    lifecycle `plan → stage → review → recovery evidence → promote → verify →
@@ -133,13 +159,26 @@ condition и rollback. После успешного gate агент сам пе
 
 ## Проверка continuity worktree
 
-- Новый local academic-period boundary прошёл focused suites: 3 файла, 15/15
-  tests, включая 3 migrated Miniflare D1 cases.
-- Полные gates текущего worktree прошли: `npm run check` — 0 errors/warnings;
-  `npm test` — 68 файлов, 521/521 tests; `npm run build` — passed.
-- После обновления operational evidence `npm run docs:check` — 162 links/55
-  files, 108 executable command lines и continuity passed; `npm run
-  release:scan` — 544/544; `git diff --check` — passed.
-- Worktree ещё не является independently reviewed candidate. До review нельзя
-  выполнять `db:period:remote`; прежний reviewed candidate `8362ffa…` остаётся
-  действующим только для уже repin-нутого Phase B import control.
+- Local remediation прошла обязательную worktree-цепочку: focused 4 файла/33
+  tests; `npm run check` — 0 errors/warnings; полный `npm test` — 68 файлов,
+  530/530 tests; `npm run build` — passed; `npm run docs:check` — 163 links/55
+  files, 109 executable commands и continuity passed; `npm run release:scan` —
+  544/544; `git diff --check` и focused Prettier check — passed. Immutable
+  candidate seal и повтор exact-SHA gates выполняются перед independent review.
+- Independent review exact candidate `73d41ab…`/parent `920c3ee…` подтвердил
+  clean exact 14-file diff. Focused review suite прошла 4 файла/24 tests;
+  `npm run check` — 0 errors/warnings; полный `npm test` — 68 файлов, 521/521;
+  `npm run build`, `npm run docs:check` (162 links/55 files, 108 commands),
+  `npm run release:scan` (544/544), candidate `git diff --check` — passed.
+- Несмотря на зелёные общие gates, review воспроизвёл partial state
+  `1 period / 0 valid audit`, обнаружил нерабочий actual-config account target и
+  отсутствие безопасной reconciliation после ambiguous dispatch. Поэтому
+  `73d41ab…` не одобрен и `db:period:remote` запрещён до remediation и нового
+  independent GO.
+- Прежний reviewed candidate `8362ffa…` остаётся действующим только для уже
+  repin-нутого Phase B import control; academic-period boundary он не одобряет.
+- Documentation remediation checkpoint добавил канонические `IMPORT-09` и
+  `AC-IMPORT-32`, обязательные regression scenarios в test plan, явный runbook
+  stop condition и отдельный local ignored Goal prompt. После правок standalone
+  `npm run check` — 0 errors/warnings; полный `npm test` — 68 файлов, 521/521;
+  `npm run build` — passed. Remote/protected state не менялся.

@@ -5,9 +5,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { unstable_readConfig } from 'wrangler';
 import {
-	assertRemoteAcademicPeriodResult,
 	assertRemoteAcademicPeriodConfigPath,
+	buildRemoteAcademicPeriodReconciliationStatements,
 	buildRemoteAcademicPeriodStatements,
+	executeRemoteAcademicPeriodApply,
+	executeRemoteAcademicPeriodReconciliation,
 	expectedRemoteAcademicPeriodConfirmation,
 	parseRemoteAcademicPeriodArguments,
 	parseRemoteAcademicPeriodEnvironment,
@@ -45,7 +47,7 @@ async function executePinnedRemoteBatch(input: {
 	config: RemoteD1WranglerConfig;
 	databaseId: string;
 	sql: string;
-}): Promise<unknown> {
+}): Promise<string> {
 	const wranglerCli = fileURLToPath(
 		new URL('../node_modules/wrangler/bin/wrangler.js', import.meta.url)
 	);
@@ -73,21 +75,22 @@ async function executePinnedRemoteBatch(input: {
 					'--json',
 					'--yes',
 				],
-				{ windowsHide: true, maxBuffer: 1_000_000 },
+				{
+					windowsHide: true,
+					maxBuffer: 1_000_000,
+					timeout: 30_000,
+					killSignal: 'SIGTERM',
+				},
 				(error, output) => {
 					if (error) {
-						reject(new Error('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS'));
+						reject(error);
 						return;
 					}
 					resolve(output);
 				}
 			);
 		});
-		try {
-			return JSON.parse(stdout) as unknown;
-		} catch {
-			throw new Error('ACADEMIC_PERIOD_REMOTE_RESULT_INVALID');
-		}
+		return stdout;
 	} finally {
 		await rm(isolatedConfigDirectory, { recursive: true, force: true });
 	}
@@ -129,13 +132,42 @@ async function main(): Promise<void> {
 	if (requiredRemoteAcademicPeriodOption(options, 'confirmation') !== expectedConfirmation) {
 		throw new Error('CLI_CONFIRMATION_INVALID');
 	}
+	if (action === 'reconcile') {
+		const statements = buildRemoteAcademicPeriodReconciliationStatements(input);
+		const outcome = await executeRemoteAcademicPeriodReconciliation(
+			statements.length,
+			async () =>
+				await executePinnedRemoteBatch({
+					config,
+					databaseId: target.databaseId,
+					sql: renderD1BatchSql(statements),
+				})
+		);
+		process.stdout.write(
+			`${JSON.stringify(
+				{
+					status: 'ready',
+					environment,
+					academicPeriod: validated.academicPeriod,
+					outcome,
+					operationDigestSha256: validated.operationDigestSha256,
+				},
+				null,
+				2
+			)}\n`
+		);
+		return;
+	}
 	const statements = buildRemoteAcademicPeriodStatements(input);
-	const result = await executePinnedRemoteBatch({
-		config,
-		databaseId: target.databaseId,
-		sql: renderD1BatchSql(statements),
-	});
-	assertRemoteAcademicPeriodResult(result, statements.length);
+	await executeRemoteAcademicPeriodApply(
+		statements.length,
+		async () =>
+			await executePinnedRemoteBatch({
+				config,
+				databaseId: target.databaseId,
+				sql: renderD1BatchSql(statements),
+			})
+	);
 	process.stdout.write(
 		`${JSON.stringify(
 			{

@@ -641,6 +641,14 @@ release gates сохраняются.
   append-only audit/evidence и PII-minimized list/export. Полный контур задан в
   [IMPORT_ADMIN_RECONCILIATION_TZ.md](../implementation/IMPORT_ADMIN_RECONCILIATION_TZ.md)
   и является обязательным gate штатного повторяемого импорта.
+- **IMPORT-09.** Remote provisioning учебного периода выполняется только через
+  exact-target audited boundary с явными environment/D1 UUID, полным Git SHA,
+  утверждёнными period fields, opaque operator, canonical timestamp и
+  digest-bound confirmation. Period и deterministic audit event создаются
+  атомарно: конфликт period/current/audit не оставляет частичную запись, а
+  byte-identical replay сохраняет ровно одну exact пару. Любая неопределённость
+  после dispatch write-команды требует SELECT-only reconciliation с теми же
+  аргументами; blind retry и direct SQL запрещены.
 
 ## 11. Нефункциональные требования
 

@@ -26,6 +26,7 @@
 		"db:period:local": "tsx scripts/ensure-academic-period.ts",
 		"db:period:confirmation:remote": "tsx scripts/ensure-academic-period-remote.ts confirmation",
 		"db:period:remote": "tsx scripts/ensure-academic-period-remote.ts apply --remote",
+		"db:period:reconcile:remote": "tsx scripts/ensure-academic-period-remote.ts reconcile --remote",
 		"import:price:local": "tsx scripts/import-references.ts price",
 		"import:schedule:local": "tsx scripts/import-references.ts schedule",
 		"import:plusbtext:local": "tsx scripts/import-references.ts plusbtext",

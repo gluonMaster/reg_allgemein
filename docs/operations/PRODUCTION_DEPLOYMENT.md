@@ -750,6 +750,20 @@ Access/PlusBText PII source туда не загружается.
 Direct SQL, автоматический выбор периода и неутверждённые display/dates/current
 запрещены.
 
+По состоянию на 2026-08-24 все finding independent NO-GO exact candidate
+`73d41ab…` исправлены в local remediation worktree: actual protected preview
+config проходит value-free exact account/target guard; period/audit используют
+одну atomic D1 batch; timeout или malformed/truncated post-dispatch output
+классифицируется как `ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS`; отдельный
+`db:period:reconcile:remote` выполняет только SELECT и возвращает
+`applied|not_applied|conflict`. Exact reconcile-команда и обязательные действия
+для каждого outcome заданы в
+[IMPORT_PIPELINE.md](IMPORT_PIPELINE.md#0-явный-academic-period). До нового
+immutable candidate и independent GO `db:period:remote` всё равно запрещён.
+После GO отдельно требуются утверждённые display/dates/current/operator/time и
+точное permission на одну preview D1 mutation; известный code `2026-2027` их не
+заменяет.
+
 **Команды local rehearsal:**
 
 ```powershell

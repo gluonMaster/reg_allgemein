@@ -99,9 +99,14 @@ concurrency/idempotency проверки в названном suite. Точны
 - remote academic-period boundary требует exact environment/config/D1 UUID,
   clean exact Git SHA, approved explicit code/display/dates/current, opaque
   operator/timestamp и digest-bound typed confirmation; child Wrangler config
-  не содержит selectors/secrets/vars. D1 contract создаёт ровно один period и
-  append-only audit идемпотентно, а conflicting code или другой current period
-  не заменяет;
+  не содержит selectors/secrets/vars. D1 contract атомарно создаёт ровно один
+  period и valid append-only audit; заранее занятый несовместимый deterministic
+  audit ID, conflicting code или другой current period не оставляют новой
+  business mutation, а byte-identical replay остаётся `1 period / 1 audit`;
+- post-dispatch malformed/truncated JSON и timeout до/после commit
+  классифицируются как ambiguous. Отдельная SELECT-only academic-period
+  reconciliation с теми же exact аргументами и confirmation возвращает только
+  `applied|not_applied|conflict`, не меняет D1 и не разрешает blind retry;
 - CLI parser для
   `plan|stage|review|recovery-evidence|confirmation|promote|verify|rollback|roll-forward`
   требует explicit `--remote`, принимает только command-specific flags и

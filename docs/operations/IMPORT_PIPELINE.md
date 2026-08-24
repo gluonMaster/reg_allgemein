@@ -95,6 +95,14 @@ direct SQL. Обе команды требуют exact non-example config/D1 UUI
 HEAD, opaque operator ID и caller-supplied canonical UTC timestamp. Сначала
 локальная команда без network/D1 получает digest-bound typed confirmation:
 
+> **Текущий gate заблокирован.** Все 1 BLOCKER/2 HIGH finding independent NO-GO
+> candidate `73d41ab…` исправлены в local remediation worktree: actual protected
+> preview config value-free проходит account/target guard, period/audit
+> создаются атомарно, а ambiguous result имеет отдельный SELECT-only reconcile.
+> Это ещё не разрешение на D1 write: `db:period:remote` нельзя запускать до нового
+> immutable candidate, отдельного independent GO, утверждения всех period values
+> и отдельного exact permission на одну preview D1 mutation.
+
 ```powershell
 npm run db:period:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period <APPROVED_PERIOD_CODE> --display-name "<APPROVED_DISPLAY_NAME>" --starts-on <APPROVED_YYYY-MM-DD> --ends-on <APPROVED_YYYY-MM-DD> --current --operator-id <OPAQUE_DATA_OWNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --git-commit <FULL_GIT_SHA>
 ```
@@ -107,13 +115,28 @@ npm run db:period:remote -- --environment preview --config <WRANGLER_PREVIEW_CON
 ```
 
 Apply pin-ит child Wrangler process на positional exact D1 UUID, удаляет из его
-temporary config resource selectors/secrets/vars, не делает blind retry при
-неопределённом результате и server-side проверяет ровно один exact current
-period и append-only audit event. Повтор **той же** команды идемпотентен. При
-`ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS` сначала выполнить read-only exact
-query/reconciliation; не менять timestamp/confirmation и не создавать другой
-period. Existing code с другими полями или другой current period даёт
-`ACADEMIC_PERIOD_REMOTE_ASSERTION_FAILED` и не заменяется.
+temporary config resource selectors/secrets/vars и ограничивает child timeout.
+Period и deterministic audit event создаются одной server-side atomic D1 batch;
+terminal assertion принимает только exact `1 period / 1 valid audit`.
+Byte-identical replay идемпотентен. Заранее занятый несовместимый audit ID,
+existing code с другими полями либо другой current period дают
+`ACADEMIC_PERIOD_REMOTE_ASSERTION_FAILED` без новой business mutation.
+
+Timeout, transport loss, malformed/truncated/non-JSON stdout и неизвестная
+post-dispatch result shape всегда дают
+`ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS`. После этого исходные аргументы,
+`--created-at` и `--confirmation` сохраняются byte-exact; write не повторяется.
+Выполняется только следующая read-only команда с **теми же** значениями:
+
+```powershell
+npm run db:period:reconcile:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period <APPROVED_PERIOD_CODE> --display-name "<APPROVED_DISPLAY_NAME>" --starts-on <APPROVED_YYYY-MM-DD> --ends-on <APPROVED_YYYY-MM-DD> --current --operator-id <OPAQUE_DATA_OWNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --git-commit <FULL_GIT_SHA> --confirmation <TYPED_CONFIRMATION>
+```
+
+| Reconcile outcome | Обязательное действие |
+| ----------------- | --------------------- |
+| `applied` | Exact period/audit pair уже зафиксирована; write не повторять, продолжить только в ранее разрешённом scope. |
+| `not_applied` | Exact pair отсутствует; остановиться. Любая последующая apply требует отдельного осознанного решения и всё ещё действующего exact write permission; автоматический retry запрещён. |
+| `conflict` | Обнаружено mixed/incompatible state; остановиться, не менять аргументы, не выполнять write/direct SQL и передать на расследование. |
 
 Для production используются `--environment production` и exact production
 config/UUID только после отдельного production/data-owner permission; preview

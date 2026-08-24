@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import {
 	assertRemoteAcademicPeriodResult,
+	assertRemoteAcademicPeriodReconciliationResult,
+	buildRemoteAcademicPeriodReconciliationStatements,
 	buildRemoteAcademicPeriodStatements,
+	executeRemoteAcademicPeriodApply,
+	validateRemoteAcademicPeriodInput,
 	type RemoteAcademicPeriodInput,
 } from '../../scripts/academic-period-remote';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
@@ -96,5 +100,114 @@ describe('remote academic-period D1 statement contract', () => {
 			.prepare('SELECT code FROM academic_periods ORDER BY code')
 			.all<{ code: string }>();
 		expect(periods.results).toEqual([{ code: baseInput.academicPeriod }]);
+	});
+
+	it('leaves no partial period or audit state when the deterministic audit ID is occupied', async () => {
+		const validated = validateRemoteAcademicPeriodInput(baseInput);
+		await context.db
+			.prepare(
+				`INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, ip_retention_value, created_at)
+				 VALUES (?, NULL, 'system', 'synthetic.preoccupied', 'synthetic', ?, ?, '{}', NULL, ?)`
+			)
+			.bind(
+				validated.auditEventId,
+				validated.periodId,
+				'synthetic-preoccupied-request',
+				validated.createdAt
+			)
+			.run();
+
+		const statements = buildRemoteAcademicPeriodStatements(baseInput);
+		const result = await db.batch(statements);
+		expect(() => assertRemoteAcademicPeriodResult(result, statements.length)).toThrow(
+			'ACADEMIC_PERIOD_REMOTE_ASSERTION_FAILED'
+		);
+		const state = await context.db
+			.prepare(
+				`SELECT
+					(SELECT COUNT(*) FROM academic_periods WHERE id = ?) AS periods,
+					(SELECT COUNT(*) FROM audit_events WHERE id = ?
+						AND action = 'synthetic.preoccupied'
+						AND request_id = 'synthetic-preoccupied-request') AS untouched_audits`
+			)
+			.bind(validated.periodId, validated.auditEventId)
+			.first<{ periods: number; untouched_audits: number }>();
+		expect(state).toEqual({ periods: 0, untouched_audits: 1 });
+		const reconciliation = buildRemoteAcademicPeriodReconciliationStatements(baseInput);
+		const reconciled = await db.batch(reconciliation);
+		expect(
+			assertRemoteAcademicPeriodReconciliationResult(reconciled, reconciliation.length)
+		).toBe('conflict');
+	});
+
+	it('rolls the audit back when a later statement in the D1 batch fails', async () => {
+		const statements = buildRemoteAcademicPeriodStatements(baseInput);
+		statements[1] = {
+			sql: `INSERT INTO academic_periods
+				(id, code, display_name, starts_on, ends_on, is_current, created_at)
+			 VALUES (NULL, ?, ?, ?, ?, 1, ?)`,
+			params: [
+				baseInput.academicPeriod,
+				baseInput.displayName,
+				baseInput.startsOn,
+				baseInput.endsOn,
+				baseInput.createdAt,
+			],
+		};
+		await expect(db.batch(statements)).rejects.toThrow();
+		const state = await context.db
+			.prepare(
+				`SELECT
+					(SELECT COUNT(*) FROM academic_periods) AS periods,
+					(SELECT COUNT(*) FROM audit_events
+						WHERE action = 'academic_period.remote_provisioned') AS audits`
+			)
+			.first<{ periods: number; audits: number }>();
+		expect(state).toEqual({ periods: 0, audits: 0 });
+	});
+
+	it('reconciles timeout before commit as not_applied and timeout after commit as applied', async () => {
+		const statements = buildRemoteAcademicPeriodStatements(baseInput);
+		await expect(
+			executeRemoteAcademicPeriodApply(statements.length, async () => {
+				throw new Error('synthetic timeout before dispatch completion');
+			})
+		).rejects.toThrow('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS');
+		const reconciliation = buildRemoteAcademicPeriodReconciliationStatements(baseInput);
+		const before = await db.batch(reconciliation);
+		expect(assertRemoteAcademicPeriodReconciliationResult(before, reconciliation.length)).toBe(
+			'not_applied'
+		);
+
+		await expect(
+			executeRemoteAcademicPeriodApply(statements.length, async () => {
+				await db.batch(statements);
+				throw new Error('synthetic timeout after commit');
+			})
+		).rejects.toThrow('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS');
+		const after = await db.batch(reconciliation);
+		expect(assertRemoteAcademicPeriodReconciliationResult(after, reconciliation.length)).toBe(
+			'applied'
+		);
+	});
+
+	it('reconciles malformed output after commit as applied without replaying the write', async () => {
+		const statements = buildRemoteAcademicPeriodStatements(baseInput);
+		let writeDispatches = 0;
+		await expect(
+			executeRemoteAcademicPeriodApply(statements.length, async () => {
+				writeDispatches += 1;
+				await db.batch(statements);
+				return '{"truncated":';
+			})
+		).rejects.toThrow('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS');
+		const reconciliation = buildRemoteAcademicPeriodReconciliationStatements(baseInput);
+		const result = await db.batch(reconciliation);
+		expect(assertRemoteAcademicPeriodReconciliationResult(result, reconciliation.length)).toBe(
+			'applied'
+		);
+		expect(writeDispatches).toBe(1);
 	});
 });

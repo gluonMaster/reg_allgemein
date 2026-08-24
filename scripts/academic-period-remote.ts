@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 import type { StatementSpec } from '../src/lib/server/db/database';
 import { assertLegacyOperatorId } from '../src/lib/server/import/legacy-release';
-import type { RemoteD1Environment, RemoteD1Target } from './remote-d1-target';
+import {
+	assertRemoteD1ConfigTarget,
+	type RemoteD1Environment,
+	type RemoteD1Target,
+	type RemoteD1WranglerConfig,
+} from './remote-d1-target';
 
 const VALUE_OPTIONS = new Set([
 	'environment',
@@ -18,7 +23,19 @@ const VALUE_OPTIONS = new Set([
 ]);
 const FLAG_OPTIONS = new Set(['remote', 'current']);
 
-export type RemoteAcademicPeriodAction = 'confirmation' | 'apply';
+export type RemoteAcademicPeriodAction = 'confirmation' | 'apply' | 'reconcile';
+
+export type RemoteAcademicPeriodReconciliationOutcome = 'applied' | 'not_applied' | 'conflict';
+
+export interface ValueFreeRemoteAcademicPeriodConfigSummary {
+	status: 'ready';
+	environment: RemoteD1Environment;
+	accountIdValid: true;
+	databaseIdValid: true;
+	databaseBindingCount: 1;
+	databaseBinding: 'DB';
+	selectorFree: true;
+}
 
 export interface ParsedRemoteAcademicPeriodArguments {
 	action: RemoteAcademicPeriodAction;
@@ -48,7 +65,7 @@ export function parseRemoteAcademicPeriodArguments(
 	values: string[]
 ): ParsedRemoteAcademicPeriodArguments {
 	const [actionValue, ...tokens] = values;
-	if (actionValue !== 'confirmation' && actionValue !== 'apply') {
+	if (actionValue !== 'confirmation' && actionValue !== 'apply' && actionValue !== 'reconcile') {
 		throw new Error('CLI_ACTION_INVALID');
 	}
 	const action = actionValue;
@@ -77,7 +94,7 @@ export function parseRemoteAcademicPeriodArguments(
 	if (action === 'confirmation' && options.has('remote')) {
 		throw new Error('CLI_REMOTE_FORBIDDEN');
 	}
-	if (action === 'apply' && options.get('remote') !== true) {
+	if (action !== 'confirmation' && options.get('remote') !== true) {
 		throw new Error('CLI_REMOTE_CONFIRMATION_REQUIRED');
 	}
 	return { action, options };
@@ -102,6 +119,23 @@ export function parseRemoteAcademicPeriodEnvironment(value: string): RemoteD1Env
 export function assertRemoteAcademicPeriodConfigPath(configPath: string): void {
 	const normalizedName = configPath.replaceAll('\\', '/').split('/').at(-1)?.toLowerCase();
 	if (normalizedName === 'wrangler.example.toml') throw new Error('CLI_EXAMPLE_CONFIG_FORBIDDEN');
+}
+
+export function valueFreeRemoteAcademicPeriodConfigSummary(
+	config: RemoteD1WranglerConfig,
+	environment: RemoteD1Environment,
+	databaseId: string
+): ValueFreeRemoteAcademicPeriodConfigSummary {
+	assertRemoteD1ConfigTarget(config, environment, databaseId);
+	return {
+		status: 'ready',
+		environment,
+		accountIdValid: true,
+		databaseIdValid: true,
+		databaseBindingCount: 1,
+		databaseBinding: 'DB',
+		selectorFree: true,
+	};
 }
 
 export function remoteAcademicPeriodInputFromOptions(
@@ -243,25 +277,152 @@ export function expectedRemoteAcademicPeriodConfirmation(input: RemoteAcademicPe
 	].join('_');
 }
 
+function remoteAcademicPeriodSafeDiff(input: ValidatedRemoteAcademicPeriodInput): string {
+	return JSON.stringify({
+		academicPeriod: input.academicPeriod,
+		displayNameSha256: sha256(input.displayName),
+		startsOn: input.startsOn,
+		endsOn: input.endsOn,
+		isCurrent: true,
+		operatorId: input.operatorId,
+		gitCommitSha: input.gitCommitSha,
+		operationDigestSha256: input.operationDigestSha256,
+	});
+}
+
+function remoteAcademicPeriodStateStatement(
+	validated: ValidatedRemoteAcademicPeriodInput,
+	safeDiff: string
+): StatementSpec {
+	return {
+		sql: `SELECT CASE
+			WHEN period_id_count = 1 AND period_code_count = 1
+				AND current_period_count = 1 AND exact_period_count = 1
+				AND audit_id_count = 1 AND audit_request_count = 1
+				AND exact_audit_count = 1 THEN 'applied'
+			WHEN period_id_count = 0 AND period_code_count = 0
+				AND current_period_count = 0 AND exact_period_count = 0
+				AND audit_id_count = 0 AND audit_request_count = 0
+				AND exact_audit_count = 0 THEN 'not_applied'
+			ELSE 'conflict'
+		END AS outcome,
+		period_id_count, period_code_count, current_period_count,
+		exact_period_count, audit_id_count, audit_request_count, exact_audit_count
+		FROM (
+			SELECT
+				(SELECT COUNT(*) FROM academic_periods WHERE id = ?) AS period_id_count,
+				(SELECT COUNT(*) FROM academic_periods WHERE code = ?) AS period_code_count,
+				(SELECT COUNT(*) FROM academic_periods WHERE is_current = 1)
+					AS current_period_count,
+				(SELECT COUNT(*) FROM academic_periods
+					WHERE id = ? AND code = ? AND display_name = ? AND starts_on = ?
+						AND ends_on = ? AND is_current = 1 AND created_at = ?)
+					AS exact_period_count,
+				(SELECT COUNT(*) FROM audit_events WHERE id = ?) AS audit_id_count,
+				(SELECT COUNT(*) FROM audit_events WHERE request_id = ?)
+					AS audit_request_count,
+				(SELECT COUNT(*) FROM audit_events
+					WHERE id = ? AND actor_user_id IS NULL AND actor_kind = 'system'
+						AND action = 'academic_period.remote_provisioned'
+						AND target_kind = 'academic_period' AND target_id = ?
+						AND request_id = ? AND safe_diff_json = ?
+						AND ip_retention_value IS NULL AND created_at = ?)
+					AS exact_audit_count
+		) AS state`,
+		params: [
+			validated.periodId,
+			validated.academicPeriod,
+			validated.periodId,
+			validated.academicPeriod,
+			validated.displayName,
+			validated.startsOn,
+			validated.endsOn,
+			validated.createdAt,
+			validated.auditEventId,
+			validated.requestId,
+			validated.auditEventId,
+			validated.periodId,
+			validated.requestId,
+			safeDiff,
+			validated.createdAt,
+		],
+	};
+}
+
 export function buildRemoteAcademicPeriodStatements(
 	input: RemoteAcademicPeriodInput
 ): StatementSpec[] {
 	const validated = validateRemoteAcademicPeriodInput(input);
-	const safeDiff = JSON.stringify({
-		academicPeriod: validated.academicPeriod,
-		displayNameSha256: sha256(validated.displayName),
-		startsOn: validated.startsOn,
-		endsOn: validated.endsOn,
-		isCurrent: true,
-		operatorId: validated.operatorId,
-		gitCommitSha: validated.gitCommitSha,
-		operationDigestSha256: validated.operationDigestSha256,
-	});
+	const safeDiff = remoteAcademicPeriodSafeDiff(validated);
 	return [
+		{
+			sql: `INSERT OR IGNORE INTO audit_events
+				(id, actor_user_id, actor_kind, action, target_kind, target_id,
+				 request_id, safe_diff_json, ip_retention_value, created_at)
+			SELECT ?, NULL, 'system', 'academic_period.remote_provisioned',
+				'academic_period', ?, ?, ?, NULL, ?
+			WHERE (
+				NOT EXISTS (SELECT 1 FROM academic_periods
+					WHERE id = ? OR code = ? OR is_current = 1)
+				AND NOT EXISTS (SELECT 1 FROM audit_events
+					WHERE id = ? OR request_id = ?)
+			) OR (
+				EXISTS (SELECT 1 FROM academic_periods
+					WHERE id = ? AND code = ? AND display_name = ? AND starts_on = ?
+						AND ends_on = ? AND is_current = 1 AND created_at = ?)
+				AND (SELECT COUNT(*) FROM academic_periods WHERE is_current = 1) = 1
+				AND EXISTS (SELECT 1 FROM audit_events
+					WHERE id = ? AND actor_user_id IS NULL AND actor_kind = 'system'
+						AND action = 'academic_period.remote_provisioned'
+						AND target_kind = 'academic_period' AND target_id = ?
+						AND request_id = ? AND safe_diff_json = ?
+						AND ip_retention_value IS NULL AND created_at = ?)
+				AND NOT EXISTS (SELECT 1 FROM audit_events
+					WHERE request_id = ? AND id <> ?)
+			)`,
+			params: [
+				validated.auditEventId,
+				validated.periodId,
+				validated.requestId,
+				safeDiff,
+				validated.createdAt,
+				validated.periodId,
+				validated.academicPeriod,
+				validated.auditEventId,
+				validated.requestId,
+				validated.periodId,
+				validated.academicPeriod,
+				validated.displayName,
+				validated.startsOn,
+				validated.endsOn,
+				validated.createdAt,
+				validated.auditEventId,
+				validated.periodId,
+				validated.requestId,
+				safeDiff,
+				validated.createdAt,
+				validated.requestId,
+				validated.auditEventId,
+			],
+		},
 		{
 			sql: `INSERT OR IGNORE INTO academic_periods
 				(id, code, display_name, starts_on, ends_on, is_current, created_at)
-			VALUES (?, ?, ?, ?, ?, 1, ?)`,
+			SELECT ?, ?, ?, ?, ?, 1, ?
+			WHERE changes() = 1 OR (
+				EXISTS (SELECT 1 FROM academic_periods
+					WHERE id = ? AND code = ? AND display_name = ? AND starts_on = ?
+						AND ends_on = ? AND is_current = 1 AND created_at = ?)
+				AND (SELECT COUNT(*) FROM academic_periods WHERE is_current = 1) = 1
+				AND EXISTS (SELECT 1 FROM audit_events
+					WHERE id = ? AND actor_user_id IS NULL AND actor_kind = 'system'
+						AND action = 'academic_period.remote_provisioned'
+						AND target_kind = 'academic_period' AND target_id = ?
+						AND request_id = ? AND safe_diff_json = ?
+						AND ip_retention_value IS NULL AND created_at = ?)
+				AND NOT EXISTS (SELECT 1 FROM audit_events
+					WHERE request_id = ? AND id <> ?)
+			)`,
 			params: [
 				validated.periodId,
 				validated.academicPeriod,
@@ -269,73 +430,53 @@ export function buildRemoteAcademicPeriodStatements(
 				validated.startsOn,
 				validated.endsOn,
 				validated.createdAt,
-			],
-		},
-		{
-			sql: `INSERT OR IGNORE INTO audit_events
-				(id, actor_user_id, actor_kind, action, target_kind, target_id,
-				 request_id, safe_diff_json, created_at)
-			SELECT ?, NULL, 'system', 'academic_period.remote_provisioned',
-				'academic_period', period.id, ?, ?, ?
-			FROM academic_periods period
-			WHERE period.code = ? AND period.display_name = ?
-				AND period.starts_on = ? AND period.ends_on = ? AND period.is_current = 1`,
-			params: [
+				validated.periodId,
+				validated.academicPeriod,
+				validated.displayName,
+				validated.startsOn,
+				validated.endsOn,
+				validated.createdAt,
 				validated.auditEventId,
+				validated.periodId,
 				validated.requestId,
 				safeDiff,
 				validated.createdAt,
-				validated.academicPeriod,
-				validated.displayName,
-				validated.startsOn,
-				validated.endsOn,
+				validated.requestId,
+				validated.auditEventId,
 			],
 		},
-		{
-			sql: `SELECT CASE WHEN
-				(SELECT COUNT(*) FROM academic_periods WHERE code = ?) = 1
-				AND (SELECT COUNT(*) FROM academic_periods
-					WHERE code = ? AND display_name = ? AND starts_on = ?
-						AND ends_on = ? AND is_current = 1) = 1
-				AND (SELECT COUNT(*) FROM audit_events audit
-					JOIN academic_periods period ON period.id = audit.target_id
-					WHERE audit.id = ? AND audit.request_id = ?
-						AND audit.actor_kind = 'system'
-						AND audit.action = 'academic_period.remote_provisioned'
-						AND audit.target_kind = 'academic_period'
-						AND audit.safe_diff_json = ? AND period.code = ?) = 1
-			THEN 'ready' ELSE 'conflict' END AS status,
-			(SELECT COUNT(*) FROM academic_periods WHERE code = ?) AS period_count,
-			(SELECT COUNT(*) FROM academic_periods
-				WHERE code = ? AND display_name = ? AND starts_on = ?
-					AND ends_on = ? AND is_current = 1) AS exact_period_count,
-			(SELECT COUNT(*) FROM audit_events WHERE id = ? AND request_id = ?) AS audit_count`,
-			params: [
-				validated.academicPeriod,
-				validated.academicPeriod,
-				validated.displayName,
-				validated.startsOn,
-				validated.endsOn,
-				validated.auditEventId,
-				validated.requestId,
-				safeDiff,
-				validated.academicPeriod,
-				validated.academicPeriod,
-				validated.academicPeriod,
-				validated.displayName,
-				validated.startsOn,
-				validated.endsOn,
-				validated.auditEventId,
-				validated.requestId,
-			],
-		},
+		remoteAcademicPeriodStateStatement(validated, safeDiff),
 	];
 }
 
-export function assertRemoteAcademicPeriodResult(
+export function buildRemoteAcademicPeriodReconciliationStatements(
+	input: RemoteAcademicPeriodInput
+): StatementSpec[] {
+	const validated = validateRemoteAcademicPeriodInput(input);
+	return [remoteAcademicPeriodStateStatement(validated, remoteAcademicPeriodSafeDiff(validated))];
+}
+
+interface RemoteAcademicPeriodStateCounts {
+	periodIdCount: number;
+	periodCodeCount: number;
+	currentPeriodCount: number;
+	exactPeriodCount: number;
+	auditIdCount: number;
+	auditRequestCount: number;
+	exactAuditCount: number;
+}
+
+function resultCount(row: object, key: string, invalidCode: string): number {
+	const value = Reflect.get(row, key);
+	if (!Number.isSafeInteger(value) || value < 0) throw new Error(invalidCode);
+	return value as number;
+}
+
+function terminalState(
 	value: unknown,
-	expectedStatementCount: number
-): void {
+	expectedStatementCount: number,
+	invalidCode: string
+): { outcome: RemoteAcademicPeriodReconciliationOutcome; counts: RemoteAcademicPeriodStateCounts } {
 	if (
 		!Number.isSafeInteger(expectedStatementCount) ||
 		expectedStatementCount < 1 ||
@@ -348,22 +489,109 @@ export function assertRemoteAcademicPeriodResult(
 				Reflect.get(entry, 'success') !== true
 		)
 	) {
-		throw new Error('ACADEMIC_PERIOD_REMOTE_RESULT_INVALID');
+		throw new Error(invalidCode);
 	}
 	const terminal = value.at(-1);
-	if (typeof terminal !== 'object' || terminal === null) {
-		throw new Error('ACADEMIC_PERIOD_REMOTE_RESULT_INVALID');
-	}
+	if (typeof terminal !== 'object' || terminal === null) throw new Error(invalidCode);
 	const results = Reflect.get(terminal, 'results');
 	const row = Array.isArray(results) && results.length === 1 ? results[0] : undefined;
+	if (typeof row !== 'object' || row === null) throw new Error(invalidCode);
+	const counts: RemoteAcademicPeriodStateCounts = {
+		periodIdCount: resultCount(row, 'period_id_count', invalidCode),
+		periodCodeCount: resultCount(row, 'period_code_count', invalidCode),
+		currentPeriodCount: resultCount(row, 'current_period_count', invalidCode),
+		exactPeriodCount: resultCount(row, 'exact_period_count', invalidCode),
+		auditIdCount: resultCount(row, 'audit_id_count', invalidCode),
+		auditRequestCount: resultCount(row, 'audit_request_count', invalidCode),
+		exactAuditCount: resultCount(row, 'exact_audit_count', invalidCode),
+	};
+	const classified: RemoteAcademicPeriodReconciliationOutcome =
+		counts.periodIdCount === 1 &&
+		counts.periodCodeCount === 1 &&
+		counts.currentPeriodCount === 1 &&
+		counts.exactPeriodCount === 1 &&
+		counts.auditIdCount === 1 &&
+		counts.auditRequestCount === 1 &&
+		counts.exactAuditCount === 1
+			? 'applied'
+			: counts.periodIdCount === 0 &&
+				  counts.periodCodeCount === 0 &&
+				  counts.currentPeriodCount === 0 &&
+				  counts.exactPeriodCount === 0 &&
+				  counts.auditIdCount === 0 &&
+				  counts.auditRequestCount === 0 &&
+				  counts.exactAuditCount === 0
+				? 'not_applied'
+				: 'conflict';
+	const outcome = Reflect.get(row, 'outcome');
+	if (outcome !== classified) throw new Error(invalidCode);
+	return { outcome: classified, counts };
+}
+
+export function assertRemoteAcademicPeriodResult(
+	value: unknown,
+	expectedStatementCount: number
+): void {
 	if (
-		typeof row !== 'object' ||
-		row === null ||
-		Reflect.get(row, 'status') !== 'ready' ||
-		Reflect.get(row, 'period_count') !== 1 ||
-		Reflect.get(row, 'exact_period_count') !== 1 ||
-		Reflect.get(row, 'audit_count') !== 1
+		terminalState(value, expectedStatementCount, 'ACADEMIC_PERIOD_REMOTE_RESULT_INVALID')
+			.outcome !== 'applied'
 	) {
 		throw new Error('ACADEMIC_PERIOD_REMOTE_ASSERTION_FAILED');
 	}
+}
+
+export function assertRemoteAcademicPeriodReconciliationResult(
+	value: unknown,
+	expectedStatementCount: number
+): RemoteAcademicPeriodReconciliationOutcome {
+	return terminalState(
+		value,
+		expectedStatementCount,
+		'ACADEMIC_PERIOD_RECONCILIATION_RESULT_INVALID'
+	).outcome;
+}
+
+export async function executeRemoteAcademicPeriodApply(
+	expectedStatementCount: number,
+	dispatch: () => Promise<string>
+): Promise<void> {
+	let stdout: string;
+	try {
+		stdout = await dispatch();
+	} catch {
+		throw new Error('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS');
+	}
+	let value: unknown;
+	try {
+		value = JSON.parse(stdout) as unknown;
+	} catch {
+		throw new Error('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS');
+	}
+	try {
+		assertRemoteAcademicPeriodResult(value, expectedStatementCount);
+	} catch (error) {
+		if (error instanceof Error && error.message === 'ACADEMIC_PERIOD_REMOTE_ASSERTION_FAILED') {
+			throw error;
+		}
+		throw new Error('ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS');
+	}
+}
+
+export async function executeRemoteAcademicPeriodReconciliation(
+	expectedStatementCount: number,
+	dispatch: () => Promise<string>
+): Promise<RemoteAcademicPeriodReconciliationOutcome> {
+	let stdout: string;
+	try {
+		stdout = await dispatch();
+	} catch {
+		throw new Error('ACADEMIC_PERIOD_RECONCILIATION_EXECUTION_FAILED');
+	}
+	let value: unknown;
+	try {
+		value = JSON.parse(stdout) as unknown;
+	} catch {
+		throw new Error('ACADEMIC_PERIOD_RECONCILIATION_RESULT_INVALID');
+	}
+	return assertRemoteAcademicPeriodReconciliationResult(value, expectedStatementCount);
 }

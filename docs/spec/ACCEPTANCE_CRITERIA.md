@@ -350,6 +350,15 @@ MVP готов, когда:
   при отсутствии completion marker, active blocking cases и blocking occurrence
   exact candidate/current run/version без live valid typed evidence;
   retention/cleanup оставляет append-only audit.
+- **AC-IMPORT-32.** Exact-target academic-period provisioning до write проверяет
+  real non-example config/account/D1 UUID, clean full Git SHA и digest-bound
+  approved fields. Успех и byte-identical replay оставляют ровно один exact
+  period и один valid deterministic audit event; заранее занятый несовместимый
+  audit ID, conflicting period либо другой current period отклоняются без новой
+  business mutation. Malformed/truncated result, timeout или иная
+  неопределённость после dispatch классифицируются как ambiguous и разрешаются
+  отдельной SELECT-only exact-argument reconciliation в `applied`,
+  `not_applied` либо `conflict`; blind retry и direct SQL запрещены.
 
 ## 5. Каталог, capacity и trial
 
