@@ -1,5 +1,8 @@
 import type { StatementSpec } from '../src/lib/server/db/database';
-import type { BootstrapEnvironmentName } from '../src/lib/server/auth/admin-bootstrap-command';
+import {
+	assertBootstrapDatabaseId,
+	type BootstrapEnvironmentName,
+} from '../src/lib/server/auth/admin-bootstrap-command';
 
 type RemoteEnvironment = Exclude<BootstrapEnvironmentName, 'local'>;
 
@@ -41,16 +44,23 @@ export function assertRemoteBootstrapConfigTarget(
 		throw new Error('CLI_DATABASE_BINDING_INVALID');
 	}
 	const binding = bindings[0];
-	const productionId = binding.database_id?.toLowerCase();
-	const previewId = binding.preview_database_id?.toLowerCase();
-	if (productionId && previewId && productionId === previewId) {
+	const exactDatabaseId = assertBootstrapDatabaseId(databaseId);
+	const deployedId = binding.database_id
+		? assertBootstrapDatabaseId(binding.database_id)
+		: undefined;
+	const developmentPreviewId = binding.preview_database_id
+		? assertBootstrapDatabaseId(binding.preview_database_id)
+		: undefined;
+	if (deployedId && developmentPreviewId && deployedId === developmentPreviewId) {
 		throw new Error('CLI_REMOTE_DATABASE_ISOLATION_REQUIRED');
 	}
-	const configuredId = environment === 'preview' ? previewId : productionId;
-	if (!configuredId || configuredId !== databaseId.toLowerCase()) {
+	if (developmentPreviewId) {
+		throw new Error('CLI_DATABASE_SELECTOR_AMBIGUOUS');
+	}
+	if (!deployedId || deployedId !== exactDatabaseId) {
 		throw new Error('CLI_DATABASE_TARGET_MISMATCH');
 	}
-	if (binding.database_name?.toLowerCase() === databaseId.toLowerCase()) {
+	if (binding.database_name?.toLowerCase() === exactDatabaseId) {
 		throw new Error('CLI_DATABASE_SELECTOR_AMBIGUOUS');
 	}
 }

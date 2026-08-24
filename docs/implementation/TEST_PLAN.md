@@ -693,8 +693,10 @@ blocked gates и local suite их не заменяет.
 - clean first-admin bootstrap, invalid candidate, existing-admin denial,
   retained-parent-state denial, replay и two-candidate concurrency;
   role/session/audit/assertion/control cardinality;
-  remote config `APP_ENV`, `database_id`/`preview_database_id`, UUID-bearing
-  confirmation, shared-ID/overlay/mismatch rejection и escaped batch rendering;
+  remote dedicated-environment config `APP_ENV`/deployed `database_id`,
+  UUID-bearing confirmation, wrong UUID/shared-ID/placeholder/selector/
+  `preview_database_id` dev-overlay/target mismatch rejection и escaped batch
+  rendering;
 - exact Cron allowlist, все fast/maintenance job IDs, scheduled disable,
   duplicate bucket, busy lease, manual audit/idempotency и failure isolation;
 - `/admin/operations` anonymous/parent/CSRF/job/confirmation/key denial до D1/

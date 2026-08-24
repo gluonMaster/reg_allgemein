@@ -867,6 +867,8 @@ MVP готов, когда:
   соответствующий gate `blocked`, а не превращает проверку в optional.
   (`OPS-01`, `REL-02`)
 - Remote first-admin bootstrap до любой mutation сверяет `APP_ENV` и exact
-  environment-specific D1 UUID из указанного config, требует тот же UUID в
-  confirmation и не может молча выбрать preview binding для production intent.
-  (`OPS-01`, `REL-01`)
+  deployed D1 UUID из `database_id` указанного dedicated-environment config,
+  требует тот же UUID в confirmation и отклоняет `preview_database_id` как
+  неоднозначный `wrangler dev --remote` overlay. Shared ID, placeholder,
+  selector collision и target mismatch также fail-closed до network; preview
+  intent не может молча выбрать production binding. (`OPS-01`, `REL-01`)

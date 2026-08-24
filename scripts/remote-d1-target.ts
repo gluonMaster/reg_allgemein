@@ -55,13 +55,17 @@ export function assertRemoteD1ConfigTarget(
 		throw new Error('CLI_DATABASE_BINDING_INVALID');
 	}
 	const binding = bindings[0];
-	const productionId = binding.database_id?.toLowerCase();
-	const previewId = binding.preview_database_id?.toLowerCase();
-	if (productionId && previewId && productionId === previewId) {
+	const deployedId = binding.database_id ? assertUuid(binding.database_id) : undefined;
+	const developmentPreviewId = binding.preview_database_id
+		? assertUuid(binding.preview_database_id)
+		: undefined;
+	if (deployedId && developmentPreviewId && deployedId === developmentPreviewId) {
 		throw new Error('CLI_REMOTE_DATABASE_ISOLATION_REQUIRED');
 	}
-	const configuredId = environment === 'preview' ? previewId : productionId;
-	if (!configuredId || configuredId !== exactDatabaseId) {
+	if (developmentPreviewId) {
+		throw new Error('CLI_DATABASE_SELECTOR_AMBIGUOUS');
+	}
+	if (!deployedId || deployedId !== exactDatabaseId) {
 		throw new Error('CLI_DATABASE_TARGET_MISMATCH');
 	}
 	if (binding.database_name?.toLowerCase() === exactDatabaseId) {
@@ -180,7 +184,11 @@ export class RemoteD1Boundary implements SqlDatabaseBoundary {
 		requestTimeoutMs = 30_000
 	) {
 		if (!apiToken || /\s/u.test(apiToken)) throw new Error('REMOTE_D1_TOKEN_INVALID');
-		if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 100 || requestTimeoutMs >= 60_000) {
+		if (
+			!Number.isSafeInteger(requestTimeoutMs) ||
+			requestTimeoutMs < 100 ||
+			requestTimeoutMs >= 60_000
+		) {
 			throw new Error('REMOTE_D1_TIMEOUT_INVALID');
 		}
 		this.#apiToken = apiToken;
@@ -224,7 +232,11 @@ export class RemoteD1Boundary implements SqlDatabaseBoundary {
 				clearTimeout(timeout);
 			}
 			if (!response.ok) {
-				if (readOnly && (response.status === 429 || response.status >= 500) && attempt < attempts) {
+				if (
+					readOnly &&
+					(response.status === 429 || response.status >= 500) &&
+					attempt < attempts
+				) {
 					continue;
 				}
 				throw new RemoteD1Error(

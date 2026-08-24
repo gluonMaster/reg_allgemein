@@ -1684,3 +1684,60 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
   CLI/config mismatch и подготовить current-snapshot prerequisite; его постоянная
   цель — продолжать deployment process после каждого успешного gate, а не
   завершаться после первого шага.
+
+## Continuation 2026-08-24: dedicated-preview D1 contract fixed locally
+
+- Continuation начата с clean HEAD `adb7b70b`; он на один docs-only commit
+  опережает указанную в prompt baseline `82ca91e3`. Diff затрагивает только 11
+  canonical documentation files; `src`/`scripts`/`migrations`/`tests`, package и
+  Wrangler configs между этими commits не менялись. Pre-existing commit и
+  protected evidence не переписывались; новый commit не создавался.
+- Fresh read-only exact-target reconciliation в `2026-08-24T10:13:28Z`
+  подтвердила одну active Worker version `…76ee` на 100%, expected previous
+  `…4154` inactive/available и anonymous `404` для active и retained `…1500`
+  versioned preview routes. Local ignored config по-прежнему имеет
+  `preview_urls=false` и SHA-256
+  `b6fffb07d4c1e6654c657b2adb9a2e16acf4ed73b72cbead7465fe0908d08959`.
+- Fresh Access perimeter: anonymous и invalid service token получают `302` в
+  Access, valid service token достигает canonical Worker root с `200`, а
+  `/_health/operations` возвращает `204`. DPAPI credential использован только
+  в памяти, значения не печатались и не менялись.
+- Fresh D1 read-only state: pending migrations `0`, ledger `0001`–`0022` точно
+  совпадает с local files, FK violations `0`; academic periods/users/sessions/
+  import runs/legacy versions/promotion events/bootstrap actions/assertions/
+  audit и active admins равны `0`, bootstrap control остаётся `available`.
+  Оба exact private EU R2 bucket имеют `0` objects, custom domains отсутствуют,
+  `r2.dev` disabled. Deployed vars/bindings совпадают с ignored config; public
+  auth, contract send/upload/public/media functions и email/Telegram/renderer
+  providers остаются fail-closed. Scheduled operations остаются отдельно
+  enabled по уже reviewed Cron contract.
+- Wrangler `4.120.1` local schema и current official Cloudflare docs определяют
+  `preview_database_id` как override для `wrangler dev`; deployed Worker binding
+  использует `database_id`. Поэтому `scripts/remote-d1-target.ts` и
+  `scripts/admin-bootstrap-remote.ts` теперь принимают exact deployed
+  `database_id` для dedicated preview/production config и отклоняют любой
+  `preview_database_id` overlay. Shared explicit identity, wrong UUID,
+  placeholder, additional binding, selector collision, APP_ENV/account/target
+  mismatch продолжают fail-closed до network.
+- Bootstrap guard проверен на существующем ignored runtime config, import guard
+  — на отдельном protected control config; targets совпадают. В
+  `imports/legacy-preview-control.json` изменено только имя D1 selector
+  `preview_database_id` → `database_id`; файл остаётся ignored и current-user
+  ACL protected, новый SHA-256
+  `c92f31615380815ade0576b724a445d7fe0d316c567daa883c72ea7e468a836f`.
+  Его candidate/reviewer provenance сознательно не repin-илась без нового clean
+  commit и independent review.
+- Targeted unit и existing D1 integration tests прошли: 3 files, 19/19 tests.
+  Затем прошли полные gates: `npm run check` — 0 errors/warnings; `npm test` —
+  66 files, 512/512 tests; fresh `npm run build`; `npm run docs:check` — 151
+  links in 52 files и 106 executable command lines; `npm run release:scan` —
+  536/536; `git diff --check` passed. Ни один Worker/D1/R2/Access/flag/secret/
+  provider/import/bootstrap/production/DNS/CMS/official-site mutation или send
+  не выполнялся.
+- Phase B remote plan/transition ещё не запускались: current worktree содержит
+  этот uncommitted Phase A candidate, а prompt запрещает создавать commit без
+  отдельного explicit permission. Protected control provenance остаётся на
+  предыдущем reviewed candidate и должна быть repin-нута только после exact
+  candidate commit и независимого review. Ближайший gate — разрешённый local
+  candidate commit, после которого нужен отдельный reviewer/session protocol;
+  разрешение на commit не является разрешением на synthetic import mutation.

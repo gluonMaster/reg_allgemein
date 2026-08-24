@@ -11,16 +11,17 @@ import {
 
 const productionId = '11111111-1111-4111-8111-111111111111';
 const previewId = '22222222-2222-4222-8222-222222222222';
+const accountId = 'a'.repeat(32);
 
 describe('pinned remote first-admin bootstrap', () => {
 	it('requires the exact config APP_ENV and environment-specific database ID', () => {
 		const production = {
+			account_id: accountId,
 			vars: { APP_ENV: 'production' },
 			d1_databases: [
 				{
 					binding: 'DB',
 					database_id: productionId,
-					preview_database_id: previewId,
 				},
 			],
 		};
@@ -35,16 +36,16 @@ describe('pinned remote first-admin bootstrap', () => {
 		).toThrow('CLI_DATABASE_TARGET_MISMATCH');
 	});
 
-	it('selects preview_database_id explicitly and rejects shared remote identities', () => {
+	it('accepts a dedicated preview database_id and rejects dev overlays or shared identities', () => {
 		expect(() =>
 			assertRemoteBootstrapConfigTarget(
 				{
+					account_id: accountId,
 					vars: { APP_ENV: 'preview' },
 					d1_databases: [
 						{
 							binding: 'DB',
-							database_id: productionId,
-							preview_database_id: previewId,
+							database_id: previewId,
 						},
 					],
 				},
@@ -55,6 +56,7 @@ describe('pinned remote first-admin bootstrap', () => {
 		expect(() =>
 			assertRemoteBootstrapConfigTarget(
 				{
+					account_id: accountId,
 					vars: { APP_ENV: 'preview' },
 					d1_databases: [
 						{
@@ -68,17 +70,34 @@ describe('pinned remote first-admin bootstrap', () => {
 				previewId
 			)
 		).toThrow('CLI_REMOTE_DATABASE_ISOLATION_REQUIRED');
+		expect(() =>
+			assertRemoteBootstrapConfigTarget(
+				{
+					account_id: accountId,
+					vars: { APP_ENV: 'preview' },
+					d1_databases: [
+						{
+							binding: 'DB',
+							database_id: productionId,
+							preview_database_id: previewId,
+						},
+					],
+				},
+				'preview',
+				previewId
+			)
+		).toThrow('CLI_DATABASE_SELECTOR_AMBIGUOUS');
 	});
 
 	it('rejects selector collisions and additional D1 bindings before remote execution', () => {
 		const base = {
+			account_id: accountId,
 			vars: { APP_ENV: 'preview' },
 			d1_databases: [
 				{
 					binding: 'DB',
 					database_name: previewId,
-					database_id: productionId,
-					preview_database_id: previewId,
+					database_id: previewId,
 				},
 			],
 		};
@@ -98,6 +117,17 @@ describe('pinned remote first-admin bootstrap', () => {
 				previewId
 			)
 		).toThrow('CLI_DATABASE_BINDING_INVALID');
+		expect(() =>
+			assertRemoteBootstrapConfigTarget(
+				{
+					account_id: accountId,
+					vars: { APP_ENV: 'preview' },
+					d1_databases: [{ binding: 'DB', database_id: 'replace-me' }],
+				},
+				'preview',
+				previewId
+			)
+		).toThrow('CLI_DATABASE_ID_INVALID');
 	});
 
 	it('uses config-only local targeting and strips all resource selectors from the child config', () => {

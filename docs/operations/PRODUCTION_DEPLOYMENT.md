@@ -676,9 +676,11 @@ npm run admin:bootstrap -- --environment production --database-id <PRODUCTION_D1
 ```
 
 До mutation CLI читает именно указанный config без `.dev.vars` overlay, сверяет
-`APP_ENV`, единственный binding `DB` и environment-specific ID
-(`preview_database_id` либо `database_id`), запрещает общий preview/production
-ID, selector collision и placeholder config. Для дочерней Wrangler-команды
+`APP_ENV`, единственный binding `DB` и exact deployed `database_id` dedicated
+environment config. `preview_database_id` является Wrangler Dev override, а не
+deployed Worker binding, поэтому remote mutation CLI отклоняет его как
+selector/config ambiguity. Общий явно заданный ID, placeholder, selector
+collision и target mismatch также запрещены. Для дочерней Wrangler-команды
 создаётся временный config без vars и D1 bindings: positional UUID нельзя
 перенаправить через `database_name`/binding. CLI требует успешный результат для
 каждого statement и ровно одну terminal assertion row. Unit/integration tests
@@ -1122,17 +1124,20 @@ production verdict остаётся **NO-GO**.
   `AUTH_PUBLIC_ENABLED=false` и `EMAIL_PROVIDER=disabled`; direct SQL является
   stop condition, а их изменение относится к отдельному provider/feature/deploy
   scope.
-- Дополнительно current dedicated preview config использует `database_id`, но
-  reviewed preview bootstrap guard требует `preview_database_id`; текущая exact
-  command поэтому fail-closed до сети с `CLI_DATABASE_TARGET_MISMATCH`.
+- Local contract fix 2026-08-24 согласовал guard с фактической deployed
+  topology: dedicated preview использует exact `database_id`, а любой
+  `preview_database_id` dev-overlay теперь fail-closed как неоднозначный.
+  Bootstrap/import exact-target unit tests и существующий D1 integration suite
+  проходят; ignored protected import control использует тот же deployed
+  selector. Remote bootstrap/import mutation после fix не выполнялась.
 - Recovery/replay не выполнялись, one-shot control не consumed. До следующей
-  попытки нужны согласованный exact config contract для dedicated preview
-  topology и approved target-creation path.
+  попытки всё ещё нужны clean reviewed candidate provenance и approved
+  target-creation path.
 - Проверка runtime после preflight уточнила порядок dependencies: email
   verification в текущем public auth path атомарно требует ровно один current
   promoted legacy snapshot. В empty preview такой snapshot отсутствует, поэтому
   обычная регистрация сейчас откатится и не создаст eligible target. Следующий
-  безопасный порядок: исправить/review exact preview CLI/config contract;
+  безопасный порядок: завершить review fixed exact preview CLI/config contract;
   выполнить отдельно разрешённый synthetic import/recovery lifecycle из § 8;
   только после успешного current-snapshot gate включать preview auth/email,
   создавать контролируемые accounts и выполнять one-shot bootstrap.

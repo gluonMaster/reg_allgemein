@@ -18,8 +18,7 @@ function config(environment: 'preview' | 'production') {
 			{
 				binding: 'DB',
 				database_name: 'portal-database',
-				database_id: productionId,
-				preview_database_id: previewId,
+				database_id: environment === 'preview' ? previewId : productionId,
 			},
 		],
 	};
@@ -37,11 +36,18 @@ function successfulResponse(results: unknown[][], singleResult = false): Respons
 }
 
 describe('exact-target remote D1 boundary', () => {
-	it('pins the environment-specific UUID and rejects isolation or selector ambiguity', () => {
+	it('accepts dedicated deployed targets and rejects target or selector mismatch', () => {
 		expect(assertRemoteD1ConfigTarget(config('preview'), 'preview', previewId)).toEqual({
 			environment: 'preview',
 			accountId,
 			databaseId: previewId,
+		});
+		expect(
+			assertRemoteD1ConfigTarget(config('production'), 'production', productionId)
+		).toEqual({
+			environment: 'production',
+			accountId,
+			databaseId: productionId,
 		});
 		expect(() =>
 			assertRemoteD1ConfigTarget(config('preview'), 'preview', productionId)
@@ -55,12 +61,30 @@ describe('exact-target remote D1 boundary', () => {
 							binding: 'DB',
 							database_name: productionId,
 							database_id: productionId,
-							preview_database_id: previewId,
 						},
 					],
 				},
 				'production',
 				productionId
+			)
+		).toThrow('CLI_DATABASE_SELECTOR_AMBIGUOUS');
+	});
+
+	it('rejects Wrangler dev overlays, shared identities and placeholder targets', () => {
+		expect(() =>
+			assertRemoteD1ConfigTarget(
+				{
+					...config('preview'),
+					d1_databases: [
+						{
+							binding: 'DB',
+							database_id: productionId,
+							preview_database_id: previewId,
+						},
+					],
+				},
+				'preview',
+				previewId
 			)
 		).toThrow('CLI_DATABASE_SELECTOR_AMBIGUOUS');
 		expect(() =>
@@ -79,6 +103,16 @@ describe('exact-target remote D1 boundary', () => {
 				previewId
 			)
 		).toThrow('CLI_REMOTE_DATABASE_ISOLATION_REQUIRED');
+		expect(() =>
+			assertRemoteD1ConfigTarget(
+				{
+					...config('preview'),
+					d1_databases: [{ binding: 'DB', database_id: 'replace-me' }],
+				},
+				'preview',
+				previewId
+			)
+		).toThrow('CLI_DATABASE_ID_INVALID');
 	});
 
 	it('accepts the documented single-query response object as well as a batch array', async () => {
@@ -87,8 +121,9 @@ describe('exact-target remote D1 boundary', () => {
 			'synthetic-token',
 			(async () => successfulResponse([[{ count: 1 }]], true)) as typeof fetch
 		);
-		await expect(boundary.first<{ count: number }>({ sql: 'SELECT 1 AS count' }))
-			.resolves.toEqual({ count: 1 });
+		await expect(
+			boundary.first<{ count: number }>({ sql: 'SELECT 1 AS count' })
+		).resolves.toEqual({ count: 1 });
 	});
 
 	it('binds destructive confirmation to action, environment, UUID and reviewed digest', () => {
@@ -233,7 +268,9 @@ describe('exact-target remote D1 boundary', () => {
 					{ status: 200 }
 				)) as typeof fetch
 		);
-		await expect(streamedWrite.run({ sql: 'UPDATE example SET value = 1' })).rejects.toMatchObject({
+		await expect(
+			streamedWrite.run({ sql: 'UPDATE example SET value = 1' })
+		).rejects.toMatchObject({
 			code: 'REMOTE_D1_DELIVERY_AMBIGUOUS',
 			delivery: 'ambiguous',
 		});
