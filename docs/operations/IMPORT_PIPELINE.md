@@ -1,6 +1,6 @@
 # Import pipeline
 
-Ревизия: 2026-08-17.
+Ревизия: 2026-08-24.
 
 ## Гарантии
 
@@ -82,6 +82,42 @@ clean HEAD: она не требует API token и не обращается к
 - planner ≠ stager; reviewer отличается от обоих; transition operator
   отличается от reviewer; recovery verifier отличается от planner/stager/
   reviewer и promoter.
+
+### 0. Явный academic period
+
+`plan` является no-write import action, но он fail-closed, если переданный
+academic period ещё не существует в exact remote D1. Период нельзя выводить из
+текущей даты, имени файла или synthetic fixture. Data owner заранее утверждает
+его code, display name, inclusive start/end dates и признак current.
+
+Remote provisioning выполняется отдельной идемпотентной audited D1 mutation, не
+direct SQL. Обе команды требуют exact non-example config/D1 UUID, clean exact
+HEAD, opaque operator ID и caller-supplied canonical UTC timestamp. Сначала
+локальная команда без network/D1 получает digest-bound typed confirmation:
+
+```powershell
+npm run db:period:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period <APPROVED_PERIOD_CODE> --display-name "<APPROVED_DISPLAY_NAME>" --starts-on <APPROVED_YYYY-MM-DD> --ends-on <APPROVED_YYYY-MM-DD> --current --operator-id <OPAQUE_DATA_OWNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --git-commit <FULL_GIT_SHA>
+```
+
+Только после independent review exact candidate и отдельного permission на одну
+preview D1 запись допускается apply с теми же byte-exact аргументами:
+
+```powershell
+npm run db:period:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period <APPROVED_PERIOD_CODE> --display-name "<APPROVED_DISPLAY_NAME>" --starts-on <APPROVED_YYYY-MM-DD> --ends-on <APPROVED_YYYY-MM-DD> --current --operator-id <OPAQUE_DATA_OWNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --git-commit <FULL_GIT_SHA> --confirmation <TYPED_CONFIRMATION>
+```
+
+Apply pin-ит child Wrangler process на positional exact D1 UUID, удаляет из его
+temporary config resource selectors/secrets/vars, не делает blind retry при
+неопределённом результате и server-side проверяет ровно один exact current
+period и append-only audit event. Повтор **той же** команды идемпотентен. При
+`ACADEMIC_PERIOD_REMOTE_EXECUTION_AMBIGUOUS` сначала выполнить read-only exact
+query/reconciliation; не менять timestamp/confirmation и не создавать другой
+period. Existing code с другими полями или другой current period даёт
+`ACADEMIC_PERIOD_REMOTE_ASSERTION_FAILED` и не заменяется.
+
+Для production используются `--environment production` и exact production
+config/UUID только после отдельного production/data-owner permission; preview
+approval на production не переносится.
 
 ### 1. No-write plan
 

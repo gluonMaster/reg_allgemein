@@ -24,6 +24,8 @@
 		"db:migrations:local": "wrangler d1 migrations list DB --local --config wrangler.local.toml --persist-to .wrangler/state",
 		"db:reset:local": "node scripts/reset-local-d1.js",
 		"db:period:local": "tsx scripts/ensure-academic-period.ts",
+		"db:period:confirmation:remote": "tsx scripts/ensure-academic-period-remote.ts confirmation",
+		"db:period:remote": "tsx scripts/ensure-academic-period-remote.ts apply --remote",
 		"import:price:local": "tsx scripts/import-references.ts price",
 		"import:schedule:local": "tsx scripts/import-references.ts schedule",
 		"import:plusbtext:local": "tsx scripts/import-references.ts plusbtext",

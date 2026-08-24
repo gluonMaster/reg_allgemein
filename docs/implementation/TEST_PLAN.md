@@ -96,6 +96,12 @@ concurrency/idempotency проверки в названном suite. Точны
 
 ### Production legacy release
 
+- remote academic-period boundary требует exact environment/config/D1 UUID,
+  clean exact Git SHA, approved explicit code/display/dates/current, opaque
+  operator/timestamp и digest-bound typed confirmation; child Wrangler config
+  не содержит selectors/secrets/vars. D1 contract создаёт ровно один period и
+  append-only audit идемпотентно, а conflicting code или другой current period
+  не заменяет;
 - CLI parser для
   `plan|stage|review|recovery-evidence|confirmation|promote|verify|rollback|roll-forward`
   требует explicit `--remote`, принимает только command-specific flags и

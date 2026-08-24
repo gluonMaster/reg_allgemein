@@ -523,5 +523,19 @@ violations were recorded in a protected ignored manifest. No down migration is
 allowed. Recovery remains compatible code behavior, a new append-only forward
 fix, or a separately authorized restore to the retained pre-apply point.
 
+Read-only Phase B recovery preflight 2026-08-24: source preview D1 всё ещё имеет
+exact `0001`–`0022`, FK violations `0` и empty current/import state. D1 Time
+Travel вернул fresh bookmark; в tracked evidence сохранён только его SHA-256
+`2aa4c2e747d30f7511354d3398d69c7785a42404319659793af1ee3b738c2066`.
+Существующий isolated restore остался distinct/unbound и целым: `0001`–`0015`,
+398 comparable schema objects, 124 tables, FK violations `0`, empty
+academic-period/user/current-snapshot state; четыре source/restore R2 roles
+остаются distinct private EEUR и empty. Однако protected evidence от 2026-08-20
+имеет старую candidate/control provenance и старше 24 часов. Оно не считается
+fresh plan-bound recovery evidence для Phase B. Никакой backup/restore/R2 write
+в этом preflight не выполнялся; после создания exact import plan требуется
+отдельный recovery verifier и отдельно разрешённый fresh isolated restore либо
+другая предусмотренная runbook recovery mutation.
+
 Даже с заполненной записью production readiness остаётся `blocked` из-за
 перечисленных gaps и отсутствия отдельного production restore/deploy approval.

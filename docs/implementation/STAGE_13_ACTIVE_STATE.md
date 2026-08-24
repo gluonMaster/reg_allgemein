@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-24T13:58:11Z
+updated_utc: 2026-08-24T14:50:03Z
 reviewed_candidate: 8362ffa875dde563519d91482e5aa5c8d6a2eca5
-last_completed_gate: phase-a-dedicated-preview-d1-independent-review
-next_gate: phase-b-protected-provenance-and-synthetic-import-lifecycle
+last_completed_gate: phase-b-academic-period-boundary-local-implementation
+next_gate: phase-b-academic-period-boundary-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -34,14 +34,24 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Последний закрытый gate
 
-- Exact candidate `8362ffa875dde563519d91482e5aa5c8d6a2eca5` прошёл независимый
-  read-only review dedicated-preview D1 contract: **GO**.
-- Provenance, committed scope, Wrangler semantics, exact-target guards,
-  ignored configs/ACL и полные local gates прошли. Review не менял remote state
-  и не являлся разрешением Phase B.
-- Проверки candidate: `npm run check`, `npm test` (66 файлов, 512 тестов),
-  `npm run build`, `npm run docs:check`, `npm run release:scan` и
-  `git diff --check` — passed.
+- Protected ignored Phase B control локально repin-нут на independently reviewed
+  candidate/reviewer SHA `8362ffa875dde563519d91482e5aa5c8d6a2eca5` без remote
+  mutation. Selector остаётся exact deployed `database_id`; current-user ACL и
+  Git-ignore сохранены. Новый protected control SHA-256:
+  `f154471dd2497fcb144168c1b67ec1116b1aca1904481d7718bdc1636eb63393`.
+- Fresh exact-target read-only preflight около `2026-08-24T14:17Z` подтвердил
+  migration ledger `0001`–`0022` (digest
+  `c50295a8dc2e5d79d0fed983a02acd36ba1d1943c2c96e5d924e9344112a4840`),
+  pending `0`, FK violations `0`, empty business/import/bootstrap state, два
+  distinct private empty EEUR R2 bucket, expected deployed Worker vars/bindings,
+  healthy scheduled journal и intact Access perimeter (`302/302/200`, health
+  `204`). Никакие D1/R2/Worker/Access/provider writes не выполнялись.
+- Time Travel read-only preflight вернул fresh source bookmark; в документацию
+  записан только его SHA-256
+  `2aa4c2e747d30f7511354d3398d69c7785a42404319659793af1ee3b738c2066`.
+  Старое protected recovery evidence от 2026-08-20 цело, но привязано к старой
+  provenance и schema `0001`–`0015`, поэтому не является fresh plan-bound
+  evidence для Phase B.
 
 ## Фактический preview baseline
 
@@ -49,8 +59,8 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
   Cloudflare Access, versioned preview routes закрыты; повторный Worker deploy
   сейчас не нужен.
 - Preview D1 имеет migrations `0001`–`0022`, pending `0`, FK violations `0`, но
-  business state пуст: нет current promoted legacy snapshot, users или admins;
-  bootstrap control доступен и не использован.
+  business state пуст: нет academic period, current promoted legacy snapshot,
+  users или admins; bootstrap control доступен и не использован.
 - Два preview R2 bucket private/EU и пусты.
 - Public auth, прикладной email, Telegram, document upload, contract send,
   public statutory и media paths остаются fail-closed. Scheduled operations
@@ -70,25 +80,28 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Точная цепочка до full manual preview
 
-1. Синхронизировать protected ignored Phase B control provenance с reviewed
-   candidate; затем подготовить exact scope и recovery point без remote write.
-2. В отдельных независимых ролях выполнить разрешённый synthetic/no-PII import
+1. Независимо проверить подготовленную local exact-target границу provisioning
+   approved current academic period. Затем получить exact owner permission и
+   выполнить только эту идемпотентную audited preview D1 запись; direct SQL
+   запрещён. Код/display/dates/current должны быть явно утверждены data owner.
+2. Создать no-write baseline plan и fresh plan-bound recovery point.
+3. В отдельных независимых ролях выполнить разрешённый synthetic/no-PII import
    lifecycle `plan → stage → review → recovery evidence → promote → verify →
    rollback → verify → roll-forward → verify`, получив ровно один current
    promoted snapshot.
-3. Подготовить, независимо проверить и отдельно разрешённо deployed preview
+4. Подготовить, независимо проверить и отдельно разрешённо deployed preview
    auth/email candidate; ограничить email smoke согласованными test recipients.
-4. Владелец лично создаёт и подтверждает два account, не передавая password,
+5. Владелец лично создаёт и подтверждает два account, не передавая password,
    OTP, verification link, cookie или token.
-5. После exact permission выполнить one-shot bootstrap корпоративного
+6. После exact permission выполнить one-shot bootstrap корпоративного
    empty-state account и проверить audit, replay denial, session revoke, admin
    RBAC и сохранение parent-only роли второго account.
-6. Пройти guided full manual preview plan: family lookup/registration, parent и
+7. Пройти guided full manual preview plan: family lookup/registration, parent и
    admin workflows, security/IDOR/CSRF/session, operations/manual jobs/failures,
    pricing, synthetic Browser contract lifecycle, synthetic upload/local-AV,
    accessibility/mobile/keyboard, а также отдельно разрешённые email и один
    минимизированный Telegram preview smoke.
-7. Обновить checklist/handoff после каждого блока. Legal/privacy/provider paths
+8. Обновить checklist/handoff после каждого блока. Legal/privacy/provider paths
    без требуемого approval не включать молча: получить owner input либо проверить
    предусмотренный каноническим контрактом fail-closed режим.
 
@@ -120,11 +133,13 @@ condition и rollback. После успешного gate агент сам пе
 
 ## Проверка continuity worktree
 
-- `npm run check`, `npm run build`, `npm run docs:check`,
-  `npm run release:scan` (540/540) и `git diff --check` — passed.
-- Обычный параллельный `npm test` завершился 507/512: пять D1 tests превысили
-  свои timeout при общем времени 443 s, без assertion failures. Все пять
-  отдельно перепроверены последовательно и прошли: legacy-import 1/1 в составе
-  полного файла 13/13, messaging 3/3 и price-review 1/1. Это зафиксированный
-  resource/parallel-timeout residual текущего worktree, а не скрытый зелёный
-  full-suite verdict.
+- Новый local academic-period boundary прошёл focused suites: 3 файла, 15/15
+  tests, включая 3 migrated Miniflare D1 cases.
+- Полные gates текущего worktree прошли: `npm run check` — 0 errors/warnings;
+  `npm test` — 68 файлов, 521/521 tests; `npm run build` — passed.
+- После обновления operational evidence `npm run docs:check` — 162 links/55
+  files, 108 executable command lines и continuity passed; `npm run
+  release:scan` — 544/544; `git diff --check` — passed.
+- Worktree ещё не является independently reviewed candidate. До review нельзя
+  выполнять `db:period:remote`; прежний reviewed candidate `8362ffa…` остаётся
+  действующим только для уже repin-нутого Phase B import control.

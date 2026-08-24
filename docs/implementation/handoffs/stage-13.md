@@ -1785,3 +1785,59 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
   targeted перепроверке (legacy-import 1/1 внутри 13/13 файла, messaging 3/3,
   price-review 1/1). Full-suite run поэтому честно не помечается зелёным, но
   targeted evidence не обнаружило regression от documentation/continuity scope.
+
+## Continuation 2026-08-24: Phase B provenance, preflight и academic-period boundary
+
+- По прямому разрешению владельца protected ignored
+  `imports/legacy-preview-control.json` локально repin-нут: candidate и
+  independent-review provenance теперь оба exact
+  `8362ffa875dde563519d91482e5aa5c8d6a2eca5`. Selector остаётся deployed
+  `database_id`; account/D1 target не менялись. Файл остаётся Git-ignored,
+  current-user ACL protected; новый SHA-256
+  `f154471dd2497fcb144168c1b67ec1116b1aca1904481d7718bdc1636eb63393`.
+  Runtime target guard прочитал его успешно. Targeted existing remote/import/
+  bootstrap guards прошли 44/44.
+- Fresh read-only Phase B preflight около `2026-08-24T14:17Z` подтвердил exact
+  D1 migration ledger `0001`–`0022` с digest
+  `c50295a8dc2e5d79d0fed983a02acd36ba1d1943c2c96e5d924e9344112a4840`,
+  pending `0`, FK violations `0`; academic periods/users/admins/current
+  PlusBText/current Access/import plans/runs/events/bootstrap actions/assertions
+  — все `0`. Worker `…76ee` остаётся active на 100% с expected disabled
+  provider/public vars и двумя Cron; scheduled journal не имеет running/failed
+  rows. Canonical Access probes снова дали anonymous `302`, invalid `302`, valid
+  root `200`, valid health `204` с empty body/`no-store`/`noindex`.
+- Source/restore R2 archive/quarantine роли остаются четырьмя distinct private
+  EEUR bucket, каждый `0 objects / 0 B`. Fresh D1 Time Travel info был только
+  прочитан; bookmark не печатался, его digest
+  `2aa4c2e747d30f7511354d3398d69c7785a42404319659793af1ee3b738c2066`.
+  Старый protected isolated-restore evidence остаётся целым и подтверждает
+  `0001`–`0015`, 398 comparable schema objects, 124 tables, FK `0` и empty
+  state, но он старше 24 часов и привязан к прежней provenance. Он не пригоден
+  как fresh plan-bound Phase B recovery evidence.
+- Fresh state обнаружил предусмотренный fail-closed prerequisite: source D1 не
+  имеет academic period, а `import:legacy:plan:remote` читает его до создания
+  plan и возвращает `ACADEMIC_PERIOD_UNKNOWN`. Direct SQL запрещён, а прежний
+  `db:period:local` не является remote boundary. Никакой plan artifact поэтому
+  не создавался.
+- Локально подготовлены отдельные
+  `db:period:confirmation:remote`/`db:period:remote` entrypoints. Confirmation
+  только читает exact ignored config и clean exact HEAD; apply требует explicit
+  `--remote`, exact deployed D1 UUID, approved period fields, opaque operator,
+  canonical timestamp и digest-bound typed confirmation. Child Wrangler config
+  selector-free, write не retry-ится blind. Controlled SQL идемпотентно создаёт
+  current period и append-only system audit, server-side проверяет exact row/
+  audit и не заменяет conflicting code либо другой current period.
+- Focused verification прошла: unit academic-period 6/6, shared bootstrap
+  remote guards 6/6 и migrated Miniflare D1 contract 3/3. Integration доказал
+  exact-repeat `1 period / 1 audit`, conflicting-display denial и сохранение
+  существующего current period. Полные local gates также прошли: `npm run
+  check` — 0 errors/warnings; `npm test` — 68 файлов, 521/521 tests; `npm run
+  build`; `npm run docs:check` — 162 links/55 files, 108 commands и continuity;
+  `npm run release:scan` — 544/544; `git diff --check`. Immutable candidate
+  commit ещё должен быть создан до independent review.
+- Ни один D1/R2/Worker/Access/secret/flag/provider/import/bootstrap/production/
+  DNS/CMS/official-site write или send не выполнялся. Ближайшая boundary —
+  independent read-only review нового exact academic-period candidate. Только
+  после GO отдельно требуются data-owner values для code/display/dates/current
+  и exact разрешение на одну preview D1 provisioning mutation; оно не разрешает
+  последующие import transitions или recovery writes.

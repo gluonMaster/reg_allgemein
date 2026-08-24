@@ -65,9 +65,12 @@ export function assertRemoteBootstrapConfigTarget(
 	}
 }
 
-export function buildPinnedWranglerConfig(config: BootstrapWranglerConfig): string {
+export function buildPinnedWranglerConfig(
+	config: BootstrapWranglerConfig,
+	commandName = 'kolibri-admin-bootstrap-exact-target'
+): string {
 	const pinnedConfig: Record<string, unknown> = {
-		name: 'kolibri-admin-bootstrap-exact-target',
+		name: commandName,
 		send_metrics: false,
 		d1_databases: [],
 	};

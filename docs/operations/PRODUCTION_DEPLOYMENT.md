@@ -742,6 +742,14 @@ Office/Access/Excel/COM/LibreOffice/VBA не запускаются, полны�
 не создаётся. Для ordinary preview разрешён только synthetic bundle: реальный
 Access/PlusBText PII source туда не загружается.
 
+Если approved academic period отсутствует в exact remote D1, до import plan
+используется только audited exact-target boundary из
+[IMPORT_PIPELINE.md](IMPORT_PIPELINE.md#0-явный-academic-period). Его
+`db:period:confirmation:remote` является локальной проверкой; последующий
+`db:period:remote` — отдельная D1 mutation и требует собственного разрешения.
+Direct SQL, автоматический выбор периода и неутверждённые display/dates/current
+запрещены.
+
 **Команды local rehearsal:**
 
 ```powershell
