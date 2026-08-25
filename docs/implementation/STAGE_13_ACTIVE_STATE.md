@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-25T13:59:55Z
-reviewed_candidate: a098b8324ddca337c19b3344c7c1f82dfb68a36a
-last_completed_gate: phase-b-promote-timeout-remediation-verification-review
-next_gate: phase-b-promote-timeout-remediation-immutable-commit
+updated_utc: 2026-08-25T14:34:46Z
+reviewed_candidate: 5789e319fd65850112a1bf05961e96c86f7c76aa
+last_completed_gate: phase-b-promote-timeout-remediation-immutable-review
+next_gate: phase-b-preview-0023-recovery-rebind-and-baseline-promote-authorization
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -46,13 +46,14 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
   current pair `none`, projection/events/promoted rows `0`, FK/dependency
   invariants проходят. Blind retry остановлен.
 - Root cause локализован в correlated projection lookups без exact indexes.
-  Подготовлена новая append-only candidate migration
+  Immutable remediation anchor
+  `5789e319fd65850112a1bf05961e96c86f7c76aa` содержит append-only migration
   `0023_legacy_projection_lookup_indexes.sql` с пятью узкими indexes;
   deterministic `EXPLAIN QUERY PLAN` focused test проходит. Full gates прошли:
   check 0/0, Vitest 68 files/531 tests, build, Playwright 18/18, audit 0,
-  docs/continuity и release scan. Независимый read-only review текущего diff
-  вернул GO без BLOCKER/HIGH/MEDIUM. Эта migration ещё не применена к preview и
-  не разрешает новый promote сама по себе.
+  docs/continuity и release scan. Независимый exact-SHA read-only review вернул
+  GO без BLOCKER/HIGH/MEDIUM. Эта migration ещё не применена к preview или
+  isolated recovery D1 и не разрешает новый promote сама по себе.
 - Immutable remediation anchor
   `723e94715c2764f829bf718c49989428fa3c169a` создан непосредственным потомком
   rejected `73d41ab855cfd670f24b6791563e335f6828e446`. Exact diff содержит 14
@@ -131,18 +132,20 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Точная цепочка до full manual preview
 
-1. Создать новый immutable candidate из local remediation всех 1 BLOCKER/2 HIGH
-   finding candidate `73d41ab…` и получить отдельный independent read-only GO.
-   Reviewer обязан проверить actual config value-free, atomic period/audit
-   denial и SELECT-only exact-argument reconciliation. Только затем
-   запросить exact owner values/permission на одну preview D1 запись; direct SQL
-   запрещён. Владелец подтвердил code `2026-2027`, но display/dates/current
-   остаются отдельными explicit inputs.
-2. Создать no-write baseline plan и fresh plan-bound recovery point.
-3. В отдельных независимых ролях выполнить разрешённый synthetic/no-PII import
-   lifecycle `plan → stage → review → recovery evidence → promote → verify →
-   rollback → verify → roll-forward → verify`, получив ровно один current
-   promoted snapshot.
+1. После нового exact owner permission применить `0023` только к preview D1 и
+   существующей distinct/unbound isolated recovery D1. Проверить ledger, пять
+   indexes, deterministic plans, FK и отсутствие current pair; production не
+   затрагивать.
+2. Тем же независимым recovery-verifier role перепроверить isolated restore с
+   новой schema и выпустить новый versioned recovery-evidence artifact, не
+   перезаписывая исходную pre-stage backup/evidence. Получить новую exact
+   confirmation, затем выполнить ровно одну попытку baseline promote. При
+   неопределённом transport result сначала выполнить canonical read-only verify,
+   без blind retry.
+3. После успешного baseline создать отдельный candidate plan и в независимых
+   ролях завершить `stage → review → recovery evidence → promote → verify →
+   repeated-promote reconciliation → rollback → verify → roll-forward → verify`,
+   получив ровно один current promoted snapshot.
 4. Подготовить, независимо проверить и отдельно разрешённо deployed preview
    auth/email candidate; ограничить email smoke согласованными test recipients.
 5. Владелец лично создаёт и подтверждает два account, не передавая password,

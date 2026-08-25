@@ -24,8 +24,10 @@ Production readiness: **`blocked` / NO-GO**
 ## Full-manual-preview checkpoint — текущий проход 2026-08-25
 
 - Independently reviewed period/import execution anchor:
-  `a098b8324ddca337c19b3344c7c1f82dfb68a36a`; текущая `0023` remediation
-  является новым локальным кандидатом и не наследует review verdict этого SHA.
+  `a098b8324ddca337c19b3344c7c1f82dfb68a36a`. Timeout remediation имеет
+  отдельный immutable anchor `5789e319fd65850112a1bf05961e96c86f7c76aa`;
+  его exact-SHA independent read-only review вернул GO без
+  BLOCKER/HIGH/MEDIUM.
 - Утверждённый владельцем current period создан в preview одной атомарной D1
   mutation: `2026-2027` / `2026/2027`, даты
   `2026-08-17`–`2027-07-09`. Exact postverify: одна period/audit pair, users `0`,
@@ -42,11 +44,39 @@ Production readiness: **`blocked` / NO-GO**
   Подготовлена append-only migration `0023_legacy_projection_lookup_indexes.sql`
   и deterministic EXPLAIN regression. Check, 68 files/531 Vitest, build,
   Playwright 18/18, audit 0, docs/continuity и release scan прошли; независимый
-  read-only review текущего diff вернул GO без BLOCKER/HIGH/MEDIUM. Migration
-  локальна/pending: preview apply, новый recovery binding и следующий promote
-  требуют отдельного разрешения.
+  exact-SHA read-only review вернул GO без BLOCKER/HIGH/MEDIUM. Migration
+  committed/pending: preview apply, isolated-recovery apply, новый recovery
+  binding и следующий promote требуют отдельного разрешения.
 - Production, официальный сайт, реальные Office/PII источники, auth/email и
   bootstrap в этом проходе не изменялись.
+
+### Продолжение goal в новой сессии
+
+- Продолжать из clean local workspace на commit, содержащем этот handoff;
+  immutable code/migration anchor —
+  `5789e319fd65850112a1bf05961e96c86f7c76aa`. Перед действиями сверить
+  `STAGE_13_ACTIVE_STATE.md`, этот раздел и exact Git ancestry.
+- На этой же машине сохранены protected ignored controls
+  `wrangler.preview.toml`, `imports/legacy-preview-baseline-plan.json`,
+  `imports/legacy-preview-baseline-recovery-point.json` и
+  `imports/legacy-preview-baseline-recovery.json`. Они не входят в Git, не
+  должны выводиться или переноситься небезопасным способом и не появятся
+  автоматически в другой машине/cloud workspace.
+- Remote source остаётся на migrations `0001`–`0022`; period существует,
+  baseline reviewed/staged, current pair `none`, users/admins `0`. Timed-out
+  promote доказан как `not applied`; blind retry запрещён.
+- Ближайшее внешнее изменение требует одной новой точной фразы владельца,
+  разрешающей применить `0023` к preview и существующей isolated recovery D1,
+  обновить recovery evidence и сделать ровно одну новую baseline promote
+  attempt. Это разрешение не охватывает production, Worker/auth/email deploy,
+  account/bootstrap, Telegram или Office/PII.
+- После разрешения сначала применить/проверить `0023` на обеих D1, затем тем же
+  независимым recovery-verifier role создать новый versioned recovery evidence.
+  Исходную pre-stage backup/evidence не перезаписывать. Baseline confirmation и
+  promote/verify выполнять из clean exact
+  `a098b8324ddca337c19b3344c7c1f82dfb68a36a` worktree, потому что существующий
+  plan закреплён за этим SHA; migration в этот старый worktree не cherry-pick.
+  Неопределённый promote result сначала reconciled read-only, без blind retry.
 
 Stage 13 реализует технический hardening и operator packet, но не даёт права на
 production actions. Preview D1/R2 provision/migration и fail-closed Worker
