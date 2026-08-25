@@ -45,6 +45,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0020_reconciliation_release_fence.sql',
 			'0021_reconciliation_exact_candidate_evidence.sql',
 			'0022_reconciliation_completion_downstream_fence.sql',
+			'0023_legacy_projection_lookup_indexes.sql',
 		]);
 
 		const result = await context.db
@@ -89,6 +90,59 @@ describe('foundation D1 migration and repositories', () => {
 				'legacy_reconciliation_evidence_bindings',
 				'legacy_reconciliation_materializations',
 			])
+		);
+	});
+
+	it('uses version-scoped indexes for atomic legacy projection lookups', async () => {
+		const lookups = [
+			{
+				table: 'legacy_snapshot_families',
+				identity: 'legacy_family_id',
+				index: 'legacy_snapshot_families_version_family_lookup',
+			},
+			{
+				table: 'legacy_snapshot_children',
+				identity: 'legacy_child_id',
+				index: 'legacy_snapshot_children_version_child_lookup',
+			},
+			{
+				table: 'legacy_snapshot_source_rows',
+				identity: 'legacy_source_row_id',
+				index: 'legacy_snapshot_source_rows_version_row_lookup',
+			},
+			{
+				table: 'legacy_snapshot_enrollments',
+				identity: 'legacy_enrollment_id',
+				index: 'legacy_snapshot_enrollments_version_enrollment_lookup',
+			},
+		] as const;
+
+		for (const lookup of lookups) {
+			const index = await context.db
+				.prepare("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?")
+				.bind(lookup.index)
+				.first<{ sql: string }>();
+			expect(index?.sql).toContain(`(${['legacy_version_id', lookup.identity].join(', ')})`);
+
+			const plan = await context.db
+				.prepare(
+					`EXPLAIN QUERY PLAN SELECT id FROM ${lookup.table}
+					 WHERE legacy_version_id = ? AND ${lookup.identity} = ?`
+				)
+				.bind('synthetic-version', 'synthetic-identity')
+				.all<{ detail: string }>();
+			expect(plan.results.map(({ detail }) => detail).join('\n')).toContain(lookup.index);
+		}
+
+		const currentChildPlan = await context.db
+			.prepare(
+				`EXPLAIN QUERY PLAN SELECT 1 FROM legacy_source_rows
+				 WHERE child_id = ? AND is_current = 1`
+			)
+			.bind('synthetic-child')
+			.all<{ detail: string }>();
+		expect(currentChildPlan.results.map(({ detail }) => detail).join('\n')).toContain(
+			'legacy_source_rows_current_child_lookup'
 		);
 	});
 

@@ -255,6 +255,14 @@ leases в фиксированном порядке и одним batch выпо
 projection, pair switch, run status, append-only events и audit. Recovery digest
 обязателен для каждого promote и сохраняется в event/audit.
 
+Exact 1703-row bundle не должен запускаться без migration
+`0023_legacy_projection_lookup_indexes.sql`: она добавляет четыре
+version+snapshot-ID index и partial current-child index для всех коррелированных
+projection lookups. Focused gate обязан подтвердить их через
+`EXPLAIN QUERY PLAN`. Увеличивать client timeout поверх 30-second D1 query limit
+не является remediation. Если transition превысил limit или оборвался после
+dispatch, сначала выполнить только canonical `verify`; blind retry запрещён.
+
 Сейчас `production` promote/rollback/roll-forward всегда останавливается с
 `LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED` до чтения
 Cloudflare API token и до network call. Не обходить этот guard: сначала

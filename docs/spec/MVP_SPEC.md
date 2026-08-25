@@ -594,7 +594,9 @@ release gates сохраняются.
   PlusBText и Access current pointers, Access projection, import runs,
   append-only events и audit переключаются как один dependency-compatible D1
   batch под двумя leases/fencing tokens и compare-and-set expected-current;
-  частично опубликованная legacy pair недопустима.
+  частично опубликованная legacy pair недопустима. Представительная
+  1703-row projection обязана укладываться в provider query limit; все
+  коррелированные snapshot/current lookups имеют явные проверяемые индексы.
 - **IMPORT-05.** После каждого stage/promote/rollback/roll-forward выполняется
   PII-free verify: plan/run state, immutable planned-versus-actual source,
   snapshot, projection и issue counts,

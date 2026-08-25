@@ -270,6 +270,9 @@ MVP готов, когда:
   stager, reviewer и promoter. До отдельного remote transaction evidence
   production transition ещё до чтения API token или network call возвращает
   `LEGACY_RELEASE_PRODUCTION_TRANSACTION_EVIDENCE_NOT_IMPLEMENTED`.
+  Для exact 1703-row preview fixture query plan всех коррелированных projection
+  lookups использует version/current-scoped indexes; фактическое прохождение
+  provider limit подтверждается отдельным remote preview lifecycle evidence.
 - **AC-IMPORT-20.** Read-only verify возвращает только status, безопасные
   aggregate target/issue/event counts и booleans для pair uniqueness,
   dependency и `PRAGMA foreign_key_check`; D1 trigger и verifier отклоняют любое

@@ -150,6 +150,11 @@ concurrency/idempotency проверки в названном suite. Точны
 - promote без этого artifact или с неверным confirmation binding
   `hash(review+recovery+operator)` блокируется; успешный event сохраняет digest,
   injected Access publish failure после PlusBText work откатывает весь batch;
+- append-only projection-index migration проходит empty/populated upgrade;
+  deterministic `EXPLAIN QUERY PLAN` использует пять exact version/current-scoped
+  indexes вместо correlated snapshot/current scans. Exact 1703-row wall-clock
+  и 30-second provider limit доказываются remote preview lifecycle, а не временем
+  полного Miniflare stage setup;
 - bundle promote/rollback/roll-forward проверяет expected current pair,
   PlusBText/Access leases и fencing tokens, dependency и append-only events;
   retry timeout-after-commit reconciles completed event/current pair, а

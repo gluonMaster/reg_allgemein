@@ -1,6 +1,6 @@
 # Handoff этапа 13: hardening и production readiness
 
-Ревизия: 2026-08-24.
+Ревизия: 2026-08-25.
 
 Статус этапа: `in_progress` — exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956`
 получил authorized independent `IMPORT-08` review `NO-GO` с 2 BLOCKER и 2 HIGH.
@@ -20,6 +20,33 @@ final-confirm/apply fixtures fail closed, но не изолируют duplicate
 guard от других eligibility checks; текущего runtime bypass reviewer не нашёл.
 
 Production readiness: **`blocked` / NO-GO**
+
+## Full-manual-preview checkpoint — текущий проход 2026-08-25
+
+- Independently reviewed period/import execution anchor:
+  `a098b8324ddca337c19b3344c7c1f82dfb68a36a`; текущая `0023` remediation
+  является новым локальным кандидатом и не наследует review verdict этого SHA.
+- Утверждённый владельцем current period создан в preview одной атомарной D1
+  mutation: `2026-2027` / `2026/2027`, даты
+  `2026-08-17`–`2027-07-09`. Exact postverify: одна period/audit pair, users `0`,
+  FK violations `0`.
+- Встроенный no-PII baseline прошёл раздельные planner/stager/reviewer/recovery
+  роли: PlusBText `2/2`, Access `1703/1703`, issues `0`, current pair `none`.
+  Fresh protected recovery point и полный isolated restore отдельной EU D1
+  проверены; source preview не менялся при restore.
+- Baseline promote превысил provider 30-second query limit. После завершения
+  процесса два canonical read-only verify доказали `not applied`: plan
+  `reviewed`, current pair `none`, promoted/projection/event counts `0`,
+  dependency/FK/reconciliation gates valid. Дальнейший blind retry остановлен.
+- Причина — пять неиндексированных correlated lookups в атомарной projection.
+  Подготовлена append-only migration `0023_legacy_projection_lookup_indexes.sql`
+  и deterministic EXPLAIN regression. Check, 68 files/531 Vitest, build,
+  Playwright 18/18, audit 0, docs/continuity и release scan прошли; независимый
+  read-only review текущего diff вернул GO без BLOCKER/HIGH/MEDIUM. Migration
+  локальна/pending: preview apply, новый recovery binding и следующий promote
+  требуют отдельного разрешения.
+- Production, официальный сайт, реальные Office/PII источники, auth/email и
+  bootstrap в этом проходе не изменялись.
 
 Stage 13 реализует технический hardening и operator packet, но не даёт права на
 production actions. Preview D1/R2 provision/migration и fail-closed Worker

@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-24T16:53:37Z
-reviewed_candidate: 8362ffa875dde563519d91482e5aa5c8d6a2eca5
-last_completed_gate: phase-b-academic-period-boundary-immutable-candidate-verification
-next_gate: phase-b-academic-period-boundary-independent-review
+updated_utc: 2026-08-25T13:59:55Z
+reviewed_candidate: a098b8324ddca337c19b3344c7c1f82dfb68a36a
+last_completed_gate: phase-b-promote-timeout-remediation-verification-review
+next_gate: phase-b-promote-timeout-remediation-immutable-commit
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -34,6 +34,25 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Последний закрытый gate
 
+- В preview атомарно создан и проверен утверждённый current academic period
+  `2026-2027` / `2026/2027`, `2026-08-17`–`2027-07-09`; users/admins остались
+  `0`, FK violations `0`. Разрешение не распространялось на production.
+- Built-in no-PII baseline `legacy-preview-synthetic-baseline-v1` прошёл
+  независимые plan/stage/review/recovery роли: `2` PlusBText и `1703` Access
+  rows, issues `0`, exact current pair `none`. Full isolated EU D1 restore
+  проверен, source preview не публиковал current pair.
+- Первый promote не уложился в 30-second D1 query limit. Два post-exit
+  canonical verify однозначно доказали `not applied`: plan остаётся `reviewed`,
+  current pair `none`, projection/events/promoted rows `0`, FK/dependency
+  invariants проходят. Blind retry остановлен.
+- Root cause локализован в correlated projection lookups без exact indexes.
+  Подготовлена новая append-only candidate migration
+  `0023_legacy_projection_lookup_indexes.sql` с пятью узкими indexes;
+  deterministic `EXPLAIN QUERY PLAN` focused test проходит. Full gates прошли:
+  check 0/0, Vitest 68 files/531 tests, build, Playwright 18/18, audit 0,
+  docs/continuity и release scan. Независимый read-only review текущего diff
+  вернул GO без BLOCKER/HIGH/MEDIUM. Эта migration ещё не применена к preview и
+  не разрешает новый promote сама по себе.
 - Immutable remediation anchor
   `723e94715c2764f829bf718c49989428fa3c169a` создан непосредственным потомком
   rejected `73d41ab855cfd670f24b6791563e335f6828e446`. Exact diff содержит 14
@@ -88,9 +107,11 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 - Exact preview Worker уже deployed на 100%, canonical hostname защищён
   Cloudflare Access, versioned preview routes закрыты; повторный Worker deploy
   сейчас не нужен.
-- Preview D1 имеет migrations `0001`–`0022`, pending `0`, FK violations `0`, но
-  business state пуст: нет academic period, current promoted legacy snapshot,
-  users или admins; bootstrap control доступен и не использован.
+- Preview D1 имеет applied migrations `0001`–`0022`, а local candidate `0023`
+  ещё pending и не применён. FK violations `0`; current approved academic
+  period существует, reviewed synthetic baseline staged, current promoted
+  legacy snapshot всё ещё отсутствует; users/admins `0`, bootstrap control
+  доступен и не использован.
 - Два preview R2 bucket private/EU и пусты.
 - Public auth, прикладной email, Telegram, document upload, contract send,
   public statutory и media paths остаются fail-closed. Scheduled operations
