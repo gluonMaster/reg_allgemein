@@ -469,15 +469,16 @@ operator checks the approved chat. Prepared unsent smoke cohort закрыват
 
 ## 4. Ручная проверка quarantined document
 
-Production upload сейчас `feature_disabled`. Раздельные
-`R2_QUARANTINE`/`R2_ARCHIVE`, local tests и private preview EU wiring evidence
-уже есть, но процедура применяется только после production/restore resource
-evidence, approved training, controlled AV passage, legal/provider approval и
-полного release gate.
+Production upload остаётся `feature_disabled`, но по `REQ-11` рабочий preview
+обязан фактически пройти эту процедуру на синтетическом файле через реальные
+раздельные preview `R2_QUARANTINE`/`R2_ARCHIVE`. Training/legal/provider approval
+являются production gates и не откладывают контролируемый preview rehearsal.
 
 **Prerequisites:** active admin с purpose; выделенная локальная quarantine-папка
 внутри утверждённого encrypted workspace; актуальные утверждённые AV definitions;
-никакого cloud sync/public scanner; document status `quarantined`.
+никакого cloud sync/public scanner; document status `quarantined`. Для preview:
+`APP_ENV=preview`, Access protection, `DOCUMENT_UPLOAD_ENABLED=true`, verified
+synthetic parent и файл без PII.
 
 **Точное UI/команда:** на `<PORTAL_ORIGIN>/admin/requests` использовать forced
 download для одной записи. Сохранить файл в выделенную папку, не открывать его.
@@ -558,26 +559,50 @@ archive handoff; duplicate run идемпотентен; approved archive не �
 
 ## 7. Проверить Browser quota и contract rendering
 
-Production contract send сейчас `feature_disabled`.
+Production contract send остаётся `feature_disabled`. Ниже описан обязательный
+`preview_review` rehearsal; он не выдаёт production approval.
 
-**Prerequisites:** Browser binding и approved templates/legal profiles; remote
-conformance passed; budget/alert inputs утверждены.
+**Prerequisites:** Access-protected preview; verified synthetic parent и active
+admin; Browser/private archive bindings; Resend key; SHA-256 адреса только
+контролируемых test recipients в `PREVIEW_EMAIL_RECIPIENT_HASHES`;
+`CONTRACT_SEND_ENABLED=true`, `CONTRACT_PREVIEW_REVIEW_ENABLED=true`,
+`CONTRACT_RENDERER=browser_run`; migration `0024` applied. Реальные клиенты и
+Office/PII запрещены.
 
-**Точная UI:** `/admin/contracts`. `/admin/operations` показывает scheduled job
-runs, но не Browser quota/render metrics. Отдельной безопасной CLI/manual-render
-команды нет, поэтому Browser production gate остаётся `blocked`.
+**Точное UI:** `/admin/contracts`. Сначала один active admin нажимает «Vier
+Preview-Prüfvorlagen bereitstellen»; создаются четыре immutable
+`preview-review-v1` bundle в private R2 и D1. Затем для synthetic owner/child
+создаются четыре offer вида `group_yearly|group_monthly|individual_hourly|
+nachhilfe_hourly` с `previewReviewMarker=synthetic-no-pii`. Кнопка render/send
+вызывает Browser Run и штатный email outbox. Родитель открывает offer из кабинета,
+скачивает PDF и для одного offer выполняет acceptance; другой active admin
+выполняет formation/activation. Родитель и admin отдельно скачивают offer PDF и
+formation certificate.
 
-**Ожидаемый безопасный результат:** quota/budget не исчерпаны; rendering errors
-не создают send без immutable PDF; glyph/font/long-name/pagination tests passed.
+**Ожидаемый безопасный результат:** все четыре письма имеют тему/текст
+`TEST/ENTWURF`, содержат именно hash-verified PDF attachment, а каждая страница
+PDF — watermark `TEST/ENTWURF — nicht für reale Vertragsbeziehungen`. Static
+provider/register/contact, общие и kind-specific clauses, цена/оплата,
+Widerrufsinformation и Muster-Widerrufsformular визуально проверяются на
+фактическом output. Для платного договора кнопка явно сообщает платежное
+обязательство; funded Nachhilfe использует отдельную неплатёжную кнопку.
 
-**Проверка:** safe counts/duration/error code; PDF body и client content не
-попадают в logs/evidence.
+**Проверка:** D1 template scope/basis ровно `preview_review/internal_preview_review`;
+offer artifact size/SHA совпадают с R2 и email attachment; outbox `sent` содержит
+только provider request ID; offer acceptance actor отличается по роли от
+formation admin; certificate ready и оба download audit существуют. Evidence
+хранит только opaque IDs, hashes, statuses, timestamps и safe error codes — без
+email, имени, адреса или PDF body.
 
-**Stop condition:** metrics отсутствуют, renderer disabled, template/legal gate
-не passed, quota exhaustion или partial artifact.
+**Stop condition:** любой адрес вне allowlist, отсутствующий marker/watermark,
+R2/hash mismatch, письмо без attachment, renderer disabled, quota exhaustion,
+partial artifact, реальный клиент/PII или попытка использовать preview template
+в production.
 
-**Rollback/recovery:** оставить `CONTRACT_SEND_ENABLED=false` и renderer disabled;
-не применять manual PDF workaround к production договору.
+**Rollback/recovery:** вернуть `CONTRACT_PREVIEW_REVIEW_ENABLED=false`,
+`CONTRACT_SEND_ENABLED=false`, `CONTRACT_RENDERER=disabled`, сохранить D1/R2/
+outbox evidence и разбирать ошибку по opaque IDs. Не перерендеривать уже принятый
+offer и не применять manual PDF workaround к production договору.
 
 ## 8. Безопасный block/session incident и family correction
 

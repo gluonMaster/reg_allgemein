@@ -8,10 +8,13 @@ entry-point, а не snapshot отдельного gate. Не выбирай д�
 ## Постоянная цель
 
 Ближайшая проверяемая цель — Access-protected preview, в котором владелец может
-вручную проверить весь MVP в максимально полном канонически допустимом виде на
-синтетических данных без PII. После достижения этого milestone продолжай Stage
-13 до production readiness и отдельно разрешённого production deploy. Один
-local fix, review, import, deploy, login или bootstrap не завершает процесс.
+вручную проверить весь MVP end-to-end на синтетических данных без PII. По
+`SYS-04`/`OQ-036` это требует реально включённых preview-only contract/
+Browser/R2/email, Telegram normal-outbox и document upload/quarantine/manual-AV/
+business-review paths; production approval или `feature_disabled` не заменяет
+их проверку. После достижения этого milestone продолжай Stage 13 до production
+readiness и отдельно разрешённого production deploy. Один local fix, review,
+import, deploy, login или bootstrap не завершает процесс.
 
 ## Обязательный старт
 
@@ -24,7 +27,8 @@ local fix, review, import, deploy, login или bootstrap не завершае�
    `docs/operations/PRODUCTION_READINESS.md`,
    `docs/operations/PRODUCTION_READINESS_CHECKLIST.md`,
    `docs/operations/PRODUCTION_DEPLOYMENT.md` и тематический runbook следующего
-   gate.
+   gate. Для всех preview-функций обязательно прочитай
+   `docs/operations/FULL_MANUAL_PREVIEW.md`.
 2. Выполни `git status --short`, `git rev-parse HEAD` и fresh read-only
    reconciliation только тех remote ресурсов, которые нужны для следующего
    gate. Сохрани чужие изменения; не делай reset/checkout/cleanup.
@@ -52,7 +56,8 @@ local fix, review, import, deploy, login или bootstrap не завершае�
 boundary или при небезопасной потере context. Перед остановкой заверши всю
 безопасную подготовку и задай один точный вопрос: environment, scope, expected
 result, stop condition и rollback. Разрешение одного remote scope не переносится
-на другой.
+на другой. Legal/provider/training approval, нужный только для production, не
+является причиной останавливать подготовку synthetic preview lifecycle.
 
 ## Permission boundary
 

@@ -2,6 +2,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import { ResendEmailProvider } from '$lib/server/email/resend';
+import { contractArtifactStore } from '$lib/server/contracts/storage';
 import { TelegramBotApiProvider } from '$lib/server/telegram/bot-api';
 import {
 	DisabledEmailProvider,
@@ -13,12 +14,21 @@ import {
 } from './providers';
 import { OutboxRepository } from './outbox-repository';
 import { EmailOutboxWorker, TelegramOutboxWorker } from './outbox-worker';
+import { ContractEmailAttachmentResolver } from './email-attachments';
 
 export function createOutboxRuntime(
 	config: RuntimeConfig,
 	overrides: { emailProvider?: EmailProvider; telegramProvider?: TelegramProvider } = {}
 ) {
-	const repository = new OutboxRepository(new DatabaseBoundary(config.db));
+	const database = new DatabaseBoundary(config.db);
+	const repository = new OutboxRepository(database);
+	const attachmentResolver = config.r2ArchiveBucket
+		? new ContractEmailAttachmentResolver(
+				database,
+				contractArtifactStore(config.r2ArchiveBucket),
+				config.contracts.maxPdfBytes
+			)
+		: undefined;
 	const emailProvider =
 		overrides.emailProvider ??
 		(config.messaging.emailProvider === 'fake'
@@ -54,7 +64,10 @@ export function createOutboxRuntime(
 			emailProvider,
 			config.jwtSecret,
 			config,
-			timing
+			timing,
+			undefined,
+			undefined,
+			attachmentResolver
 		),
 		telegramWorker: new TelegramOutboxWorker(
 			repository,
@@ -76,6 +89,7 @@ function createResendEmailProvider(config: RuntimeConfig): ResendEmailProvider {
 		apiKey: resendApiKey,
 		from: emailFrom,
 		replyTo: emailReplyTo,
+		allowedRecipientHashes: config.messaging.previewEmailRecipientHashes,
 	});
 }
 

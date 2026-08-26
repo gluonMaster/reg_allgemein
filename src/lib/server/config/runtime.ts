@@ -25,6 +25,7 @@ const rawConfigSchema = z.object({
 	EMAIL_FROM: z.string().min(1).optional(),
 	EMAIL_REPLY_TO: z.string().min(1).optional(),
 	RESEND_API_KEY: z.string().min(20).optional(),
+	PREVIEW_EMAIL_RECIPIENT_HASHES: z.string().min(1).optional(),
 	PRIVACY_NOTICE_VERSION: z.string().min(1).optional(),
 	AUTH_VERIFICATION_TTL_SECONDS: z.string().optional(),
 	AUTH_RESET_TTL_SECONDS: z.string().optional(),
@@ -61,6 +62,7 @@ const rawConfigSchema = z.object({
 	DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS: z.string().optional(),
 	DOCUMENT_AV_ATTESTATION_TEXT_VERSION: z.string().min(1).optional(),
 	CONTRACT_SEND_ENABLED: z.enum(['true', 'false']).optional(),
+	CONTRACT_PREVIEW_REVIEW_ENABLED: z.enum(['true', 'false']).optional(),
 	CONTRACT_RENDERER: z.enum(['disabled', 'synthetic_test', 'browser_run']).optional(),
 	CONTRACT_PDF_MAX_HTML_BYTES: z.string().optional(),
 	CONTRACT_PDF_MAX_BYTES: z.string().optional(),
@@ -141,6 +143,7 @@ export interface DocumentRuntimeConfig {
 
 export interface ContractRuntimeConfig {
 	sendEnabled: boolean;
+	previewReviewEnabled: boolean;
 	renderer: 'disabled' | 'synthetic_test' | 'browser_run';
 	maxHtmlBytes: number;
 	maxPdfBytes: number;
@@ -155,6 +158,7 @@ export interface MessagingRuntimeConfig {
 	emailFrom?: string;
 	emailReplyTo?: string;
 	resendApiKey?: string;
+	previewEmailRecipientHashes: readonly string[];
 	telegramProvider: TelegramProviderKind;
 	telegramBotToken?: string;
 	telegramChatId?: string;
@@ -332,6 +336,20 @@ function parseTurnstileHostnames(value: string | undefined, issues: string[]): s
 	return [...hostnames];
 }
 
+function parsePreviewRecipientHashes(value: string | undefined, issues: string[]): string[] {
+	if (!value) return [];
+	const hashes = value.split(',').map((entry) => entry.trim().toLowerCase());
+	if (
+		hashes.length > 5 ||
+		hashes.some((hash) => !/^[0-9a-f]{64}$/u.test(hash)) ||
+		new Set(hashes).size !== hashes.length
+	) {
+		issues.push('PREVIEW_EMAIL_RECIPIENT_HASHES:invalid_sha256_allowlist');
+		return [];
+	}
+	return hashes;
+}
+
 function validateOfficialUrl(
 	name: string,
 	value: string | undefined,
@@ -431,10 +449,15 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	const authPublicEnabled = parsed.data.AUTH_PUBLIC_ENABLED === 'true';
 	const documentUploadEnabled = parsed.data.DOCUMENT_UPLOAD_ENABLED === 'true';
 	const contractSendEnabled = parsed.data.CONTRACT_SEND_ENABLED === 'true';
+	const contractPreviewReviewEnabled = parsed.data.CONTRACT_PREVIEW_REVIEW_ENABLED === 'true';
 	const contractRenderer = parsed.data.CONTRACT_RENDERER ?? 'disabled';
 	const mediaOnlineGrantEnabled = parsed.data.MEDIA_ONLINE_GRANT_ENABLED === 'true';
 	const publicContractFunctionsEnabled = parsed.data.PUBLIC_CONTRACT_FUNCTIONS_ENABLED === 'true';
 	const emailProvider = parsed.data.EMAIL_PROVIDER ?? 'disabled';
+	const previewEmailRecipientHashes = parsePreviewRecipientHashes(
+		parsed.data.PREVIEW_EMAIL_RECIPIENT_HASHES,
+		issues
+	);
 	const telegramProvider = parsed.data.TELEGRAM_PROVIDER ?? 'disabled';
 	const officialPrivacyUrl = validateOfficialUrl(
 		'OFFICIAL_PRIVACY_URL',
@@ -508,6 +531,19 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (parsed.data.APP_ENV === 'production' && emailProvider === 'fake') {
 		issues.push('EMAIL_PROVIDER:fake_forbidden_in_production');
 	}
+	if (
+		parsed.data.APP_ENV === 'preview' &&
+		emailProvider === 'resend' &&
+		previewEmailRecipientHashes.length === 0
+	) {
+		issues.push('PREVIEW_EMAIL_RECIPIENT_HASHES:required_for_preview_resend');
+	}
+	if (
+		parsed.data.APP_ENV !== 'preview' &&
+		parsed.data.PREVIEW_EMAIL_RECIPIENT_HASHES !== undefined
+	) {
+		issues.push('PREVIEW_EMAIL_RECIPIENT_HASHES:preview_only');
+	}
 	if (parsed.data.APP_ENV === 'production' && telegramProvider === 'fake') {
 		issues.push('TELEGRAM_PROVIDER:fake_forbidden_in_production');
 	}
@@ -533,9 +569,10 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		} else if (
 			!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(
 				parsed.data.TELEGRAM_ACTIVATION_AT
-			) || Number.isNaN(Date.parse(parsed.data.TELEGRAM_ACTIVATION_AT))
-			|| new Date(parsed.data.TELEGRAM_ACTIVATION_AT).toISOString()
-				!== parsed.data.TELEGRAM_ACTIVATION_AT
+			) ||
+			Number.isNaN(Date.parse(parsed.data.TELEGRAM_ACTIVATION_AT)) ||
+			new Date(parsed.data.TELEGRAM_ACTIVATION_AT).toISOString() !==
+				parsed.data.TELEGRAM_ACTIVATION_AT
 		) {
 			issues.push('TELEGRAM_ACTIVATION_AT:canonical_utc_required');
 		}
@@ -560,6 +597,21 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	if (contractSendEnabled && contractRenderer === 'disabled') {
 		issues.push('CONTRACT_RENDERER:required_when_send_enabled');
+	}
+	if (contractPreviewReviewEnabled && parsed.data.APP_ENV !== 'preview') {
+		issues.push('CONTRACT_PREVIEW_REVIEW_ENABLED:preview_only');
+	}
+	if (
+		contractPreviewReviewEnabled &&
+		(!contractSendEnabled || contractRenderer !== 'browser_run')
+	) {
+		issues.push('CONTRACT_PREVIEW_REVIEW_ENABLED:browser_send_required');
+	}
+	if (contractPreviewReviewEnabled && emailProvider !== 'resend') {
+		issues.push('CONTRACT_PREVIEW_REVIEW_ENABLED:resend_required');
+	}
+	if (parsed.data.APP_ENV === 'preview' && contractSendEnabled && !contractPreviewReviewEnabled) {
+		issues.push('CONTRACT_SEND_ENABLED:preview_review_gate_required');
 	}
 	if (contractRenderer === 'synthetic_test' && parsed.data.APP_ENV !== 'test') {
 		issues.push('CONTRACT_RENDERER:synthetic_test_only');
@@ -684,6 +736,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		emailFrom: parsed.data.EMAIL_FROM,
 		emailReplyTo: parsed.data.EMAIL_REPLY_TO,
 		resendApiKey: parsed.data.RESEND_API_KEY,
+		previewEmailRecipientHashes,
 		telegramProvider,
 		telegramBotToken: parsed.data.TELEGRAM_BOT_TOKEN,
 		telegramChatId: parsed.data.TELEGRAM_CHAT_ID,
@@ -822,6 +875,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 
 	const contracts: ContractRuntimeConfig = {
 		sendEnabled: contractSendEnabled,
+		previewReviewEnabled: contractPreviewReviewEnabled,
 		renderer: contractRenderer,
 		maxHtmlBytes: parseIntegerConfig({
 			name: 'CONTRACT_PDF_MAX_HTML_BYTES',

@@ -6,10 +6,20 @@ export interface EmailMessage {
 	to: string;
 	subject: string;
 	text: string;
+	attachments?: readonly EmailAttachment[];
+}
+
+export interface EmailAttachment {
+	filename: string;
+	content: Uint8Array;
+	contentType: 'application/pdf';
 }
 
 export interface EmailProvider {
-	send(message: EmailMessage, context?: ProviderSendContext): Promise<{ providerRequestId: string }>;
+	send(
+		message: EmailMessage,
+		context?: ProviderSendContext
+	): Promise<{ providerRequestId: string }>;
 }
 
 export interface TelegramMessage {

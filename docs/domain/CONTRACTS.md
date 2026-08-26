@@ -34,9 +34,9 @@ HTML/CSS-шаблоны и Cloudflare Browser Run Quick Action `/pdf` по `ADR-
 - immutable bundle location/hash, HTML/CSS hash, font/asset manifests,
   `renderer_id`, adapter contract version и Worker compatibility date;
 - версию утверждённого clause set и manifest обязательных приложений;
-- `usage_scope` (`synthetic_test|production`), `approval_status`,
+- `usage_scope` (`synthetic_test|preview_review|production`), `approval_status`,
   `approval_basis`
-  (`synthetic_fixture|authorized_verein_approval|legal_review`),
+  (`synthetic_fixture|internal_preview_review|authorized_verein_approval|legal_review`),
   автора/дату утверждения и интервал применимости;
 - `distance_legal_profile`
   (`offline_only|widerruf_applicable|widerruf_not_applicable_312g_2_9`),
@@ -49,7 +49,7 @@ HTML/CSS-шаблоны и Cloudflare Browser Run Quick Action `/pdf` по `ADR-
 Он проверяет schema/hash/error contract, но не считается проверкой production
 fonts/pagination.
 
-Реальный offer переходит в `sent` только для
+Production offer переходит в `sent` только для
 `usage_scope=production + approval_status=approved +
 approval_basis=authorized_verein_approval|legal_review` и выбранного production
 renderer. Online send дополнительно требует утверждённый не-`offline_only`
@@ -64,6 +64,67 @@ Approved template bundle, fonts/assets и renderer metadata сохраняютс
 Хранить только hash,
 перезаписывая source при deploy, запрещено: старую принятую версию и готовый PDF
 должно быть возможно проверить. Byte-identical повторный render не обещается.
+
+## Preview-review договоры
+
+`usage_scope=preview_review + approval_status=approved +
+approval_basis=internal_preview_review` предназначен только для
+Access-protected preview и synthetic parties. Это не юридическое утверждение
+production-текста, а внутреннее разрешение изготовить видимый рабочий draft,
+прогнать настоящий технический lifecycle и передать получившийся PDF
+руководству/юристу для содержательной правки.
+
+Preview-review bundle строится для каждого из четырёх `template_id` и содержит:
+
+- общие versioned partials для provider snapshot, сторон, предмета договора,
+  цены/оплаты, privacy references, Widerruf/Kündigung information и signature/
+  formation evidence;
+- отдельные clauses вида договора, сохраняющие экономическую и операционную
+  суть соответствующего business source из `references/vorlage/`;
+- структурированные provider/payment/contact values из immutable snapshot, а
+  не реквизиты, зашитые в renderer или извлечённые во время runtime из Office;
+- обязательный заметный watermark на каждой странице и в теме/тексте письма:
+  `TEST/ENTWURF — nicht für reale Vertragsbeziehungen`;
+- immutable bundle/source/PDF hashes, renderer metadata и change log, чтобы
+  замечание руководства выпускало новую версию, а не меняло уже отправленный
+  artifact.
+
+Такой bundle использует реальный `cloudflare-browser-run-pdf-v1`, private
+preview R2 и обычный contract/email outbox, но отправляется только заранее
+согласованным контролируемым test recipients. Runtime gate одновременно
+требует `APP_ENV=preview`, preview-review feature flag и synthetic party marker;
+любой production environment, отсутствие watermark/marker либо попытка выбрать
+preview-review template для production offer завершается fail-closed.
+Deterministic bundle key записывается только если объекта ещё нет; существующий
+R2 object сначала сверяется по размеру и SHA-256 и при конфликте не
+перезаписывается. D1 install/replay принимает только exact provider/media/
+template snapshots, а create draft дополнительно требует совпадения approved
+HTML/CSS source hashes с текущим runtime renderer source.
+
+Реализация использует `CONTRACT_PREVIEW_REVIEW_ENABLED=true` только совместно с
+`CONTRACT_SEND_ENABLED=true`, `CONTRACT_RENDERER=browser_run` и
+`EMAIL_PROVIDER=resend`. Preview Resend дополнительно требует
+`PREVIEW_EMAIL_RECIPIENT_HASHES`: не более пяти SHA-256 от нормализованных
+адресов контролируемых получателей. Адреса в Git/vars/evidence не записываются;
+не входящий в allowlist recipient отклоняется до provider request.
+
+Событие `contract.sent` перед отправкой повторно загружает immutable `offer_pdf`
+из private R2, сверяет размер и SHA-256 с D1 и прикладывает PDF к обычному
+outbox-письму. Missing/mismatched artifact — permanent safe failure, а не письмо
+с одной ссылкой. Для платного offer родительская кнопка и серверный acceptance
+text явно называют платежное обязательство; для third-party funded Nachhilfe
+используется отдельный текст без платежного обязательства.
+
+До `full-manual-preview` все четыре вида проходят real render/delivery review,
+а минимум один — offer send, parent acceptance, formation/activation другим
+admin actor, certificate и owner/admin download. Финальное управленческое/
+юридическое approval и применимый distance-legal profile остаются production
+gate после просмотра этих artifacts, а не prerequisite их создания.
+
+Append-only migration `0024_contract_preview_review.sql` расширяет таблицу
+`contract_template_versions` из migration `0010` значениями `preview_review` и
+`internal_preview_review`, сохраняя прежние строки/FK/guards. Применённая `0010`
+не переписывается.
 
 ## Production PDF renderer
 
@@ -402,7 +463,9 @@ Blocker применяется по виду offer/включённой функ
 | SEPA/medical feature | Вне MVP; включение требует нового требования и privacy review |
 
 Stage 09 может завершить core с `synthetic_test`-adapter, но это не снимает ни
-одного production blocker.
+одного production blocker. Эти production blockers не отменяют обязательный
+`preview_review` lifecycle из `CONTRACT-21`: его artifacts явно не имеют силы
+реального договора и не могут быть отправлены реальному клиенту.
 
 ## Юридические риски и минимальные корректировки
 

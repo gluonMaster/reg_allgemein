@@ -46,6 +46,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0021_reconciliation_exact_candidate_evidence.sql',
 			'0022_reconciliation_completion_downstream_fence.sql',
 			'0023_legacy_projection_lookup_indexes.sql',
+			'0024_contract_preview_review.sql',
 		]);
 
 		const result = await context.db

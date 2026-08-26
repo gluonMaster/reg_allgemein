@@ -304,6 +304,15 @@ Provider остаётся `disabled` до установки environment-specifi
 разрешённого preview smoke с синтетическим адресатом и отдельного решения о
 включении реальной отправки.
 
+Для рабочего preview `EMAIL_PROVIDER=resend` дополнительно требует
+`PREVIEW_EMAIL_RECIPIENT_HASHES`: comma-separated SHA-256 allowlist максимум из
+пяти нормализованных test-recipient адресов. Сами адреса не попадают в Git,
+Worker vars, audit или evidence. Проверка выполняется до HTTPS-запроса к Resend;
+адрес вне allowlist завершается permanent safe error. `contract.sent` может
+содержать ровно один PDF до 10 MiB: worker получает его только из private R2,
+предварительно сверяет D1 size/SHA-256, а provider передаёт Base64 attachment.
+Официальный Resend batch endpoint для этого пути не используется.
+
 ## Языки
 
 Обязательный MVP locale — German. Template keys и UI не должны блокировать

@@ -26,6 +26,7 @@ declare global {
 				EMAIL_FROM?: string;
 				EMAIL_REPLY_TO?: string;
 				RESEND_API_KEY?: string;
+				PREVIEW_EMAIL_RECIPIENT_HASHES?: string;
 				JWT_SECRET?: string;
 				TURNSTILE_SITE_KEY?: string;
 				TURNSTILE_SECRET_KEY?: string;
@@ -62,6 +63,7 @@ declare global {
 				DOCUMENT_UPLOAD_RATE_LIMIT_MAX_ATTEMPTS?: string;
 				DOCUMENT_AV_ATTESTATION_TEXT_VERSION?: string;
 				CONTRACT_SEND_ENABLED?: string;
+				CONTRACT_PREVIEW_REVIEW_ENABLED?: string;
 				CONTRACT_RENDERER?: string;
 				CONTRACT_PDF_MAX_HTML_BYTES?: string;
 				CONTRACT_PDF_MAX_BYTES?: string;

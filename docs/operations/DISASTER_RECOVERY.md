@@ -1,6 +1,6 @@
 # Аварийное восстановление
 
-Ревизия: 2026-08-20.
+Ревизия: 2026-08-25.
 
 Статус документа: `blocked`. Одноразовая репетиция 2026-08-20 доказала protected
 preview D1 export и его полное восстановление в отдельную EU D1, а также exact
@@ -9,11 +9,14 @@ EU restore buckets. RPO, RTO, backup cadence/retention, reusable R2 backup
 mechanism для будущего непустого состояния и full application critical-path
 restore smoke ещё не утверждены или не доказаны. Эти остатки сохраняют
 production recovery readiness в `blocked` и не отменяют локальный candidate GO.
-Target-pinned remote legacy import boundary реализован и локально протестирован,
-но remote rehearsal/restore evidence отсутствует. Для первого promote нет
-previous published version, поэтому обычный import-version rollback не является
-recovery: до mutation нужен проверенный recovery bookmark/pre-import D1 backup и
-isolated restore к состоянию без current legacy snapshot.
+Target-pinned remote legacy import boundary прошёл оба synthetic/no-PII preview
+plans. До baseline promote distinct isolated D1 restore был перепроверен на
+exact schema `0001`–`0023` и состоянии без current legacy snapshot. Перед
+candidate stage создан новый protected candidate-current export и полный
+restore в новую distinct/unbound EU D1; plan-bound evidence подтвердил baseline
+как exact previous pair. Candidate затем прошёл promote, один idempotent repeat,
+rollback и roll-forward с canonical verify после каждого перехода. Финальная
+current pair — candidate; baseline остаётся previous rollback target.
 
 Наличие export или provider backup само по себе не означает возможность
 восстановления. `passed` допустим только после полного D1/R2 restore в новую
@@ -37,19 +40,19 @@ non-production environment и критического smoke. Production restore
 
 ## Release inputs
 
-| Input                               | Значение                                        | Gate при отсутствии |
-| ----------------------------------- | ----------------------------------------------- | ------------------- |
-| RPO                                 | `<APPROVED_RPO>` — не задано                    | `blocked`           |
-| RTO                                 | `<APPROVED_RTO>` — не задано                    | `blocked`           |
-| Backup cadence                      | `<APPROVED_CADENCE>` — не задано                | `blocked`           |
-| Backup retention                    | `<APPROVED_RETENTION>` — не задано              | `blocked`           |
-| D1 backup owner/location/encryption | `<APPROVED_D1_BACKUP_PROFILE>` — не задано      | `blocked`           |
-| R2 backup owner/location/encryption | `<APPROVED_R2_BACKUP_PROFILE>` — не задано      | `blocked`           |
-| Restore environment config          | protected ignored config создан/проверен 2026-08-20 | `passed`         |
-| Restore D1                          | отдельная unbound EU D1 восстановлена/сверена   | `passed`            |
-| Restore R2                          | две private EU buckets воспроизводят текущие 0 objects/0 B | `passed` |
-| Production restore approval         | отдельное прямое поручение                      | `blocked`           |
-| Legacy pre-import recovery point     | exact target/time/hash before first remote stage/promote; не создан/не проверен | `blocked` |
+| Input                               | Значение                                                                                                                                                                        | Gate при отсутствии              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| RPO                                 | `<APPROVED_RPO>` — не задано                                                                                                                                                    | `blocked`                        |
+| RTO                                 | `<APPROVED_RTO>` — не задано                                                                                                                                                    | `blocked`                        |
+| Backup cadence                      | `<APPROVED_CADENCE>` — не задано                                                                                                                                                | `blocked`                        |
+| Backup retention                    | `<APPROVED_RETENTION>` — не задано                                                                                                                                              | `blocked`                        |
+| D1 backup owner/location/encryption | `<APPROVED_D1_BACKUP_PROFILE>` — не задано                                                                                                                                      | `blocked`                        |
+| R2 backup owner/location/encryption | `<APPROVED_R2_BACKUP_PROFILE>` — не задано                                                                                                                                      | `blocked`                        |
+| Restore environment config          | protected ignored config создан/проверен 2026-08-20                                                                                                                             | `passed`                         |
+| Restore D1                          | отдельная unbound EU D1 восстановлена/сверена                                                                                                                                   | `passed`                         |
+| Restore R2                          | две private EU buckets воспроизводят текущие 0 objects/0 B                                                                                                                      | `passed`                         |
+| Production restore approval         | отдельное прямое поручение                                                                                                                                                      | `blocked`                        |
+| Legacy pre-import recovery point    | baseline и candidate: protected plan-bound points и distinct isolated restores through `0023` проверены 2026-08-25; candidate evidence привязано к exact previous baseline pair | `passed` for synthetic rehearsal |
 
 Эти значения нельзя заменять отраслевыми defaults или оценкой агента.
 
@@ -57,16 +60,16 @@ non-production environment и критического smoke. Production restore
 
 Реализованный stage-13 inventory:
 
-| Назначение                   | Binding         | Restore target                     |
-| ---------------------------- | --------------- | ---------------------------------- |
-| Runtime database             | `DB`; deployed preview `0001`–`0022`, pending 0 | новая isolated non-production D1 |
-| Retained/approved archive    | `R2_ARCHIVE`    | новый private EU archive bucket    |
-| Quarantine/transient objects | `R2_QUARANTINE` | новый private EU quarantine bucket |
+| Назначение                   | Binding                                         | Restore target                     |
+| ---------------------------- | ----------------------------------------------- | ---------------------------------- |
+| Runtime database             | `DB`; deployed preview `0001`–`0023`, pending 0 | новая isolated non-production D1   |
+| Retained/approved archive    | `R2_ARCHIVE`                                    | новый private EU archive bucket    |
+| Quarantine/transient objects | `R2_QUARANTINE`                                 | новый private EU quarantine bucket |
 
 Полный append-only migration set `0001_foundation.sql`–
 `0015_worker_monitoring.sql`, `R2_ARCHIVE` и `R2_QUARANTINE` сверены с runtime и
 локальными migration/storage-intent тестами. Current preview имеет migrations
-`0001`–`0022`, pending 0, и физически разные private EU buckets. Репетиция
+`0001`–`0023`, pending 0, и физически разные private EU buckets. Репетиция
 2026-08-20 восстановила exact current D1 state в отдельную unbound EU D1 и
 воспроизвела текущее пустое состояние обоих source buckets в двух отдельных
 private EU restore buckets. Это не доказывает production placement, future
@@ -78,7 +81,10 @@ Migrations `0016_legacy_import_release_control.sql`,
 `0018_legacy_import_release_hardening.sql` и reconciliation migrations
 `0019`–`0022` были отдельно разрешены и применены только в preview 2026-08-20.
 Exact ledger 22/22, candidate schema inventory, empty new tables и 0 FK
-violations проверены; production и Worker этим не изменялись.
+violations проверены; production и Worker этим не изменялись. Append-only
+`0023_legacy_projection_lookup_indexes.sql` отдельно разрешена и применена
+2026-08-25 только к preview и существующей distinct isolated recovery D1; exact
+23-entry ledger, пять indexes/query plans и FK `0` проверены на обеих.
 
 Initial preview migration evidence 2026-08-10 (`0001`–`0014`, 14/14, pending 0)
 сохраняется как историческая точка до monitoring migration. Append-only
@@ -268,7 +274,7 @@ npm run release:verify
 
 `npm run release:verify` проверяет typecheck, полный Vitest suite, Playwright,
 build, production dependency audit, документацию и artifact/secret/PII scan.
-Локальные проверки candidate migration set `0001`–`0022`, job inventory и
+Локальные проверки candidate migration set `0001`–`0023`, job inventory и
 fail-closed config входят в suite, но полный release gate остаётся `blocked` при
 любой неуспешной команде и до remote restore smoke.
 
@@ -311,7 +317,7 @@ D1/R2 не изменены; reason не содержит PII.
 scheduled/provider behavior и post-rollback smoke.
 
 **Stop condition:** previous code не понимает exact target schema (deployed
-preview сейчас `0001`–`0022`),
+preview сейчас `0001`–`0023`),
 known-good ID неизвестен, rollback затронет wrong Worker или проблема в data/
 import.
 
@@ -332,7 +338,7 @@ scope известны; write/external paths contained; database/security owners
 - если damage нельзя безопасно исправить — восстановить D1/R2 в isolated env и
   запросить отдельное production restore approval.
 
-Весь migration set `0001`–`0022` теперь deployed в preview и проходит local empty tests;
+Весь migration set `0001`–`0023` теперь deployed в preview и проходит local tests;
 representative populated upgrade применяет весь suffix после `0013`. Recovery
 compatibility получила remote apply/schema/FK evidence, но остаётся неполной без
 post-apply isolated restore и code-rollback/forward-fix rehearsal.
@@ -344,8 +350,8 @@ schema/data compatibility доказана.
 critical smoke.
 
 **Stop condition:** предложение отредактировать любую applied migration
-`0001`–`0022`, direct SQL hotfix без migration/audit, backup не восстанавливается
-или code/schema несовместимы. Все `0001`–`0022` уже applied в preview; следующее
+`0001`–`0023`, direct SQL hotfix без migration/audit, backup не восстанавливается
+или code/schema несовместимы. Все `0001`–`0023` уже applied в preview; следующее
 исправление после реально применённого набора всегда получает новый номер.
 
 **Rollback/recovery:** оставить feature disabled; подготовить reviewed forward
@@ -399,11 +405,11 @@ remote command/target pinning отсутствует, first import не имее
 path, plan/source hash changed, partial Access/PlusBText switch, rollback выделяет
 namespace `2` при lookup failure.
 
-**Rollback/recovery:** production не менять. Remote import rollback/roll-forward
-boundary реализована локально, но first-import restore сейчас `blocked`; нужны
-authorized built-in synthetic/no-PII preview rehearsal, exact protected recovery
-artifact и separate production restore permission. Production transitions в
-candidate fail closed до такого remote transaction evidence.
+**Rollback/recovery:** production не менять. Built-in synthetic/no-PII preview
+rehearsal с exact protected recovery artifacts, idempotent repeated promote,
+rollback и roll-forward пройдена. Это не разрешает production transitions:
+production restore всё ещё требует отдельного permission, approved RPO/RTO и
+полного production-grade recovery evidence.
 
 ## 10. Emergency feature disable
 
@@ -501,18 +507,18 @@ post-restore monitoring и rollback trigger.
 
 Запись репетиции 2026-08-20:
 
-| Поле                             | Значение |
-| -------------------------------- | -------- |
-| Date/time UTC                    | `2026-08-20T13:12:41Z`–`2026-08-20T13:27:42Z` |
-| Environment                      | isolated preview recovery resources; no Worker binding |
-| Commit/Worker/tool versions      | HEAD `82ca91e3`; source Worker unchanged; Wrangler `4.120.1` |
+| Поле                             | Значение                                                                                                                                                                                                                                                                          |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date/time UTC                    | `2026-08-20T13:12:41Z`–`2026-08-20T13:27:42Z`                                                                                                                                                                                                                                     |
+| Environment                      | isolated preview recovery resources; no Worker binding                                                                                                                                                                                                                            |
+| Commit/Worker/tool versions      | HEAD `82ca91e3`; source Worker unchanged; Wrangler `4.120.1`                                                                                                                                                                                                                      |
 | D1 backup hash и safe counts     | plaintext SHA-256 `2c3cc90ffb455dc04a7c99bf2d30ead0d578454755d9fedbfc7e8e3129dd6c92`; encrypted SHA-256 `9401a7bb980f21804a590aac2e523b961edc35c4fd3d29273ab6fc924aea2981`; 398 schema objects, 124 tables, 32,146 aggregate rows; exact schema/per-table counts; 0 FK violations |
-| R2 manifest hashes и safe counts | source archive/quarantine and distinct restore pair: each `0 objects / 0 B`, EEUR; non-empty manifest not applicable to this point |
-| Restore duration                 | 901 s measured; RTO not claimed |
-| Recovery-point delta             | 133 s measured; RPO not claimed |
-| Smoke/result                     | D1 exact schema/count/FK restore `passed`; current empty-state R2 restore `passed`; providers/features `feature_disabled`; application critical path not run |
-| Operator/reviewer role           | release operator; evidence independently reproducible from protected manifest and remote aggregate checks |
-| Gaps/next action                 | approve RPO/RTO/cadence/retention; implement non-empty R2 mechanism before objects exist; separately authorize exact Worker deploy and later post-apply restore/rollback smoke |
+| R2 manifest hashes и safe counts | source archive/quarantine and distinct restore pair: each `0 objects / 0 B`, EEUR; non-empty manifest not applicable to this point                                                                                                                                                |
+| Restore duration                 | 901 s measured; RTO not claimed                                                                                                                                                                                                                                                   |
+| Recovery-point delta             | 133 s measured; RPO not claimed                                                                                                                                                                                                                                                   |
+| Smoke/result                     | D1 exact schema/count/FK restore `passed`; current empty-state R2 restore `passed`; providers/features `feature_disabled`; application critical path not run                                                                                                                      |
+| Operator/reviewer role           | release operator; evidence independently reproducible from protected manifest and remote aggregate checks                                                                                                                                                                         |
+| Gaps/next action                 | approve RPO/RTO/cadence/retention; implement non-empty R2 mechanism before objects exist; separately authorize exact Worker deploy and later post-apply restore/rollback smoke                                                                                                    |
 
 Migration checkpoint 2026-08-20: immediately before the separately authorized
 preview apply a fresh Time Travel bookmark was captured and the exact protected
@@ -536,6 +542,45 @@ fresh plan-bound recovery evidence для Phase B. Никакой backup/restore
 в этом preflight не выполнялся; после создания exact import plan требуется
 отдельный recovery verifier и отдельно разрешённый fresh isolated restore либо
 другая предусмотренная runbook recovery mutation.
+
+Plan-bound baseline recovery checkpoint 2026-08-25: исходные protected
+pre-stage backup/evidence не перезаписывались. После отдельно разрешённого
+`0023` apply тот же независимый recovery-verifier выпустил versioned protected
+recovery point/evidence. Source и distinct/unbound recovery имели exact
+`0001`–`0023`, pending `0`, одинаковые `527` comparable schema objects и `142`
+tables; recovery aggregate pre-promote rows `49,731`, current pair `none`, FK
+violations `0`. Новые artifact-файлы:
+`imports/legacy-preview-baseline-recovery-point-0023.json` (SHA-256
+`24d905357f9450b4b2cea3b57c9f72d7ca316ce14085dc8596341c9c847164d3`) и
+`imports/legacy-preview-baseline-recovery-0023.json` (SHA-256
+`2209dea875c6e3cfaa5adfd51b8f7b9369fbd2b9f48efe4411365ccbf5b2c4f6`).
+Они ignored/current-user-only и не содержат source rows. Ровно одна последующая
+baseline promote attempt завершилась успешно; canonical verify подтвердил
+current target pair, `2 + 1703` rows, issues `0`, FK/dependency/reconciliation
+passed. Recovery D1 осталась в exact pre-promote/current-none состоянии.
+
+Candidate-bound recovery checkpoint 2026-08-25: перед stage текущая synthetic
+baseline pair была экспортирована в новый protected DPAPI CurrentUser artifact и
+восстановлена в новую distinct/unbound EU D1. Exact export↔restore сверка дала
+`527` comparable schema objects, `142` tables, `67,422` aggregate rows,
+migrations `23/max 23`, current pair `previous`, PlusBText `2`, Access projection
+`1703`, users `0` и FK violations `0`; local SQLite oracle дополнительно дал
+`quick_check=ok`. Append-only post-export source drift ограничивался
+`scheduled_job_runs`. Plaintext и local scratch удалены. Protected ignored
+recovery point `imports/legacy-preview-candidate-recovery-point.json` имеет
+SHA-256 `2d8977c92077c1d92651ae1f1d5362fe4c51d50b7af8d53156932840ac8272fc`;
+plan-bound evidence сохранено как
+`imports/legacy-preview-candidate-recovery.json`.
+
+Из clean detached worktree exact
+`c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9` distinct roles выполнили candidate
+plan→stage→independent review→recovery evidence(previous)→promote→verify→один
+repeated-promote reconciliation→rollback→verify→roll-forward→verify. Финальный
+verify: `promoted/target`, PlusBText `2`, Access target/projection `1703`, issues
+`0`, unique/dependency/FK/reconciliation passed, candidate events `1/1/1`.
+Повтор promote не добавил rows/events; первый и повторный verify byte-identical.
+Worker/auth/email, bootstrap, Telegram, Office/PII, production и официальный сайт
+не менялись.
 
 Даже с заполненной записью production readiness остаётся `blocked` из-за
 перечисленных gaps и отсутствия отдельного production restore/deploy approval.

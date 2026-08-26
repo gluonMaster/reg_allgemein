@@ -4,11 +4,13 @@ import { adminQuery, verifiedAdminForm } from '$lib/server/admin/http';
 import { requestContractRuntime } from '$lib/server/contracts/runtime';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { translate } from '$lib/i18n';
+import { loadRuntimeConfig } from '$lib/server/config/runtime';
 
 export const load: PageServerLoad = async (event) => {
 	requireAdmin(event.locals.user);
 	const query = adminQuery(event.url);
 	const runtime = requestContractRuntime(event);
+	const config = loadRuntimeConfig(event.platform?.env);
 	const [offers, endRequests] = await Promise.all([
 		runtime.repository.listAdminOffers(query.q),
 		runtime.repository.listAdminEndRequests(),
@@ -18,12 +20,29 @@ export const load: PageServerLoad = async (event) => {
 		offers,
 		endRequests,
 		productionSendEnabled: false,
+		previewReviewEnabled: config.contracts.previewReviewEnabled,
 		mediaIdempotencyKey: crypto.randomUUID(),
 		createIdempotencyKey: crypto.randomUUID(),
 	};
 };
 
 export const actions = {
+	installPreviewReview: async (event) => {
+		try {
+			const { actor } = await verifiedAdminForm(event);
+			const installed =
+				await requestContractRuntime(event).service.installPreviewReviewTemplates(actor);
+			return {
+				success: true,
+				message: `${installed.length} Preview-Vertragsvorlagen wurden bereitgestellt.`,
+			};
+		} catch {
+			return fail(409, {
+				success: false,
+				message: 'Die Preview-Vertragsvorlagen konnten nicht bereitgestellt werden.',
+			});
+		}
+	},
 	createDraft: async (event) => {
 		try {
 			const { form, actor } = await verifiedAdminForm(event);
@@ -52,7 +71,10 @@ export const actions = {
 			});
 			return { success: true, message: translate('de', 'admin.contracts.created') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.contracts.failed') });
+			return fail(409, {
+				success: false,
+				message: translate('de', 'admin.contracts.failed'),
+			});
 		}
 	},
 	renderSend: async (event) => {
@@ -66,7 +88,10 @@ export const actions = {
 			});
 			return { success: true, message: translate('de', 'admin.contracts.sent') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.contracts.failed') });
+			return fail(409, {
+				success: false,
+				message: translate('de', 'admin.contracts.failed'),
+			});
 		}
 	},
 	formActivate: async (event) => {
@@ -84,7 +109,10 @@ export const actions = {
 			});
 			return { success: true, message: translate('de', 'admin.contracts.formed') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.contracts.failed') });
+			return fail(409, {
+				success: false,
+				message: translate('de', 'admin.contracts.failed'),
+			});
 		}
 	},
 	mediaWithdrawal: async (event) => {
@@ -104,9 +132,15 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.contracts.mediaWithdrawalRecorded') };
+			return {
+				success: true,
+				message: translate('de', 'admin.contracts.mediaWithdrawalRecorded'),
+			};
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.contracts.failed') });
+			return fail(409, {
+				success: false,
+				message: translate('de', 'admin.contracts.failed'),
+			});
 		}
 	},
 	terminationReview: async (event) => {
@@ -124,9 +158,15 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.contracts.terminationReviewed') };
+			return {
+				success: true,
+				message: translate('de', 'admin.contracts.terminationReviewed'),
+			};
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.contracts.failed') });
+			return fail(409, {
+				success: false,
+				message: translate('de', 'admin.contracts.failed'),
+			});
 		}
 	},
 } satisfies Actions;

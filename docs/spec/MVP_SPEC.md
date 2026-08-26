@@ -34,6 +34,14 @@ release gates сохраняются.
   утверждённый перечень внешних link surfaces входят в release manifest;
   изменение CMS/инфраструктуры сайта выполняется отдельно и только по прямому
   поручению.
+- **SYS-04.** До объявления checkpoint `full-manual-preview` все входящие в MVP
+  технические контуры должны быть реально включены и пройдены end-to-end в
+  Access-protected preview на синтетических данных и выделенных preview-
+  ресурсах/provider targets. Юридическое, управленческое или provider approval
+  остаётся gate для production, но не заменяет preview-проверку выключенным
+  флагом. `feature_disabled` допустим как production release decision, однако
+  сам по себе не доказывает работоспособность соответствующего MVP-контура в
+  полном manual preview.
 
 Роли MVP:
 
@@ -297,6 +305,15 @@ release gates сохраняются.
   contract/PDF и не прекращает договор автоматически. Продолжение требует
   новой approved authorization и явного admin funding amendment; если меняются
   parent-facing условия, выпускается новый offer с parent acceptance.
+- **REQ-11.** До `full-manual-preview` синтетический funding document должен
+  пройти фактический preview lifecycle через выделенные private EU R2:
+  authenticated upload в quarantine, audited forced attachment-download,
+  локальную проверку актуальным утверждённым antivirus, привязанную к SHA-256
+  versioned clean attestation и отдельное business `approved|rejected` решение.
+  Проверяются также hash mismatch/direct-approve rejection и cleanup
+  неутверждённого synthetic artifact. Реальные клиентские документы и PII для
+  этого checkpoint запрещены; production enablement и обучение операторов
+  остаются отдельными gates.
 
 ## 9. Договоры и enrollments
 
@@ -463,6 +480,20 @@ release gates сохраняются.
   offer со старым FamilyID supersede-ится до повторного render. Старый FamilyID
   остаётся только historical alias/audit reference, а не вторым current FamilyID.
   Collision всегда fail-closed.
+- **CONTRACT-21.** До `full-manual-preview` все четыре цифровых вида договора
+  получают versioned `preview_review` bundle, построенный из соответствующих
+  business source templates и production-candidate общих/видовых clauses.
+  Bundle использует синтетические стороны, заметную маркировку
+  `TEST/ENTWURF — nicht für reale Vertragsbeziehungen`, реальный Cloudflare
+  Browser Run renderer, private preview R2 и доставку только на заранее
+  согласованные контролируемые test recipients. Минимум один offer проходит
+  реальный lifecycle `render → send → parent accept → different-admin formation
+  and activation → certificate/download`, а все четыре вида проходят render/
+  delivery review. Полученные PDF являются материалом для управленческой и
+  юридической правки; новый feedback выпускает новую immutable template
+  version/change log. Preview-review artifact нельзя использовать для
+  production offer, а отсутствие финального production approval не является
+  основанием откладывать его создание и техническую проверку.
 
 ## 9.1. Цена и её изменение
 
@@ -534,6 +565,14 @@ release gates сохраняются.
   оборвался уже после durable `dispatch_started`, отдельный target/cohort-bound
   reconcile только после lease expiry без provider secrets/send/retry переводит
   попытку в `delivery_unknown` для обычного manual resolution.
+- **MSG-07.** До `full-manual-preview` выделенный preview bot и private bureau
+  destination проходят реальный target-bound lifecycle через normal outbox:
+  read-only preflight, ровно один минимизированный synthetic `sendMessage`,
+  verify и предусмотренные abort/reconciliation/operator recovery проверки.
+  Preview bot token/destination не переиспользуются в production. Недостающий
+  внешний bot/chat parameter или разрешение запрашивается непосредственно перед
+  соответствующей операцией и не является основанием откладывать всю
+  предшествующую локальную подготовку и проверку.
 - **ADMIN-01.** Админка покрывает import runs/issues, review tasks, legacy-
   поиск, пользователей и детей, каталог, прайс, trials, requests/documents,
   contracts/enrollments, price reviews, messages и outbox. Для family name-match

@@ -37,6 +37,67 @@ describe('Resend email provider', () => {
 		});
 	});
 
+	it('sends one bounded PDF attachment as Base64 and enforces the preview recipient hash', async () => {
+		let body: Record<string, unknown> | undefined;
+		const recipient = 'preview-parent@example.org';
+		const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(recipient));
+		const recipientHash = [...new Uint8Array(digest)]
+			.map((value) => value.toString(16).padStart(2, '0'))
+			.join('');
+		const provider = new ResendEmailProvider({
+			...providerOptions,
+			allowedRecipientHashes: [recipientHash],
+			fetcher: async (_input, init) => {
+				body = JSON.parse(String(init?.body));
+				return Response.json({ id: 'resend-with-pdf' });
+			},
+		});
+		await expect(
+			provider.send(
+				{
+					to: recipient.toUpperCase(),
+					subject: '[TEST/ENTWURF] Vertrag',
+					text: 'Synthetischer Test',
+					attachments: [
+						{
+							filename: 'TEST-ENTWURF-Vertrag-K-100.pdf',
+							content: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+							contentType: 'application/pdf',
+						},
+					],
+				},
+				{ idempotencyKey: 'preview-contract-email-1' }
+			)
+		).resolves.toEqual({
+			providerRequestId: 'resend-with-pdf',
+		});
+		expect(body?.attachments).toEqual([
+			{
+				filename: 'TEST-ENTWURF-Vertrag-K-100.pdf',
+				content: 'JVBERg==',
+			},
+		]);
+	});
+
+	it('rejects a recipient outside the preview allowlist before the network request', async () => {
+		let called = false;
+		const provider = new ResendEmailProvider({
+			...providerOptions,
+			allowedRecipientHashes: ['a'.repeat(64)],
+			fetcher: async () => {
+				called = true;
+				return Response.json({ id: 'unexpected' });
+			},
+		});
+		await expect(
+			provider.send(
+				{ to: 'not-allowed@example.org', subject: 'A', text: 'B' },
+				{ idempotencyKey: 'preview-recipient-denied' }
+			)
+		).rejects.toMatchObject({ code: 'RESEND_RECIPIENT_NOT_ALLOWLISTED', retryable: false });
+		expect(called).toBe(false);
+	});
+
 	it('uses the same provider idempotency key for the same outbox identity', async () => {
 		const keys: string[] = [];
 		const fetcher: typeof fetch = async (_input, init) => {

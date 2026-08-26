@@ -54,6 +54,7 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 | Канонический production-readiness contract  | [operations/PRODUCTION_READINESS.md](operations/PRODUCTION_READINESS.md)                             |
 | Развёртывание портала                       | [operations/PRODUCTION_DEPLOYMENT.md](operations/PRODUCTION_DEPLOYMENT.md)                           |
 | Ежедневная эксплуатация и incident response | [operations/OPERATIONS_RUNBOOK.md](operations/OPERATIONS_RUNBOOK.md)                                 |
+| Полный ручной preview checkpoint            | [operations/FULL_MANUAL_PREVIEW.md](operations/FULL_MANUAL_PREVIEW.md)                               |
 | Backup, rollback и disaster recovery        | [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)                                   |
 | Текущий production readiness ledger         | [operations/PRODUCTION_READINESS_CHECKLIST.md](operations/PRODUCTION_READINESS_CHECKLIST.md)         |
 | Этапы реализации                            | [implementation/ROADMAP.md](implementation/ROADMAP.md)                                               |

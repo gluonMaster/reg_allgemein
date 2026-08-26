@@ -18,12 +18,22 @@
 		<p class="item-kicker">{status(data.offer.status)}</p>
 		<h2>{data.offer.contractNumber}</h2>
 		<p>{data.offer.childName} · {data.offer.contractKind}</p>
-		<p>{data.offer.effectiveFrom}{data.offer.effectiveTo ? `–${data.offer.effectiveTo}` : ''}</p>
+		<p>
+			{data.offer.effectiveFrom}{data.offer.effectiveTo ? `–${data.offer.effectiveTo}` : ''}
+		</p>
 		{#if data.offer.artifacts.length}
 			<h3>{translate('de', 'contract.artifacts')}</h3>
 			<ul>
 				{#each data.offer.artifacts as artifact}
-					<li><a href={`/contracts/artifacts/${artifact.id}/download`}>{translate('de', `contract.artifact.${artifact.kind}` as 'contract.artifact.offer_pdf')}</a> · SHA-256 {artifact.shortHash}…</li>
+					<li>
+						<a href={`/contracts/artifacts/${artifact.id}/download`}
+							>{translate(
+								'de',
+								`contract.artifact.${artifact.kind}` as 'contract.artifact.offer_pdf'
+							)}</a
+						>
+						· SHA-256 {artifact.shortHash}…
+					</li>
 				{/each}
 			</ul>
 		{/if}
@@ -32,15 +42,40 @@
 			<div class="contract-actions">
 				<form method="POST" action="?/accept">
 					<input type="hidden" name="_csrf" value={data.csrfToken} />
-					<input type="hidden" name="expectedContractHash" value={data.offer.contractHash} />
-					<input type="hidden" name="idempotencyKey" value={`accept:${data.offer.id}:${data.offer.contractHash}`} />
-					<button type="submit">{translate('de', 'contract.accept')}</button>
+					<input
+						type="hidden"
+						name="expectedContractHash"
+						value={data.offer.contractHash}
+					/>
+					<input
+						type="hidden"
+						name="idempotencyKey"
+						value={`accept:${data.offer.id}:${data.offer.contractHash}`}
+					/>
+					<button type="submit"
+						>{translate(
+							'de',
+							data.offer.paymentRequired
+								? 'contract.accept.payable'
+								: 'contract.accept.funded'
+						)}</button
+					>
 				</form>
 				<form method="POST" action="?/decline">
 					<input type="hidden" name="_csrf" value={data.csrfToken} />
-					<input type="hidden" name="expectedContractHash" value={data.offer.contractHash} />
-					<input type="hidden" name="idempotencyKey" value={`decline:${data.offer.id}:${data.offer.contractHash}`} />
-					<button class="secondary-button" type="submit">{translate('de', 'contract.decline')}</button>
+					<input
+						type="hidden"
+						name="expectedContractHash"
+						value={data.offer.contractHash}
+					/>
+					<input
+						type="hidden"
+						name="idempotencyKey"
+						value={`decline:${data.offer.id}:${data.offer.contractHash}`}
+					/>
+					<button class="secondary-button" type="submit"
+						>{translate('de', 'contract.decline')}</button
+					>
 				</form>
 			</div>
 		{/if}
@@ -51,17 +86,31 @@
 				<input type="hidden" name="_csrf" value={data.csrfToken} />
 				<input type="hidden" name="contractId" value={data.offer.contractId} />
 				<input type="hidden" name="idempotencyKey" value={data.endIdempotencyKey} />
-				<label>{translate('de', 'contract.end.kind')}
+				<label
+					>{translate('de', 'contract.end.kind')}
 					<select name="kind" required>
-						<option value="ordinary_termination">{translate('de', 'contract.end.ordinary')}</option>
-						<option value="extraordinary_termination">{translate('de', 'contract.end.extraordinary')}</option>
-						<option value="mutual_termination_request">{translate('de', 'contract.end.mutual')}</option>
+						<option value="ordinary_termination"
+							>{translate('de', 'contract.end.ordinary')}</option
+						>
+						<option value="extraordinary_termination"
+							>{translate('de', 'contract.end.extraordinary')}</option
+						>
+						<option value="mutual_termination_request"
+							>{translate('de', 'contract.end.mutual')}</option
+						>
 						{#if data.offer.distanceLegalProfile === 'widerruf_applicable'}
-							<option value="withdrawal">{translate('de', 'contract.end.withdrawal')}</option>
+							<option value="withdrawal"
+								>{translate('de', 'contract.end.withdrawal')}</option
+							>
 						{/if}
 					</select>
 				</label>
-				<label>{translate('de', 'contract.end.requestedDate')}<input type="date" name="requestedEffectiveOn" /></label>
+				<label
+					>{translate('de', 'contract.end.requestedDate')}<input
+						type="date"
+						name="requestedEffectiveOn"
+					/></label
+				>
 				<button type="submit">{translate('de', 'contract.end.submit')}</button>
 			</form>
 			{#if data.offer.contractKind === 'individual_hourly' || data.offer.contractKind === 'nachhilfe_hourly'}
@@ -70,7 +119,11 @@
 				<form method="POST" action="?/attendance">
 					<input type="hidden" name="_csrf" value={data.csrfToken} />
 					<input type="hidden" name="contractId" value={data.offer.contractId} />
-					<input type="hidden" name="idempotencyKey" value={data.attendanceIdempotencyKey} />
+					<input
+						type="hidden"
+						name="idempotencyKey"
+						value={data.attendanceIdempotencyKey}
+					/>
 					<button type="submit">{translate('de', 'contract.attendance.submit')}</button>
 				</form>
 			{/if}
@@ -81,18 +134,37 @@
 			<form class="admin-action-form" method="POST" action="?/mediaDecline">
 				<input type="hidden" name="_csrf" value={data.csrfToken} />
 				<input type="hidden" name="childId" value={data.offer.childId} />
-				<input type="hidden" name="withdrawalContactVersionId" value={data.offer.mediaContactVersionId} />
+				<input
+					type="hidden"
+					name="withdrawalContactVersionId"
+					value={data.offer.mediaContactVersionId}
+				/>
 				<input type="hidden" name="idempotencyKey" value={data.mediaIdempotencyKey} />
-				<fieldset><legend>{translate('de', 'contract.media.capture')}</legend>
-					<label class="checkbox"><input type="checkbox" name="captureScopes" value="photo" /> Foto</label>
-					<label class="checkbox"><input type="checkbox" name="captureScopes" value="video" /> Video</label>
+				<fieldset>
+					<legend>{translate('de', 'contract.media.capture')}</legend>
+					<label class="checkbox"
+						><input type="checkbox" name="captureScopes" value="photo" /> Foto</label
+					>
+					<label class="checkbox"
+						><input type="checkbox" name="captureScopes" value="video" /> Video</label
+					>
 				</fieldset>
-				<fieldset><legend>{translate('de', 'contract.media.channels')}</legend>
-					<label class="checkbox"><input type="checkbox" name="publicationChannels" value="website" /> Website</label>
-					<label class="checkbox"><input type="checkbox" name="publicationChannels" value="social_media" /> Social Media</label>
-					<label class="checkbox"><input type="checkbox" name="publicationChannels" value="print" /> Print</label>
+				<fieldset>
+					<legend>{translate('de', 'contract.media.channels')}</legend>
+					<label class="checkbox"
+						><input type="checkbox" name="publicationChannels" value="website" /> Website</label
+					>
+					<label class="checkbox"
+						><input type="checkbox" name="publicationChannels" value="social_media" /> Social
+						Media</label
+					>
+					<label class="checkbox"
+						><input type="checkbox" name="publicationChannels" value="print" /> Print</label
+					>
 				</fieldset>
-				<button class="secondary-button" type="submit">{translate('de', 'contract.media.decline')}</button>
+				<button class="secondary-button" type="submit"
+					>{translate('de', 'contract.media.decline')}</button
+				>
 			</form>
 		{/if}
 	</section>

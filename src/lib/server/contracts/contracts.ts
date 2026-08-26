@@ -37,12 +37,15 @@ const lineItemSchema = z
 export const contractRenderInputSchema = z
 	.object({
 		schemaVersion: z.literal(CONTRACT_RENDER_SCHEMA_VERSION),
+		previewReviewMarker: z.literal('synthetic-no-pii').optional(),
 		templateId: contractTemplateIdSchema,
 		offerNumber: z.string().trim().min(1).max(100),
 		contractNumber: z.string().trim().min(1).max(100),
 		provider: partySchema.extend({
 			role: z.literal('provider'),
 			paymentTermsVersion: nonEmpty,
+			registrationLines: z.array(z.string().trim().min(1).max(200)).max(3).optional(),
+			contactLines: z.array(z.string().trim().min(1).max(200)).max(4).optional(),
 		}),
 		parent: partySchema.extend({
 			role: z.literal('contracting_parent'),
@@ -142,7 +145,8 @@ export const contractRenderInputSchema = z
 				input.billing.unitMinutes !== null ||
 				input.billing.paymentArrangement === 'not_applicable' ||
 				!input.billing.basePriceDisclaimer
-			) invalid('group service/template/billing permutation is forbidden');
+			)
+				invalid('group service/template/billing permutation is forbidden');
 		}
 		if (individual) {
 			if (
@@ -157,7 +161,8 @@ export const contractRenderInputSchema = z
 				input.billing.unitMinutes !== 45 ||
 				input.billing.billingPeriodCode !== 'per_45_minutes' ||
 				input.billing.paymentArrangement === 'not_applicable'
-			) invalid('individual service/template/billing permutation is forbidden');
+			)
+				invalid('individual service/template/billing permutation is forbidden');
 		}
 		if (nachhilfe) {
 			if (
@@ -176,15 +181,20 @@ export const contractRenderInputSchema = z
 				input.billing.paymentArrangement !== 'not_applicable' ||
 				input.billing.paymentDueDay !== null ||
 				input.parent.payerRole
-			) invalid('Nachhilfe service/template/billing permutation is forbidden');
+			)
+				invalid('Nachhilfe service/template/billing permutation is forbidden');
 		}
-		if (input.billing.paymentArrangement === 'manual_payment' && input.billing.paymentDueDay !== 7) {
+		if (
+			input.billing.paymentArrangement === 'manual_payment' &&
+			input.billing.paymentDueDay !== 7
+		) {
 			invalid('manual payment requires due day 7');
 		}
 		if (
 			input.billing.paymentArrangement === 'existing_external_sepa' &&
 			input.billing.paymentDueDay !== null
-		) invalid('external SEPA must not contain a portal due day');
+		)
+			invalid('external SEPA must not contain a portal due day');
 	});
 
 export const contractParentDecisionSchema = z
@@ -227,7 +237,10 @@ export const mediaDecisionSchema = z
 	.object({
 		offerId: z.string().trim().min(1).max(200),
 		childId: z.string().min(1),
-		captureScopes: z.array(z.enum(['photo', 'video'])).min(1).max(2),
+		captureScopes: z
+			.array(z.enum(['photo', 'video']))
+			.min(1)
+			.max(2),
 		publicationChannels: z
 			.array(z.enum(['website', 'social_media', 'print']))
 			.min(1)
@@ -252,8 +265,14 @@ export const mediaWithdrawalSchema = z
 	.object({
 		ownerUserId: z.string().min(1),
 		childId: z.string().min(1),
-		captureScopes: z.array(z.enum(['photo', 'video'])).min(1).max(2),
-		publicationChannels: z.array(z.enum(['website', 'social_media', 'print'])).min(1).max(3),
+		captureScopes: z
+			.array(z.enum(['photo', 'video']))
+			.min(1)
+			.max(2),
+		publicationChannels: z
+			.array(z.enum(['website', 'social_media', 'print']))
+			.min(1)
+			.max(3),
 		channel: z.enum(['office', 'email', 'phone']),
 		receivedAt: z.string().datetime({ offset: true }),
 		evidenceSummary: z.string().trim().min(5).max(500),
@@ -267,7 +286,12 @@ export const terminationReviewSchema = z
 		decision: z.enum(['effective_date_confirmed', 'disputed', 'approved', 'declined']),
 		effectiveOn: isoDate.nullable(),
 		reason: z.string().trim().min(5).max(1000),
-		externalDebtCheckResult: z.enum(['not_checked', 'no_debt_reported', 'debt_reported', 'unknown']),
+		externalDebtCheckResult: z.enum([
+			'not_checked',
+			'no_debt_reported',
+			'debt_reported',
+			'unknown',
+		]),
 		idempotencyKey: z.string().trim().min(8).max(200),
 	})
 	.strict();

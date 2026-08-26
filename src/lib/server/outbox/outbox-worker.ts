@@ -1,25 +1,12 @@
 import type { RuntimeConfig } from '$lib/server/config/runtime';
 import { nextBusinessWindow, type BusinessHoursSchedule } from './business-hours';
 import type { EmailOutboxStore, TelegramOutboxStore } from './contracts';
-import {
-	OutboxProviderError,
-	type EmailProvider,
-	type TelegramProvider,
-} from './providers';
-import {
-	OutboxTemplateError,
-	renderEmailTemplate,
-	renderTelegramTemplate,
-} from './templates';
+import { OutboxProviderError, type EmailProvider, type TelegramProvider } from './providers';
+import { OutboxTemplateError, renderEmailTemplate, renderTelegramTemplate } from './templates';
+import type { EmailAttachmentResolver } from './email-attachments';
 
 export type DispatchOutcome =
-	| 'empty'
-	| 'deferred'
-	| 'sent'
-	| 'retry'
-	| 'dead'
-	| 'delivery_unknown'
-	| 'lost_lease';
+	'empty' | 'deferred' | 'sent' | 'retry' | 'dead' | 'delivery_unknown' | 'lost_lease';
 
 export interface WorkerTimingConfig {
 	leaseSeconds: number;
@@ -110,7 +97,8 @@ export class EmailOutboxWorker {
 		private readonly config: Pick<RuntimeConfig, 'portalPublicOrigin'>,
 		private readonly timing: WorkerTimingConfig,
 		private readonly workerId: string = `email-worker:${crypto.randomUUID()}`,
-		private readonly clock: () => string = () => new Date().toISOString()
+		private readonly clock: () => string = () => new Date().toISOString(),
+		private readonly attachmentResolver?: EmailAttachmentResolver
 	) {}
 
 	async dispatchNext(now = this.clock()): Promise<DispatchOutcome> {
@@ -128,6 +116,16 @@ export class EmailOutboxWorker {
 				config: this.config,
 				secret: this.secret,
 			});
+			if (this.attachmentResolver) {
+				const resolution = await this.attachmentResolver.resolve(row);
+				if (resolution.attachments.length > 0) {
+					message.attachments = resolution.attachments;
+				}
+				if (resolution.previewReview) {
+					message.subject = `[TEST/ENTWURF] ${message.subject}`;
+					message.text = `TEST/ENTWURF — nicht für reale Vertragsbeziehungen.\n\n${message.text}`;
+				}
+			}
 			const result = await this.provider.send(message, { idempotencyKey: row.dedupe_key });
 			return (await this.repository.markEmailSent({
 				id: row.id,
@@ -237,14 +235,15 @@ export class TelegramOutboxWorker {
 					now: completedAt,
 				});
 			}
-			const nextAttemptAt = safe.retryAfterSeconds === undefined
-				? deterministicRetryAt(completedAt, row.attempts + 1, this.timing)
-				: retryAtWithProviderDelay(
-						completedAt,
-						row.attempts + 1,
-						this.timing,
-						safe.retryAfterSeconds
-					);
+			const nextAttemptAt =
+				safe.retryAfterSeconds === undefined
+					? deterministicRetryAt(completedAt, row.attempts + 1, this.timing)
+					: retryAtWithProviderDelay(
+							completedAt,
+							row.attempts + 1,
+							this.timing,
+							safe.retryAfterSeconds
+						);
 			const destinationCooldownUntil =
 				safe.code === 'TELEGRAM_RATE_LIMITED' || safe.retryAfterSeconds !== undefined
 					? nextAttemptAt
@@ -256,9 +255,7 @@ export class TelegramOutboxWorker {
 				errorCode: safe.code,
 				permanent: safe.permanent,
 				nextAttemptAt,
-				...(destinationCooldownUntil === undefined
-					? {}
-					: { destinationCooldownUntil }),
+				...(destinationCooldownUntil === undefined ? {} : { destinationCooldownUntil }),
 				now: completedAt,
 			});
 		}

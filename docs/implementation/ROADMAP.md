@@ -383,6 +383,15 @@ Provider/manual smoke, job-specific alerts, post-apply recovery rehearsal и в�
 inputs также отсутствуют.
 `feature_disabled` не считается завершением полного MVP.
 
+По `SYS-04`/`OQ-036` ближайший Stage-13 checkpoint также не может считаться
+`full-manual-preview`, пока synthetic Browser-contract/R2/email,
+Telegram normal-outbox и document upload/quarantine/manual-AV/business-review
+не пройдены фактически на выделенных preview resources. Production legal,
+provider и training approvals остаются следующими release gates; они не
+заменяют работающий тестовый контур. Агент готовит локальные candidates и
+reversible evidence до точного внешнего gate, а owner input запрашивает только
+непосредственно перед нужным credential, remote mutation, deploy или send.
+
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,
 exact-target remote boundary, schema-v3 protected no-write plan с
@@ -489,9 +498,11 @@ Exit gate:
 - clean install, все migrations на empty и representative upgraded D1,
   `npm run check`, `npm test` и `npm run build` проходят;
 - production-shaped preview использует отдельные D1/R2 resources, Browser,
-  provider и Cron bindings; preview migration/smoke, remote Browser conformance
-  и разрешённый provider smoke выполнены либо соответствующий path имеет явный
-  `feature_disabled|blocked`, но не ложный `passed`;
+  provider и Cron bindings; до `full-manual-preview` все MVP-контуры из
+  `SYS-04` фактически проходят preview migration/smoke, remote Browser
+  conformance и разрешённый provider lifecycle. Явный
+  `feature_disabled|blocked` остаётся честным production verdict, но не
+  заменяет preview evidence и не получает ложный `passed`;
 - создан и проверен полный inventory environment variables, secrets, bindings,
   feature flags и scheduled jobs с owner, schedule/timezone, dedupe/lock,
   monitoring, manual-run и failure procedure;

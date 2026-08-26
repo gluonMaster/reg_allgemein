@@ -420,9 +420,15 @@ export const germanCatalog = {
 		'Die Annahme bezieht sich ausschließlich auf diese Vertragsnummer und den angezeigten unveränderlichen Dokument-Hash. Der Vertrag entsteht erst nach der getrennten Bestätigung durch den Verein.',
 	'contract.acceptance.text':
 		'Ich nehme dieses unveränderte Vertragsangebot mit der angezeigten Vertragsnummer und dem gespeicherten Dokument-Hash verbindlich an. Mir ist bekannt, dass der Vertrag erst durch die anschließende Bestätigung des Vereins gebildet wird.',
+	'contract.acceptance.payableText':
+		'Ich schließe den zahlungspflichtigen Vertrag auf Grundlage dieses unveränderten Angebots, der angezeigten Vertragsnummer, des gespeicherten Dokument-Hash und der ausgewiesenen Preis- und Zahlungsangaben verbindlich ab. Mir ist bekannt, dass der Vertrag erst durch die anschließende Bestätigung des Vereins gebildet wird.',
+	'contract.acceptance.fundedText':
+		'Ich nehme dieses als nicht zahlungspflichtig ausgewiesene, unveränderte Vertragsangebot mit der angezeigten Vertragsnummer und dem gespeicherten Dokument-Hash verbindlich an. Mir ist bekannt, dass der Vertrag erst durch die anschließende Bestätigung des Vereins gebildet wird.',
 	'contract.decline.text':
 		'Ich lehne dieses konkrete Vertragsangebot mit der angezeigten Vertragsnummer und dem gespeicherten Dokument-Hash ab.',
 	'contract.accept': 'Angebot verbindlich annehmen',
+	'contract.accept.payable': 'Zahlungspflichtigen Vertrag abschließen',
+	'contract.accept.funded': 'Nicht zahlungspflichtiges Angebot annehmen',
 	'contract.decline': 'Angebot ablehnen',
 	'contract.accepted': 'Ihre Annahme wurde unveränderlich gespeichert.',
 	'contract.declined': 'Ihre Ablehnung wurde gespeichert.',

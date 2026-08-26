@@ -10,9 +10,9 @@ import { translate } from '$lib/i18n';
 
 export const load: PageServerLoad = async (event) => {
 	const actor = requireParent(event.locals.user);
-	let offer: Awaited<ReturnType<
-		ReturnType<typeof requestContractRuntime>['service']['loadOwnerOffer']
-	>>;
+	let offer: Awaited<
+		ReturnType<ReturnType<typeof requestContractRuntime>['service']['loadOwnerOffer']>
+	>;
 	try {
 		offer = await requestContractRuntime(event).service.loadOwnerOffer(
 			actor,
@@ -46,6 +46,10 @@ async function decide(event: Parameters<Actions[string]>[0], decision: 'accept' 
 			submittedToken: form.get('_csrf')?.toString(),
 		});
 		const actor = requireParent(event.locals.user);
+		const offer = await requestContractRuntime(event).service.loadOwnerOffer(
+			actor,
+			event.params.offerId
+		);
 		await requestContractRuntime(event).service.parentDecision({
 			actor,
 			payload: {
@@ -55,7 +59,12 @@ async function decide(event: Parameters<Actions[string]>[0], decision: 'accept' 
 				acceptanceTextVersion: 'contract-acceptance-de-v1',
 				acceptanceText:
 					decision === 'accept'
-						? translate('de', 'contract.acceptance.text')
+						? translate(
+								'de',
+								offer.paymentRequired
+									? 'contract.acceptance.payableText'
+									: 'contract.acceptance.fundedText'
+							)
 						: translate('de', 'contract.decline.text'),
 				idempotencyKey: form.get('idempotencyKey'),
 			},
@@ -65,7 +74,10 @@ async function decide(event: Parameters<Actions[string]>[0], decision: 'accept' 
 		});
 		return {
 			success: true,
-			message: translate('de', decision === 'accept' ? 'contract.accepted' : 'contract.declined'),
+			message: translate(
+				'de',
+				decision === 'accept' ? 'contract.accepted' : 'contract.declined'
+			),
 		};
 	} catch {
 		return fail(409, { success: false, message: translate('de', 'contract.decisionFailed') });

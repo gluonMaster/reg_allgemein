@@ -13,6 +13,10 @@ MVP готов, когда:
 - импорт текущих безопасных reference-файлов завершается отчетом, а повторный
   запуск не создает дубликаты;
 - все обязательные пользовательские и административные сценарии ниже проходят;
+- до checkpoint `full-manual-preview` входящие в MVP email, Telegram,
+  Browser-contract и upload/manual-review paths реально включены и пройдены в
+  Access-protected preview на synthetic/no-PII data; их production
+  `feature_disabled`/approval status не подменяет это evidence. (`SYS-04`)
 - `npm run check`, `npm test` и `npm run build` выполняются успешно;
 - authorization-, CSRF-, import rollback-, pricing- и upload-тесты включены в
   автоматический набор;
@@ -523,6 +527,14 @@ MVP готов, когда:
 - `group_nachhilfe` отсутствует в публичном каталоге, quote и trial flow. Его
   создание через parent API отклоняется; admin обязан задать manual capacity,
   price и условия Jobcenter/Sozialamt. (`REQ-09`)
+- В Access-protected preview parent загружает synthetic PDF, JPEG и PNG в
+  реальные private-EU quarantine objects. Admin получает каждый только как
+  audited forced attachment, локально проверяет актуальным approved AV,
+  подтверждает показанный SHA-256/versioned attestation и отдельно принимает
+  business `approved|rejected` решение. Parent видит только approved artifact;
+  hash mismatch, direct approve и повтор чужой роли отклоняются. Отдельный
+  неутверждённый synthetic object проходит idempotent cleanup по каноническому
+  TTL без удаления approved archive. (`REQ-05`, `REQ-07`, `REQ-08`, `REQ-11`)
 
 ## 8. Договоры и price review
 
@@ -697,6 +709,24 @@ MVP готов, когда:
 - Sent price review item immutable; acceptance фиксирует item version/hash и
   ещё не применяет цену без второго admin confirmation.
   Измененное условие создает superseding item и требует нового согласия.
+- Для каждого `group_yearly|group_monthly|individual_hourly|nachhilfe_hourly`
+  real Browser Run создаёт из `preview_review` bundle читаемый PDF с корректной
+  Unicode/pagination/signature layout и заметным на каждой странице
+  `TEST/ENTWURF — nicht für reale Vertragsbeziehungen`. Artifact и source
+  manifests/hash находятся в private preview R2, а email уходит только
+  согласованному test recipient с тем же предупреждением. Synthetic adapter или
+  локально подложенный PDF не удовлетворяет этому checkpoint. (`CONTRACT-21`)
+- Минимум один preview-review offer проходит через обычные application paths:
+  admin render/send, owning parent accept, formation/activation другим admin
+  principal, immutable formation certificate и owner/admin download с RBAC/
+  audit. Повтор render/send/accept/formation не дублирует artifacts, delivery,
+  contract или enrollment/engagement. (`AUTH-08`, `CONTRACT-07`,
+  `CONTRACT-08`, `CONTRACT-16`, `CONTRACT-21`)
+- `preview_review` template принимается только при `APP_ENV=preview`, explicit
+  feature flag, synthetic party marker и watermark. Он отклоняется в production
+  и не удовлетворяет production template/legal gate. Замечания по реально
+  полученному PDF выпускают новую immutable bundle version/change log, сохраняя
+  старый artifact. (`CONTRACT-03`, `CONTRACT-11`, `CONTRACT-21`)
 
 ## 9. Сообщения и outbox
 
@@ -764,6 +794,11 @@ MVP готов, когда:
   `attemptCount=1`, no provider ID и `requiresManualResolution=true`; повторный
   `run`/abort запрещён, дальше применима только обычная exact-attempt operator
   resolution. (`MSG-06`, `REL-02`)
+- `full-manual-preview` не закрывается локальным Telegram fake или deployed
+  `TELEGRAM_PROVIDER=disabled`: dedicated preview bot/destination должен пройти
+  описанный read-only preflight и ровно один реальный minimized normal-outbox
+  attempt, затем verify и применимые no-send/ambiguous reconciliation drills.
+  Production token/destination и реальные PII не используются. (`MSG-07`)
 
 ## 10. UX и эксплуатация
 

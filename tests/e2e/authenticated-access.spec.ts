@@ -305,7 +305,7 @@ test.describe.serial('authenticated role, ownership and session boundaries', () 
 				parentB.locator('a[href="/contracts/artifacts/e2e-contract-artifact-b/download"]')
 			).toBeVisible();
 			await expect(
-				parentB.getByRole('button', { name: germanCatalog['contract.accept'] })
+				parentB.getByRole('button', { name: germanCatalog['contract.accept.payable'] })
 			).toBeVisible();
 
 			const activeOfferRoute = '/contracts/00000000-0000-4000-8000-0000000000b1';

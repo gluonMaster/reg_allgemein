@@ -11,6 +11,18 @@
 	<h1>{translate('de', 'admin.contracts.title')}</h1>
 	<p class="sensitive-notice">{translate('de', 'admin.contracts.productionBlocked')}</p>
 	{#if form?.message}<p class="form-status" aria-live="polite">{form.message}</p>{/if}
+	{#if data.previewReviewEnabled}
+		<aside class="notice-card">
+			<p>
+				<strong>Preview-Vertragsprüfung aktiv.</strong> Nur synthetische Daten und kontrollierte
+				Testempfänger verwenden. Alle erzeugten PDFs tragen TEST/ENTWURF.
+			</p>
+			<form class="admin-action-form" method="POST" action="?/installPreviewReview">
+				<input type="hidden" name="_csrf" value={data.csrfToken} />
+				<button type="submit">Vier Preview-Prüfvorlagen bereitstellen</button>
+			</form>
+		</aside>
+	{/if}
 	<form class="filter-bar" method="GET">
 		<label for="contract-search">{translate('de', 'admin.search')}</label>
 		<input id="contract-search" name="q" value={data.query.q} maxlength="160" />

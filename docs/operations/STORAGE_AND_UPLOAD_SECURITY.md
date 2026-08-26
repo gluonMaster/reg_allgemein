@@ -99,6 +99,25 @@ authenticated parent upload
   -> approved private document access
 ```
 
+### Обязательный preview rehearsal
+
+По `REQ-11`/`OQ-036` этот flow до `full-manual-preview` проходит фактически, а
+не только unit/integration tests или disabled-flag smoke. Используются
+Access-protected preview, его реальные раздельные private EU R2 bindings,
+verified synthetic parent и admin roles и специально созданные PDF/JPEG/PNG без
+PII. Оператор сохраняет forced download в выделенную локальную quarantine-
+папку, не открывает файл до актуальной Defender/approved-AV проверки, затем в
+UI сверяет SHA-256 и выполняет clean attestation; business review остаётся
+отдельным действием.
+
+Evidence фиксирует только opaque IDs, hash/status/version/timestamps и audit,
+без filename/body, email или иных PII. Минимальный проход включает approved и
+rejected outcomes, hash mismatch/direct-approve negative checks, owner/admin
+access boundary и idempotent cleanup отдельного неутверждённого synthetic
+artifact по 14×24h contract. Production flag, реальные документы, обучение
+всех операторов и privacy/provider approval остаются отдельными gates после
+этого rehearsal.
+
 Controlled download:
 
 - разрешён только admin после повторной RBAC-проверки и purpose/audit;

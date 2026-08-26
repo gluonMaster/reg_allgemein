@@ -29,11 +29,74 @@ import {
 	type ContractPdfAdapter,
 } from './pdf';
 import type { ContractArtifactStore } from './storage';
-import { contractTemplateRegistry, renderContractSource } from './templates';
+import {
+	PREVIEW_REVIEW_CLAUSE_SET_VERSION,
+	PREVIEW_REVIEW_TEMPLATE_VERSION,
+	contractTemplateSourceHashes,
+	contractTemplateRegistry,
+	previewReviewContractTemplateRegistry,
+	renderContractSource,
+} from './templates';
 import type { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 import { contractArtifactDownloadPurposeSchema } from '$lib/server/security/download-purpose';
 
 type DraftRenderInput = Omit<ContractRenderInput, 'offerNumber' | 'contractNumber'>;
+
+const PREVIEW_REVIEW_PROVIDER: ContractRenderInput['provider'] = {
+	fullName: 'Kinder- und Elternzentrum „Kolibri“ e. V.',
+	addressLines: ['Ritzenbergstraße 3', '01067 Dresden'],
+	role: 'provider',
+	payerRole: false,
+	paymentTermsVersion: 'preview-review-payment-v1',
+	registrationLines: ['Vereinsregister VR 5107', 'Amtsgericht Dresden'],
+	contactLines: [
+		'E-Mail: registration@kolibri-dresden.de',
+		'https://kolibri-dresden.de/kontakt/',
+	],
+};
+
+const PREVIEW_REVIEW_TERMS: Readonly<Record<ContractTemplateId, ContractRenderInput['term']>> =
+	Object.freeze({
+		group_yearly: {
+			initialTermText:
+				'Der Vertrag beginnt zum ausgewiesenen Leistungsbeginn und läuft zunächst für den vereinbarten Jahreszeitraum.',
+			renewalText:
+				'Nach der Erstlaufzeit wird der Vertrag nur nach dem im Prüfstand ausgewiesenen Verlängerungsmodell fortgesetzt; eine Verlängerung auf unbestimmte Zeit bleibt mit höchstens einmonatiger Frist kündbar.',
+			ordinaryTerminationText:
+				'Die ordentliche Kündigung ist zum Ende der Erstlaufzeit mit der ausgewiesenen Frist und nach einer Verlängerung mit höchstens einmonatiger Frist möglich.',
+			extraordinaryTerminationText:
+				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
+		},
+		group_monthly: {
+			initialTermText:
+				'Der Vertrag beginnt zum ausgewiesenen Leistungsbeginn und wird auf unbestimmte Zeit mit monatlicher Abrechnung geschlossen.',
+			renewalText:
+				'Eine gesonderte automatische Verlängerung findet nicht statt; der Vertrag läuft bis zu einer wirksamen Beendigung weiter.',
+			ordinaryTerminationText:
+				'Die ordentliche Kündigung ist mit einer Frist von einem Monat zum Monatsende möglich.',
+			extraordinaryTerminationText:
+				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
+		},
+		individual_hourly: {
+			initialTermText:
+				'Der Vertrag beginnt zum ausgewiesenen Leistungsbeginn; vergütet werden die dokumentiert durchgeführten Unterrichtseinheiten.',
+			renewalText: 'Eine automatische feste Verlängerung findet nicht statt.',
+			ordinaryTerminationText:
+				'Die ordentliche Beendigung ist nach der im Angebot ausgewiesenen Vereinbarung für künftige Einheiten möglich.',
+			extraordinaryTerminationText:
+				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
+		},
+		nachhilfe_hourly: {
+			initialTermText:
+				'Der Vertrag gilt ausschließlich für den ausgewiesenen und bewilligten Förderzeitraum.',
+			renewalText:
+				'Eine Verlängerung setzt einen neuen dokumentierten Bewilligungs- und Vertragsstand voraus.',
+			ordinaryTerminationText:
+				'Der Vertrag endet spätestens mit Ablauf des ausgewiesenen Förderzeitraums; weitergehende Beendigungsrechte bleiben unberührt.',
+			extraordinaryTerminationText:
+				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
+		},
+	});
 
 export interface CreateContractDraftCommand {
 	userId: string;
@@ -60,7 +123,7 @@ function ensureTimestamp(value: string, code: string): void {
 	if (Number.isNaN(Date.parse(value))) throw new ContractServiceError(code);
 }
 
-function certificateHtml(source: Record<string, unknown>): string {
+function certificateHtml(source: Record<string, unknown>, previewReview = false): string {
 	const escape = (value: unknown) =>
 		String(value)
 			.replaceAll('&', '&amp;')
@@ -71,7 +134,10 @@ function certificateHtml(source: Record<string, unknown>): string {
 	return `<!doctype html><html lang="de"><head><meta charset="utf-8"><style>
 	@page{size:A4;margin:20mm}body{font:11pt/1.5 Arial,sans-serif;color:#172033}
 	h1{font-size:20pt}.box{border:1px solid #8993a8;padding:12px;margin:12px 0}
-	</style></head><body><h1>Nachweis der Vertragsbildung</h1>
+	.watermark{position:fixed;top:42%;left:4%;width:92%;text-align:center;transform:rotate(-28deg);
+	color:#a10f22;opacity:.13;font-size:34pt;font-weight:800;z-index:999}
+	.test-banner{border:2px solid #a10f22;color:#7c0b1b;padding:12px;font-weight:700}
+	</style></head><body>${previewReview ? '<div class="watermark">TEST/ENTWURF</div><p class="test-banner">TEST/ENTWURF — nicht für reale Vertragsbeziehungen.</p>' : ''}<h1>Nachweis der Vertragsbildung</h1>
 	<p>Dieses Dokument ist ein separater, unveränderlicher Nachweis. Es enthält keine Unterschriftsbilder und verändert das ursprüngliche Vertragsangebot nicht.</p>
 	<div class="box"><strong>Vertragsnummer:</strong> ${escape(source.contractNumber)}<br>
 	<strong>Angebotsnummer:</strong> ${escape(source.offerNumber)}<br>
@@ -96,6 +162,26 @@ export class ContractService {
 		private readonly storageIntents?: StorageIntentRepository
 	) {
 		this.adapter = adapter ?? this.buildAdapter();
+	}
+
+	private async putImmutableTemplateBundle(
+		key: string,
+		bundle: Uint8Array,
+		bundleHash: string
+	): Promise<void> {
+		const existing = await this.store.get(key);
+		if (existing) {
+			const existingBytes = new Uint8Array(existing.body);
+			if (
+				existing.size !== bundle.byteLength ||
+				existingBytes.byteLength !== bundle.byteLength ||
+				(await sha256Bytes(existingBytes)) !== bundleHash
+			) {
+				throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_CONFLICT');
+			}
+			return;
+		}
+		await this.store.put(key, bundle, bundleHash);
 	}
 
 	private buildAdapter(): ContractPdfAdapter | null {
@@ -144,17 +230,14 @@ export class ContractService {
 					);
 					const bundleHash = await sha256Bytes(bundle);
 					const key = `contract-templates/synthetic/${templateId}/synthetic-core-v1.json`;
-					await this.store.put(key, bundle, bundleHash);
+					await this.putImmutableTemplateBundle(key, bundle, bundleHash);
+					const sourceHashes = await contractTemplateSourceHashes(definition);
 					return {
 						id: `contract-template:synthetic:${templateId}:v1`,
 						templateId,
 						bundleKey: key,
 						bundleHash,
-						htmlSourceHash: await hashCanonical({
-							templateId,
-							renderer: definition.render.toString(),
-						}),
-						cssSourceHash: await hashCanonical({ css: definition.css }),
+						...sourceHashes,
 					};
 				}
 			)
@@ -167,6 +250,67 @@ export class ContractService {
 			}),
 			mediaContactSnapshotJson: canonicalJson(mediaContact),
 			mediaContactSnapshotHash: await hashCanonical(mediaContact),
+			templates,
+			now: this.now(),
+		});
+	}
+
+	async installPreviewReviewTemplates(admin: AdminActor) {
+		if (
+			this.config.appEnvironment !== 'preview' ||
+			!this.config.contracts.previewReviewEnabled ||
+			this.config.contracts.renderer !== 'browser_run'
+		) {
+			throw new ContractServiceError('PREVIEW_REVIEW_INSTALL_DISABLED');
+		}
+		const provider = PREVIEW_REVIEW_PROVIDER;
+		const mediaContact = {
+			address: 'Ritzenbergstraße 3, 01067 Dresden',
+			email: 'registration@kolibri-dresden.de',
+			impressumUrl: 'https://kolibri-dresden.de/impressum/',
+			kontaktUrl: 'https://kolibri-dresden.de/kontakt/',
+		};
+		const templates = await Promise.all(
+			(Object.keys(previewReviewContractTemplateRegistry) as ContractTemplateId[]).map(
+				async (templateId) => {
+					const definition = previewReviewContractTemplateRegistry[templateId];
+					const bundle = new TextEncoder().encode(
+						canonicalJson({
+							templateId,
+							version: definition.templateVersion,
+							clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
+							css: definition.css,
+							renderer: 'cloudflare-browser-run-pdf-v1',
+							watermark: 'TEST/ENTWURF — nicht für reale Vertragsbeziehungen',
+						})
+					);
+					const bundleHash = await sha256Bytes(bundle);
+					const key = `contract-templates/preview-review/${templateId}/${PREVIEW_REVIEW_TEMPLATE_VERSION}.json`;
+					await this.putImmutableTemplateBundle(key, bundle, bundleHash);
+					const sourceHashes = await contractTemplateSourceHashes(definition);
+					return {
+						id: `contract-template:preview-review:${templateId}:v1`,
+						templateId,
+						bundleKey: key,
+						bundleHash,
+						...sourceHashes,
+					};
+				}
+			)
+		);
+		return this.repository.installPreviewReviewTemplates({
+			admin,
+			providerSnapshotJson: canonicalJson(provider),
+			providerPaymentTermsHash: await hashCanonical({
+				version: provider.paymentTermsVersion,
+			}),
+			mediaContactSnapshotJson: canonicalJson(mediaContact),
+			mediaContactSnapshotHash: await hashCanonical(mediaContact),
+			distanceLegalBasisHash: await hashCanonical({
+				profile: 'widerruf_applicable',
+				basisVersion: 'preview-review-distance-v1',
+				status: 'internal_draft_for_preview_review',
+			}),
 			templates,
 			now: this.now(),
 		});
@@ -289,10 +433,43 @@ export class ContractService {
 			contractNumber,
 		});
 		if (!parsed.success) throw new ContractServiceError('CONTRACT_RENDER_INPUT_REJECTED');
-		const render = parsed.data;
+		let render = parsed.data;
 		if (
 			render.templateId !== template.template_id ||
-			render.schemaVersion !== template.render_schema_version ||
+			render.schemaVersion !== template.render_schema_version
+		) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_SNAPSHOT_MISMATCH');
+		}
+		if (
+			(template.usage_scope === 'preview_review') !==
+			(render.previewReviewMarker === 'synthetic-no-pii')
+		) {
+			throw new ContractServiceError('CONTRACT_PREVIEW_REVIEW_MARKER_REQUIRED');
+		}
+		if (template.usage_scope === 'preview_review') {
+			render = contractRenderInputSchema.parse({
+				...render,
+				provider: PREVIEW_REVIEW_PROVIDER,
+				term: PREVIEW_REVIEW_TERMS[render.templateId],
+				legal: {
+					...render.legal,
+					clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
+					attachments: [
+						'Datenschutzhinweis',
+						'Widerrufsinformation und Muster-Widerrufsformular',
+					],
+					privacyNoticeVersion:
+						this.config.auth.privacyNoticeVersion ?? 'preview-review-privacy-v1',
+					distanceLegalProfile: template.distance_legal_profile,
+					distanceLegalBasisHash: template.distance_legal_basis_hash,
+					withdrawalTextVersion: 'preview-review-withdrawal-v1',
+					earlyPerformanceRequestVersion: 'preview-review-early-performance-v1',
+					wertersatzNoticeVersion: 'preview-review-wertersatz-v1',
+					mediaClauseVersion: 'preview-review-media-text-v1',
+				},
+			});
+		}
+		if (
 			render.legal.clauseSetVersion !== template.clause_set_version ||
 			render.legal.distanceLegalProfile !== template.distance_legal_profile ||
 			render.legal.distanceLegalBasisHash !== template.distance_legal_basis_hash
@@ -325,7 +502,13 @@ export class ContractService {
 			now,
 			requireQuote: template.usage_scope === 'production',
 		});
-		const source = await renderContractSource(render);
+		const source = await renderContractSource(render, template.template_version);
+		if (
+			source.sourceManifest.htmlSourceHash !== template.html_source_hash ||
+			source.sourceManifest.cssSourceHash !== template.css_source_hash
+		) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_MISMATCH');
+		}
 		const requestHash = await hashCanonical({
 			userId: input.payload.userId,
 			childId: input.payload.childId,
@@ -382,6 +565,19 @@ export class ContractService {
 			}
 			return;
 		}
+		if (template.usage_scope === 'preview_review') {
+			if (
+				this.config.appEnvironment !== 'preview' ||
+				!this.config.contracts.previewReviewEnabled ||
+				template.approval_basis !== 'internal_preview_review'
+			) {
+				throw new ContractServiceError('PREVIEW_REVIEW_TEMPLATE_FORBIDDEN');
+			}
+			return;
+		}
+		if (this.config.appEnvironment !== 'production') {
+			throw new ContractServiceError('PRODUCTION_TEMPLATE_ENVIRONMENT_REQUIRED');
+		}
 		if (
 			template.approval_basis !== 'authorized_verein_approval' &&
 			template.approval_basis !== 'legal_review'
@@ -434,7 +630,10 @@ export class ContractService {
 		}
 		const template = await this.repository.loadTemplate(offer.template_version_id);
 		this.assertSendGate(template);
-		const source = await renderContractSource(JSON.parse(offer.render_input_json));
+		const source = await renderContractSource(
+			JSON.parse(offer.render_input_json),
+			template!.template_version
+		);
 		if (
 			source.renderInputHash !== offer.render_input_hash ||
 			source.sourceManifestHash !== offer.source_manifest_hash
@@ -524,7 +723,10 @@ export class ContractService {
 				let replay: Awaited<ReturnType<typeof this.repository.loadAdminAction>> = null;
 				let authoritativeReadSucceeded = false;
 				try {
-					replay = await this.repository.loadAdminAction(input.admin.id, input.idempotencyKey);
+					replay = await this.repository.loadAdminAction(
+						input.admin.id,
+						input.idempotencyKey
+					);
 					authoritativeReadSucceeded = true;
 				} catch {
 					// Keep staged objects until reconciliation can prove they are unreferenced.
@@ -538,7 +740,10 @@ export class ContractService {
 				}
 				if (authoritativeReadSucceeded) {
 					if (!htmlIntentId && !pdfIntentId) {
-						await Promise.allSettled([this.store.delete(htmlKey), this.store.delete(pdfKey)]);
+						await Promise.allSettled([
+							this.store.delete(htmlKey),
+							this.store.delete(pdfKey),
+						]);
 					}
 					for (const intentId of [htmlIntentId, pdfIntentId]) {
 						if (intentId)
@@ -606,7 +811,15 @@ export class ContractService {
 
 	private async revalidateOffer(offer: StoredContractOffer) {
 		const render = contractRenderInputSchema.parse(JSON.parse(offer.render_input_json));
-		const source = await renderContractSource(render);
+		const template = await this.repository.loadTemplate(offer.template_version_id);
+		if (!template) throw new ContractServiceError('CONTRACT_TEMPLATE_NOT_APPROVED');
+		if (
+			(template.usage_scope === 'preview_review') !==
+			(render.previewReviewMarker === 'synthetic-no-pii')
+		) {
+			throw new ContractServiceError('CONTRACT_PREVIEW_REVIEW_MARKER_REQUIRED');
+		}
+		const source = await renderContractSource(render, template.template_version);
 		if (
 			source.renderInputHash !== offer.render_input_hash ||
 			source.sourceManifestHash !== offer.source_manifest_hash
@@ -619,7 +832,6 @@ export class ContractService {
 			academicPeriodId: offer.academic_period_id,
 			render,
 		});
-		const template = await this.repository.loadTemplate(offer.template_version_id);
 		await this.assertGroupPricing({
 			userId: offer.user_id,
 			childId: offer.child_id,
@@ -697,7 +909,10 @@ export class ContractService {
 			return { ...formation, certificateReady: true };
 		}
 		try {
-			const html = certificateHtml(JSON.parse(certificate.source_snapshot_json));
+			const html = certificateHtml(
+				JSON.parse(certificate.source_snapshot_json),
+				template?.usage_scope === 'preview_review'
+			);
 			const result = await this.adapter.render({
 				html,
 				sourceManifestHash: certificate.source_hash,
@@ -730,9 +945,8 @@ export class ContractService {
 					storageIntentId,
 				});
 			} catch (error) {
-				let replay: Awaited<ReturnType<
-					typeof this.repository.loadCertificateByContract
-				>> = null;
+				let replay: Awaited<ReturnType<typeof this.repository.loadCertificateByContract>> =
+					null;
 				let authoritativeReadSucceeded = false;
 				try {
 					replay = await this.repository.loadCertificateByContract(formation.contractId);
@@ -1077,6 +1291,7 @@ export class ContractService {
 			effectiveFrom: offer.effective_from,
 			effectiveTo: offer.effective_to,
 			contractHash: offer.contract_hash,
+			paymentRequired: offer.payment_arrangement !== 'not_applicable',
 			expiresAt: offer.expires_at,
 			childId: offer.child_id,
 			mediaContactVersionId: offer.media_contact_version_id,
@@ -1096,10 +1311,7 @@ export class ContractService {
 		requestId: string;
 	}) {
 		const actor = requireParent(input.actor);
-		const artifact = await this.repository.loadArtifactForOwner(
-			actor.id,
-			input.artifactId
-		);
+		const artifact = await this.repository.loadArtifactForOwner(actor.id, input.artifactId);
 		if (!artifact) throw new ContractServiceError('CONTRACT_ARTIFACT_NOT_FOUND');
 		const object = await this.store.get(artifact.private_r2_key);
 		if (

@@ -95,13 +95,12 @@ direct SQL. Обе команды требуют exact non-example config/D1 UUI
 HEAD, opaque operator ID и caller-supplied canonical UTC timestamp. Сначала
 локальная команда без network/D1 получает digest-bound typed confirmation:
 
-> **Текущий gate заблокирован.** Все 1 BLOCKER/2 HIGH finding independent NO-GO
-> candidate `73d41ab…` исправлены в local remediation worktree: actual protected
-> preview config value-free проходит account/target guard, period/audit
-> создаются атомарно, а ambiguous result имеет отдельный SELECT-only reconcile.
-> Это ещё не разрешение на D1 write: `db:period:remote` нельзя запускать до нового
-> immutable candidate, отдельного independent GO, утверждения всех period values
-> и отдельного exact permission на одну preview D1 mutation.
+> **Preview checkpoint 2026-08-25.** Утверждённый period `2026-2027` и его audit
+> уже созданы одной отдельно разрешённой atomic mutation и проверены. Эту команду
+> не повторять; при сомнении использовать только exact read-only reconcile.
+> Remediation/review history остаётся evidence реализации boundary, а не новым
+> разрешением. Любой другой preview period или production period требует своих
+> immutable candidate/review, утверждённых values и exact permission.
 
 ```powershell
 npm run db:period:confirmation:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period <APPROVED_PERIOD_CODE> --display-name "<APPROVED_DISPLAY_NAME>" --starts-on <APPROVED_YYYY-MM-DD> --ends-on <APPROVED_YYYY-MM-DD> --current --operator-id <OPAQUE_DATA_OWNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --git-commit <FULL_GIT_SHA>
@@ -132,11 +131,11 @@ post-dispatch result shape всегда дают
 npm run db:period:reconcile:remote -- --environment preview --config <WRANGLER_PREVIEW_CONFIG> --database-id <PREVIEW_D1_UUID> --academic-period <APPROVED_PERIOD_CODE> --display-name "<APPROVED_DISPLAY_NAME>" --starts-on <APPROVED_YYYY-MM-DD> --ends-on <APPROVED_YYYY-MM-DD> --current --operator-id <OPAQUE_DATA_OWNER_ID> --created-at <CANONICAL_UTC_TIMESTAMP> --git-commit <FULL_GIT_SHA> --confirmation <TYPED_CONFIRMATION>
 ```
 
-| Reconcile outcome | Обязательное действие |
-| ----------------- | --------------------- |
-| `applied` | Exact period/audit pair уже зафиксирована; write не повторять, продолжить только в ранее разрешённом scope. |
-| `not_applied` | Exact pair отсутствует; остановиться. Любая последующая apply требует отдельного осознанного решения и всё ещё действующего exact write permission; автоматический retry запрещён. |
-| `conflict` | Обнаружено mixed/incompatible state; остановиться, не менять аргументы, не выполнять write/direct SQL и передать на расследование. |
+| Reconcile outcome | Обязательное действие                                                                                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `applied`         | Exact period/audit pair уже зафиксирована; write не повторять, продолжить только в ранее разрешённом scope.                                                                        |
+| `not_applied`     | Exact pair отсутствует; остановиться. Любая последующая apply требует отдельного осознанного решения и всё ещё действующего exact write permission; автоматический retry запрещён. |
+| `conflict`        | Обнаружено mixed/incompatible state; остановиться, не менять аргументы, не выполнять write/direct SQL и передать на расследование.                                                 |
 
 Для production используются `--environment production` и exact production
 config/UUID только после отдельного production/data-owner permission; preview
@@ -315,6 +314,18 @@ repeated promote reconciliation→rollback→verify→roll-forward→verify, в�
 timeout-after-commit reconciliation. Оба используют встроенные fixtures и
 сохраняют только sanitized evidence. Production остаётся NO-GO, пока preview,
 restore, legal/provider и остальные release gates не закрыты.
+
+Preview checkpoint 2026-08-25: этот обязательный gate выполнен из clean detached
+worktree exact `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9` с distinct
+planner/stager/reviewer/recovery-verifier/promoter/transition identities.
+Candidate safe delta составила PlusBText `changed=1, unchanged=1` и Access
+`changed=1, unchanged=1702`; stage/review/recovery и все transition verifies
+прошли без issues. Ровно один повтор promote reconciled idempotently. После
+rollback current pair была exact previous baseline, после roll-forward — exact
+target candidate; финальные candidate events `promote/rollback/roll_forward =
+1/1/1`, current rows `2 + 1703`, FK/dependency/reconciliation passed. Это только
+synthetic/no-PII preview evidence и не разрешает Worker/auth/email deploy,
+bootstrap, providers, Office/PII или production.
 
 ## Price import
 

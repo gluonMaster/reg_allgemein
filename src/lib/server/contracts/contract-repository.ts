@@ -47,6 +47,7 @@ export interface StoredContractOffer {
 	base_price_cents: number;
 	price_source: string;
 	price_mode: string;
+	payment_arrangement: 'existing_external_sepa' | 'manual_payment' | 'not_applicable';
 	render_input_json: string;
 	render_input_hash: string;
 	source_manifest_json: string;
@@ -84,9 +85,13 @@ export interface StoredTemplateVersion {
 	renderer_id: 'synthetic-test-pdf-v1' | 'cloudflare-browser-run-pdf-v1';
 	renderer_contract_version: string;
 	worker_compatibility_date: string;
-	usage_scope: 'synthetic_test' | 'production';
+	usage_scope: 'synthetic_test' | 'preview_review' | 'production';
 	approval_status: 'draft' | 'approved' | 'retired';
-	approval_basis: 'synthetic_fixture' | 'authorized_verein_approval' | 'legal_review';
+	approval_basis:
+		| 'synthetic_fixture'
+		| 'internal_preview_review'
+		| 'authorized_verein_approval'
+		| 'legal_review';
 	distance_legal_profile:
 		'offline_only' | 'widerruf_applicable' | 'widerruf_not_applicable_312g_2_9';
 	distance_legal_basis_hash: string | null;
@@ -246,6 +251,253 @@ export class ContractRepository {
 		];
 		await this.db.batch(statements);
 		return input.templates.map((template) => template.id);
+	}
+
+	async installPreviewReviewTemplates(input: {
+		admin: AdminActor;
+		providerSnapshotJson: string;
+		providerPaymentTermsHash: string;
+		mediaContactSnapshotJson: string;
+		mediaContactSnapshotHash: string;
+		distanceLegalBasisHash: string;
+		templates: ReadonlyArray<{
+			id: string;
+			templateId: ContractTemplateId;
+			bundleKey: string;
+			bundleHash: string;
+			htmlSourceHash: string;
+			cssSourceHash: string;
+		}>;
+		now: string;
+	}): Promise<string[]> {
+		const providerId = 'contract-provider:preview-review-v1';
+		const mediaContactId = 'media-contact:preview-review-v1';
+		type InstalledPreviewTemplate = {
+			id: string;
+			template_id: ContractTemplateId;
+			template_bundle_r2_key: string;
+			bundle_hash: string;
+			html_source_hash: string;
+			css_source_hash: string;
+			render_schema_version: string;
+			clause_set_version: string;
+			required_fields_json: string;
+			renderer_id: string;
+			renderer_contract_version: string;
+			worker_compatibility_date: string;
+			approval_status: string;
+			approval_basis: string;
+			provider_version_id: string;
+			media_contact_version_id: string;
+			distance_legal_profile: string;
+			distance_legal_basis_version: string;
+			distance_legal_basis_hash: string;
+			kuendigung_function_required: number;
+			early_performance_supported: number;
+		};
+		const loadInstalled = () =>
+			this.db.all<InstalledPreviewTemplate>({
+				sql: `SELECT id, template_id, template_bundle_r2_key, bundle_hash,
+					html_source_hash, css_source_hash, render_schema_version,
+					clause_set_version, required_fields_json, renderer_id,
+					renderer_contract_version, worker_compatibility_date,
+					approval_status, approval_basis, provider_version_id,
+					media_contact_version_id, distance_legal_profile,
+					distance_legal_basis_version, distance_legal_basis_hash,
+					kuendigung_function_required, early_performance_supported
+				FROM contract_template_versions WHERE usage_scope = 'preview_review'
+					AND template_version = 'preview-review-v1' ORDER BY id`,
+			});
+		const installationIsExact = async (
+			rows: readonly InstalledPreviewTemplate[]
+		): Promise<boolean> => {
+			const expected = new Map(input.templates.map((template) => [template.id, template]));
+			if (
+				rows.length !== input.templates.length ||
+				rows.some((row) => {
+					const template = expected.get(row.id);
+					return (
+						!template ||
+						row.template_id !== template.templateId ||
+						row.template_bundle_r2_key !== template.bundleKey ||
+						row.bundle_hash !== template.bundleHash ||
+						row.html_source_hash !== template.htmlSourceHash ||
+						row.css_source_hash !== template.cssSourceHash ||
+						row.render_schema_version !== 'contract-render-v1' ||
+						row.clause_set_version !== 'preview-review-clauses-v1' ||
+						row.required_fields_json !== '["previewReviewMarker"]' ||
+						row.renderer_id !== 'cloudflare-browser-run-pdf-v1' ||
+						row.renderer_contract_version !== 'pdf-adapter-v1' ||
+						row.worker_compatibility_date !== '2026-03-24' ||
+						row.approval_status !== 'approved' ||
+						row.approval_basis !== 'internal_preview_review' ||
+						row.provider_version_id !== providerId ||
+						row.media_contact_version_id !== mediaContactId ||
+						row.distance_legal_profile !== 'widerruf_applicable' ||
+						row.distance_legal_basis_version !== 'preview-review-distance-v1' ||
+						row.distance_legal_basis_hash !== input.distanceLegalBasisHash ||
+						row.early_performance_supported !== 1 ||
+						row.kuendigung_function_required !==
+							(template.templateId === 'group_yearly' ||
+							template.templateId === 'group_monthly'
+								? 1
+								: 0)
+					);
+				})
+			) {
+				return false;
+			}
+			const [provider, mediaContact] = await Promise.all([
+				this.db.first<{
+					provider_snapshot_json: string;
+					payment_terms_hash: string;
+				}>({
+					sql: `SELECT provider_snapshot_json, payment_terms_hash
+						FROM contract_provider_versions WHERE id = ?
+							AND version = 'preview-review-provider-v1'
+							AND payment_terms_version = 'preview-review-payment-v1'
+							AND approval_status = 'approved'`,
+					params: [providerId],
+				}),
+				this.db.first<{ contact_snapshot_json: string; snapshot_hash: string }>({
+					sql: `SELECT contact_snapshot_json, snapshot_hash
+						FROM media_withdrawal_contact_versions WHERE id = ?
+							AND version = 'preview-review-media-contact-v1'
+							AND german_text_version = 'preview-review-media-text-v1'
+							AND approval_status = 'approved'
+							AND compliance_assessment_status = 'not_assessed'`,
+					params: [mediaContactId],
+				}),
+			]);
+			return (
+				provider?.provider_snapshot_json === input.providerSnapshotJson &&
+				provider.payment_terms_hash === input.providerPaymentTermsHash &&
+				mediaContact?.contact_snapshot_json === input.mediaContactSnapshotJson &&
+				mediaContact.snapshot_hash === input.mediaContactSnapshotHash
+			);
+		};
+		const existing = await loadInstalled();
+		if (existing.results.length > 0) {
+			if (!(await installationIsExact(existing.results))) {
+				throw new ContractRepositoryError('PREVIEW_REVIEW_TEMPLATE_INSTALL_CONFLICT');
+			}
+			return existing.results.map((row) => row.id);
+		}
+		const auditId = crypto.randomUUID();
+		const statements: StatementSpec[] = [
+			{
+				sql: `INSERT OR IGNORE INTO contract_provider_versions
+					(id, version, provider_snapshot_json, payment_terms_version,
+					 payment_terms_hash, approval_status, approved_by, approved_at, created_at)
+				SELECT ?, 'preview-review-provider-v1', ?, 'preview-review-payment-v1', ?,
+					'approved', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
+				params: [
+					providerId,
+					input.providerSnapshotJson,
+					input.providerPaymentTermsHash,
+					input.admin.id,
+					input.now,
+					input.now,
+					input.admin.id,
+				],
+			},
+			{
+				sql: `INSERT OR IGNORE INTO media_withdrawal_contact_versions
+					(id, version, contact_snapshot_json, snapshot_hash, german_text_version,
+					 approval_status, compliance_assessment_status, approved_by, approved_at, created_at)
+				SELECT ?, 'preview-review-media-contact-v1', ?, ?, 'preview-review-media-text-v1',
+					'approved', 'not_assessed', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
+				params: [
+					mediaContactId,
+					input.mediaContactSnapshotJson,
+					input.mediaContactSnapshotHash,
+					input.admin.id,
+					input.now,
+					input.now,
+					input.admin.id,
+				],
+			},
+			...input.templates.map<StatementSpec>((template) => ({
+				sql: `INSERT OR IGNORE INTO contract_template_versions
+					(id, template_id, template_version, render_schema_version,
+					 clause_set_version, provider_version_id, media_contact_version_id,
+					 template_bundle_r2_key, bundle_hash, html_source_hash, css_source_hash,
+					 asset_manifest_json, font_manifest_json, required_fields_json,
+					 renderer_id, renderer_contract_version, worker_compatibility_date,
+					 usage_scope, approval_status, approval_basis, distance_legal_profile,
+					 distance_legal_basis_version, distance_legal_basis_hash,
+					 kuendigung_function_required, early_performance_supported,
+					 approved_by, approved_at, valid_from, valid_to, created_at)
+				SELECT ?, ?, 'preview-review-v1', 'contract-render-v1',
+					'preview-review-clauses-v1', ?, ?, ?, ?, ?, ?, '{}', '{}',
+					'["previewReviewMarker"]', 'cloudflare-browser-run-pdf-v1',
+					'pdf-adapter-v1', '2026-03-24', 'preview_review', 'approved',
+					'internal_preview_review', 'widerruf_applicable',
+					'preview-review-distance-v1', ?, ?, 1, ?, ?, NULL, NULL, ?
+				WHERE ${ACTIVE_ADMIN}
+					AND EXISTS (SELECT 1 FROM contract_provider_versions
+						WHERE id = ? AND version = 'preview-review-provider-v1'
+							AND provider_snapshot_json = ?
+							AND payment_terms_version = 'preview-review-payment-v1'
+							AND payment_terms_hash = ? AND approval_status = 'approved')
+					AND EXISTS (SELECT 1 FROM media_withdrawal_contact_versions
+						WHERE id = ? AND version = 'preview-review-media-contact-v1'
+							AND contact_snapshot_json = ? AND snapshot_hash = ?
+							AND german_text_version = 'preview-review-media-text-v1'
+							AND approval_status = 'approved'
+							AND compliance_assessment_status = 'not_assessed')`,
+				params: [
+					template.id,
+					template.templateId,
+					providerId,
+					mediaContactId,
+					template.bundleKey,
+					template.bundleHash,
+					template.htmlSourceHash,
+					template.cssSourceHash,
+					input.distanceLegalBasisHash,
+					template.templateId === 'group_yearly' ||
+					template.templateId === 'group_monthly'
+						? 1
+						: 0,
+					input.admin.id,
+					input.now,
+					input.now,
+					input.admin.id,
+					providerId,
+					input.providerSnapshotJson,
+					input.providerPaymentTermsHash,
+					mediaContactId,
+					input.mediaContactSnapshotJson,
+					input.mediaContactSnapshotHash,
+				],
+			})),
+			{
+				sql: `INSERT INTO audit_events
+					(id, actor_user_id, actor_kind, action, target_kind, target_id,
+					 request_id, safe_diff_json, created_at)
+				SELECT ?, ?, 'user', 'contract.preview_review_templates_installed',
+					'contract_template_set', 'preview-review-v1', ?,
+					'{"usageScope":"preview_review","templateCount":4}', ?
+				WHERE ${ACTIVE_ADMIN}
+					AND (SELECT COUNT(*) FROM contract_template_versions
+						WHERE usage_scope = 'preview_review'
+							AND template_version = 'preview-review-v1') = 4`,
+				params: [
+					auditId,
+					input.admin.id,
+					`preview-review-install:${auditId}`,
+					input.now,
+					input.admin.id,
+				],
+			},
+		];
+		await this.db.batch(statements);
+		const installed = await loadInstalled();
+		if (!(await installationIsExact(installed.results))) {
+			throw new ContractRepositoryError('PREVIEW_REVIEW_TEMPLATE_INSTALL_REJECTED');
+		}
+		return installed.results.map((row) => row.id);
 	}
 
 	loadTemplate(templateVersionId: string): Promise<StoredTemplateVersion | null> {
@@ -1927,8 +2179,14 @@ export class ContractRepository {
 						AND assertion.action_id = request.id
 						AND assertion.actor_user_id = ?
 						AND assertion.assertion_passed = 1)`,
-			params: [input.idempotencyKey, input.contractId, input.userId,
-				input.userId, input.offerId, input.userId],
+			params: [
+				input.idempotencyKey,
+				input.contractId,
+				input.userId,
+				input.userId,
+				input.offerId,
+				input.userId,
+			],
 		});
 	}
 
@@ -2418,8 +2676,14 @@ export class ContractRepository {
 						AND assertion.action_id = notice.id
 						AND assertion.actor_user_id = ?
 						AND assertion.assertion_passed = 1)`,
-			params: [input.idempotencyKey, input.contractId, input.userId,
-				input.userId, input.offerId, input.userId],
+			params: [
+				input.idempotencyKey,
+				input.contractId,
+				input.userId,
+				input.userId,
+				input.offerId,
+				input.userId,
+			],
 		});
 	}
 
@@ -2474,8 +2738,15 @@ export class ContractRepository {
 						AND engagement.status IN ('active', 'funding_review')
 						AND owner.role = 'parent' AND owner.account_status = 'active'
 						AND owner.is_blocked = 0 AND owner.email_verified_at IS NOT NULL`,
-					params: [taskId, noticeId, input.now, input.now,
-						input.contractId, input.actor.id, input.offerId],
+					params: [
+						taskId,
+						noticeId,
+						input.now,
+						input.now,
+						input.contractId,
+						input.actor.id,
+						input.offerId,
+					],
 				},
 				{
 					sql: `INSERT INTO service_attendance_notices
@@ -2536,9 +2807,18 @@ export class ContractRepository {
 						AND EXISTS (SELECT 1 FROM service_attendance_notices notice
 							WHERE notice.id = ? AND notice.contract_id = ?
 								AND notice.service_engagement_id = service_engagements.id)`,
-					params: [input.now, noticeId, input.now, input.contractId,
-						input.actor.id, input.offerId, input.contractId, input.actor.id,
-						noticeId, input.contractId],
+					params: [
+						input.now,
+						noticeId,
+						input.now,
+						input.contractId,
+						input.actor.id,
+						input.offerId,
+						input.contractId,
+						input.actor.id,
+						noticeId,
+						input.contractId,
+					],
 				},
 				{
 					sql: `INSERT INTO contract_events
@@ -2641,13 +2921,36 @@ export class ContractRepository {
 								AND audit.request_id = ?)
 					THEN 1 ELSE 0 END, ?)`,
 					params: [
-						crypto.randomUUID(), input.contractId, noticeId, input.actor.id, auditId,
-						noticeId, input.contractId, input.actor.id, input.noticeTextVersion,
-						input.noticeHash, input.idempotencyKey, taskId, input.offerId,
-						input.actor.id, input.now, taskId, noticeId, eventId, input.contractId,
-						input.offerId, input.actor.id, `attendance-ceased:${noticeId}`,
-						outboxId, noticeId, `attendance-confirmation:${noticeId}`,
-						auditId, input.actor.id, input.contractId, input.requestId, input.now,
+						crypto.randomUUID(),
+						input.contractId,
+						noticeId,
+						input.actor.id,
+						auditId,
+						noticeId,
+						input.contractId,
+						input.actor.id,
+						input.noticeTextVersion,
+						input.noticeHash,
+						input.idempotencyKey,
+						taskId,
+						input.offerId,
+						input.actor.id,
+						input.now,
+						taskId,
+						noticeId,
+						eventId,
+						input.contractId,
+						input.offerId,
+						input.actor.id,
+						`attendance-ceased:${noticeId}`,
+						outboxId,
+						noticeId,
+						`attendance-confirmation:${noticeId}`,
+						auditId,
+						input.actor.id,
+						input.contractId,
+						input.requestId,
+						input.now,
 					],
 				},
 			]);
@@ -2734,9 +3037,18 @@ export class ContractRepository {
 						AND assertion.action_id = consent.id
 						AND assertion.actor_user_id = ?
 						AND assertion.assertion_passed = 1)`,
-			params: [input.idempotencyKey, input.userId, input.userId, input.offerId,
-				input.userId, input.childId, input.contactVersionId,
-				input.contactSnapshotHash, input.contactSnapshotHash, input.userId],
+			params: [
+				input.idempotencyKey,
+				input.userId,
+				input.userId,
+				input.offerId,
+				input.userId,
+				input.childId,
+				input.contactVersionId,
+				input.contactSnapshotHash,
+				input.contactSnapshotHash,
+				input.userId,
+			],
 		});
 	}
 
@@ -2878,14 +3190,35 @@ export class ContractRepository {
 								AND audit.request_id = ?)
 					THEN 1 ELSE 0 END, ?)`,
 					params: [
-						crypto.randomUUID(), input.offerId, consentId, input.actor.id, auditId,
-						consentId, input.actor.id, input.childId, input.captureScopesJson,
-						input.publicationChannelsJson, input.textVersion, input.contactVersionId,
-						input.contactSnapshotHash, input.decision, input.actor.id,
-						input.evidenceHash, input.idempotencyKey, input.offerId,
-						input.offerId, input.actor.id, input.childId, input.contactVersionId,
-						input.contactSnapshotHash, input.decision, auditId, input.actor.id,
-						consentId, input.requestId, input.now,
+						crypto.randomUUID(),
+						input.offerId,
+						consentId,
+						input.actor.id,
+						auditId,
+						consentId,
+						input.actor.id,
+						input.childId,
+						input.captureScopesJson,
+						input.publicationChannelsJson,
+						input.textVersion,
+						input.contactVersionId,
+						input.contactSnapshotHash,
+						input.decision,
+						input.actor.id,
+						input.evidenceHash,
+						input.idempotencyKey,
+						input.offerId,
+						input.offerId,
+						input.actor.id,
+						input.childId,
+						input.contactVersionId,
+						input.contactSnapshotHash,
+						input.decision,
+						auditId,
+						input.actor.id,
+						consentId,
+						input.requestId,
+						input.now,
 					],
 				},
 			]);
@@ -2900,7 +3233,10 @@ export class ContractRepository {
 				idempotencyKey: input.idempotencyKey,
 			});
 			if (replay) {
-				if (replay.evidence_hash !== input.evidenceHash || replay.decision !== input.decision) {
+				if (
+					replay.evidence_hash !== input.evidenceHash ||
+					replay.decision !== input.decision
+				) {
 					throw new ContractRepositoryError('IDEMPOTENCY_KEY_REUSED');
 				}
 				return { consentId: replay.id, replayed: true };

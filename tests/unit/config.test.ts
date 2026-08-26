@@ -620,6 +620,7 @@ describe('runtime configuration', () => {
 		});
 		expect(defaults.contracts).toEqual({
 			sendEnabled: false,
+			previewReviewEnabled: false,
 			renderer: 'disabled',
 			maxHtmlBytes: 2 * 1024 * 1024,
 			maxPdfBytes: 10 * 1024 * 1024,
@@ -628,6 +629,33 @@ describe('runtime configuration', () => {
 			mediaOnlineGrantEnabled: false,
 			publicFunctionsEnabled: false,
 		});
+		const previewReview = loadRuntimeConfig({
+			APP_ENV: 'preview',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			...previewTurnstile,
+			...officialLinks,
+			SCHEDULED_JOBS_ENABLED: 'true',
+			EMAIL_PROVIDER: 'resend',
+			RESEND_API_KEY: 're_' + 'x'.repeat(32),
+			EMAIL_FROM: APPROVED_EMAIL_FROM,
+			EMAIL_REPLY_TO: APPROVED_EMAIL_REPLY_TO,
+			PREVIEW_EMAIL_RECIPIENT_HASHES: 'a'.repeat(64),
+			CONTRACT_SEND_ENABLED: 'true',
+			CONTRACT_PREVIEW_REVIEW_ENABLED: 'true',
+			CONTRACT_RENDERER: 'browser_run',
+		});
+		expect(previewReview.contracts).toMatchObject({
+			sendEnabled: true,
+			previewReviewEnabled: true,
+			renderer: 'browser_run',
+		});
+		expect(previewReview.messaging.previewEmailRecipientHashes).toEqual(['a'.repeat(64)]);
 		expect(() =>
 			loadRuntimeConfig({
 				APP_ENV: 'development',

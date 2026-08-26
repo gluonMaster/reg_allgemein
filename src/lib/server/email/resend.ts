@@ -23,10 +23,61 @@ export interface ResendEmailProviderOptions {
 	replyTo: string;
 	fetcher?: typeof fetch;
 	timeoutMs?: number;
+	allowedRecipientHashes?: readonly string[];
+}
+
+function bytesToBase64(content: Uint8Array): string {
+	const chunkSize = 3 * 8_192;
+	const parts: string[] = [];
+	for (let offset = 0; offset < content.byteLength; offset += chunkSize) {
+		const chunk = content.subarray(offset, Math.min(content.byteLength, offset + chunkSize));
+		parts.push(btoa(String.fromCharCode(...chunk)));
+	}
+	return parts.join('');
+}
+
+async function assertAllowedRecipient(
+	recipient: string,
+	allowedHashes: readonly string[] | undefined
+): Promise<void> {
+	if (!allowedHashes || allowedHashes.length === 0) return;
+	const digest = await crypto.subtle.digest(
+		'SHA-256',
+		new TextEncoder().encode(recipient.trim().toLowerCase())
+	);
+	const hash = [...new Uint8Array(digest)]
+		.map((value) => value.toString(16).padStart(2, '0'))
+		.join('');
+	if (!allowedHashes.includes(hash)) {
+		throw new EmailProviderError('RESEND_RECIPIENT_NOT_ALLOWLISTED', false);
+	}
+}
+
+function resendAttachments(message: EmailMessage) {
+	if (!message.attachments || message.attachments.length === 0) return undefined;
+	if (
+		message.attachments.length > 1 ||
+		message.attachments.some(
+			(attachment) =>
+				attachment.contentType !== 'application/pdf' ||
+				attachment.content.byteLength < 1 ||
+				attachment.content.byteLength > 10 * 1024 * 1024 ||
+				!/^[A-Za-z0-9._-]{1,120}$/u.test(attachment.filename)
+		)
+	) {
+		throw new EmailProviderError('RESEND_ATTACHMENT_INVALID', false);
+	}
+	return message.attachments.map((attachment) => ({
+		filename: attachment.filename,
+		content: bytesToBase64(attachment.content),
+	}));
 }
 
 function safeErrorCode(type: string | undefined, status: number): string {
-	const normalized = type?.toUpperCase().replace(/[^A-Z0-9_]/g, '_').slice(0, 100);
+	const normalized = type
+		?.toUpperCase()
+		.replace(/[^A-Z0-9_]/g, '_')
+		.slice(0, 100);
 	return normalized ? `RESEND_${normalized}` : `RESEND_HTTP_${status}`;
 }
 
@@ -75,6 +126,8 @@ export class ResendEmailProvider implements EmailProvider {
 		context?: ProviderSendContext
 	): Promise<{ providerRequestId: string }> {
 		const idempotencyKey = await providerIdempotencyKey(context);
+		await assertAllowedRecipient(message.to, this.options.allowedRecipientHashes);
+		const attachments = resendAttachments(message);
 		let response: Response;
 
 		try {
@@ -92,6 +145,7 @@ export class ResendEmailProvider implements EmailProvider {
 					reply_to: this.options.replyTo,
 					subject: message.subject,
 					text: message.text,
+					...(attachments ? { attachments } : {}),
 				}),
 				signal: AbortSignal.timeout(this.timeoutMs),
 			});

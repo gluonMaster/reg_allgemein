@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-25T14:34:46Z
+updated_utc: 2026-08-26T14:45:17Z
 reviewed_candidate: 5789e319fd65850112a1bf05961e96c86f7c76aa
-last_completed_gate: phase-b-promote-timeout-remediation-immutable-review
-next_gate: phase-b-preview-0023-recovery-rebind-and-baseline-promote-authorization
+last_completed_gate: full-manual-preview-local-candidate-gates
+next_gate: full-manual-preview-candidate-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -18,30 +18,85 @@ readiness contract/checklist, roadmap и persistent handoff.
 ## Постоянная цель
 
 Ближайшая цель — получить Access-protected preview, в котором владелец может
-вручную проверить весь MVP в максимально полном канонически допустимом виде на
-синтетических данных без PII: разрешённые пути проходят end-to-end, а путь,
-который по legal/security policy обязан оставаться выключенным, проходит явный
-fail-closed negative smoke с зафиксированной причиной. После этого процесс
-продолжается до production readiness и отдельно разрешённого production deploy.
+вручную проверить весь MVP end-to-end на синтетических данных без PII. По
+`SYS-04`/`OQ-036` email, Telegram, Browser-contract и document upload/manual
+review для этого checkpoint реально включаются на выделенных preview resources;
+их production legal/provider/training gate не заменяется одним fail-closed
+negative smoke. После этого процесс продолжается до production readiness и
+отдельно разрешённого production deploy.
 
 `full-manual-preview` достигнут только когда владелец получил URL и пошаговый
 manual test plan, два контролируемых verified account работают с разными ролями,
 первый admin bootstrap проверен, а user/admin/import/operations/email/Telegram/
-Browser-contract/upload и обязательные security/accessibility сценарии либо
-выполнены в preview, либо имеют канонически обязательный и проверенный
-fail-closed verdict. Один deploy, login, import или bootstrap эту цель не
-закрывает.
+Browser-contract/upload и обязательные security/accessibility сценарии
+фактически выполнены в preview. Fail-closed verdict допустим для намеренно
+вне-MVP или production-only unsafe эффекта, но не вместо обязательного MVP-
+контура. Один deploy, login, import или bootstrap эту цель не закрывает.
 
 ## Последний закрытый gate
 
+- По точному разрешению владельца из clean detached worktree exact HEAD
+  `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9` выполнен весь built-in no-PII
+  candidate lifecycle с отдельными planner/stager/reviewer/recovery-verifier/
+  promoter/transition identities. Plan зафиксировал ожидаемую baseline pair и
+  safe delta: PlusBText `changed=1, unchanged=1`, Access
+  `changed=1, unchanged=1702`; stage дал `2 + 1703` promotable rows и issues `0`.
+- До stage создан fresh protected DPAPI CurrentUser export и новый distinct
+  unbound EU D1 restore. Exact export↔restore сверка подтвердила `527`
+  comparable schema objects, `142` tables, `67,422` rows на recovery point,
+  migrations `23/max 23`, FK `0`, current pair `previous`, PlusBText `2`, Access
+  projection `1703`, users `0`. Единственный post-export drift live source —
+  append-only `scheduled_job_runs`; local SQLite oracle доказал exact export↔
+  restore counts/digests и `quick_check=ok`. Plaintext/local scratch удалены,
+  зашифрованный backup и protected ignored point/evidence сохранены.
+- Independent review закрепил immutable staged digest; отдельный recovery
+  verifier привязал fresh evidence к exact plan/review с
+  `restored-current-pair=previous`. Первый promote завершился однозначно;
+  canonical verify дал `promoted/target`, unique/dependency/FK/reconciliation
+  `true`, `2 + 1703`, issues `0`, events `1/0/0`.
+- Ровно один повтор той же promote-команды reconciled idempotently: transition
+  result и canonical verify byte-identical, rows/events не изменились. Затем
+  rollback/verify дал `rolled_back/previous`, events `1/1/0`; roll-forward/
+  verify вернул `promoted/target`, events `1/1/1`, issues `0` и все invariants
+  `true`.
+- Final aggregate audit: migrations `23/max 23`, FK `0`, один current period,
+  users `0`, два release plans и оба `promoted`, non-promoted `0`, total bundle
+  events `2/1/1` с учётом baseline, ровно одна current pair `2 + 1703`, current
+  issues `0`, bootstrap `available`, actions `0`. Worker/Access/auth/email,
+  bootstrap, Telegram, Office/PII, production и официальный сайт не менялись.
+- По точному разрешению владельца append-only migration
+  `0023_legacy_projection_lookup_indexes.sql` применена только к source preview
+  D1 и существующей distinct/unbound isolated recovery D1. На обеих exact
+  ledger теперь `0001`–`0023`, pending `0`, все пять indexes присутствуют,
+  пять deterministic `EXPLAIN QUERY PLAN` используют ожидаемые indexes,
+  FK violations `0`. Production не затронут.
+- Исходные protected pre-stage recovery artifacts не перезаписывались. Тот же
+  независимый recovery-verifier перепроверил plan-bound isolated recovery на
+  schema `0023`: source/restore comparable schema совпадает (`527` objects,
+  `142` tables), aggregate pre-promote rows `49,731`, current pair `none`, FK
+  violations `0`. Созданы отдельные protected ignored versioned artifacts
+  `legacy-preview-baseline-recovery-point-0023.json` и
+  `legacy-preview-baseline-recovery-0023.json`.
+- Из clean detached worktree exact plan anchor
+  `a098b8324ddca337c19b3344c7c1f82dfb68a36a` создана новая digest-bound
+  confirmation и выполнена ровно одна разрешённая baseline promote attempt.
+  Она завершилась `promote`, exit `0`, без ambiguous delivery; повторной
+  попытки не было.
+- Immediate canonical read-only verify вернул `promoted`, current pair
+  `target`, unique/dependency/FK/reconciliation `true`, issues `0`; PlusBText
+  `2/2`, Access run/target/projection `1703/1703`, promote events `1`, rollback
+  и roll-forward events `0`. Это закрыло исторический first baseline publish;
+  отдельный candidate rollback/roll-forward lifecycle теперь также закрыт выше,
+  но не `full-manual-preview`.
 - В preview атомарно создан и проверен утверждённый current academic period
   `2026-2027` / `2026/2027`, `2026-08-17`–`2027-07-09`; users/admins остались
   `0`, FK violations `0`. Разрешение не распространялось на production.
-- Built-in no-PII baseline `legacy-preview-synthetic-baseline-v1` прошёл
+- До `0023` remediation built-in no-PII baseline
+  `legacy-preview-synthetic-baseline-v1` прошёл
   независимые plan/stage/review/recovery роли: `2` PlusBText и `1703` Access
   rows, issues `0`, exact current pair `none`. Full isolated EU D1 restore
   проверен, source preview не публиковал current pair.
-- Первый promote не уложился в 30-second D1 query limit. Два post-exit
+- Первый promote до `0023` не уложился в 30-second D1 query limit. Два post-exit
   canonical verify однозначно доказали `not applied`: plan остаётся `reviewed`,
   current pair `none`, projection/events/promoted rows `0`, FK/dependency
   invariants проходят. Blind retry остановлен.
@@ -52,8 +107,8 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
   deterministic `EXPLAIN QUERY PLAN` focused test проходит. Full gates прошли:
   check 0/0, Vitest 68 files/531 tests, build, Playwright 18/18, audit 0,
   docs/continuity и release scan. Независимый exact-SHA read-only review вернул
-  GO без BLOCKER/HIGH/MEDIUM. Эта migration ещё не применена к preview или
-  isolated recovery D1 и не разрешает новый promote сама по себе.
+  GO без BLOCKER/HIGH/MEDIUM. В текущем gate migration была отдельно разрешена,
+  применена и проверена на preview и isolated recovery D1.
 - Immutable remediation anchor
   `723e94715c2764f829bf718c49989428fa3c169a` создан непосредственным потомком
   rejected `73d41ab855cfd670f24b6791563e335f6828e446`. Exact diff содержит 14
@@ -103,28 +158,97 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
   provenance и schema `0001`–`0015`, поэтому не является fresh plan-bound
   evidence для Phase B.
 
-## Фактический preview baseline
+## Локальный full-manual-preview candidate
 
-- Exact preview Worker уже deployed на 100%, canonical hostname защищён
-  Cloudflare Access, versioned preview routes закрыты; повторный Worker deploy
-  сейчас не нужен.
-- Preview D1 имеет applied migrations `0001`–`0022`, а local candidate `0023`
-  ещё pending и не применён. FK violations `0`; current approved academic
-  period существует, reviewed synthetic baseline staged, current promoted
-  legacy snapshot всё ещё отсутствует; users/admins `0`, bootstrap control
-  доступен и не использован.
+- На базе exact continuation HEAD `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9`
+  подготовлена append-only migration `0024_contract_preview_review.sql` и
+  fail-closed `preview_review` scope для всех четырёх видов договора. Он
+  допускается только в `APP_ENV=preview`, требует Browser Run, synthetic marker
+  и печатает на каждой странице `TEST/ENTWURF — nicht für reale
+  Vertragsbeziehungen`; production scope/gates не ослаблены.
+- Admin может идемпотентно установить четыре versioned bundle. Обычный
+  application flow создаёт immutable source snapshot, реально рендерит PDF,
+  кладёт HTML/PDF в private archive R2, а email worker перед отправкой повторно
+  читает ровно этот PDF и проверяет его D1-bound size/SHA-256. Preview Resend
+  принимает только заранее согласованный SHA-256 allowlist получателей и
+  отправляет сам marked PDF как attachment, а не одну ссылку.
+- Parent acceptance теперь явно различает платный и не платный договор;
+  последующая formation/activation остаётся отдельным действием admin principal
+  и создаёт отдельный marked formation certificate. Preview bundle — внутренний
+  draft для получения фактических PDF и последующих правок, а не production
+  legal approval.
+- Обязательный document flow не переписан и не подменён stub: профильный и
+  полный D1 test подтверждают synthetic upload → quarantine R2 → forced admin
+  download → hash-bound local-AV attestation → отдельную business review →
+  owner download/negative access → cleanup. Telegram normal-outbox
+  prepare/send/unknown/reconcile/abort path также повторно прошёл полный test
+  gate. Удалённый upload/AV и Bot API send ещё не выполнялись.
+- Local candidate gates зелёные: `npm run check` — 0 errors/warnings; `npm
+  test` — 69 files/541 tests; `npm run build`; Playwright — 18/18; `npm audit
+  --omit=dev` — 0 vulnerabilities; `npm run docs:check` — 168 links/56 files,
+  109 commands и continuity; `npm run release:scan` — 549/549; `git diff
+  --check`. Focused contract/config/migration suite — 71/71, Telegram — 56/56,
+  documents — 25/25.
+- Эти изменения пока являются local worktree candidate. Migration `0024`,
+  Worker/config/flags, auth/bootstrap, Resend/Telegram sends и реальные preview
+  R2 uploads не применялись. Следующий gate — immutable commit и independent
+  read-only exact-SHA review другой ролью/сессией.
+
+## Фактическое preview состояние
+
+- Существующий preview Worker deployed на 100%, canonical hostname защищён
+  Cloudflare Access, versioned preview routes закрыты. Это прежняя версия до
+  full-manual-preview candidate; после independent GO потребуется отдельно
+  разрешённый exact-SHA deploy.
+- Preview D1 имеет applied migrations `0001`–`0023`, pending `0`, пять новых
+  projection lookup indexes и FK violations `0`; current approved academic
+  period существует. После успешного candidate roll-forward единственная
+  current pair — built-in synthetic candidate: PlusBText `2`, Access/projection
+  `1703`, issues `0`; users/admins `0`, bootstrap control доступен и не
+  использован. Synthetic baseline остаётся exact previous rollback target.
 - Два preview R2 bucket private/EU и пусты.
 - Public auth, прикладной email, Telegram, document upload, contract send,
   public statutory и media paths остаются fail-closed. Scheduled operations
   отдельно deployed и активны.
+- Решение владельца `OQ-036` требует после auth/bootstrap реально включить на
+  synthetic data preview-review договоры через Browser Run/R2/email, dedicated
+  Telegram normal-outbox и upload/quarantine/manual-AV/business-review. Их
+  нынешний disabled status является исходным безопасным состоянием, а не
+  завершённым manual-preview evidence.
 - Production verdict остаётся **NO-GO / blocked**; production и официальный
   сайт не входят в разрешение preview-гейтов.
 
+## Fresh continuation audit
+
+- Final canonical `verify` выполнен 2026-08-25 из clean detached exact candidate
+  worktree `c02b1bf…`: status `promoted`, current pair `target`, unique/
+  dependency/FK/reconciliation passed, PlusBText `2`, Access target/projection
+  `1703`, issues `0`, candidate events `promote=1`, `rollback=1`,
+  `roll_forward=1`.
+- Отдельный SELECT-only aggregate audit подтвердил migrations `23/max 23`, FK
+  `0`, один current academic period, users `0`, два release plans и оба
+  `promoted`, non-promoted plans `0`, total events `2/1/1`, bootstrap control
+  `available`, completed bootstrap actions `0`.
+- Fresh browser preflight без credentials проверил canonical root, operations
+  health, registration и admin-operations routes. Все четыре route до Worker UI
+  остановлены Cloudflare Access login с доступными heading/email-label/button;
+  browser console errors `0`. Активной Access/portal session не было, email/OTP
+  не вводились, поэтому authenticated portal/manual evidence не заявляется.
+- Completion audit сохраняет `full-manual-preview` в `blocked`: candidate
+  transition lifecycle закрыт, но всё ещё нужны independently reviewed и
+  отдельно разрешённо deployed preview auth/email, два созданных владельцем
+  verified account, one-shot admin bootstrap и guided authenticated manual/
+  security/accessibility/provider проверки, включая реальные synthetic
+  Browser-contract/email, Telegram и upload/manual-review lifecycles.
+  Production approval и production enablement остаются отдельными gates.
+
 ## Не повторять
 
-- Не повторять migrations `0001`–`0022`, preview Worker deploy, Access perimeter
-  setup, empty-R2 verification или Phase A D1-contract implementation/review,
-  пока fresh read-only reconciliation не обнаружит drift.
+- Не повторять migrations `0001`–`0023`, baseline promote, candidate plan/stage/
+  review/promote/repeated-promote/rollback/roll-forward, preview Worker deploy,
+  Access perimeter setup, empty-R2 verification или Phase A D1-contract
+  implementation/review, пока fresh read-only reconciliation не обнаружит
+  drift. При неопределённости использовать только canonical read-only verify.
 - Не пытаться создать bootstrap target direct SQL или включить auth до current
   promoted snapshot: verification fail-closed по каноническому контракту.
 - Не использовать ordinary preview для Access/Office PII и не считать
@@ -132,35 +256,39 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
 
 ## Точная цепочка до full manual preview
 
-1. После нового exact owner permission применить `0023` только к preview D1 и
-   существующей distinct/unbound isolated recovery D1. Проверить ledger, пять
-   indexes, deterministic plans, FK и отсутствие current pair; production не
-   затрагивать.
-2. Тем же независимым recovery-verifier role перепроверить isolated restore с
-   новой schema и выпустить новый versioned recovery-evidence artifact, не
-   перезаписывая исходную pre-stage backup/evidence. Получить новую exact
-   confirmation, затем выполнить ровно одну попытку baseline promote. При
-   неопределённом transport result сначала выполнить canonical read-only verify,
-   без blind retry.
-3. После успешного baseline создать отдельный candidate plan и в независимых
-   ролях завершить `stage → review → recovery evidence → promote → verify →
-   repeated-promote reconciliation → rollback → verify → roll-forward → verify`,
-   получив ровно один current promoted snapshot.
-4. Подготовить, независимо проверить и отдельно разрешённо deployed preview
-   auth/email candidate; ограничить email smoke согласованными test recipients.
-5. Владелец лично создаёт и подтверждает два account, не передавая password,
+1. Завершено 2026-08-25: `0023` применена и проверена только на preview и
+   distinct/unbound isolated recovery D1; production не затронут.
+2. Завершено 2026-08-25: versioned recovery point/evidence выпущены без
+   перезаписи исходных artifacts; одна baseline promote attempt и canonical
+   verify успешно опубликовали единственную target pair.
+3. Завершено 2026-08-25: fresh candidate-current recovery point/isolated restore
+   и независимые `plan → stage → review → recovery evidence(previous) → promote
+→ verify → repeated-promote reconciliation → rollback → verify → roll-forward
+→ verify` получили ровно один current promoted synthetic candidate snapshot.
+4. Создать immutable full-manual-preview candidate и получить independent
+   read-only exact-SHA review другой ролью/сессией. BLOCKER/HIGH исправляются
+   новым commit и новым review.
+5. Создать fresh candidate-bound recovery point/isolated restore, применить
+   `0024` только к preview/recovery и после отдельного разрешения deployed exact
+   reviewed Worker. Ограничить email согласованными SHA-256 test recipients.
+6. Владелец лично создаёт и подтверждает два account, не передавая password,
    OTP, verification link, cookie или token.
-6. После exact permission выполнить one-shot bootstrap корпоративного
+7. После exact permission выполнить one-shot bootstrap корпоративного
    empty-state account и проверить audit, replay denial, session revoke, admin
    RBAC и сохранение parent-only роли второго account.
-7. Пройти guided full manual preview plan: family lookup/registration, parent и
+8. Пройти guided full manual preview plan: family lookup/registration, parent и
    admin workflows, security/IDOR/CSRF/session, operations/manual jobs/failures,
-   pricing, synthetic Browser contract lifecycle, synthetic upload/local-AV,
-   accessibility/mobile/keyboard, а также отдельно разрешённые email и один
-   минимизированный Telegram preview smoke.
-8. Обновить checklist/handoff после каждого блока. Legal/privacy/provider paths
-   без требуемого approval не включать молча: получить owner input либо проверить
-   предусмотренный каноническим контрактом fail-closed режим.
+   pricing, все четыре preview-review договора через реальный Browser Run/
+   private R2/email и минимум один полный accept/different-admin formation/
+   certificate lifecycle, synthetic upload/quarantine/local-AV/hash attestation/
+   business review/cleanup, accessibility/mobile/keyboard, а также один
+   отдельно разрешённый минимизированный Telegram normal-outbox smoke и его
+   recovery/reconciliation checks.
+9. Обновить checklist/handoff после каждого блока. Legal/privacy/provider paths
+   не переносить в production без требуемого approval. Для preview agent обязан
+   сначала завершить всю локальную подготовку и остановиться только
+   непосредственно перед точным внешним параметром, credential, remote
+   mutation, deploy или provider send.
 
 ## Когда агент обязан остановиться
 
@@ -171,7 +299,8 @@ fail-closed verdict. Один deploy, login, import или bootstrap эту це
   secret/Access/security mutation или production action;
 - независимый reviewer/operator, которого нельзя изображать той же identity;
 - ввод владельцем password/OTP/verification link или другой credential;
-- owner/legal/privacy решение, которое нельзя вывести из канонических docs;
+- owner/legal/privacy решение, которое нельзя вывести из канонических docs и
+  требуется именно перед следующей внешней операцией либо production gate;
 - rollover в новую сессию из-за потери точного target/permission/rollback state.
 
 Перед такой остановкой агент завершает всю безопасную подготовку, обновляет этот
@@ -183,6 +312,7 @@ condition и rollback. После успешного gate агент сам пе
 ## Ссылки состояния
 
 - [Readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
+- [Полный ручной preview](../operations/FULL_MANUAL_PREVIEW.md)
 - [Deployment runbook](../operations/PRODUCTION_DEPLOYMENT.md)
 - [Import pipeline](../operations/IMPORT_PIPELINE.md)
 - [Persistent Stage 13 handoff](handoffs/stage-13.md)
@@ -190,6 +320,13 @@ condition и rollback. После успешного gate агент сам пе
 
 ## Проверка continuity worktree
 
+- Current full-manual-preview worktree candidate из `c02b1bf…`: `npm run check`
+  — 0 errors/warnings; полный `npm test` — 69 files/541 tests; `npm run build`
+  — passed; Playwright — 18/18; dependency audit — 0; `npm run docs:check` —
+  168 links/56 files, 109 executable commands и continuity passed; `npm run
+  release:scan` — 549/549; `git diff --check` — passed. Remote Worker/D1/R2/
+  Access/provider/production state этими проверками не менялся. До independent
+  exact-SHA review это не GO.
 - Exact remediation anchor `723e947…` повторно прошёл обязательную clean
   exact-SHA цепочку: focused 4 файла/33 tests; `npm run check` — 0
   errors/warnings; полный `npm test` — 68 файлов, 530/530 tests; `npm run build`
