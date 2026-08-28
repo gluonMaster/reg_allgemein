@@ -392,6 +392,17 @@ provider и training approvals остаются следующими release gat
 reversible evidence до точного внешнего gate, а owner input запрашивает только
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
+Exact full-manual-preview candidate
+`fa7aeeb40726089a72396b41b27ce93db1f2a096` прошёл полную local gate-цепочку,
+но independent read-only review 2026-08-27 вернул **NO-GO** с 2 HIGH и 2 MEDIUM.
+До любого `0024` apply/deploy обязательны: полный immutable renderer-source
+bundle и exact version resolution без fallback; D1 storage intent + atomic R2
+create-if-absent + server-side exact D1 install assertion; preview isolation до
+number/draft side effects; permanent populated `0023 → 0024` regression с
+existing templates/offers/artifacts/FK/triggers. Следующий gate — local
+remediation, полный proportional/final verification, новый immutable candidate
+и отдельный independent review. Remote preview/production state не менялся.
+
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,
 exact-target remote boundary, schema-v3 protected no-write plan с
@@ -406,8 +417,8 @@ failed-stage cleanup evidence, recovery-bound atomic promote/
 rollback/roll-forward и aggregate verify. Это реализуют candidate migrations
 `0016` и `0018`; populated-upgrade tests сохраняют прежние unhardened plans как
 immutable evidence, но запрещают их lifecycle и требуют новый hardened plan.
-Deployed preview D1 содержит `0001`–`0022`, pending 0; schema/object/FK
-verification после remote apply 2026-08-20 прошла.
+Deployed preview D1 содержит `0001`–`0023`, pending 0; schema/object/FK
+verification после отдельно разрешённых apply 2026-08-20/25 прошла.
 Production transitions намеренно fail closed ещё до API-token lookup/network,
 пока remote transaction evidence отсутствует.
 Это не делает environment gate `passed`: remote preview plan/stage/promotion не
@@ -451,9 +462,10 @@ docs/scan/diff и final provenance gates. `src`/`migrations` не менялис
 `2bedc73c9b39a4cb43296046986a3f48e039b022` — прямой docs-only потомок
 `4ac6a491`; его exact short gates и separately authorized independent review
 прошли с итогом GO. Оставшийся MEDIUM не открывает runtime bypass.
-PR-B17 остаётся blocked; independent admin cold-read, owner review текущих
-buckets и authorized import lifecycle rehearsal также отсутствуют. В remote
-изменена только preview D1 schema `0016`–`0022`; Worker и R2 не менялись.
+PR-B17 остаётся blocked; independent admin cold-read и owner review текущих
+buckets также отсутствуют. В remote preview D1 schema доведена до `0016`–`0023`;
+synthetic lifecycle `plan→stage→review→recovery→promote→rollback→roll-forward`
+прошёл, а Worker и R2 этим import gate не менялись.
 
 Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
 candidate добавляет real one-way `bot_api` adapter, strict minimized payload,
@@ -482,7 +494,7 @@ Tracked packet этапа:
 - [persistent handoff](handoffs/stage-13.md).
 
 Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed preview migrations
-`0014`–`0022` (полный ledger `0001`–`0022`, pending 0),
+`0014`–`0023` (полный ledger `0001`–`0023`, pending 0),
 scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
 `admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
 покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются

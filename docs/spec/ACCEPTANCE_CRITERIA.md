@@ -560,6 +560,32 @@ MVP готов, когда:
   доступны после нового deploy/template version вместе с готовым immutable PDF;
   byte-identical rerender managed Chromium не требуется.
   (`CONTRACT-03`, `CONTRACT-13`)
+- **AC-CONTRACT-02.** Source manifest каждой из четырёх versions меняется при
+  изменении base body, kind clause, fixed copy, helper/schema/adapter, CSS/font/
+  asset либо связанного snapshot hash. Он строится из полного canonical bundle,
+  а не только `Function.toString()` delegating wrapper; hash фактически
+  полученного self-contained HTML сохраняется отдельно. Cross-deploy regression
+  доказывает, что установленная v1 продолжает разрешаться из exact v1 bundle
+  после добавления v2, а unknown/missing v1 завершается fail-closed без fallback.
+  (`CONTRACT-03`, `CONTRACT-13`, `CONTRACT-22`)
+- **AC-CONTRACT-03.** Два concurrent install одной version с одинаковыми bytes
+  создают один неизменяемый R2 object, одну exact D1 installation и один success
+  audit; replay возвращает тот же результат. При разных bytes для одного key
+  atomic create-if-absent не позволяет второму writer перезаписать object, а D1
+  не оставляет partial provider/media/template rows либо ложный installed audit.
+  Crash/ambiguous windows `intent → R2 → D1 link` восстанавливаются штатным
+  reconciler. (`REL-01`, `CONTRACT-23`)
+- **AC-CONTRACT-04.** Seeded `preview_review` row в production либо выключенный
+  preview flag отклоняются до `prepareNumber`, draft/operational record,
+  idempotency/audit и любого другого D1/R2 side effect; direct service/API и UI
+  дают одинаковый fail-closed результат. (`CONTRACT-11`, `CONTRACT-21`,
+  `CONTRACT-23`)
+- **AC-CONTRACT-05.** Permanent populated migration test применяет `0024` к
+  схеме `0001`–`0023` с прежними approved provider/template rows и зависимыми
+  offers/artifacts. После upgrade все исходные значения, FK и triggers
+  сохранены, разрешённые preview scope/basis работают, а forbidden pairings
+  отклоняются. Fresh empty migration sequence этот regression не заменяет.
+  (`CONTRACT-21`, `CONTRACT-23`)
 - Browser Run получает только self-contained inline HTML; successful attempt
   сохраняет PDF/hash/browser-ms в private R2 до `sent`. 429/5xx ограничены тремя
   retry, budget/size excess и final failure оставляют offer в `draft`.

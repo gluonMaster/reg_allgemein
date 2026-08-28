@@ -2,10 +2,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-26T14:45:17Z
-reviewed_candidate: 5789e319fd65850112a1bf05961e96c86f7c76aa
-last_completed_gate: full-manual-preview-local-candidate-gates
-next_gate: full-manual-preview-candidate-independent-review
+updated_utc: 2026-08-27T20:47:31Z
+reviewed_candidate: fa7aeeb40726089a72396b41b27ce93db1f2a096
+last_completed_gate: full-manual-preview-remediation-local-candidate-gates
+next_gate: full-manual-preview-remediation-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -32,6 +32,85 @@ Browser-contract/upload и обязательные security/accessibility сц�
 фактически выполнены в preview. Fail-closed verdict допустим для намеренно
 вне-MVP или production-only unsafe эффекта, но не вместо обязательного MVP-
 контура. Один deploy, login, import или bootstrap эту цель не закрывает.
+
+## Текущий blocking review
+
+- Exact candidate `fa7aeeb40726089a72396b41b27ce93db1f2a096`, direct parent
+  `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9`, прошёл отдельно порученный
+  independent read-only review. Provenance/worktree и все mandatory commands
+  были зелёными: check 0/0, Vitest 69 files/541 tests, build, Chromium 18/18,
+  production dependency audit 0, docs 168 links/56 files + 109 commands,
+  release scan 549/549 и candidate diff check. Verdict — **NO-GO**: 2 HIGH и
+  2 MEDIUM; review не выполнял remote mutation.
+- **HIGH — incomplete runtime source binding.** Preview renderer hash покрывает
+  delegating `render.toString()`, но не полные base body/kind clauses/fixed copy/
+  helpers/assets. R2 bundle содержит metadata/CSS, а runtime выбирает current
+  registry и допускает fallback для неизвестной version. Новый deploy способен
+  изменить v1 под прежним approved hash или сломать старую version.
+- **HIGH — template install не atomic/write-once/recoverable.** `GET → PUT`
+  допускает TOCTOU overwrite одного deterministic key, template bundle не имеет
+  обязательного D1 storage intent, а D1 count-only audit и post-commit client
+  verification допускают false installed audit/partial conflicting install.
+- **MEDIUM — production isolation запаздывает.** `preview_review` gate проверен
+  при send, но не до `prepareNumber`/create draft. Seeded preview row в
+  production способен израсходовать number и создать draft state до позднего
+  отказа.
+- **MEDIUM — нет permanent populated-upgrade regression именно для `0024`.**
+  Empty sequence проходит, но общий populated suite не seed-ит прежние
+  provider/template rows и зависимые offers/artifacts перед `0024`, поэтому
+  preservation FK/triggers/forbidden pairings не доказан.
+- Следующий gate полностью local: реализовать `CONTRACT-22`/`CONTRACT-23` и
+  `AC-CONTRACT-02`–`AC-CONTRACT-05`, выполнить focused concurrency/crash/
+  cross-deploy/production-side-effect/migration tests и полную gate-цепочку,
+  создать новый immutable remediation candidate и передать другой identity на
+  новый independent exact-SHA review. До его GO запрещены `0024` apply,
+  Worker/config deploy, R2/D1 write, provider send, bootstrap и production.
+
+## Local remediation 2026-08-27 — independent review pending
+
+- Рабочее состояние: `remediated_candidate_pending_independent_review`.
+  Исторический verdict `fa7aeeb…` остаётся NO-GO; эта implementation session не
+  присваивает себе independent GO. Exact remediation SHA появляется только у
+  единственного финального local commit и фиксируется в ignored self-contained
+  review prompt.
+- **HIGH source/version binding закрыт локально:**
+  `src/lib/server/contracts/templates.ts` сериализует полный canonical bundle с
+  base body, общими/видовыми clauses, copy, CSS, встроенными DejaVu Sans
+  Regular/Bold bytes, helper/schema/adapter versions и provider/payment/legal/
+  media snapshot hashes. Runtime принимает только explicit exact bundle;
+  string/current/synthetic fallback удалён. Actual self-contained HTML SHA-256
+  хранится отдельно в source evidence. Golden v1 bytes/hashes и mutation/
+  unknown/missing/retired regressions находятся в
+  `tests/unit/contract-template-bundles.test.ts` и
+  `tests/integration/contracts-d1.test.ts`.
+- **HIGH atomic/write-once/recoverable install закрыт локально:** до R2 write
+  создаётся exact staged `storage_object_intents`; Workers R2 binding использует
+  conditional `onlyIf`, а winner всегда перечитывается и сверяется по bounded
+  bytes/size/SHA-256. Provider/media/four templates/link assertions/success
+  audit и terminal exact assertion входят в одну D1 batch transaction;
+  ambiguous result проходит только read-only exact reconciliation. Race/crash/
+  conflict regressions находятся в `contract-template-install-d1.test.ts` и
+  `contract-storage.test.ts`.
+- **MEDIUM pre-draft isolation закрыт локально:** preview environment/flag/
+  renderer/approval/marker gate выполняется до `prepareNumber` и любого draft,
+  operational, idempotency, audit или R2 side effect. Direct service и route/UI
+  evidence покрывают test/production/disabled-preview, missing marker и exact
+  source failure.
+- **MEDIUM populated `0024` upgrade закрыт локально:** permanent migration test
+  создаёт схему exact through `0023`, approved provider/media/templates и
+  offer/artifact/delivery graph, применяет original `0024`, сравнивает все
+  seeded fields, требует FK zero и повторно проверяет template/offer/artifact
+  triggers плюс allowed/forbidden scope/basis pairings.
+- Focused source/storage/route/contract/install/migration/production-readiness
+  suites прошли. Финальная local command chain на том же implementation tree:
+  check 0/0, controlled-worker Vitest 73 files/548 tests, build, Playwright
+  18/18, production dependency audit 0, docs/continuity, release scan и diff
+  check. Local E2E helper изолирует Wrangler logs/config в system temp и
+  детерминированно завершает только synthetic server после global teardown.
+- Immutable remediation candidate — единственный local commit, содержащий этот
+  checkpoint. Его exact SHA/direct parent фиксируются после commit в ignored
+  self-contained review prompt. Текущий gate — отдельный independent exact-SHA
+  review. Никакой remote/provider/production/official-site state не менялся.
 
 ## Последний закрытый gate
 
@@ -158,16 +237,17 @@ Browser-contract/upload и обязательные security/accessibility сц�
   provenance и schema `0001`–`0015`, поэтому не является fresh plan-bound
   evidence для Phase B.
 
-## Локальный full-manual-preview candidate
+## Reviewed full-manual-preview candidate (rejected)
 
 - На базе exact continuation HEAD `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9`
   подготовлена append-only migration `0024_contract_preview_review.sql` и
   fail-closed `preview_review` scope для всех четырёх видов договора. Он
   допускается только в `APP_ENV=preview`, требует Browser Run, synthetic marker
-  и печатает на каждой странице `TEST/ENTWURF — nicht für reale
-  Vertragsbeziehungen`; production scope/gates не ослаблены.
-- Admin может идемпотентно установить четыре versioned bundle. Обычный
-  application flow создаёт immutable source snapshot, реально рендерит PDF,
+  и печатает на каждой странице `TEST/ENTWURF`; полная маркировка уточняет
+  `nicht für reale Vertragsbeziehungen`. Production scope/gates не ослаблены.
+- Rejected candidate пытался идемпотентно установить четыре versioned bundle,
+  но blocking review выше доказал неполный source binding и неатомарный install.
+  Остальной application flow создаёт source snapshot, реально рендерит PDF,
   кладёт HTML/PDF в private archive R2, а email worker перед отправкой повторно
   читает ровно этот PDF и проверяет его D1-bound size/SHA-256. Preview Resend
   принимает только заранее согласованный SHA-256 allowlist получателей и
@@ -183,16 +263,17 @@ Browser-contract/upload и обязательные security/accessibility сц�
   owner download/negative access → cleanup. Telegram normal-outbox
   prepare/send/unknown/reconcile/abort path также повторно прошёл полный test
   gate. Удалённый upload/AV и Bot API send ещё не выполнялись.
-- Local candidate gates зелёные: `npm run check` — 0 errors/warnings; `npm
-  test` — 69 files/541 tests; `npm run build`; Playwright — 18/18; `npm audit
-  --omit=dev` — 0 vulnerabilities; `npm run docs:check` — 168 links/56 files,
-  109 commands и continuity; `npm run release:scan` — 549/549; `git diff
-  --check`. Focused contract/config/migration suite — 71/71, Telegram — 56/56,
-  documents — 25/25.
-- Эти изменения пока являются local worktree candidate. Migration `0024`,
-  Worker/config/flags, auth/bootstrap, Resend/Telegram sends и реальные preview
-  R2 uploads не применялись. Следующий gate — immutable commit и independent
-  read-only exact-SHA review другой ролью/сессией.
+- Local candidate gates зелёные: `npm run check` — 0 errors/warnings;
+  `npm test` — 69 files/541 tests; `npm run build`; Playwright — 18/18;
+  `npm audit --omit=dev` — 0 vulnerabilities; `npm run docs:check` — 168 links/
+  56 files, 109 commands и continuity; `npm run release:scan` — 549/549;
+  `git diff --check`. Focused contract/config/migration suite — 71/71,
+  Telegram — 56/56, documents — 25/25.
+- Эти изменения зафиксированы exact candidate `fa7aeeb…`, но independent review
+  вернул NO-GO по разделу выше. Migration `0024`, Worker/config/flags,
+  auth/bootstrap, Resend/Telegram sends и реальные preview R2 uploads не
+  применялись. Следующий gate — local remediation и новый immutable candidate;
+  старые зелёные tests и verdict не наследуются.
 
 ## Фактическое preview состояние
 
@@ -235,8 +316,9 @@ Browser-contract/upload и обязательные security/accessibility сц�
   browser console errors `0`. Активной Access/portal session не было, email/OTP
   не вводились, поэтому authenticated portal/manual evidence не заявляется.
 - Completion audit сохраняет `full-manual-preview` в `blocked`: candidate
-  transition lifecycle закрыт, но всё ещё нужны independently reviewed и
-  отдельно разрешённо deployed preview auth/email, два созданных владельцем
+  transition lifecycle закрыт, но сначала нужен исправленный contract runtime с
+  новым independent GO, затем отдельно разрешённые deploy preview auth/email,
+  два созданных владельцем
   verified account, one-shot admin bootstrap и guided authenticated manual/
   security/accessibility/provider проверки, включая реальные synthetic
   Browser-contract/email, Telegram и upload/manual-review lifecycles.
@@ -262,21 +344,23 @@ Browser-contract/upload и обязательные security/accessibility сц�
    перезаписи исходных artifacts; одна baseline promote attempt и canonical
    verify успешно опубликовали единственную target pair.
 3. Завершено 2026-08-25: fresh candidate-current recovery point/isolated restore
-   и независимые `plan → stage → review → recovery evidence(previous) → promote
-→ verify → repeated-promote reconciliation → rollback → verify → roll-forward
-→ verify` получили ровно один current promoted synthetic candidate snapshot.
-4. Создать immutable full-manual-preview candidate и получить independent
-   read-only exact-SHA review другой ролью/сессией. BLOCKER/HIGH исправляются
-   новым commit и новым review.
-5. Создать fresh candidate-bound recovery point/isolated restore, применить
-   `0024` только к preview/recovery и после отдельного разрешения deployed exact
-   reviewed Worker. Ограничить email согласованными SHA-256 test recipients.
-6. Владелец лично создаёт и подтверждает два account, не передавая password,
+   и независимые plan → stage → review → recovery evidence(previous) → promote →
+   verify → repeated-promote reconciliation → rollback → verify → roll-forward →
+   verify получили ровно один current promoted synthetic candidate snapshot.
+4. Завершено с NO-GO 2026-08-27: immutable `fa7aeeb…` прошёл independent
+   read-only exact-SHA review, который обнаружил 2 HIGH/2 MEDIUM.
+5. Исправить все findings локально, выполнить full gates, создать новый
+   immutable candidate и получить новый independent review другой ролью.
+6. Только после GO создать fresh candidate-bound recovery point/isolated
+   restore, применить `0024` и возможную следующую append-only migration только
+   к preview/recovery и после отдельного разрешения deploy exact reviewed
+   Worker. Ограничить email согласованными SHA-256 test recipients.
+7. Владелец лично создаёт и подтверждает два account, не передавая password,
    OTP, verification link, cookie или token.
-7. После exact permission выполнить one-shot bootstrap корпоративного
+8. После exact permission выполнить one-shot bootstrap корпоративного
    empty-state account и проверить audit, replay denial, session revoke, admin
    RBAC и сохранение parent-only роли второго account.
-8. Пройти guided full manual preview plan: family lookup/registration, parent и
+9. Пройти guided full manual preview plan: family lookup/registration, parent и
    admin workflows, security/IDOR/CSRF/session, operations/manual jobs/failures,
    pricing, все четыре preview-review договора через реальный Browser Run/
    private R2/email и минимум один полный accept/different-admin formation/
@@ -284,11 +368,11 @@ Browser-contract/upload и обязательные security/accessibility сц�
    business review/cleanup, accessibility/mobile/keyboard, а также один
    отдельно разрешённый минимизированный Telegram normal-outbox smoke и его
    recovery/reconciliation checks.
-9. Обновить checklist/handoff после каждого блока. Legal/privacy/provider paths
-   не переносить в production без требуемого approval. Для preview agent обязан
-   сначала завершить всю локальную подготовку и остановиться только
-   непосредственно перед точным внешним параметром, credential, remote
-   mutation, deploy или provider send.
+10. Обновить checklist/handoff после каждого блока. Legal/privacy/provider paths
+    не переносить в production без требуемого approval. Для preview agent обязан
+    сначала завершить всю локальную подготовку и остановиться только
+    непосредственно перед точным внешним параметром, credential, remote
+    mutation, deploy или provider send.
 
 ## Когда агент обязан остановиться
 
@@ -320,13 +404,15 @@ condition и rollback. После успешного gate агент сам пе
 
 ## Проверка continuity worktree
 
-- Current full-manual-preview worktree candidate из `c02b1bf…`: `npm run check`
+- Exact rejected full-manual-preview candidate `fa7aeeb…` из `c02b1bf…`:
+  independent review подтвердил `npm run check`
   — 0 errors/warnings; полный `npm test` — 69 files/541 tests; `npm run build`
   — passed; Playwright — 18/18; dependency audit — 0; `npm run docs:check` —
-  168 links/56 files, 109 executable commands и continuity passed; `npm run
-  release:scan` — 549/549; `git diff --check` — passed. Remote Worker/D1/R2/
-  Access/provider/production state этими проверками не менялся. До independent
-  exact-SHA review это не GO.
+  168 links/56 files, 109 executable commands и continuity passed;
+  `npm run release:scan` — 549/549; `git diff --check` — passed. Remote Worker/D1/R2/
+  Access/provider/production state этими проверками не менялся. Несмотря на
+  зелёные gates, 2 HIGH/2 MEDIUM выше делают candidate NO-GO до remediation и
+  нового independent review.
 - Exact remediation anchor `723e947…` повторно прошёл обязательную clean
   exact-SHA цепочку: focused 4 файла/33 tests; `npm run check` — 0
   errors/warnings; полный `npm test` — 68 файлов, 530/530 tests; `npm run build`

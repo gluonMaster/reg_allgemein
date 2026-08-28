@@ -1,7 +1,7 @@
-import { readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
 import {
 	assertGitCommitMatchesHead,
 	assertIndependentRecoveryVerifier,
@@ -251,7 +251,8 @@ describe('legacy release remote command boundary', () => {
 	});
 
 	it('creates protected artifacts once, permits byte-identical replay and rejects conflicts', async () => {
-		const path = join(tmpdir(), `legacy-release-${randomUUID()}.json`);
+		const directory = await mkdtemp(join(tmpdir(), 'legacy-release-test-'));
+		const path = join(directory, 'artifact.json');
 		try {
 			await writeProtectedArtifact(path, { schemaVersion: 1, marker: 'first' });
 			const original = await readFile(path, 'utf8');
@@ -263,7 +264,10 @@ describe('legacy release remote command boundary', () => {
 			).rejects.toThrow('CLI_PROTECTED_ARTIFACT_CONFLICT');
 			await expect(readFile(path, 'utf8')).resolves.toBe(original);
 		} finally {
-			await rm(path, { force: true });
+			if (process.platform === 'win32') {
+				execFileSync('icacls.exe', [path, '/reset'], { stdio: 'ignore' });
+			}
+			await rm(directory, { recursive: true, force: true });
 		}
 	});
 

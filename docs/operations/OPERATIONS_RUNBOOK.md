@@ -566,8 +566,12 @@ Production contract send остаётся `feature_disabled`. Ниже опис�
 admin; Browser/private archive bindings; Resend key; SHA-256 адреса только
 контролируемых test recipients в `PREVIEW_EMAIL_RECIPIENT_HASHES`;
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_PREVIEW_REVIEW_ENABLED=true`,
-`CONTRACT_RENDERER=browser_run`; migration `0024` applied. Реальные клиенты и
-Office/PII запрещены.
+`CONTRACT_RENDERER=browser_run`; новый remediation candidate после exact
+`fa7aeeb…` NO-GO имеет separate independent GO; migration `0024` и все
+последующие required append-only migrations applied. До apply подтверждены
+complete exact-version render bundle, D1 storage intent, atomic R2
+create-if-absent, exact D1 install assertion и populated-upgrade regression.
+Реальные клиенты и Office/PII запрещены.
 
 **Точное UI:** `/admin/contracts`. Сначала один active admin нажимает «Vier
 Preview-Prüfvorlagen bereitstellen»; создаются четыре immutable
@@ -595,9 +599,12 @@ formation admin; certificate ready и оба download audit существуют
 email, имени, адреса или PDF body.
 
 **Stop condition:** любой адрес вне allowlist, отсутствующий marker/watermark,
-R2/hash mismatch, письмо без attachment, renderer disabled, quota exhaustion,
-partial artifact, реальный клиент/PII или попытка использовать preview template
-в production.
+R2/hash/source-version mismatch, неизвестная template version/fallback,
+conflicting/partial template installation или ложный install audit, письмо без
+attachment, renderer disabled, quota exhaustion, partial artifact, реальный
+клиент/PII либо попытка использовать preview template в production. Любая
+preview draft/number/D1 mutation в production или при выключенном preview flag
+также немедленно останавливает gate.
 
 **Rollback/recovery:** вернуть `CONTRACT_PREVIEW_REVIEW_ENABLED=false`,
 `CONTRACT_SEND_ENABLED=false`, `CONTRACT_RENDERER=disabled`, сохранить D1/R2/

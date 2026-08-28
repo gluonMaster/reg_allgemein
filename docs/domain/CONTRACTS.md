@@ -8,12 +8,12 @@ read-only; цифровая версия получает отдельный ver
 
 ## Поддерживаемые виды
 
-| `template_id` | Исходный reference | Назначение |
-| --- | --- | --- |
-| `group_yearly` | `Jahresvertrag_Eltern24-25(1).docx` | Годовой срок/условия; ежемесячная плата по `Preis` |
-| `group_monthly` | `Unterrichtsvertrag 2025 Monatsvereinbahrung.docx` | Месячный срок/условия; ежемесячная плата по `Sonderpreis` |
-| `individual_hourly` | `vertrag Individueller Unterricht.doc` | Индивидуальные занятия с почасовым тарифом |
-| `nachhilfe_hourly` | `vertrag Nachhilfe.doc` | Почасовая единица возмещения; финансирование Jobcenter/Sozialamt |
+| `template_id`       | Исходный reference                                 | Назначение                                                       |
+| ------------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
+| `group_yearly`      | `Jahresvertrag_Eltern24-25(1).docx`                | Годовой срок/условия; ежемесячная плата по `Preis`               |
+| `group_monthly`     | `Unterrichtsvertrag 2025 Monatsvereinbahrung.docx` | Месячный срок/условия; ежемесячная плата по `Sonderpreis`        |
+| `individual_hourly` | `vertrag Individueller Unterricht.doc`             | Индивидуальные занятия с почасовым тарифом                       |
+| `nachhilfe_hourly`  | `vertrag Nachhilfe.doc`                            | Почасовая единица возмещения; финансирование Jobcenter/Sozialamt |
 
 Во всех четырёх файлах отсутствуют Word fields, content controls и bookmarks,
 а два файла используют legacy-формат `.doc`. Конвертация DOC/DOCX в runtime
@@ -95,11 +95,33 @@ preview R2 и обычный contract/email outbox, но отправляетс�
 требует `APP_ENV=preview`, preview-review feature flag и synthetic party marker;
 любой production environment, отсутствие watermark/marker либо попытка выбрать
 preview-review template для production offer завершается fail-closed.
-Deterministic bundle key записывается только если объекта ещё нет; существующий
-R2 object сначала сверяется по размеру и SHA-256 и при конфликте не
-перезаписывается. D1 install/replay принимает только exact provider/media/
-template snapshots, а create draft дополнительно требует совпадения approved
-HTML/CSS source hashes с текущим runtime renderer source.
+Эта проверка выполняется до reservation contract number, создания draft/
+operational record, audit либо иного business side effect; одного send-time gate
+недостаточно.
+
+Canonical render-source bundle содержит не только CSS/metadata. Он включает
+фактически используемые base body, общие и kind-specific clauses, fixed copy,
+CSS, embedded fonts/assets, версии helper/schema/adapter и manifest hashes
+provider/payment/legal/media snapshots. Source hash нельзя строить только из
+`Function.toString()` функции-обёртки, если она делегирует внешним helper/copy;
+отдельно сохраняется hash фактически собранного self-contained HTML. Runtime
+разрешает только exact зарегистрированную пару `template_version` +
+`render_schema_version`; неизвестная/retired/отсутствующая версия не получает
+current либо synthetic fallback. Bundle прежней версии остаётся доступен после
+нового deploy, а изменение любого перечисленного source выпускает новую version
+и новый hash.
+
+Установка выполняется через storage intent из
+[STORAGE_AND_UPLOAD_SECURITY.md](../operations/STORAGE_AND_UPLOAD_SECURITY.md).
+Deterministic R2 key получает provider-supported atomic create-if-absent
+precondition. Если concurrent writer уже создал объект, проигравшая операция не
+перезаписывает его, а перечитывает и сверяет exact bytes/size/SHA-256. Затем
+provider/media/template rows, storage link assertions и success audit проходят
+одну exact-state D1 transaction с server-side terminal assertion. Проверка
+только количества строк либо client-side проверка после commit не доказывает
+успешную установку. Byte-identical replay идемпотентен; conflicting concurrency,
+crash или ambiguous result оставляют recoverable intent и не создают partial
+installation/ложный installed audit.
 
 Реализация использует `CONTRACT_PREVIEW_REVIEW_ENABLED=true` только совместно с
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_RENDERER=browser_run` и
@@ -124,15 +146,21 @@ gate после просмотра этих artifacts, а не prerequisite их
 Append-only migration `0024_contract_preview_review.sql` расширяет таблицу
 `contract_template_versions` из migration `0010` значениями `preview_review` и
 `internal_preview_review`, сохраняя прежние строки/FK/guards. Применённая `0010`
-не переписывается.
+не переписывается. Permanent populated-upgrade regression начинает с `0023`,
+создаёт прежние approved template/provider rows и зависимые offers/artifacts,
+затем применяет `0024` и проверяет byte/field preservation, FK, recreated
+triggers и запрет несовместимых scope/basis pairings. Empty-install test эту
+проверку не заменяет.
 
 ## Production PDF renderer
 
 `renderer_id = cloudflare-browser-run-pdf-v1` использует Workers binding
 `BROWSER.quickAction("pdf", ...)` с compatibility date не ниже `2026-03-24`.
 Передаётся self-contained inline HTML, а не публичный/временный URL договора.
-JavaScript и внешние network resources запрещены; CSS и pinned Noto Sans
-WOFF2/fonts встраиваются из approved bundle.
+JavaScript и внешние network resources запрещены; CSS и pinned subset
+DejaVu Sans Regular/Bold в формате WOFF встраиваются непосредственно из
+approved bundle. Exact bytes проверяются по SHA-256 до render, а лицензия
+зафиксирована в [DejaVu Fonts license](../licenses/DEJAVU_FONTS_LICENSE.txt).
 
 Базовые print options: A4, `preferCSSPageSize`, `printBackground`, tagged PDF,
 outline и timeout 30 секунд. Внутренние limits значительно ниже Cloudflare:
@@ -452,15 +480,15 @@ grant договор не блокирует. При отсутствии дру
 Blocker применяется по виду offer/включённой функции, а не автоматически ко
 всем договорам:
 
-| Область | Должны быть закрыты до production |
-| --- | --- |
-| Любой online contract offer | Approved production template и не-`offline_only` legal profile; при `widerruf_applicable` реализованы § 356a/early-performance requirements, при applicable Dauerschuldverhältnis — § 312k. Automatic legal-archive purge выключен |
-| Portal family/contract numbering | Open product blocker отсутствует; email-verification/family finalization, name-match proof, admin reassignment и immutable historical-number rules должны пройти acceptance tests. Ambiguous/colliding/other-owned destination остаётся fail-closed |
-| Automatic price-change apply | Открытого blocker нет; действует immutable 14-day/next-month evidence flow из PRICING.md |
-| `manual_override` | Открытого blocker нет, но обязателен high-friction/audit contract из PRICING.md |
-| Jobcenter/Sozialamt-funded Nachhilfe | Open product blocker отсутствует; manual local-AV upload flow и funding expiry/replacement lifecycle обязательны |
-| Media consent/publication | Online grant и publication disabled, пока документированная compliance assessment не подтвердит, что withdrawal path удовлетворяет требованию простоты отзыва, либо не реализован иной approved compliant path. German text/contact snapshot и admin runbook обязательны, но risk acceptance не заменяет соблюдение права. Publication по неподтверждённому scope запрещена |
-| SEPA/medical feature | Вне MVP; включение требует нового требования и privacy review |
+| Область                              | Должны быть закрыты до production                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Любой online contract offer          | Approved production template и не-`offline_only` legal profile; при `widerruf_applicable` реализованы § 356a/early-performance requirements, при applicable Dauerschuldverhältnis — § 312k. Automatic legal-archive purge выключен                                                                                                                                          |
+| Portal family/contract numbering     | Open product blocker отсутствует; email-verification/family finalization, name-match proof, admin reassignment и immutable historical-number rules должны пройти acceptance tests. Ambiguous/colliding/other-owned destination остаётся fail-closed                                                                                                                         |
+| Automatic price-change apply         | Открытого blocker нет; действует immutable 14-day/next-month evidence flow из PRICING.md                                                                                                                                                                                                                                                                                    |
+| `manual_override`                    | Открытого blocker нет, но обязателен high-friction/audit contract из PRICING.md                                                                                                                                                                                                                                                                                             |
+| Jobcenter/Sozialamt-funded Nachhilfe | Open product blocker отсутствует; manual local-AV upload flow и funding expiry/replacement lifecycle обязательны                                                                                                                                                                                                                                                            |
+| Media consent/publication            | Online grant и publication disabled, пока документированная compliance assessment не подтвердит, что withdrawal path удовлетворяет требованию простоты отзыва, либо не реализован иной approved compliant path. German text/contact snapshot и admin runbook обязательны, но risk acceptance не заменяет соблюдение права. Publication по неподтверждённому scope запрещена |
+| SEPA/medical feature                 | Вне MVP; включение требует нового требования и privacy review                                                                                                                                                                                                                                                                                                               |
 
 Stage 09 может завершить core с `synthetic_test`-adapter, но это не снимает ни
 одного production blocker. Эти production blockers не отменяют обязательный

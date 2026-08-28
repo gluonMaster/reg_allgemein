@@ -1,15 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
+import { canonicalJson, hashCanonical } from '$lib/server/import/canonical';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
 import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
 import type { ContractArtifactStore } from '$lib/server/contracts/storage';
+import {
+	buildContractTemplateBundle,
+	contractTemplateBundleHashes,
+	contractTemplateResourceManifest,
+	serializeContractTemplateBundle,
+} from '$lib/server/contracts/templates';
 import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
 import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
 import { PrivacyService } from '$lib/server/privacy/privacy-service';
 import { OperationsRepository } from '$lib/server/operations/operations-repository';
 import { requireAdmin } from '$lib/server/security/authorization';
+import { sha256Bytes } from '$lib/server/security/digest';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
 const now = '2026-07-22T10:00:00.000Z';
@@ -44,6 +52,11 @@ class MemoryStore implements ContractArtifactStore {
 	beforeGet?: (key: string) => Promise<void>;
 	async put(key: string, body: Uint8Array) {
 		this.values.set(key, Uint8Array.from(body));
+	}
+	async putIfAbsent(key: string, body: Uint8Array) {
+		if (this.values.has(key)) return false;
+		this.values.set(key, Uint8Array.from(body));
+		return true;
 	}
 	async get(key: string) {
 		const value = this.values.get(key);
@@ -476,7 +489,11 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			undefined,
 			() => now
 		);
-		await expect(previewService.installPreviewReviewTemplates(admin)).resolves.toHaveLength(4);
+		const concurrentInstall = await Promise.all([
+			previewService.installPreviewReviewTemplates(admin),
+			previewService.installPreviewReviewTemplates(admin),
+		]);
+		expect(concurrentInstall[0]).toEqual(concurrentInstall[1]);
 		await expect(previewService.installPreviewReviewTemplates(admin)).resolves.toHaveLength(4);
 		const template = await db.first<{ distance_legal_basis_hash: string }>({
 			sql: `SELECT distance_legal_basis_hash FROM contract_template_versions
@@ -484,43 +501,256 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		});
 		expect(template?.distance_legal_basis_hash).toMatch(/^[a-f0-9]{64}$/u);
 		const previewInput = groupRenderInput();
+		const previewRenderInput = {
+			...previewInput,
+			previewReviewMarker: 'synthetic-no-pii' as const,
+			legal: {
+				...previewInput.legal,
+				clauseSetVersion: 'preview-review-clauses-v1',
+				distanceLegalProfile: 'widerruf_applicable' as const,
+				distanceLegalBasisHash: template!.distance_legal_basis_hash,
+			},
+		};
+		const previewDraftPayload = {
+			userId: parent.id,
+			childId: 'child-contract',
+			academicPeriodId: 'period-contract',
+			templateVersionId: 'contract-template:preview-review:group_yearly:v1',
+			renderInput: previewRenderInput,
+			expiresAt: '2026-08-05T10:00:00.000Z',
+			idempotencyKey: 'create-preview-review-contract',
+		};
+		const cloneTemplate = async (overrides: Record<string, unknown>) => {
+			const columns = (
+				await db.all<{ name: string }>({
+					sql: 'PRAGMA table_info(contract_template_versions)',
+				})
+			).results.map((column) => column.name);
+			const params: unknown[] = [];
+			const selections = columns.map((column) => {
+				if (!Object.hasOwn(overrides, column)) return `"${column}"`;
+				params.push(overrides[column]);
+				return '?';
+			});
+			params.push('contract-template:preview-review:group_yearly:v1');
+			await db.run({
+				sql: `INSERT INTO contract_template_versions (${columns.map((column) => `"${column}"`).join(', ')})
+					SELECT ${selections.join(', ')} FROM contract_template_versions WHERE id = ?`,
+				params,
+			});
+		};
+		const installedBundleKey =
+			'contract-templates/preview-review/group_yearly/preview-review-v1.json';
+		const unknownBundleKey =
+			'contract-templates/preview-review/group_yearly/preview-review-v99.json';
+		store.values.set(unknownBundleKey, Uint8Array.from(store.values.get(installedBundleKey)!));
+		await cloneTemplate({
+			id: 'contract-template:preview-review:group_yearly:unknown',
+			template_version: 'preview-review-v99',
+			template_bundle_r2_key: unknownBundleKey,
+		});
+		await cloneTemplate({
+			id: 'contract-template:preview-review:group_yearly:missing',
+			template_version: 'preview-review-missing-v1',
+			template_bundle_r2_key:
+				'contract-templates/preview-review/group_yearly/preview-review-missing-v1.json',
+		});
+		await cloneTemplate({
+			id: 'contract-template:preview-review:group_yearly:retired',
+			template_version: 'preview-review-retired-v1',
+			template_bundle_r2_key:
+				'contract-templates/preview-review/group_yearly/preview-review-retired-v1.json',
+			approval_status: 'retired',
+		});
+		const mutableState = async () =>
+			db.first<{
+				sequences: number;
+				offers: number;
+				enrollments: number;
+				engagements: number;
+				actions: number;
+				audits: number;
+				idempotency: number;
+				artifacts: number;
+				deliveries: number;
+				storageIntents: number;
+				storageAssertions: number;
+			}>({
+				sql: `SELECT
+					(SELECT COUNT(*) FROM contract_number_sequences) AS sequences,
+					(SELECT COUNT(*) FROM contract_offers) AS offers,
+					(SELECT COUNT(*) FROM enrollments) AS enrollments,
+					(SELECT COUNT(*) FROM service_engagements) AS engagements,
+					(SELECT COUNT(*) FROM contract_admin_actions) AS actions,
+					(SELECT COUNT(*) FROM audit_events) AS audits,
+					(SELECT COUNT(*) FROM idempotency_records) AS idempotency,
+					(SELECT COUNT(*) FROM contract_artifacts) AS artifacts,
+					(SELECT COUNT(*) FROM contract_deliveries) AS deliveries,
+					(SELECT COUNT(*) FROM storage_object_intents) AS storageIntents,
+					(SELECT COUNT(*) FROM storage_intent_link_assertions) AS storageAssertions`,
+			});
+		const stateBeforeDeniedDrafts = await mutableState();
+		const objectsBeforeDeniedDrafts = Array.from(store.values, ([key, value]) => [
+			key,
+			Array.from(value),
+		]);
+		const disabledPreviewService = new ContractService(
+			repository,
+			store,
+			{
+				...previewConfig,
+				contracts: { ...previewConfig.contracts, previewReviewEnabled: false },
+			},
+			undefined,
+			() => now
+		);
+		const productionService = new ContractService(
+			repository,
+			store,
+			{
+				...previewConfig,
+				appEnvironment: 'production',
+				contracts: { ...previewConfig.contracts, previewReviewEnabled: false },
+			},
+			undefined,
+			() => now
+		);
+		for (const [label, deniedService] of [
+			['test', service],
+			['disabled-preview', disabledPreviewService],
+			['production', productionService],
+		] as const) {
+			await expect(
+				deniedService.createDraft({
+					admin,
+					requestId: `denied-preview-draft-${label}`,
+					payload: {
+						...previewDraftPayload,
+						idempotencyKey: `denied-preview-draft-${label}`,
+					},
+				})
+			).rejects.toMatchObject({ code: 'PREVIEW_REVIEW_TEMPLATE_FORBIDDEN' });
+		}
+		await expect(
+			previewService.createDraft({
+				admin,
+				requestId: 'denied-preview-draft-missing-marker',
+				payload: {
+					...previewDraftPayload,
+					renderInput: previewInput,
+					idempotencyKey: 'denied-preview-draft-missing-marker',
+				},
+			})
+		).rejects.toMatchObject({ code: 'CONTRACT_PREVIEW_REVIEW_MARKER_REQUIRED' });
+		for (const [templateVersionId, code] of [
+			[
+				'contract-template:preview-review:group_yearly:unknown',
+				'CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED',
+			],
+			[
+				'contract-template:preview-review:group_yearly:missing',
+				'CONTRACT_TEMPLATE_SOURCE_MISSING',
+			],
+			[
+				'contract-template:preview-review:group_yearly:retired',
+				'CONTRACT_TEMPLATE_NOT_APPROVED',
+			],
+		] as const) {
+			await expect(
+				previewService.createDraft({
+					admin,
+					requestId: `denied-${templateVersionId}`,
+					payload: {
+						...previewDraftPayload,
+						templateVersionId,
+						idempotencyKey: `denied-${templateVersionId}`,
+					},
+				})
+			).rejects.toMatchObject({ code });
+		}
+		expect(await mutableState()).toEqual(stateBeforeDeniedDrafts);
+		expect(Array.from(store.values, ([key, value]) => [key, Array.from(value)])).toEqual(
+			objectsBeforeDeniedDrafts
+		);
 		const created = await previewService.createDraft({
 			admin,
 			requestId: 'create-preview-review-contract',
-			payload: {
-				userId: parent.id,
-				childId: 'child-contract',
-				academicPeriodId: 'period-contract',
-				templateVersionId: 'contract-template:preview-review:group_yearly:v1',
-				renderInput: {
-					...previewInput,
-					previewReviewMarker: 'synthetic-no-pii',
-					legal: {
-						...previewInput.legal,
-						clauseSetVersion: 'preview-review-clauses-v1',
-						distanceLegalProfile: 'widerruf_applicable',
-						distanceLegalBasisHash: template!.distance_legal_basis_hash,
-					},
-				},
-				expiresAt: '2026-08-05T10:00:00.000Z',
-				idempotencyKey: 'create-preview-review-contract',
-			},
+			payload: previewDraftPayload,
 		});
-		await expect(
-			previewService.renderAndSend({
-				admin,
-				offerId: created.offerId,
-				idempotencyKey: 'render-preview-review-contract',
-				requestId: 'render-preview-review-contract',
-			})
-		).resolves.toMatchObject({ offerId: created.offerId, replayed: false });
-		const offer = await db.first<{ contract_html_r2_key: string }>({
-			sql: 'SELECT contract_html_r2_key FROM contract_offers WHERE id = ?',
+		const rendered = await previewService.renderAndSend({
+			admin,
+			offerId: created.offerId,
+			idempotencyKey: 'render-preview-review-contract',
+			requestId: 'render-preview-review-contract',
+		});
+		expect(rendered).toMatchObject({ offerId: created.offerId, replayed: false });
+		const offer = await db.first<{
+			contract_html_r2_key: string;
+			source_manifest_json: string;
+			source_manifest_hash: string;
+			render_input_hash: string;
+			template_version_id: string;
+		}>({
+			sql: `SELECT contract_html_r2_key, source_manifest_json, source_manifest_hash,
+				render_input_hash, template_version_id FROM contract_offers WHERE id = ?`,
 			params: [created.offerId],
 		});
-		const html = new TextDecoder().decode(store.values.get(offer!.contract_html_r2_key));
+		const htmlBytes = store.values.get(offer!.contract_html_r2_key)!;
+		const html = new TextDecoder().decode(htmlBytes);
 		expect(html).toContain('TEST/ENTWURF');
 		expect(html).toContain('nicht für reale Vertragsbeziehungen');
+		const sourceManifest = JSON.parse(offer!.source_manifest_json) as {
+			templateVersion: string;
+			bundleHash: string;
+			renderedHtmlHash: string;
+			inputHash: string;
+		};
+		const exactTemplate = await db.first<{ bundle_hash: string }>({
+			sql: 'SELECT bundle_hash FROM contract_template_versions WHERE id = ?',
+			params: [offer!.template_version_id],
+		});
+		const htmlArtifact = await db.first<{ sha256: string }>({
+			sql: `SELECT sha256 FROM contract_artifacts
+					WHERE contract_offer_id = ? AND artifact_kind = 'offer_html'`,
+			params: [created.offerId],
+		});
+		expect(sourceManifest).toMatchObject({
+			templateVersion: 'preview-review-v1',
+			bundleHash: exactTemplate!.bundle_hash,
+			inputHash: offer!.render_input_hash,
+			renderedHtmlHash: htmlArtifact!.sha256,
+		});
+		expect(sourceManifest.renderedHtmlHash).toBe(
+			await sha256Bytes(new TextEncoder().encode(html))
+		);
+		expect(offer!.source_manifest_hash).toMatch(/^[a-f0-9]{64}$/u);
+
+		await previewService.parentDecision({
+			actor: parent,
+			payload: {
+				offerId: created.offerId,
+				expectedContractHash: rendered.contractHash,
+				decision: 'accept',
+				acceptanceTextVersion: 'contract-acceptance-de-v1',
+				acceptanceText: 'Ich nehme das unveränderte synthetische Preview-Angebot an.',
+				idempotencyKey: 'accept-preview-review-contract',
+			},
+			userAgent: 'vitest',
+			requestSubject: 'preview-review-subject',
+			requestId: 'accept-preview-review-contract',
+		});
+		await expect(
+			previewService.formAndActivate({
+				admin,
+				requestId: 'form-preview-review-contract',
+				payload: {
+					offerId: created.offerId,
+					reason: 'Exact immutable preview bundle revalidated.',
+					confirmation: 'confirmed',
+					idempotencyKey: 'form-preview-review-contract',
+				},
+			})
+		).resolves.toMatchObject({ replayed: false });
 
 		const bundleKey = 'contract-templates/preview-review/group_yearly/preview-review-v1.json';
 		const conflictingBundle = new TextEncoder().encode('conflicting-template-bundle');
@@ -550,6 +780,31 @@ describe('stage 09 immutable contract workflow in D1', () => {
 	async function withdrawalDraft(key: string) {
 		const templateVersionId = 'contract-template:synthetic:group_yearly:withdrawal-v1';
 		const legalBasisHash = hash('a');
+		const baseTemplate = await repository.loadTemplate(
+			'contract-template:synthetic:group_yearly:v1'
+		);
+		if (!baseTemplate) throw new Error('Synthetic base template fixture is missing.');
+		const bundle = buildContractTemplateBundle({
+			templateId: 'group_yearly',
+			templateVersion: 'synthetic-withdrawal-v1',
+			usageScope: 'synthetic_test',
+			snapshotHashes: {
+				providerSnapshotHash: await hashCanonical(
+					JSON.parse(baseTemplate.provider_snapshot_json)
+				),
+				paymentTermsHash: baseTemplate.provider_payment_terms_hash,
+				legalSnapshotHash: await hashCanonical({
+					clauseSetVersion: baseTemplate.clause_set_version,
+					distanceLegalProfile: 'widerruf_applicable',
+					distanceLegalBasisHash: legalBasisHash,
+				}),
+				mediaSnapshotHash: baseTemplate.media_contact_snapshot_hash!,
+			},
+		});
+		const bundleBytes = serializeContractTemplateBundle(bundle);
+		const bundleHashes = await contractTemplateBundleHashes(bundle);
+		const bundleKey = 'contract-templates/synthetic/group_yearly/synthetic-withdrawal-v1.json';
+		await store.putIfAbsent!(bundleKey, bundleBytes);
 		await db.run({
 			sql: `INSERT INTO contract_template_versions
 				(id, template_id, template_version, render_schema_version,
@@ -563,9 +818,7 @@ describe('stage 09 immutable contract workflow in D1', () => {
 				 approved_by, approved_at, valid_from, valid_to, created_at)
 			SELECT ?, template_id, 'synthetic-withdrawal-v1', render_schema_version,
 				clause_set_version, provider_version_id, media_contact_version_id,
-				template_bundle_r2_key || '/withdrawal-v1', bundle_hash,
-				html_source_hash, css_source_hash, asset_manifest_json,
-				font_manifest_json, required_fields_json, renderer_id,
+				?, ?, ?, ?, ?, ?, ?, renderer_id,
 				renderer_contract_version, worker_compatibility_date, usage_scope,
 				approval_status, approval_basis, 'widerruf_applicable',
 				'synthetic-withdrawal-basis-v1', ?, 0, 1, approved_by, approved_at,
@@ -573,6 +826,13 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			FROM contract_template_versions WHERE id = ?`,
 			params: [
 				templateVersionId,
+				bundleKey,
+				bundleHashes.bundleHash,
+				bundleHashes.htmlSourceHash,
+				bundleHashes.cssSourceHash,
+				contractTemplateResourceManifest(bundle.assets),
+				contractTemplateResourceManifest(bundle.fonts),
+				canonicalJson(bundle.requiredFields),
 				legalBasisHash,
 				'contract-template:synthetic:group_yearly:v1',
 			],

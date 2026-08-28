@@ -8,14 +8,20 @@ import {
 	SyntheticContractPdfAdapter,
 } from '$lib/server/contracts/pdf';
 import {
+	CONTRACT_TEMPLATE_IDS,
 	PREVIEW_REVIEW_TEMPLATE_VERSION,
-	contractTemplateRegistry,
-	previewReviewContractTemplateRegistry,
+	buildContractTemplateBundle,
 	renderContractSource,
 } from '$lib/server/contracts/templates';
 import { calendarDayAfter, calendarMonthEnd } from '$lib/server/time/berlin';
 
 const hash = (character: string) => character.repeat(64);
+const snapshotHashes = {
+	providerSnapshotHash: hash('1'),
+	paymentTermsHash: hash('2'),
+	legalSnapshotHash: hash('3'),
+	mediaSnapshotHash: hash('4'),
+};
 
 function input(templateId: ContractTemplateId) {
 	const group = templateId.startsWith('group_');
@@ -123,12 +129,20 @@ function input(templateId: ContractTemplateId) {
 }
 
 describe('stage 09 contract render contract', () => {
-	it.each(Object.keys(contractTemplateRegistry) as ContractTemplateId[])(
+	it.each(CONTRACT_TEMPLATE_IDS)(
 		'validates and renders escaped, input-dependent HTML for %s',
 		async (templateId) => {
 			const value = input(templateId);
 			expect(contractRenderInputSchema.parse(value).templateId).toBe(templateId);
-			const rendered = await renderContractSource(value);
+			const rendered = await renderContractSource(
+				value,
+				buildContractTemplateBundle({
+					templateId,
+					templateVersion: 'synthetic-core-v1',
+					usageScope: 'synthetic_test',
+					snapshotHashes,
+				})
+			);
 			expect(rendered.html).toContain('&lt;Eltern&gt;');
 			expect(rendered.html).not.toContain('<script');
 			expect(rendered.sourceManifest.templateId).toBe(templateId);
@@ -136,7 +150,7 @@ describe('stage 09 contract render contract', () => {
 		}
 	);
 
-	it.each(Object.keys(previewReviewContractTemplateRegistry) as ContractTemplateId[])(
+	it.each(CONTRACT_TEMPLATE_IDS)(
 		'renders a visibly marked, kind-specific real-preview source for %s',
 		async (templateId) => {
 			const value = {
@@ -149,7 +163,15 @@ describe('stage 09 contract render contract', () => {
 					distanceLegalBasisHash: hash('a'),
 				},
 			};
-			const rendered = await renderContractSource(value, PREVIEW_REVIEW_TEMPLATE_VERSION);
+			const rendered = await renderContractSource(
+				value,
+				buildContractTemplateBundle({
+					templateId,
+					templateVersion: PREVIEW_REVIEW_TEMPLATE_VERSION,
+					usageScope: 'preview_review',
+					snapshotHashes,
+				})
+			);
 			expect(rendered.html).toContain('TEST/ENTWURF');
 			expect(rendered.html).toContain('nicht für reale Vertragsbeziehungen');
 			expect(rendered.html).toContain('Allgemeine Vertragsbedingungen');

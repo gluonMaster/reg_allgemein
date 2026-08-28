@@ -175,6 +175,13 @@ Checklist является текущим release ledger и содержит sta
   разрешённый synthetic preview smoke с no-send abort для zero-attempt cohort и
   no-send reconcile истёкшего `dispatch_started` lease в `delivery_unknown`;
 - remote Browser Run glyph/font/pagination/quota/budget conformance;
+- contract renderer source is bound to a complete immutable versioned bundle,
+  exact old versions survive later deploys without fallback, template install
+  uses D1 intents plus atomic R2 create-if-absent and one exact-state D1
+  transaction, and preview scope is rejected before draft/number side effects;
+- representative populated D1 upgrade through the contract preview migration
+  preserves existing approved templates, dependent offers/artifacts, FK and
+  triggers; an empty migration run alone is insufficient;
 - approved production templates, legal profiles и applicable contract blockers;
 - privacy notice, DPA/AVV/subprocessors и media text/contact approval;
 - upload runbook, admin training и manual AV test passage;

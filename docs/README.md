@@ -1,6 +1,6 @@
 # Документация проекта
 
-Актуально на 2026-08-24. Документация разделена по назначению, чтобы требования,
+Актуально на 2026-08-27. Документация разделена по назначению, чтобы требования,
 архитектура и рабочие материалы не конкурировали как источники истины.
 
 ## С чего начинать
@@ -63,7 +63,7 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 | Активный Stage-13 operational checkpoint    | [implementation/STAGE_13_ACTIVE_STATE.md](implementation/STAGE_13_ACTIVE_STATE.md)                   |
 | Persistent handoff этапов                   | [implementation/handoffs/README.md](implementation/handoffs/README.md)                               |
 | Текущий stage-13 handoff                    | [implementation/handoffs/stage-13.md](implementation/handoffs/stage-13.md)                           |
-| Постоянная команда продолжения Stage 13      | [prompts/stage-13-continue-deployment.md](prompts/stage-13-continue-deployment.md)                    |
+| Постоянная команда продолжения Stage 13     | [prompts/stage-13-continue-deployment.md](prompts/stage-13-continue-deployment.md)                   |
 
 При конфликте общего документа с тематическим действует тематический документ.
 `architecture/DECISIONS.md` объясняет причину решения, но актуальное поведение

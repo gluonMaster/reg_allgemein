@@ -98,8 +98,71 @@ export interface StoredTemplateVersion {
 	kuendigung_function_required: 0 | 1;
 	early_performance_supported: 0 | 1;
 	media_contact_version_id: string | null;
+	provider_version_id: string;
+	provider_snapshot_json: string;
+	provider_payment_terms_hash: string;
+	media_contact_snapshot_hash: string | null;
+	asset_manifest_json: string;
+	font_manifest_json: string;
+	required_fields_json: string;
 	provider_approval_status: string;
 	media_contact_approval_status: string | null;
+}
+
+export interface ContractTemplateInstallRecord {
+	id: string;
+	templateId: ContractTemplateId;
+	templateVersion: string;
+	renderSchemaVersion: string;
+	clauseSetVersion: string;
+	bundleKey: string;
+	bundleHash: string;
+	bundleSizeBytes: number;
+	htmlSourceHash: string;
+	cssSourceHash: string;
+	assetManifestJson: string;
+	fontManifestJson: string;
+	requiredFieldsJson: string;
+	rendererId: 'synthetic-test-pdf-v1' | 'cloudflare-browser-run-pdf-v1';
+	rendererContractVersion: string;
+	workerCompatibilityDate: string;
+	usageScope: 'synthetic_test' | 'preview_review';
+	approvalBasis: 'synthetic_fixture' | 'internal_preview_review';
+	distanceLegalProfile: 'offline_only' | 'widerruf_applicable';
+	distanceLegalBasisVersion: string | null;
+	distanceLegalBasisHash: string | null;
+	kuendigungFunctionRequired: 0 | 1;
+	earlyPerformanceSupported: 0 | 1;
+	storageIntentId: string;
+	storageIntentSourceRef: string;
+}
+
+interface ContractTemplateSetInstall {
+	admin: AdminActor;
+	provider: {
+		id: string;
+		version: string;
+		snapshotJson: string;
+		paymentTermsVersion: string;
+		paymentTermsHash: string;
+	};
+	mediaContact: {
+		id: string;
+		version: string;
+		snapshotJson: string;
+		snapshotHash: string;
+		germanTextVersion: string;
+		complianceStatus: 'not_assessed';
+	};
+	templates: readonly ContractTemplateInstallRecord[];
+	audit: {
+		id: string;
+		action: string;
+		targetId: string;
+		requestId: string;
+		safeDiffJson: string;
+	};
+	now: string;
 }
 
 interface NumberContext {
@@ -156,41 +219,248 @@ const ACTIVE_ADMIN = `EXISTS (SELECT 1 FROM users admin WHERE admin.id = ?
 export class ContractRepository {
 	constructor(private readonly db: DatabaseBoundary) {}
 
-	async installSyntheticTemplateFixtures(input: {
-		admin: AdminActor;
-		providerSnapshotJson: string;
-		providerPaymentTermsHash: string;
-		mediaContactSnapshotJson: string;
-		mediaContactSnapshotHash: string;
-		templates: ReadonlyArray<{
-			id: string;
-			templateId: ContractTemplateId;
-			bundleKey: string;
-			bundleHash: string;
-			htmlSourceHash: string;
-			cssSourceHash: string;
-		}>;
+	async stageTemplateBundleIntent(input: {
+		id: string;
+		objectKey: string;
+		sourceRef: string;
+		sha256: string;
+		sizeBytes: number;
 		now: string;
-	}) {
-		const providerId = 'contract-provider:synthetic-v1';
-		const mediaContactId = 'media-contact:synthetic-v1';
-		const existing = await this.db.all<{ id: string }>({
-			sql: `SELECT id FROM contract_template_versions WHERE usage_scope = 'synthetic_test'
-				AND template_version = 'synthetic-core-v1'`,
+	}): Promise<string> {
+		try {
+			await this.db.run({
+				sql: `INSERT OR IGNORE INTO storage_object_intents
+					(id, storage_class, object_key, object_kind, source_ref, sha256,
+					 size_bytes, status, attempts, created_at, updated_at)
+				VALUES (?, 'archive', ?, 'contract_template_bundle', ?, ?, ?,
+					'staged', 0, ?, ?)`,
+				params: [
+					input.id,
+					input.objectKey,
+					input.sourceRef,
+					input.sha256,
+					input.sizeBytes,
+					input.now,
+					input.now,
+				],
+			});
+		} catch (cause) {
+			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_STAGE_REJECTED', { cause });
+		}
+		const authoritative = await this.db.first<{
+			id: string;
+			storage_class: string;
+			object_key: string;
+			object_kind: string;
+			source_ref: string | null;
+			sha256: string;
+			size_bytes: number;
+			status: string;
+		}>({
+			sql: `SELECT id, storage_class, object_key, object_kind, source_ref,
+				sha256, size_bytes, status
+			FROM storage_object_intents
+			WHERE id = ? OR (storage_class = 'archive' AND object_key = ?)
+			ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END
+			LIMIT 1`,
+			params: [input.id, input.objectKey, input.id],
 		});
-		if (existing.results.length === input.templates.length)
-			return existing.results.map((row) => row.id);
+		if (
+			!authoritative ||
+			authoritative.id !== input.id ||
+			authoritative.storage_class !== 'archive' ||
+			authoritative.object_key !== input.objectKey ||
+			authoritative.object_kind !== 'contract_template_bundle' ||
+			authoritative.source_ref !== input.sourceRef ||
+			authoritative.sha256 !== input.sha256 ||
+			authoritative.size_bytes !== input.sizeBytes ||
+			!['staged', 'delete_pending', 'linked'].includes(authoritative.status)
+		) {
+			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_CONFLICT');
+		}
+		return authoritative.id;
+	}
+
+	private templateSetExactCondition(
+		input: ContractTemplateSetInstall,
+		includeFinalAssertion: boolean
+	): { sql: string; params: unknown[] } {
+		const conditions: string[] = [];
+		const params: unknown[] = [];
+		const expected = (value: Record<string, unknown>) => {
+			params.push(JSON.stringify(value));
+			return `CROSS JOIN (SELECT ? AS value) expected`;
+		};
+		conditions.push(`EXISTS (SELECT 1 FROM contract_provider_versions provider
+			${expected({
+				id: input.provider.id,
+				version: input.provider.version,
+				snapshot: input.provider.snapshotJson,
+				paymentVersion: input.provider.paymentTermsVersion,
+				paymentHash: input.provider.paymentTermsHash,
+			})}
+			WHERE provider.id = json_extract(expected.value, '$.id')
+				AND provider.version = json_extract(expected.value, '$.version')
+				AND provider.provider_snapshot_json = json_extract(expected.value, '$.snapshot')
+				AND provider.payment_terms_version = json_extract(expected.value, '$.paymentVersion')
+				AND provider.payment_terms_hash = json_extract(expected.value, '$.paymentHash')
+				AND provider.approval_status = 'approved'
+				AND provider.approved_by IS NOT NULL AND provider.approved_at IS NOT NULL)`);
+		conditions.push(`EXISTS (SELECT 1 FROM media_withdrawal_contact_versions contact
+			${expected({
+				id: input.mediaContact.id,
+				version: input.mediaContact.version,
+				snapshot: input.mediaContact.snapshotJson,
+				snapshotHash: input.mediaContact.snapshotHash,
+				textVersion: input.mediaContact.germanTextVersion,
+				complianceStatus: input.mediaContact.complianceStatus,
+			})}
+			WHERE contact.id = json_extract(expected.value, '$.id')
+				AND contact.version = json_extract(expected.value, '$.version')
+				AND contact.contact_snapshot_json = json_extract(expected.value, '$.snapshot')
+				AND contact.snapshot_hash = json_extract(expected.value, '$.snapshotHash')
+				AND contact.german_text_version = json_extract(expected.value, '$.textVersion')
+				AND contact.compliance_assessment_status = json_extract(expected.value, '$.complianceStatus')
+				AND contact.approval_status = 'approved'
+				AND contact.approved_by IS NOT NULL AND contact.approved_at IS NOT NULL)`);
+		for (const template of input.templates) {
+			conditions.push(`EXISTS (SELECT 1 FROM contract_template_versions template
+				${expected({
+					id: template.id,
+					templateId: template.templateId,
+					templateVersion: template.templateVersion,
+					renderSchemaVersion: template.renderSchemaVersion,
+					clauseSetVersion: template.clauseSetVersion,
+					providerId: input.provider.id,
+					mediaId: input.mediaContact.id,
+					bundleKey: template.bundleKey,
+					bundleHash: template.bundleHash,
+					htmlSourceHash: template.htmlSourceHash,
+					cssSourceHash: template.cssSourceHash,
+					assetManifest: template.assetManifestJson,
+					fontManifest: template.fontManifestJson,
+					requiredFields: template.requiredFieldsJson,
+					rendererId: template.rendererId,
+					rendererContractVersion: template.rendererContractVersion,
+					workerCompatibilityDate: template.workerCompatibilityDate,
+					usageScope: template.usageScope,
+					approvalBasis: template.approvalBasis,
+					distanceLegalProfile: template.distanceLegalProfile,
+					distanceLegalBasisVersion: template.distanceLegalBasisVersion,
+					distanceLegalBasisHash: template.distanceLegalBasisHash,
+					kuendigungRequired: template.kuendigungFunctionRequired,
+					earlyPerformance: template.earlyPerformanceSupported,
+				})}
+				WHERE template.id = json_extract(expected.value, '$.id')
+					AND template.template_id = json_extract(expected.value, '$.templateId')
+					AND template.template_version = json_extract(expected.value, '$.templateVersion')
+					AND template.render_schema_version = json_extract(expected.value, '$.renderSchemaVersion')
+					AND template.clause_set_version = json_extract(expected.value, '$.clauseSetVersion')
+					AND template.provider_version_id = json_extract(expected.value, '$.providerId')
+					AND template.media_contact_version_id = json_extract(expected.value, '$.mediaId')
+					AND template.template_bundle_r2_key = json_extract(expected.value, '$.bundleKey')
+					AND template.bundle_hash = json_extract(expected.value, '$.bundleHash')
+					AND template.html_source_hash = json_extract(expected.value, '$.htmlSourceHash')
+					AND template.css_source_hash = json_extract(expected.value, '$.cssSourceHash')
+					AND template.asset_manifest_json = json_extract(expected.value, '$.assetManifest')
+					AND template.font_manifest_json = json_extract(expected.value, '$.fontManifest')
+					AND template.required_fields_json = json_extract(expected.value, '$.requiredFields')
+					AND template.renderer_id = json_extract(expected.value, '$.rendererId')
+					AND template.renderer_contract_version = json_extract(expected.value, '$.rendererContractVersion')
+					AND template.worker_compatibility_date = json_extract(expected.value, '$.workerCompatibilityDate')
+					AND template.usage_scope = json_extract(expected.value, '$.usageScope')
+					AND template.approval_status = 'approved'
+					AND template.approval_basis = json_extract(expected.value, '$.approvalBasis')
+					AND template.distance_legal_profile = json_extract(expected.value, '$.distanceLegalProfile')
+					AND template.distance_legal_basis_version IS json_extract(expected.value, '$.distanceLegalBasisVersion')
+					AND template.distance_legal_basis_hash IS json_extract(expected.value, '$.distanceLegalBasisHash')
+					AND template.kuendigung_function_required = json_extract(expected.value, '$.kuendigungRequired')
+					AND template.early_performance_supported = json_extract(expected.value, '$.earlyPerformance')
+					AND template.approved_by IS NOT NULL AND template.approved_at IS NOT NULL)`);
+			conditions.push(`EXISTS (SELECT 1 FROM storage_object_intents intent
+				${expected({
+					id: template.storageIntentId,
+					key: template.bundleKey,
+					sourceRef: template.storageIntentSourceRef,
+					sha256: template.bundleHash,
+					size: template.bundleSizeBytes,
+				})}
+				WHERE intent.id = json_extract(expected.value, '$.id')
+					AND intent.storage_class = 'archive'
+					AND intent.object_key = json_extract(expected.value, '$.key')
+					AND intent.object_kind = 'contract_template_bundle'
+					AND intent.source_ref = json_extract(expected.value, '$.sourceRef')
+					AND intent.sha256 = json_extract(expected.value, '$.sha256')
+					AND intent.size_bytes = json_extract(expected.value, '$.size')
+					AND intent.status = 'linked')`);
+		}
+		conditions.push(`EXISTS (SELECT 1 FROM audit_events audit
+			JOIN users audit_admin ON audit_admin.id = audit.actor_user_id
+			${expected({
+				id: input.audit.id,
+				action: input.audit.action,
+				targetId: input.audit.targetId,
+				requestId: input.audit.requestId,
+				safeDiff: input.audit.safeDiffJson,
+			})}
+			WHERE audit.id = json_extract(expected.value, '$.id')
+				AND audit.actor_kind = 'user'
+				AND audit.action = json_extract(expected.value, '$.action')
+				AND audit.target_kind = 'contract_template_set'
+				AND audit.target_id = json_extract(expected.value, '$.targetId')
+				AND audit.request_id = json_extract(expected.value, '$.requestId')
+				AND audit.safe_diff_json = json_extract(expected.value, '$.safeDiff')
+				AND audit_admin.role = 'admin')`);
+		const assertedTemplates = includeFinalAssertion
+			? input.templates
+			: input.templates.slice(0, -1);
+		for (const template of assertedTemplates) {
+			conditions.push(`EXISTS (SELECT 1 FROM storage_intent_link_assertions assertion
+				${expected({
+					id: `storage-link:${template.storageIntentId}`,
+					intentId: template.storageIntentId,
+					targetId: template.id,
+				})}
+				WHERE assertion.id = json_extract(expected.value, '$.id')
+					AND assertion.intent_id = json_extract(expected.value, '$.intentId')
+					AND assertion.target_kind = 'contract_template_version'
+					AND assertion.target_id = json_extract(expected.value, '$.targetId')
+					AND assertion.assertion_passed = 1)`);
+		}
+		return { sql: conditions.map((condition) => `(${condition})`).join(' AND '), params };
+	}
+
+	private async templateSetInstalledExactly(input: ContractTemplateSetInstall): Promise<boolean> {
+		const exact = this.templateSetExactCondition(input, true);
+		const row = await this.db.first<{ exact: number }>({
+			sql: `SELECT CASE WHEN ${exact.sql} THEN 1 ELSE 0 END AS exact`,
+			params: exact.params,
+		});
+		return row?.exact === 1;
+	}
+
+	async installTemplateSetAtomic(input: ContractTemplateSetInstall): Promise<string[]> {
+		if (
+			input.templates.length !== 4 ||
+			new Set(input.templates.map((item) => item.id)).size !== 4
+		) {
+			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INSTALL_SET_INVALID');
+		}
+		if (await this.templateSetInstalledExactly(input)) {
+			return input.templates.map((template) => template.id);
+		}
 		const statements: StatementSpec[] = [
 			{
-				sql: `INSERT OR IGNORE INTO contract_provider_versions
+				sql: `INSERT INTO contract_provider_versions
 					(id, version, provider_snapshot_json, payment_terms_version,
 					 payment_terms_hash, approval_status, approved_by, approved_at, created_at)
-				SELECT ?, 'synthetic-provider-v1', ?, 'synthetic-payment-v1', ?,
-					'approved', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
+				SELECT ?, ?, ?, ?, ?, 'approved', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
 				params: [
-					providerId,
-					input.providerSnapshotJson,
-					input.providerPaymentTermsHash,
+					input.provider.id,
+					input.provider.version,
+					input.provider.snapshotJson,
+					input.provider.paymentTermsVersion,
+					input.provider.paymentTermsHash,
 					input.admin.id,
 					input.now,
 					input.now,
@@ -198,15 +468,17 @@ export class ContractRepository {
 				],
 			},
 			{
-				sql: `INSERT OR IGNORE INTO media_withdrawal_contact_versions
+				sql: `INSERT INTO media_withdrawal_contact_versions
 					(id, version, contact_snapshot_json, snapshot_hash, german_text_version,
 					 approval_status, compliance_assessment_status, approved_by, approved_at, created_at)
-				SELECT ?, 'synthetic-media-contact-v1', ?, ?, 'synthetic-media-text-v1',
-					'approved', 'not_assessed', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
+				SELECT ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
 				params: [
-					mediaContactId,
-					input.mediaContactSnapshotJson,
-					input.mediaContactSnapshotHash,
+					input.mediaContact.id,
+					input.mediaContact.version,
+					input.mediaContact.snapshotJson,
+					input.mediaContact.snapshotHash,
+					input.mediaContact.germanTextVersion,
+					input.mediaContact.complianceStatus,
 					input.admin.id,
 					input.now,
 					input.now,
@@ -214,305 +486,164 @@ export class ContractRepository {
 				],
 			},
 			...input.templates.map<StatementSpec>((template) => ({
-				sql: `INSERT OR IGNORE INTO contract_template_versions
-					(id, template_id, template_version, render_schema_version,
-					 clause_set_version, provider_version_id, media_contact_version_id,
-					 template_bundle_r2_key, bundle_hash, html_source_hash, css_source_hash,
-					 asset_manifest_json, font_manifest_json, required_fields_json,
-					 renderer_id, renderer_contract_version, worker_compatibility_date,
-					 usage_scope, approval_status, approval_basis, distance_legal_profile,
+				sql: `INSERT INTO contract_template_versions
+					(id, template_id, template_version, render_schema_version, clause_set_version,
+					 provider_version_id, media_contact_version_id, template_bundle_r2_key,
+					 bundle_hash, html_source_hash, css_source_hash, asset_manifest_json,
+					 font_manifest_json, required_fields_json, renderer_id,
+					 renderer_contract_version, worker_compatibility_date, usage_scope,
+					 approval_status, approval_basis, distance_legal_profile,
 					 distance_legal_basis_version, distance_legal_basis_hash,
 					 kuendigung_function_required, early_performance_supported,
 					 approved_by, approved_at, valid_from, valid_to, created_at)
-				SELECT ?, ?, 'synthetic-core-v1', 'contract-render-v1',
-					'synthetic-clause-v1', ?, ?, ?, ?, ?, ?, '{}', '{}',
-					'[]', 'synthetic-test-pdf-v1', 'pdf-adapter-v1', '2026-03-24',
-					'synthetic_test', 'approved', 'synthetic_fixture', 'offline_only',
-					NULL, NULL, 0, 0, ?, ?, NULL, NULL, ? WHERE ${ACTIVE_ADMIN}
+				SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?,
+					?, ?, ?, ?, ?, ?, NULL, NULL, ? WHERE ${ACTIVE_ADMIN}
 					AND EXISTS (SELECT 1 FROM contract_provider_versions WHERE id = ?)
 					AND EXISTS (SELECT 1 FROM media_withdrawal_contact_versions WHERE id = ?)`,
 				params: [
 					template.id,
 					template.templateId,
-					providerId,
-					mediaContactId,
+					template.templateVersion,
+					template.renderSchemaVersion,
+					template.clauseSetVersion,
+					input.provider.id,
+					input.mediaContact.id,
 					template.bundleKey,
 					template.bundleHash,
 					template.htmlSourceHash,
 					template.cssSourceHash,
+					template.assetManifestJson,
+					template.fontManifestJson,
+					template.requiredFieldsJson,
+					template.rendererId,
+					template.rendererContractVersion,
+					template.workerCompatibilityDate,
+					template.usageScope,
+					template.approvalBasis,
+					template.distanceLegalProfile,
+					template.distanceLegalBasisVersion,
+					template.distanceLegalBasisHash,
+					template.kuendigungFunctionRequired,
+					template.earlyPerformanceSupported,
 					input.admin.id,
 					input.now,
 					input.now,
 					input.admin.id,
-					providerId,
-					mediaContactId,
+					input.provider.id,
+					input.mediaContact.id,
 				],
 			})),
-		];
-		await this.db.batch(statements);
-		return input.templates.map((template) => template.id);
-	}
-
-	async installPreviewReviewTemplates(input: {
-		admin: AdminActor;
-		providerSnapshotJson: string;
-		providerPaymentTermsHash: string;
-		mediaContactSnapshotJson: string;
-		mediaContactSnapshotHash: string;
-		distanceLegalBasisHash: string;
-		templates: ReadonlyArray<{
-			id: string;
-			templateId: ContractTemplateId;
-			bundleKey: string;
-			bundleHash: string;
-			htmlSourceHash: string;
-			cssSourceHash: string;
-		}>;
-		now: string;
-	}): Promise<string[]> {
-		const providerId = 'contract-provider:preview-review-v1';
-		const mediaContactId = 'media-contact:preview-review-v1';
-		type InstalledPreviewTemplate = {
-			id: string;
-			template_id: ContractTemplateId;
-			template_bundle_r2_key: string;
-			bundle_hash: string;
-			html_source_hash: string;
-			css_source_hash: string;
-			render_schema_version: string;
-			clause_set_version: string;
-			required_fields_json: string;
-			renderer_id: string;
-			renderer_contract_version: string;
-			worker_compatibility_date: string;
-			approval_status: string;
-			approval_basis: string;
-			provider_version_id: string;
-			media_contact_version_id: string;
-			distance_legal_profile: string;
-			distance_legal_basis_version: string;
-			distance_legal_basis_hash: string;
-			kuendigung_function_required: number;
-			early_performance_supported: number;
-		};
-		const loadInstalled = () =>
-			this.db.all<InstalledPreviewTemplate>({
-				sql: `SELECT id, template_id, template_bundle_r2_key, bundle_hash,
-					html_source_hash, css_source_hash, render_schema_version,
-					clause_set_version, required_fields_json, renderer_id,
-					renderer_contract_version, worker_compatibility_date,
-					approval_status, approval_basis, provider_version_id,
-					media_contact_version_id, distance_legal_profile,
-					distance_legal_basis_version, distance_legal_basis_hash,
-					kuendigung_function_required, early_performance_supported
-				FROM contract_template_versions WHERE usage_scope = 'preview_review'
-					AND template_version = 'preview-review-v1' ORDER BY id`,
-			});
-		const installationIsExact = async (
-			rows: readonly InstalledPreviewTemplate[]
-		): Promise<boolean> => {
-			const expected = new Map(input.templates.map((template) => [template.id, template]));
-			if (
-				rows.length !== input.templates.length ||
-				rows.some((row) => {
-					const template = expected.get(row.id);
-					return (
-						!template ||
-						row.template_id !== template.templateId ||
-						row.template_bundle_r2_key !== template.bundleKey ||
-						row.bundle_hash !== template.bundleHash ||
-						row.html_source_hash !== template.htmlSourceHash ||
-						row.css_source_hash !== template.cssSourceHash ||
-						row.render_schema_version !== 'contract-render-v1' ||
-						row.clause_set_version !== 'preview-review-clauses-v1' ||
-						row.required_fields_json !== '["previewReviewMarker"]' ||
-						row.renderer_id !== 'cloudflare-browser-run-pdf-v1' ||
-						row.renderer_contract_version !== 'pdf-adapter-v1' ||
-						row.worker_compatibility_date !== '2026-03-24' ||
-						row.approval_status !== 'approved' ||
-						row.approval_basis !== 'internal_preview_review' ||
-						row.provider_version_id !== providerId ||
-						row.media_contact_version_id !== mediaContactId ||
-						row.distance_legal_profile !== 'widerruf_applicable' ||
-						row.distance_legal_basis_version !== 'preview-review-distance-v1' ||
-						row.distance_legal_basis_hash !== input.distanceLegalBasisHash ||
-						row.early_performance_supported !== 1 ||
-						row.kuendigung_function_required !==
-							(template.templateId === 'group_yearly' ||
-							template.templateId === 'group_monthly'
-								? 1
-								: 0)
-					);
-				})
-			) {
-				return false;
-			}
-			const [provider, mediaContact] = await Promise.all([
-				this.db.first<{
-					provider_snapshot_json: string;
-					payment_terms_hash: string;
-				}>({
-					sql: `SELECT provider_snapshot_json, payment_terms_hash
-						FROM contract_provider_versions WHERE id = ?
-							AND version = 'preview-review-provider-v1'
-							AND payment_terms_version = 'preview-review-payment-v1'
-							AND approval_status = 'approved'`,
-					params: [providerId],
-				}),
-				this.db.first<{ contact_snapshot_json: string; snapshot_hash: string }>({
-					sql: `SELECT contact_snapshot_json, snapshot_hash
-						FROM media_withdrawal_contact_versions WHERE id = ?
-							AND version = 'preview-review-media-contact-v1'
-							AND german_text_version = 'preview-review-media-text-v1'
-							AND approval_status = 'approved'
-							AND compliance_assessment_status = 'not_assessed'`,
-					params: [mediaContactId],
-				}),
-			]);
-			return (
-				provider?.provider_snapshot_json === input.providerSnapshotJson &&
-				provider.payment_terms_hash === input.providerPaymentTermsHash &&
-				mediaContact?.contact_snapshot_json === input.mediaContactSnapshotJson &&
-				mediaContact.snapshot_hash === input.mediaContactSnapshotHash
-			);
-		};
-		const existing = await loadInstalled();
-		if (existing.results.length > 0) {
-			if (!(await installationIsExact(existing.results))) {
-				throw new ContractRepositoryError('PREVIEW_REVIEW_TEMPLATE_INSTALL_CONFLICT');
-			}
-			return existing.results.map((row) => row.id);
-		}
-		const auditId = crypto.randomUUID();
-		const statements: StatementSpec[] = [
-			{
-				sql: `INSERT OR IGNORE INTO contract_provider_versions
-					(id, version, provider_snapshot_json, payment_terms_version,
-					 payment_terms_hash, approval_status, approved_by, approved_at, created_at)
-				SELECT ?, 'preview-review-provider-v1', ?, 'preview-review-payment-v1', ?,
-					'approved', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
-				params: [
-					providerId,
-					input.providerSnapshotJson,
-					input.providerPaymentTermsHash,
-					input.admin.id,
-					input.now,
-					input.now,
-					input.admin.id,
-				],
-			},
-			{
-				sql: `INSERT OR IGNORE INTO media_withdrawal_contact_versions
-					(id, version, contact_snapshot_json, snapshot_hash, german_text_version,
-					 approval_status, compliance_assessment_status, approved_by, approved_at, created_at)
-				SELECT ?, 'preview-review-media-contact-v1', ?, ?, 'preview-review-media-text-v1',
-					'approved', 'not_assessed', ?, ?, ? WHERE ${ACTIVE_ADMIN}`,
-				params: [
-					mediaContactId,
-					input.mediaContactSnapshotJson,
-					input.mediaContactSnapshotHash,
-					input.admin.id,
-					input.now,
-					input.now,
-					input.admin.id,
-				],
-			},
 			...input.templates.map<StatementSpec>((template) => ({
-				sql: `INSERT OR IGNORE INTO contract_template_versions
-					(id, template_id, template_version, render_schema_version,
-					 clause_set_version, provider_version_id, media_contact_version_id,
-					 template_bundle_r2_key, bundle_hash, html_source_hash, css_source_hash,
-					 asset_manifest_json, font_manifest_json, required_fields_json,
-					 renderer_id, renderer_contract_version, worker_compatibility_date,
-					 usage_scope, approval_status, approval_basis, distance_legal_profile,
-					 distance_legal_basis_version, distance_legal_basis_hash,
-					 kuendigung_function_required, early_performance_supported,
-					 approved_by, approved_at, valid_from, valid_to, created_at)
-				SELECT ?, ?, 'preview-review-v1', 'contract-render-v1',
-					'preview-review-clauses-v1', ?, ?, ?, ?, ?, ?, '{}', '{}',
-					'["previewReviewMarker"]', 'cloudflare-browser-run-pdf-v1',
-					'pdf-adapter-v1', '2026-03-24', 'preview_review', 'approved',
-					'internal_preview_review', 'widerruf_applicable',
-					'preview-review-distance-v1', ?, ?, 1, ?, ?, NULL, NULL, ?
-				WHERE ${ACTIVE_ADMIN}
-					AND EXISTS (SELECT 1 FROM contract_provider_versions
-						WHERE id = ? AND version = 'preview-review-provider-v1'
-							AND provider_snapshot_json = ?
-							AND payment_terms_version = 'preview-review-payment-v1'
-							AND payment_terms_hash = ? AND approval_status = 'approved')
-					AND EXISTS (SELECT 1 FROM media_withdrawal_contact_versions
-						WHERE id = ? AND version = 'preview-review-media-contact-v1'
-							AND contact_snapshot_json = ? AND snapshot_hash = ?
-							AND german_text_version = 'preview-review-media-text-v1'
-							AND approval_status = 'approved'
-							AND compliance_assessment_status = 'not_assessed')`,
+				sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
+					updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+				WHERE id = ? AND status IN ('staged','delete_pending')
+					AND storage_class = 'archive' AND object_key = ?
+					AND object_kind = 'contract_template_bundle' AND source_ref = ?
+					AND sha256 = ? AND size_bytes = ?
+					AND EXISTS (SELECT 1 FROM contract_template_versions installed
+						WHERE installed.id = ? AND installed.template_bundle_r2_key = ?
+							AND installed.bundle_hash = ?)`,
 				params: [
+					input.now,
+					input.now,
+					template.storageIntentId,
+					template.bundleKey,
+					template.storageIntentSourceRef,
+					template.bundleHash,
+					template.bundleSizeBytes,
 					template.id,
-					template.templateId,
-					providerId,
-					mediaContactId,
 					template.bundleKey,
 					template.bundleHash,
-					template.htmlSourceHash,
-					template.cssSourceHash,
-					input.distanceLegalBasisHash,
-					template.templateId === 'group_yearly' ||
-					template.templateId === 'group_monthly'
-						? 1
-						: 0,
-					input.admin.id,
+				],
+			})),
+			...input.templates.slice(0, -1).map<StatementSpec>((template) => ({
+				sql: `INSERT INTO storage_intent_link_assertions
+					(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+				VALUES (?, ?, 'contract_template_version', ?, CASE WHEN
+					EXISTS (SELECT 1 FROM storage_object_intents WHERE id = ?
+						AND status = 'linked' AND object_key = ? AND sha256 = ?)
+					AND EXISTS (SELECT 1 FROM contract_template_versions WHERE id = ?
+						AND template_bundle_r2_key = ? AND bundle_hash = ?)
+				THEN 1 ELSE 0 END, ?)`,
+				params: [
+					`storage-link:${template.storageIntentId}`,
+					template.storageIntentId,
+					template.id,
+					template.storageIntentId,
+					template.bundleKey,
+					template.bundleHash,
+					template.id,
+					template.bundleKey,
+					template.bundleHash,
 					input.now,
-					input.now,
-					input.admin.id,
-					providerId,
-					input.providerSnapshotJson,
-					input.providerPaymentTermsHash,
-					mediaContactId,
-					input.mediaContactSnapshotJson,
-					input.mediaContactSnapshotHash,
 				],
 			})),
 			{
 				sql: `INSERT INTO audit_events
 					(id, actor_user_id, actor_kind, action, target_kind, target_id,
 					 request_id, safe_diff_json, created_at)
-				SELECT ?, ?, 'user', 'contract.preview_review_templates_installed',
-					'contract_template_set', 'preview-review-v1', ?,
-					'{"usageScope":"preview_review","templateCount":4}', ?
-				WHERE ${ACTIVE_ADMIN}
-					AND (SELECT COUNT(*) FROM contract_template_versions
-						WHERE usage_scope = 'preview_review'
-							AND template_version = 'preview-review-v1') = 4`,
+				SELECT ?, ?, 'user', ?, 'contract_template_set', ?, ?, ?, ?
+				WHERE ${ACTIVE_ADMIN}`,
 				params: [
-					auditId,
+					input.audit.id,
 					input.admin.id,
-					`preview-review-install:${auditId}`,
+					input.audit.action,
+					input.audit.targetId,
+					input.audit.requestId,
+					input.audit.safeDiffJson,
 					input.now,
 					input.admin.id,
 				],
 			},
 		];
-		await this.db.batch(statements);
-		const installed = await loadInstalled();
-		if (!(await installationIsExact(installed.results))) {
-			throw new ContractRepositoryError('PREVIEW_REVIEW_TEMPLATE_INSTALL_REJECTED');
+		const finalTemplate = input.templates.at(-1)!;
+		const terminal = this.templateSetExactCondition(input, false);
+		statements.push({
+			sql: `INSERT INTO storage_intent_link_assertions
+				(id, intent_id, target_kind, target_id, assertion_passed, created_at)
+			VALUES (?, ?, 'contract_template_version', ?,
+				CASE WHEN ${terminal.sql} THEN 1 ELSE 0 END, ?)`,
+			params: [
+				`storage-link:${finalTemplate.storageIntentId}`,
+				finalTemplate.storageIntentId,
+				finalTemplate.id,
+				...terminal.params,
+				input.now,
+			],
+		});
+
+		try {
+			await this.db.batch(statements);
+			return input.templates.map((template) => template.id);
+		} catch (error) {
+			// D1 may have committed despite an ambiguous response; never compensate blindly.
+			if (await this.templateSetInstalledExactly(input)) {
+				return input.templates.map((template) => template.id);
+			}
+			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INSTALL_REJECTED', {
+				cause: error,
+			});
 		}
-		return installed.results.map((row) => row.id);
 	}
 
 	loadTemplate(templateVersionId: string): Promise<StoredTemplateVersion | null> {
 		return this.db.first<StoredTemplateVersion>({
 			sql: `SELECT template.id, template.template_id, template.template_version,
 				template.render_schema_version, template.clause_set_version,
+				template.provider_version_id, provider.provider_snapshot_json,
+				provider.payment_terms_hash AS provider_payment_terms_hash,
 				template.template_bundle_r2_key, template.bundle_hash,
 				template.html_source_hash, template.css_source_hash, template.renderer_id,
+				template.asset_manifest_json, template.font_manifest_json,
+				template.required_fields_json,
 				template.renderer_contract_version, template.worker_compatibility_date,
 				template.usage_scope, template.approval_status, template.approval_basis,
 				template.distance_legal_profile, template.distance_legal_basis_hash,
 				template.kuendigung_function_required, template.early_performance_supported,
 				template.media_contact_version_id,
 				provider.approval_status AS provider_approval_status,
-				contact.approval_status AS media_contact_approval_status
+				contact.approval_status AS media_contact_approval_status,
+				contact.snapshot_hash AS media_contact_snapshot_hash
 			FROM contract_template_versions template
 			JOIN contract_provider_versions provider ON provider.id = template.provider_version_id
 			LEFT JOIN media_withdrawal_contact_versions contact

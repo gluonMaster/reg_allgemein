@@ -46,7 +46,8 @@ versions, quarantine и backups. Infrequent Access для такого MVP не 
   не body документа;
 - выдача всегда проходит server-side owner/RBAC check и audit для admin.
 
-Каждый application `put` использует D1 write-ahead intent: до записи body
+Каждый application `put`, включая contract template/source bundle, использует
+D1 write-ahead intent: до записи body
 создаётся `storage_object_intents(status=staged)` с bucket class, opaque key,
 hash, size и source reference. Domain D1 batch одновременно фиксирует ссылку на
 object, переводит intent в `linked` и создаёт append-only
@@ -57,6 +58,23 @@ reference. Referenced intent становится `linked`; только не re
 Claim повторяет `NOT referenced` в conditional update, поэтому поздно
 зафиксированная ссылка выигрывает у cleanup. Duplicate/stale Worker delivery
 ограничивается lease owner и не завершает чужую попытку.
+
+Для deterministic immutable template key обычная последовательность
+`GET-if-missing → PUT` запрещена как TOCTOU. R2 `put` обязан использовать
+atomic create-if-absent precondition через Workers binding `onlyIf`; failed
+precondition возвращает no-write result, после чего application перечитывает
+объект и проверяет exact bytes/size/SHA-256. Ни failed precondition, ни
+concurrent conflicting body не разрешают overwrite. D1 link/install transaction
+принимает только exact intent/object/template state и сама создаёт terminal
+assertion; post-commit client check не превращает partial installation в
+success. Crash после R2 write оставляет staged intent для штатного reconcile и
+grace/lease cleanup, а не неучтённый special-case object. Актуальные provider
+semantics сверяются по
+[R2 Workers API reference](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/)
+и
+[D1 batch contract](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch):
+conditional R2 `put` при failed precondition не записывает object, а ошибка
+statement в D1 batch откатывает всю последовательность.
 
 Configured ceilings, если они ниже hard default, входят в тот же conditional D1
 batch: document INSERT проверяет актуальные `COUNT`/`SUM(size_bytes)` на момент

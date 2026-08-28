@@ -39,6 +39,24 @@ import, deploy, login или bootstrap не завершает процесс.
    local/read-only/reversible шаги. Не проси подтверждения для каждого такого
    шага и не останавливайся после промежуточного успеха.
 
+## Приоритет independent NO-GO
+
+Если active-state фиксирует independent `NO-GO`, его remediation становится
+первым hard gate независимо от старых зелёных tests или historical GO другого
+scope. Полностью прочитай записанные findings, соответствующие canonical
+requirements/acceptance/test plan и local exact remediation prompt, если он
+назван в handoff. Исправь все BLOCKER/HIGH и обязательные MEDIUM, выполни
+focused regression плюс полную gate-цепочку и подготовь новый immutable
+candidate. Не присваивай своему candidate independent GO: на role boundary
+подготовь exact read-only review prompt для другой session/identity.
+
+До нового independent GO не запрашивай и не выполняй candidate-bound recovery,
+migration apply, deploy, config/secret mutation, provider send или bootstrap.
+Для Cloudflare Workers/D1/R2 remediation загрузи `cloudflare` и
+`workers-best-practices`, а перед Wrangler commands — `wrangler`; exact API/
+binding semantics сверяй с текущими official docs/types/schema. Historical
+review verdict не переносится на changed candidate.
+
 ## Правило продвижения
 
 После каждого успешного gate:

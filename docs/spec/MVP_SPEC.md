@@ -487,13 +487,34 @@ release gates сохраняются.
   `TEST/ENTWURF — nicht für reale Vertragsbeziehungen`, реальный Cloudflare
   Browser Run renderer, private preview R2 и доставку только на заранее
   согласованные контролируемые test recipients. Минимум один offer проходит
-  реальный lifecycle `render → send → parent accept → different-admin formation
-  and activation → certificate/download`, а все четыре вида проходят render/
+  `render → send → parent accept`, затем formation/activation другим admin и
+  `certificate/download`; все четыре вида проходят render/
   delivery review. Полученные PDF являются материалом для управленческой и
   юридической правки; новый feedback выпускает новую immutable template
   version/change log. Preview-review artifact нельзя использовать для
   production offer, а отсутствие финального production approval не является
   основанием откладывать его создание и техническую проверку.
+- **CONTRACT-22.** Каждая используемая при draft/render версия имеет полный
+  immutable render-source bundle. Его canonical manifest/hash покрывает не
+  ссылку на текущую функцию, а фактически исполняемое base body, общие и
+  kind-specific clauses, фиксированный текст, CSS, fonts/assets, версии
+  helper/schema/adapter и hashes всех provider/payment/legal/media snapshots;
+  отдельно сохраняется hash полученного self-contained HTML. Runtime разрешает
+  только exact зарегистрированные `template_version`/`render_schema_version` и
+  не подменяет неизвестную или прежнюю version текущим/synthetic fallback.
+  Новый deploy или новая template version не меняют источник уже установленной
+  версии; отсутствие её полного bundle завершает draft/render fail-closed.
+- **CONTRACT-23.** Установка template version является recoverable и
+  conflict-safe между D1 и R2. До object write создаётся D1 storage intent;
+  deterministic R2 key записывается атомарным create-if-absent, а проигравший
+  concurrent writer перечитывает и проверяет exact bytes/size/SHA-256 вместо
+  overwrite. Provider/media/template rows, link assertions и успешный install
+  audit фиксируются одной exact-state D1 transaction: count-only либо
+  post-commit client verification недостаточны. Byte-identical replay
+  идемпотентен, conflicting replay не оставляет partial rows или ложный success
+  audit. `preview_review` environment/feature/synthetic gates проверяются до
+  reservation contract number, draft/operational record или любого другого
+  business side effect.
 
 ## 9.1. Цена и её изменение
 

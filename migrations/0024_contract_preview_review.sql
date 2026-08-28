@@ -6,6 +6,16 @@ PRAGMA defer_foreign_keys = ON;
 -- visibly watermarked preview material and can never satisfy a production gate.
 DROP TRIGGER contract_template_versions_approved_immutable;
 DROP TRIGGER contract_offers_insert_scope_guard;
+DROP TRIGGER contract_artifacts_reject_delete;
+
+-- DROP TABLE performs an implicit delete.  D1 therefore requires the two
+-- direct child tables to be empty while the CHECK-constrained parent is
+-- rebuilt.  Grandchild FK checks are deferred and every child row is restored
+-- byte-for-byte before the transaction can commit.
+CREATE TABLE contract_offers_0024_backup AS SELECT * FROM contract_offers;
+CREATE TABLE contract_artifacts_0024_backup AS SELECT * FROM contract_artifacts;
+DELETE FROM contract_artifacts;
+DELETE FROM contract_offers;
 
 CREATE TABLE contract_template_versions_next (
 	id TEXT PRIMARY KEY NOT NULL,
@@ -90,6 +100,11 @@ FROM contract_template_versions;
 DROP TABLE contract_template_versions;
 ALTER TABLE contract_template_versions_next RENAME TO contract_template_versions;
 
+INSERT INTO contract_offers SELECT * FROM contract_offers_0024_backup;
+INSERT INTO contract_artifacts SELECT * FROM contract_artifacts_0024_backup;
+DROP TABLE contract_artifacts_0024_backup;
+DROP TABLE contract_offers_0024_backup;
+
 CREATE TRIGGER contract_template_versions_approved_immutable
 BEFORE UPDATE ON contract_template_versions WHEN OLD.approval_status = 'approved'
 BEGIN SELECT RAISE(ABORT, 'approved contract template version is immutable'); END;
@@ -112,5 +127,9 @@ BEGIN
 			AND template.template_id = NEW.contract_kind AND template.approval_status = 'approved'
 	);
 END;
+
+CREATE TRIGGER contract_artifacts_reject_delete
+BEFORE DELETE ON contract_artifacts
+BEGIN SELECT RAISE(ABORT, 'contract artifacts are retained evidence'); END;
 
 PRAGMA foreign_key_check;

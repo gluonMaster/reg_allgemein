@@ -1,23 +1,16 @@
 # Handoff этапа 13: hardening и production readiness
 
-Ревизия: 2026-08-26.
+Ревизия: 2026-08-27.
 
-Статус этапа: `in_progress` — exact `8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956`
-получил authorized independent `IMPORT-08` review `NO-GO` с 2 BLOCKER и 2 HIGH.
-Exact runtime remediation anchor `abb93f25a7d9ce80bdef6f204e75cabf635f9453`
-с append-only migration `0022` прошёл fresh exact-SHA full chain. Immutable
-documentation-only review seal `b2e8548f63ae62e33d519d61e0ac729085801052`
-является его прямым runtime-empty потомком и прошёл exact short gates. Отдельно
-разрешённый independent read-only re-review exact `b2e8548f` вернул NO-GO с
-1 BLOCKER и 1 MEDIUM. Exact docs/test remediation anchor
-`4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9` закрывает findings и прошёл
-proportional exact-SHA gates. Финальный review target
-`2bedc73c9b39a4cb43296046986a3f48e039b022` является его прямым docs-only
-потомком, не меняет `src`/`migrations`/`tests` и прошёл exact short gates.
-Separately authorized independent read-only review этого exact SHA вернул GO
-без BLOCKER/HIGH. Один MEDIUM test-evidence gap остаётся: stale dispatch/
-final-confirm/apply fixtures fail closed, но не изолируют duplicate-specific
-guard от других eligibility checks; текущего runtime bypass reviewer не нашёл.
+Статус этапа: `in_progress` — latest full-manual-preview review target
+`fa7aeeb40726089a72396b41b27ce93db1f2a096` с direct parent
+`c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9` прошёл mandatory local commands,
+но отдельно порученный independent read-only review вернул **NO-GO** с 2 HIGH и
+2 MEDIUM. До нового remediation candidate и нового independent GO запрещены
+`0024` apply, Worker/config deploy, D1/R2 writes, provider sends и bootstrap.
+Исторический exact `2bedc73c9b39a4cb43296046986a3f48e039b022` сохраняет GO только
+для своего более узкого IMPORT-08 docs/test scope и не одобряет новый contract
+runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
@@ -48,7 +41,7 @@ Production readiness: **`blocked` / NO-GO**
   точным credential, external parameter, remote mutation, deploy или provider
   send. Production, официальный сайт и реальные Office/PII не входят в scope.
 
-## Full-manual-preview local candidate — 2026-08-26
+## Full-manual-preview reviewed candidate (rejected) — 2026-08-26
 
 - Из exact starting HEAD `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9`
   подготовлена append-only migration `0024_contract_preview_review.sql`.
@@ -60,10 +53,12 @@ Production readiness: **`blocked` / NO-GO**
   production-candidate clauses, но каждый HTML/PDF/certificate заметно помечен
   `TEST/ENTWURF — nicht für reale Vertragsbeziehungen`. Production template
   gates и legal approval не ослаблены.
-- Deterministic template R2 keys теперь write-once/verify-existing: конфликтный
-  object не перезаписывается. D1 replay сверяет exact provider/media/template
-  snapshots, а draft creation привязывает approved HTML/CSS source hashes к
-  текущему runtime renderer source; рассогласование останавливается до offer.
+- Candidate пытался реализовать deterministic template R2 keys через
+  pre-read/verify-existing и сверять D1 provider/media/template snapshots, а
+  draft creation привязывал approved HTML/CSS source hashes к текущему runtime
+  renderer source. Independent review ниже доказал, что `GET → PUT` не даёт
+  atomic write-once, а source binding и D1 terminal assertion неполны; эти
+  свойства нельзя считать реализованными до remediation и нового GO.
 - Реальный preview email больше не является одной ссылкой: worker читает exact
   offer PDF из private archive R2, сверяет content type, размер и SHA-256 с D1,
   после чего передаёт один bounded Base64 attachment в Resend. В preview Resend
@@ -81,19 +76,94 @@ Production readiness: **`blocked` / NO-GO**
   профильных tests и полный suite: target/preflight, ровно один attempt,
   ambiguous delivery quarantine, abort/reconcile и запрет blind retry. Bot
   token/destination не устанавливались, remote prepare/send не выполнялись.
-- Candidate verification: focused contract/config/migration — 71/71; `npm run
-  check` — 0 errors/warnings; полный `npm test` — 69 files/541 tests; `npm run
-  build`; Playwright — 18/18; `npm audit --omit=dev` — 0 vulnerabilities; `npm
-  run docs:check` — 168 links/56 files, 109 commands и continuity; `npm run
-  release:scan` — 549/549; `git diff --check` — passed. Первый Playwright run
+- Candidate verification: focused contract/config/migration — 71/71;
+  `npm run check` — 0 errors/warnings; полный `npm test` — 69 files/541 tests;
+  `npm run build`; Playwright — 18/18; `npm audit --omit=dev` — 0
+  vulnerabilities; `npm run docs:check` — 168 links/56 files, 109 commands и
+  continuity; `npm run release:scan` — 549/549; `git diff --check` — passed.
+  Первый Playwright run
   выявил только устаревшее ожидание старого общего текста кнопки; fixture имеет
   `manual_payment`, ожидание исправлено на новый payable label, полный повтор
   прошёл 18/18.
 - Ни Worker, D1/R2, Access, secrets, provider, bootstrap, production, CMS,
-  официальный сайт, Office либо PII state не менялись. Следующий gate — local
-  immutable commit и independent read-only exact-SHA review отдельной identity.
-  Только после GO можно отдельно разрешать fresh candidate-bound recovery,
-  apply `0024` к preview/recovery, exact deploy и первые controlled sends.
+  официальный сайт, Office либо PII state не менялись. Этот local candidate был
+  зафиксирован как `fa7aeeb…` и получил independent NO-GO, описанный ниже;
+  candidate-bound recovery, `0024` apply, deploy и sends запрещены до нового
+  remediation candidate и отдельного GO.
+
+## Full-manual-preview independent review NO-GO — 2026-08-27
+
+- Exact candidate `fa7aeeb40726089a72396b41b27ce93db1f2a096`/parent
+  `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9` был clean до и после review.
+  `git diff --check`, check 0/0, 69 files/541 Vitest, build, Chromium 18/18,
+  audit 0, docs 168 links/56 files + 109 commands и scan 549/549 прошли. Зелёная
+  общая цепочка не перекрыла findings; verdict — **NO-GO**.
+- **HIGH:** `templates.ts` hash-ит delegating `render.toString()`, не полные
+  `renderBody`/kind clauses/copy/helpers; R2 bundle не содержит исполняемый HTML
+  source/fonts/partials, version resolution использует current registry и
+  unknown-version fallback. Remediation: canonical complete source bundle,
+  exact version registry без fallback, actual HTML hash и cross-deploy v1/v2
+  regressions.
+- **HIGH:** template bundle использует `GET → unconditional PUT` без D1 intent;
+  D1 install делает count-only audit, а exact check выполняет после committed
+  batch. Remediation: staged storage intent, conditional R2 create-if-absent с
+  verify-existing/no-overwrite, exact link assertion/reconcile и server-side D1
+  terminal assertion, включая same/different-byte concurrency/crash tests.
+- **MEDIUM:** `preview_review` draft path проверяет marker, но environment/flag
+  gate приходит только при send. Remediation должна отказать production/disabled
+  preview до `prepareNumber`, draft/operational record, audit или R2 side effect
+  и закрепить seeded-preview-row production regression.
+- **MEDIUM:** `0024` имеет empty migration evidence, но permanent populated
+  upgrade suite не seed-ит approved provider/templates и dependent offers/
+  artifacts. Нужен exact `0023 → 0024` fixture с preservation/FK/triggers/
+  forbidden-pairing assertions.
+- Canonical requirements добавлены как `CONTRACT-22`/`CONTRACT-23`, acceptance —
+  `AC-CONTRACT-02`–`AC-CONTRACT-05`; test plan/storage/manual-preview/runbook
+  синхронизированы. Для следующей основной Goal session подготовлен ignored
+  prompt `docs/prompts/stage-13-remediate-full-manual-preview-review.md`.
+- Следующий gate полностью local и не требует Cloudflare mutation. После
+  implementation выполнить focused tests и полную цепочку, получить новый
+  immutable candidate и остановиться на независимой role boundary. Только новый
+  separate GO возвращает процесс к candidate-bound recovery/apply/deploy plan.
+
+## Full-manual-preview NO-GO remediation — local candidate pending review
+
+- Четыре review findings реализованы локально без remote mutation. Status этой
+  session — `remediated_candidate_pending_independent_review`, а не GO.
+- Renderer теперь получает только canonical serialized bundle из exact R2
+  object. Bundle связывает body/common и kind clauses/copy/CSS, embedded pinned
+  DejaVu Sans WOFF bytes, helper/schema/adapter versions и exact provider/
+  payment/legal/media snapshot hashes; отдельный `renderedHtmlHash` связывает
+  фактически собранный self-contained HTML. Любой string/current/synthetic
+  fallback удалён. Hard-coded v1 golden и source/component/version denials
+  закреплены в `tests/unit/contract-template-bundles.test.ts`.
+- Template install сначала создаёт deterministic staged storage intent, затем
+  делает R2 create-if-absent через type-supported `onlyIf`, всегда сверяет
+  winner и связывает provider/media/four template rows, intent assertions,
+  audit и server-side terminal exact assertion одной D1 batch transaction.
+  `tests/integration/contract-template-install-d1.test.ts` покрывает same/different
+  bytes, crash after intent/R2, conflict и ambiguous R2/D1 outcomes.
+- `createDraft` проверяет preview environment/flag/Browser renderer/approval
+  basis и synthetic marker до number/draft/operational/idempotency/audit/storage
+  mutations. `contracts-d1.test.ts` доказывает неизменность state для test,
+  production, disabled preview, unknown/missing/retired bundle; route/UI boundary
+  закреплён `admin-contracts-preview-gate.test.ts`.
+- Permanent `migration-upgrade-d1.test.ts` начинает с exact `0023`, создаёт
+  provider/media/templates и полный offer/artifact/delivery FK graph, применяет
+  original `0024`, сравнивает seeded rows и проверяет FK/triggers и scope/basis
+  pairings. Applied migrations `0001`–`0023` не переписывались; `0024` remote не
+  применялась.
+- Focused suites и полная local chain прошли: check 0/0, controlled-worker
+  Vitest 73 files/548 tests, build, Playwright 18/18, production audit 0,
+  docs/continuity, release scan и diff check. E2E helper также получил
+  workspace-independent Wrangler/XDG paths и deterministic synthetic-server
+  teardown; remote/provider state он не использует.
+- Immutable remediation candidate — единственный local commit, содержащий этот
+  checkpoint. Его exact SHA/direct parent и clean-worktree expectation после
+  commit записываются в ignored
+  `stage-13-independent-review-full-manual-preview-remediation.md`. Следующая
+  session выполняет только independent read-only review. До её GO recovery/
+  apply/deploy/provider send/bootstrap/production остаются запрещены.
 
 ## Full-manual-preview checkpoint — текущий проход 2026-08-25
 
@@ -960,8 +1030,8 @@ logs`). Новый clean clone exact SHA прошёл `npm ci` с full audit 0 �
 | Current legacy import             | `blocked`                      | Synthetic/no-PII baseline and candidate lifecycles passed with independent roles on schema `0001`–`0023`. Fresh candidate-current backup/full isolated restore, promote, idempotent repeated-promote reconciliation, rollback and roll-forward are verified; one current candidate pair has PlusBText `2`, Access/projection `1703`, issues 0 and FK/dependency/reconciliation passed. Admin cold-read, authenticated lookup and any real/current-data import remain absent                                                                                                                                                                           | import/admin/data/backup/privacy owners                                  |
 | Public auth/email                 | `feature_disabled`             | scoped key/secrets installed; enablement, real-token and delivery smoke absent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | auth/provider owner                                                      |
 | Telegram                          | `feature_disabled` / `blocked` | fail-closed deployed evidence and historical exact `a590d1f` verification/independent review exist; local `bot_api`/delivery-certainty/operator implementation and tests exist. Preview bot/chat secrets are absent; the channel invitation alone is not target evidence. Dedicated bot ownership, exact numeric destination/permissions, preflight, authorized synthetic normal-outbox smoke and operator rehearsal remain absent                                                                                                                                                                                                                    | provider/privacy/reliability/operations owners                           |
-| Upload                            | `feature_disabled` / `blocked` | implementation и preview private-EU R2 split существуют; `OQ-036` требует реальный synthetic upload/quarantine/forced-download/local-AV/hash-attestation/business-review/cleanup lifecycle до full manual preview. Production training/privacy approval остаётся отдельным gate                                                                                                                                                                                                                                                                                                                                                                             | preview storage/security operator; затем production owners               |
-| Contract/statutory/media          | `feature_disabled` / `blocked` | contract lifecycle, generic synthetic templates и Browser Run adapter существуют; до full manual preview нужны отдельный `preview_review` scope, четыре production-candidate Browser Run/R2/email artifacts и минимум один полный synthetic formation lifecycle. Финальное template/legal approval блокирует только production. Statutory/media production paths остаются отдельно fail-closed                                                                                                                                                                                                | preview contract/review owners; затем production legal/privacy owners    |
+| Upload                            | `feature_disabled` / `blocked` | implementation и preview private-EU R2 split существуют; `OQ-036` требует реальный synthetic upload/quarantine/forced-download/local-AV/hash-attestation/business-review/cleanup lifecycle до full manual preview. Production training/privacy approval остаётся отдельным gate                                                                                                                                                                                                                                                                                                                                                                       | preview storage/security operator; затем production owners               |
+| Contract/statutory/media          | `feature_disabled` / `blocked` | contract lifecycle, generic synthetic templates и Browser Run adapter существуют; до full manual preview нужны отдельный `preview_review` scope, четыре production-candidate Browser Run/R2/email artifacts и минимум один полный synthetic formation lifecycle. Финальное template/legal approval блокирует только production. Statutory/media production paths остаются отдельно fail-closed                                                                                                                                                                                                                                                        | preview contract/review owners; затем production legal/privacy owners    |
 | Backup/restore/RPO/RTO            | `blocked`                      | One-off pre-candidate D1 protected export/full isolated restore and current empty-state R2 restore passed 2026-08-20. Plan-bound recovery was revalidated through `0023` before baseline publish. Fresh 2026-08-25 candidate-current DPAPI export/new isolated EU D1 restore passed exact export↔restore schema/per-table/migration/current-pair verification and local `quick_check=ok`. RPO/RTO, cadence/retention, reusable non-empty R2 mechanism and application critical-path smoke remain absent                                                                                                                                               | data/backup/operations owners                                            |
 | Synthetic browser lifecycle       | `blocked`                      | local Chromium 8 files/18 tests covers request, catalog/trial, support, structured absence and price review through `scheduled`; Browser contract accept/form/activate is not claimed. Register/verify/claim, funded upload/document review, enabled contract lifecycle, price admin-send/apply and preview/provider auth remain                                                                                                                                                                                                                                                                                                                      | product/release owner                                                    |
 | Accessibility/browser             | `blocked`                      | public preview smoke plus local strict accessibility 4/4: all default axe rules, empty `violations`/`incomplete`, inline-error semantics, 390px parent/admin and 640px zoom-equivalent reflow passed; literal/manual zoom, assistive-technology, glyph/font and remote auth review absent                                                                                                                                                                                                                                                                                                                                                             | UX/accessibility owner                                                   |
@@ -2077,9 +2147,10 @@ build`; `npm run docs:check` — 162 links/55 files, 108 commands и continuity;
   `docs/prompts/stage-13-remediate-academic-period-boundary.md`. Канонические
   `IMPORT-09`/`AC-IMPORT-32`, test plan, traceability, active state, readiness и
   runbook stop condition синхронизированы с NO-GO. Проверка documentation
-  checkpoint: standalone `npm run check` — 0 errors/warnings; полный `npm test`
-  — 68 files/521 tests; `npm run build`, `npm run docs:check`, `npm run
-release:scan` и `git diff --check` — passed. Отдельная transient ошибка
+  checkpoint: standalone `npm run check` — 0 errors/warnings; полный
+  `npm test` — 68 files/521 tests; `npm run build`, `npm run docs:check`,
+  `npm run release:scan` и `git diff --check` — passed. Отдельная transient
+  ошибка
   первого `npm run check` была вызвана одновременной генерацией `.svelte-kit`
   параллельным build; последовательный повтор полностью зелёный.
 

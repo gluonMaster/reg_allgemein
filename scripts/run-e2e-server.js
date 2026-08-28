@@ -1,15 +1,11 @@
 // @ts-check
 import { randomBytes } from 'node:crypto';
-import {
-	existsSync,
-	lstatSync,
-	mkdirSync,
-	rmSync,
-	writeFileSync,
-} from 'node:fs';
-import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'vite';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const wranglerRoot = resolve(repositoryRoot, '.wrangler');
@@ -17,6 +13,8 @@ const runtimeRoot = resolve(wranglerRoot, 'e2e-runtime');
 const expectedRelativeTarget = join('.wrangler', 'e2e-runtime');
 const actualRelativeTarget = relative(repositoryRoot, runtimeRoot);
 const runtimeEnvironmentFile = resolve(runtimeRoot, 'runtime.env');
+const wranglerLogRoot = resolve(tmpdir(), 'reg-allgemein-wrangler-e2e-logs');
+const wranglerConfigRoot = resolve(tmpdir(), 'reg-allgemein-wrangler-e2e-config');
 
 if (
 	actualRelativeTarget !== expectedRelativeTarget ||
@@ -35,6 +33,8 @@ if (existsSync(runtimeRoot) && lstatSync(runtimeRoot).isSymbolicLink()) {
 
 rmSync(runtimeRoot, { recursive: true, force: true });
 mkdirSync(runtimeRoot, { recursive: true });
+mkdirSync(wranglerLogRoot, { recursive: true });
+mkdirSync(wranglerConfigRoot, { recursive: true });
 
 const syntheticJwtSecret = randomBytes(48).toString('base64url');
 writeFileSync(runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n`, {
@@ -43,15 +43,19 @@ writeFileSync(runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n`, {
 });
 
 const wranglerBin = resolve(repositoryRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
-const viteBin = resolve(repositoryRoot, 'node_modules', 'vite', 'bin', 'vite.js');
 const persistedState = join('.wrangler', 'e2e-runtime');
 const wranglerConfig = 'wrangler.e2e.toml';
+const localWranglerEnvironment = {
+	...process.env,
+	WRANGLER_LOG_PATH: wranglerLogRoot,
+	XDG_CONFIG_HOME: wranglerConfigRoot,
+};
 
 /** @param {string[]} arguments_ */
 function runWrangler(arguments_) {
 	const result = spawnSync(process.execPath, [wranglerBin, ...arguments_], {
 		cwd: repositoryRoot,
-		env: { ...process.env, CI: '1' },
+		env: { ...localWranglerEnvironment, CI: '1' },
 		stdio: 'inherit',
 	});
 	if (result.error) throw result.error;
@@ -90,43 +94,56 @@ try {
 	throw error;
 }
 
-const vite = spawn(
-	process.execPath,
-	[viteBin, 'dev', '--host', '127.0.0.1', '--port', '4173', '--strictPort'],
-	{
-		cwd: repositoryRoot,
-		env: { ...process.env, KOLIBRI_E2E: '1' },
-		stdio: 'inherit',
-	}
-);
+process.env.KOLIBRI_E2E = '1';
+process.env.WRANGLER_LOG_PATH = wranglerLogRoot;
+process.env.XDG_CONFIG_HOME = wranglerConfigRoot;
+
+const removeGeneratedEnvironment = () => rmSync(runtimeEnvironmentFile, { force: true });
+const vite = await createServer({
+	root: repositoryRoot,
+	server: {
+		host: '127.0.0.1',
+		port: 4173,
+		strictPort: true,
+	},
+});
+
+try {
+	await vite.listen();
+	vite.printUrls();
+} catch (error) {
+	removeGeneratedEnvironment();
+	throw error;
+}
 
 let stopping = false;
-const removeGeneratedEnvironment = () => rmSync(runtimeEnvironmentFile, { force: true });
+const runtimeEnvironmentWatch = setInterval(() => {
+	if (!existsSync(runtimeEnvironmentFile)) stop();
+}, 250);
 
-/** @param {NodeJS.Signals} signal */
-function stop(signal) {
+function stop() {
 	if (stopping) return;
 	stopping = true;
-	if (vite.exitCode === null && vite.signalCode === null) vite.kill(signal);
+	clearInterval(runtimeEnvironmentWatch);
+	removeGeneratedEnvironment();
+	process.exit(0);
 }
 
 process.once('SIGINT', () => {
-	removeGeneratedEnvironment();
-	stop('SIGINT');
+	stop();
 });
 process.once('SIGTERM', () => {
-	removeGeneratedEnvironment();
-	stop('SIGTERM');
+	stop();
 });
 process.once('exit', removeGeneratedEnvironment);
 
-vite.once('error', (error) => {
+vite.httpServer?.once('error', () => {
+	clearInterval(runtimeEnvironmentWatch);
 	removeGeneratedEnvironment();
-	throw error;
+	process.exit(1);
 });
-vite.once('exit', (code, signal) => {
+vite.httpServer?.once('close', () => {
+	clearInterval(runtimeEnvironmentWatch);
 	removeGeneratedEnvironment();
-	if (!stopping && code !== 0) {
-		process.exitCode = code ?? (signal ? 1 : 0);
-	}
+	if (!stopping) process.exit(1);
 });

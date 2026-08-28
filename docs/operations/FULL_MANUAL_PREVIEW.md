@@ -27,19 +27,27 @@ Telegram, а D1/R2/Browser используют только отдельные 
 
 ## Порядок достижения checkpoint
 
-1. Локальный кандидат: migration `0024`, preview-only contract/email gates,
-   штатные upload/manual-review и Telegram smoke tools; `npm run check`,
-   `npm test`, `npm run build`, docs/release checks.
-2. Immutable candidate commit и отдельный independent read-only exact-SHA
-   review. BLOCKER/HIGH исправляются новым commit и новым review.
+1. Exact candidate `fa7aeeb40726089a72396b41b27ce93db1f2a096` содержит migration
+   `0024`, preview-only contract/email gates, штатные upload/manual-review и
+   Telegram smoke tools; его local/full verification зелёная, но independent
+   review вернул **NO-GO**.
+2. Оба HIGH и оба MEDIUM локально исправлены: complete immutable render-source/
+   version binding; D1-intent + atomic create-if-absent R2 и exact-state D1
+   installation; pre-draft environment/feature isolation; permanent populated
+   `0023 → 0024` migration regression. Полная local chain прошла; текущий gate —
+   один immutable commit и отдельный independent read-only exact-SHA review.
+   Старый verdict не наследуется; до нового GO recovery/apply/deploy запрещены,
+   а любой BLOCKER/HIGH снова означает NO-GO.
 3. Fresh candidate-bound preview D1 recovery point и isolated restore; проверить
    migration inventory, per-table counts, FK/quick-check и protected evidence.
 4. Согласовать без публикации значений: два owner-controlled email accounts,
    dedicated preview Telegram bot + exact numeric destination/type, текущий
    approved local AV label/version и факт готовности отдельной quarantine-папки.
-5. Применить `0024` только к preview и candidate-bound recovery copy. Развернуть
-   exact reviewed candidate в тот же Access-protected origin с fail-closed
-   конфигурацией и выполнить health/auth smoke до внешней отправки.
+5. Только после нового independent GO применить `0024` и, если remediation
+   добавит следующую append-only migration, весь exact reviewed ledger только к
+   preview и candidate-bound recovery copy. Развернуть exact reviewed candidate
+   в тот же Access-protected origin с fail-closed конфигурацией и выполнить
+   health/auth smoke до внешней отправки.
 6. Включить public auth + Resend только для SHA-256 allowlist согласованных
    test recipients. Создать и email-верифицировать два synthetic аккаунта;
    bootstrap admin выполнять ровно один раз штатной командой. После bootstrap
@@ -72,6 +80,10 @@ Telegram, а D1/R2/Browser используют только отдельные 
 - deploy exact reviewed candidate или применение migration к remote preview;
 - ручной local-AV шаг, который физически выполняет оператор на скачанном файле;
 - independent exact-SHA verdict отдельной ролью.
+
+Пока findings exact `fa7aeeb…` не исправлены и новый candidate не получил
+independent GO, recovery/apply/deploy/provider-send scope не запрашивается:
+следующий gate полностью local/read-only.
 
 Если один параметр отсутствует, остальные локальные и read-only проверки
 продолжаются. Нельзя объявлять весь preview «заблокированным» из-за будущего

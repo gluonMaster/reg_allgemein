@@ -32,10 +32,14 @@ import type { ContractArtifactStore } from './storage';
 import {
 	PREVIEW_REVIEW_CLAUSE_SET_VERSION,
 	PREVIEW_REVIEW_TEMPLATE_VERSION,
-	contractTemplateSourceHashes,
-	contractTemplateRegistry,
-	previewReviewContractTemplateRegistry,
+	CONTRACT_TEMPLATE_IDS,
+	buildContractTemplateBundle,
+	contractTemplateBundleHashes,
+	contractTemplateResourceManifest,
+	parseContractTemplateBundle,
 	renderContractSource,
+	serializeContractTemplateBundle,
+	type ContractTemplateBundle,
 } from './templates';
 import type { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 import { contractArtifactDownloadPurposeSchema } from '$lib/server/security/download-purpose';
@@ -54,49 +58,6 @@ const PREVIEW_REVIEW_PROVIDER: ContractRenderInput['provider'] = {
 		'https://kolibri-dresden.de/kontakt/',
 	],
 };
-
-const PREVIEW_REVIEW_TERMS: Readonly<Record<ContractTemplateId, ContractRenderInput['term']>> =
-	Object.freeze({
-		group_yearly: {
-			initialTermText:
-				'Der Vertrag beginnt zum ausgewiesenen Leistungsbeginn und läuft zunächst für den vereinbarten Jahreszeitraum.',
-			renewalText:
-				'Nach der Erstlaufzeit wird der Vertrag nur nach dem im Prüfstand ausgewiesenen Verlängerungsmodell fortgesetzt; eine Verlängerung auf unbestimmte Zeit bleibt mit höchstens einmonatiger Frist kündbar.',
-			ordinaryTerminationText:
-				'Die ordentliche Kündigung ist zum Ende der Erstlaufzeit mit der ausgewiesenen Frist und nach einer Verlängerung mit höchstens einmonatiger Frist möglich.',
-			extraordinaryTerminationText:
-				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
-		},
-		group_monthly: {
-			initialTermText:
-				'Der Vertrag beginnt zum ausgewiesenen Leistungsbeginn und wird auf unbestimmte Zeit mit monatlicher Abrechnung geschlossen.',
-			renewalText:
-				'Eine gesonderte automatische Verlängerung findet nicht statt; der Vertrag läuft bis zu einer wirksamen Beendigung weiter.',
-			ordinaryTerminationText:
-				'Die ordentliche Kündigung ist mit einer Frist von einem Monat zum Monatsende möglich.',
-			extraordinaryTerminationText:
-				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
-		},
-		individual_hourly: {
-			initialTermText:
-				'Der Vertrag beginnt zum ausgewiesenen Leistungsbeginn; vergütet werden die dokumentiert durchgeführten Unterrichtseinheiten.',
-			renewalText: 'Eine automatische feste Verlängerung findet nicht statt.',
-			ordinaryTerminationText:
-				'Die ordentliche Beendigung ist nach der im Angebot ausgewiesenen Vereinbarung für künftige Einheiten möglich.',
-			extraordinaryTerminationText:
-				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
-		},
-		nachhilfe_hourly: {
-			initialTermText:
-				'Der Vertrag gilt ausschließlich für den ausgewiesenen und bewilligten Förderzeitraum.',
-			renewalText:
-				'Eine Verlängerung setzt einen neuen dokumentierten Bewilligungs- und Vertragsstand voraus.',
-			ordinaryTerminationText:
-				'Der Vertrag endet spätestens mit Ablauf des ausgewiesenen Förderzeitraums; weitergehende Beendigungsrechte bleiben unberührt.',
-			extraordinaryTerminationText:
-				'Das Recht beider Parteien zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.',
-		},
-	});
 
 export interface CreateContractDraftCommand {
 	userId: string;
@@ -164,24 +125,125 @@ export class ContractService {
 		this.adapter = adapter ?? this.buildAdapter();
 	}
 
-	private async putImmutableTemplateBundle(
-		key: string,
-		bundle: Uint8Array,
-		bundleHash: string
-	): Promise<void> {
-		const existing = await this.store.get(key);
-		if (existing) {
-			const existingBytes = new Uint8Array(existing.body);
-			if (
-				existing.size !== bundle.byteLength ||
-				existingBytes.byteLength !== bundle.byteLength ||
-				(await sha256Bytes(existingBytes)) !== bundleHash
-			) {
-				throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_CONFLICT');
-			}
-			return;
+	private async putImmutableTemplateBundle(input: {
+		intentId: string;
+		key: string;
+		sourceRef: string;
+		bundle: Uint8Array;
+		bundleHash: string;
+		now: string;
+	}): Promise<string> {
+		if (!this.store.putIfAbsent) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_CONDITIONAL_STORE_REQUIRED');
 		}
-		await this.store.put(key, bundle, bundleHash);
+		if (input.bundle.byteLength > 2 * 1024 * 1024) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_TOO_LARGE');
+		}
+		const intentId = await this.repository.stageTemplateBundleIntent({
+			id: input.intentId,
+			objectKey: input.key,
+			sourceRef: input.sourceRef,
+			sha256: input.bundleHash,
+			sizeBytes: input.bundle.byteLength,
+			now: input.now,
+		});
+		let created = false;
+		try {
+			created = await this.store.putIfAbsent(input.key, input.bundle, input.bundleHash);
+		} catch {
+			// A provider timeout may still have committed the conditional put.
+		}
+		const winner = await this.store.get(input.key);
+		if (!winner) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_WRITE_UNRESOLVED');
+		}
+		const winnerBytes = new Uint8Array(winner.body);
+		let bytesMatch = winnerBytes.byteLength === input.bundle.byteLength;
+		for (let index = 0; bytesMatch && index < winnerBytes.byteLength; index += 1) {
+			bytesMatch = winnerBytes[index] === input.bundle[index];
+		}
+		if (
+			winner.size !== input.bundle.byteLength ||
+			!bytesMatch ||
+			(await sha256Bytes(winnerBytes)) !== input.bundleHash
+		) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_CONFLICT');
+		}
+		if (!created) {
+			// The losing writer is idempotent only after exact bounded winner verification above.
+		}
+		return intentId;
+	}
+
+	private assertDraftTemplateGate(
+		template: Awaited<ReturnType<ContractRepository['loadTemplate']>> & {}
+	): void {
+		if (template.usage_scope !== 'preview_review') return;
+		if (
+			this.config.appEnvironment !== 'preview' ||
+			!this.config.contracts.previewReviewEnabled ||
+			this.config.contracts.renderer !== 'browser_run' ||
+			template.renderer_id !== 'cloudflare-browser-run-pdf-v1' ||
+			template.approval_basis !== 'internal_preview_review'
+		) {
+			throw new ContractServiceError('PREVIEW_REVIEW_TEMPLATE_FORBIDDEN');
+		}
+	}
+
+	private async loadVerifiedTemplateBundle(
+		template: Awaited<ReturnType<ContractRepository['loadTemplate']>> & {}
+	): Promise<ContractTemplateBundle> {
+		const object = await this.store.get(template.template_bundle_r2_key);
+		if (!object) throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_MISSING');
+		if (object.size > 2 * 1024 * 1024) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_TOO_LARGE');
+		}
+		const bytes = new Uint8Array(object.body);
+		if (
+			bytes.byteLength !== object.size ||
+			(await sha256Bytes(bytes)) !== template.bundle_hash
+		) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_INTEGRITY_FAILED');
+		}
+		let bundle: ContractTemplateBundle;
+		try {
+			bundle = parseContractTemplateBundle(bytes, {
+				templateId: template.template_id,
+				templateVersion: template.template_version,
+				renderSchemaVersion: template.render_schema_version,
+			});
+		} catch {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED');
+		}
+		const hashes = await contractTemplateBundleHashes(bundle);
+		const providerSnapshotHash = await hashCanonical(
+			JSON.parse(template.provider_snapshot_json)
+		);
+		const legalSnapshotHash = await hashCanonical({
+			clauseSetVersion: template.clause_set_version,
+			distanceLegalProfile: template.distance_legal_profile,
+			distanceLegalBasisHash: template.distance_legal_basis_hash,
+		});
+		if (
+			hashes.bundleHash !== template.bundle_hash ||
+			hashes.htmlSourceHash !== template.html_source_hash ||
+			hashes.cssSourceHash !== template.css_source_hash ||
+			bundle.clauseSetVersion !== template.clause_set_version ||
+			bundle.renderer.rendererId !== template.renderer_id ||
+			bundle.renderer.adapterContractVersion !== template.renderer_contract_version ||
+			bundle.renderer.workerCompatibilityDate !== template.worker_compatibility_date ||
+			bundle.usageScope !== template.usage_scope ||
+			bundle.snapshots.providerSnapshotHash !== providerSnapshotHash ||
+			bundle.snapshots.paymentTermsHash !== template.provider_payment_terms_hash ||
+			bundle.snapshots.legalSnapshotHash !== legalSnapshotHash ||
+			bundle.snapshots.mediaSnapshotHash !== template.media_contact_snapshot_hash ||
+			contractTemplateResourceManifest(bundle.assets) !== template.asset_manifest_json ||
+			contractTemplateResourceManifest(bundle.fonts) !== template.font_manifest_json ||
+			canonicalJson(bundle.requiredFields) !== template.required_fields_json
+		) {
+			throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_MISMATCH');
+		}
+		return bundle;
 	}
 
 	private buildAdapter(): ContractPdfAdapter | null {
@@ -195,6 +257,138 @@ export class ContractService {
 		return null;
 	}
 
+	private async installTemplateSet(input: {
+		admin: AdminActor;
+		usageScope: 'synthetic_test' | 'preview_review';
+		templateVersion: string;
+		clauseSetVersion: string;
+		provider: ContractRenderInput['provider'];
+		providerId: string;
+		providerVersion: string;
+		mediaContact: Record<string, string>;
+		mediaContactId: string;
+		mediaContactVersion: string;
+		mediaTextVersion: string;
+		distanceLegalProfile: 'offline_only' | 'widerruf_applicable';
+		distanceLegalBasisVersion: string | null;
+		distanceLegalBasisHash: string | null;
+		approvalBasis: 'synthetic_fixture' | 'internal_preview_review';
+	}): Promise<string[]> {
+		const now = this.now();
+		const providerSnapshotJson = canonicalJson(input.provider);
+		const providerSnapshotHash = await hashCanonical(input.provider);
+		const providerPaymentTermsHash = await hashCanonical({
+			version: input.provider.paymentTermsVersion,
+		});
+		const mediaContactSnapshotJson = canonicalJson(input.mediaContact);
+		const mediaContactSnapshotHash = await hashCanonical(input.mediaContact);
+		const legalSnapshotHash = await hashCanonical({
+			clauseSetVersion: input.clauseSetVersion,
+			distanceLegalProfile: input.distanceLegalProfile,
+			distanceLegalBasisHash: input.distanceLegalBasisHash,
+		});
+		const templates = await Promise.all(
+			CONTRACT_TEMPLATE_IDS.map(async (templateId) => {
+				const rendererId: 'synthetic-test-pdf-v1' | 'cloudflare-browser-run-pdf-v1' =
+					input.usageScope === 'preview_review'
+						? 'cloudflare-browser-run-pdf-v1'
+						: 'synthetic-test-pdf-v1';
+				const bundle = buildContractTemplateBundle({
+					templateId,
+					templateVersion: input.templateVersion,
+					usageScope: input.usageScope,
+					snapshotHashes: {
+						providerSnapshotHash,
+						paymentTermsHash: providerPaymentTermsHash,
+						legalSnapshotHash,
+						mediaSnapshotHash: mediaContactSnapshotHash,
+					},
+				});
+				const bundleBytes = serializeContractTemplateBundle(bundle);
+				const hashes = await contractTemplateBundleHashes(bundle);
+				const scopePath =
+					input.usageScope === 'preview_review' ? 'preview-review' : 'synthetic';
+				const key = `contract-templates/${scopePath}/${templateId}/${input.templateVersion}.json`;
+				const sourceRef = `contract-template:${input.usageScope}:${templateId}:${input.templateVersion}`;
+				const intentId = `storage-intent:${sourceRef}`;
+				await this.putImmutableTemplateBundle({
+					intentId,
+					key,
+					sourceRef,
+					bundle: bundleBytes,
+					bundleHash: hashes.bundleHash,
+					now,
+				});
+				return {
+					id:
+						input.usageScope === 'preview_review'
+							? `contract-template:preview-review:${templateId}:v1`
+							: `contract-template:synthetic:${templateId}:v1`,
+					templateId,
+					templateVersion: input.templateVersion,
+					renderSchemaVersion: bundle.renderSchemaVersion,
+					clauseSetVersion: input.clauseSetVersion,
+					bundleKey: key,
+					bundleHash: hashes.bundleHash,
+					bundleSizeBytes: bundleBytes.byteLength,
+					htmlSourceHash: hashes.htmlSourceHash,
+					cssSourceHash: hashes.cssSourceHash,
+					assetManifestJson: contractTemplateResourceManifest(bundle.assets),
+					fontManifestJson: contractTemplateResourceManifest(bundle.fonts),
+					requiredFieldsJson: canonicalJson(bundle.requiredFields),
+					rendererId,
+					rendererContractVersion: bundle.renderer.adapterContractVersion,
+					workerCompatibilityDate: bundle.renderer.workerCompatibilityDate,
+					usageScope: input.usageScope,
+					approvalBasis: input.approvalBasis,
+					distanceLegalProfile: input.distanceLegalProfile,
+					distanceLegalBasisVersion: input.distanceLegalBasisVersion,
+					distanceLegalBasisHash: input.distanceLegalBasisHash,
+					kuendigungFunctionRequired:
+						input.usageScope === 'preview_review' &&
+						(templateId === 'group_yearly' || templateId === 'group_monthly')
+							? (1 as const)
+							: (0 as const),
+					earlyPerformanceSupported:
+						input.usageScope === 'preview_review' ? (1 as const) : (0 as const),
+					storageIntentId: intentId,
+					storageIntentSourceRef: sourceRef,
+				};
+			})
+		);
+		const auditId = `contract-template-install:${input.usageScope}:${input.templateVersion}`;
+		return this.repository.installTemplateSetAtomic({
+			admin: input.admin,
+			provider: {
+				id: input.providerId,
+				version: input.providerVersion,
+				snapshotJson: providerSnapshotJson,
+				paymentTermsVersion: input.provider.paymentTermsVersion,
+				paymentTermsHash: providerPaymentTermsHash,
+			},
+			mediaContact: {
+				id: input.mediaContactId,
+				version: input.mediaContactVersion,
+				snapshotJson: mediaContactSnapshotJson,
+				snapshotHash: mediaContactSnapshotHash,
+				germanTextVersion: input.mediaTextVersion,
+				complianceStatus: 'not_assessed',
+			},
+			templates,
+			audit: {
+				id: auditId,
+				action:
+					input.usageScope === 'preview_review'
+						? 'contract.preview_review_templates_installed'
+						: 'contract.synthetic_templates_installed',
+				targetId: input.templateVersion,
+				requestId: auditId,
+				safeDiffJson: canonicalJson({ templateCount: 4, usageScope: input.usageScope }),
+			},
+			now,
+		});
+	}
+
 	async installSyntheticTestFixtures(admin: AdminActor) {
 		if (
 			this.config.appEnvironment !== 'test' ||
@@ -202,56 +396,34 @@ export class ContractService {
 		) {
 			throw new ContractServiceError('SYNTHETIC_FIXTURES_TEST_ONLY');
 		}
-		const provider = {
-			fullName: 'Kolibri Testverein',
-			addressLines: ['Teststraße 1', '01067 Dresden'],
-			role: 'provider',
-			payerRole: false,
-			paymentTermsVersion: 'synthetic-payment-v1',
-		};
-		const mediaContact = {
-			address: 'Teststraße 1, 01067 Dresden',
-			email: 'media@example.test',
-			phone: '+49 000 000000',
-			impressumUrl: 'https://example.test/impressum',
-			kontaktUrl: 'https://example.test/kontakt',
-		};
-		const templates = await Promise.all(
-			(Object.keys(contractTemplateRegistry) as ContractTemplateId[]).map(
-				async (templateId) => {
-					const definition = contractTemplateRegistry[templateId];
-					const bundle = new TextEncoder().encode(
-						canonicalJson({
-							templateId,
-							version: definition.templateVersion,
-							css: definition.css,
-							renderer: 'synthetic-test-pdf-v1',
-						})
-					);
-					const bundleHash = await sha256Bytes(bundle);
-					const key = `contract-templates/synthetic/${templateId}/synthetic-core-v1.json`;
-					await this.putImmutableTemplateBundle(key, bundle, bundleHash);
-					const sourceHashes = await contractTemplateSourceHashes(definition);
-					return {
-						id: `contract-template:synthetic:${templateId}:v1`,
-						templateId,
-						bundleKey: key,
-						bundleHash,
-						...sourceHashes,
-					};
-				}
-			)
-		);
-		return this.repository.installSyntheticTemplateFixtures({
+		return this.installTemplateSet({
 			admin,
-			providerSnapshotJson: JSON.stringify(provider),
-			providerPaymentTermsHash: await hashCanonical({
-				version: provider.paymentTermsVersion,
-			}),
-			mediaContactSnapshotJson: canonicalJson(mediaContact),
-			mediaContactSnapshotHash: await hashCanonical(mediaContact),
-			templates,
-			now: this.now(),
+			usageScope: 'synthetic_test',
+			templateVersion: 'synthetic-core-v1',
+			clauseSetVersion: 'synthetic-clause-v1',
+			provider: {
+				fullName: 'Kolibri Testverein',
+				addressLines: ['Teststraße 1', '01067 Dresden'],
+				role: 'provider',
+				payerRole: false,
+				paymentTermsVersion: 'synthetic-payment-v1',
+			},
+			providerId: 'contract-provider:synthetic-v1',
+			providerVersion: 'synthetic-provider-v1',
+			mediaContact: {
+				address: 'Teststraße 1, 01067 Dresden',
+				email: 'media@example.test',
+				phone: '+49 000 000000',
+				impressumUrl: 'https://example.test/impressum',
+				kontaktUrl: 'https://example.test/kontakt',
+			},
+			mediaContactId: 'media-contact:synthetic-v1',
+			mediaContactVersion: 'synthetic-media-contact-v1',
+			mediaTextVersion: 'synthetic-media-text-v1',
+			distanceLegalProfile: 'offline_only',
+			distanceLegalBasisVersion: null,
+			distanceLegalBasisHash: null,
+			approvalBasis: 'synthetic_fixture',
 		});
 	}
 
@@ -263,56 +435,31 @@ export class ContractService {
 		) {
 			throw new ContractServiceError('PREVIEW_REVIEW_INSTALL_DISABLED');
 		}
-		const provider = PREVIEW_REVIEW_PROVIDER;
-		const mediaContact = {
-			address: 'Ritzenbergstraße 3, 01067 Dresden',
-			email: 'registration@kolibri-dresden.de',
-			impressumUrl: 'https://kolibri-dresden.de/impressum/',
-			kontaktUrl: 'https://kolibri-dresden.de/kontakt/',
-		};
-		const templates = await Promise.all(
-			(Object.keys(previewReviewContractTemplateRegistry) as ContractTemplateId[]).map(
-				async (templateId) => {
-					const definition = previewReviewContractTemplateRegistry[templateId];
-					const bundle = new TextEncoder().encode(
-						canonicalJson({
-							templateId,
-							version: definition.templateVersion,
-							clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
-							css: definition.css,
-							renderer: 'cloudflare-browser-run-pdf-v1',
-							watermark: 'TEST/ENTWURF — nicht für reale Vertragsbeziehungen',
-						})
-					);
-					const bundleHash = await sha256Bytes(bundle);
-					const key = `contract-templates/preview-review/${templateId}/${PREVIEW_REVIEW_TEMPLATE_VERSION}.json`;
-					await this.putImmutableTemplateBundle(key, bundle, bundleHash);
-					const sourceHashes = await contractTemplateSourceHashes(definition);
-					return {
-						id: `contract-template:preview-review:${templateId}:v1`,
-						templateId,
-						bundleKey: key,
-						bundleHash,
-						...sourceHashes,
-					};
-				}
-			)
-		);
-		return this.repository.installPreviewReviewTemplates({
+		return this.installTemplateSet({
 			admin,
-			providerSnapshotJson: canonicalJson(provider),
-			providerPaymentTermsHash: await hashCanonical({
-				version: provider.paymentTermsVersion,
-			}),
-			mediaContactSnapshotJson: canonicalJson(mediaContact),
-			mediaContactSnapshotHash: await hashCanonical(mediaContact),
+			usageScope: 'preview_review',
+			templateVersion: PREVIEW_REVIEW_TEMPLATE_VERSION,
+			clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
+			provider: PREVIEW_REVIEW_PROVIDER,
+			providerId: 'contract-provider:preview-review-v1',
+			providerVersion: 'preview-review-provider-v1',
+			mediaContact: {
+				address: 'Ritzenbergstraße 3, 01067 Dresden',
+				email: 'registration@kolibri-dresden.de',
+				impressumUrl: 'https://kolibri-dresden.de/impressum/',
+				kontaktUrl: 'https://kolibri-dresden.de/kontakt/',
+			},
+			mediaContactId: 'media-contact:preview-review-v1',
+			mediaContactVersion: 'preview-review-media-contact-v1',
+			mediaTextVersion: 'preview-review-media-text-v1',
+			distanceLegalProfile: 'widerruf_applicable',
+			distanceLegalBasisVersion: 'preview-review-distance-v1',
 			distanceLegalBasisHash: await hashCanonical({
 				profile: 'widerruf_applicable',
 				basisVersion: 'preview-review-distance-v1',
 				status: 'internal_draft_for_preview_review',
 			}),
-			templates,
-			now: this.now(),
+			approvalBasis: 'internal_preview_review',
 		});
 	}
 
@@ -420,6 +567,16 @@ export class ContractService {
 		if (!template || template.approval_status !== 'approved') {
 			throw new ContractServiceError('CONTRACT_TEMPLATE_NOT_APPROVED');
 		}
+		this.assertDraftTemplateGate(template);
+		const templateBundle = await this.loadVerifiedTemplateBundle(template);
+		const previewMarker = (input.payload.renderInput as { previewReviewMarker?: unknown })
+			.previewReviewMarker;
+		if (
+			(template.usage_scope === 'preview_review') !==
+			(previewMarker === 'synthetic-no-pii')
+		) {
+			throw new ContractServiceError('CONTRACT_PREVIEW_REVIEW_MARKER_REQUIRED');
+		}
 		const number = await this.repository.prepareNumber(
 			input.payload.userId,
 			input.payload.childId
@@ -440,32 +597,27 @@ export class ContractService {
 		) {
 			throw new ContractServiceError('CONTRACT_TEMPLATE_SNAPSHOT_MISMATCH');
 		}
-		if (
-			(template.usage_scope === 'preview_review') !==
-			(render.previewReviewMarker === 'synthetic-no-pii')
-		) {
-			throw new ContractServiceError('CONTRACT_PREVIEW_REVIEW_MARKER_REQUIRED');
-		}
 		if (template.usage_scope === 'preview_review') {
+			const previewOverrides = templateBundle.source.previewOverrides;
+			if (!previewOverrides) {
+				throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_MISMATCH');
+			}
 			render = contractRenderInputSchema.parse({
 				...render,
-				provider: PREVIEW_REVIEW_PROVIDER,
-				term: PREVIEW_REVIEW_TERMS[render.templateId],
+				provider: JSON.parse(template.provider_snapshot_json),
+				term: previewOverrides.term,
 				legal: {
 					...render.legal,
-					clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
-					attachments: [
-						'Datenschutzhinweis',
-						'Widerrufsinformation und Muster-Widerrufsformular',
-					],
-					privacyNoticeVersion:
-						this.config.auth.privacyNoticeVersion ?? 'preview-review-privacy-v1',
+					clauseSetVersion: templateBundle.clauseSetVersion,
+					attachments: previewOverrides.legal.attachments,
+					privacyNoticeVersion: previewOverrides.legal.privacyNoticeVersion,
 					distanceLegalProfile: template.distance_legal_profile,
 					distanceLegalBasisHash: template.distance_legal_basis_hash,
-					withdrawalTextVersion: 'preview-review-withdrawal-v1',
-					earlyPerformanceRequestVersion: 'preview-review-early-performance-v1',
-					wertersatzNoticeVersion: 'preview-review-wertersatz-v1',
-					mediaClauseVersion: 'preview-review-media-text-v1',
+					withdrawalTextVersion: previewOverrides.legal.withdrawalTextVersion,
+					earlyPerformanceRequestVersion:
+						previewOverrides.legal.earlyPerformanceRequestVersion,
+					wertersatzNoticeVersion: previewOverrides.legal.wertersatzNoticeVersion,
+					mediaClauseVersion: previewOverrides.legal.mediaClauseVersion,
 				},
 			});
 		}
@@ -502,8 +654,9 @@ export class ContractService {
 			now,
 			requireQuote: template.usage_scope === 'production',
 		});
-		const source = await renderContractSource(render, template.template_version);
+		const source = await renderContractSource(render, templateBundle);
 		if (
+			source.sourceManifest.bundleHash !== template.bundle_hash ||
 			source.sourceManifest.htmlSourceHash !== template.html_source_hash ||
 			source.sourceManifest.cssSourceHash !== template.css_source_hash
 		) {
@@ -630,9 +783,10 @@ export class ContractService {
 		}
 		const template = await this.repository.loadTemplate(offer.template_version_id);
 		this.assertSendGate(template);
+		const templateBundle = await this.loadVerifiedTemplateBundle(template!);
 		const source = await renderContractSource(
 			JSON.parse(offer.render_input_json),
-			template!.template_version
+			templateBundle
 		);
 		if (
 			source.renderInputHash !== offer.render_input_hash ||
@@ -658,6 +812,9 @@ export class ContractService {
 			});
 			const htmlBytes = new TextEncoder().encode(source.html);
 			const htmlSha256 = await sha256Bytes(htmlBytes);
+			if (htmlSha256 !== source.sourceManifest.renderedHtmlHash) {
+				throw new ContractServiceError('CONTRACT_HTML_SOURCE_HASH_MISMATCH');
+			}
 			const contractHash = await hashCanonical({
 				renderInputHash: source.renderInputHash,
 				sourceManifestHash: source.sourceManifestHash,
@@ -812,14 +969,17 @@ export class ContractService {
 	private async revalidateOffer(offer: StoredContractOffer) {
 		const render = contractRenderInputSchema.parse(JSON.parse(offer.render_input_json));
 		const template = await this.repository.loadTemplate(offer.template_version_id);
-		if (!template) throw new ContractServiceError('CONTRACT_TEMPLATE_NOT_APPROVED');
+		if (!template || template.approval_status !== 'approved')
+			throw new ContractServiceError('CONTRACT_TEMPLATE_NOT_APPROVED');
+		this.assertDraftTemplateGate(template);
 		if (
 			(template.usage_scope === 'preview_review') !==
 			(render.previewReviewMarker === 'synthetic-no-pii')
 		) {
 			throw new ContractServiceError('CONTRACT_PREVIEW_REVIEW_MARKER_REQUIRED');
 		}
-		const source = await renderContractSource(render, template.template_version);
+		const templateBundle = await this.loadVerifiedTemplateBundle(template);
+		const source = await renderContractSource(render, templateBundle);
 		if (
 			source.renderInputHash !== offer.render_input_hash ||
 			source.sourceManifestHash !== offer.source_manifest_hash

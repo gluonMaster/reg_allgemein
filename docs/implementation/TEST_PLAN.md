@@ -441,6 +441,27 @@ blocked gates и local suite их не заменяет.
 ### Contracts
 
 - incomplete snapshot/artifact cannot be sent;
+- complete canonical render-source bundle включает base body, kind clauses,
+  fixed copy, CSS/fonts/assets и helper/schema/adapter versions; mutation каждой
+  составляющей меняет source manifest/hash и hash фактического HTML;
+- exact-version registry сохраняет v1 behavior/hash после добавления v2 и
+  отклоняет unknown/missing/retired version без current/synthetic fallback;
+- template install использует D1 staged storage intent и conditional
+  create-if-absent R2 put: concurrent same-bytes replay даёт один object/link/
+  success audit, concurrent different bytes не overwrite-ит winner и не
+  оставляет partial/ложную D1 installation; crash после intent и после object
+  write проходит штатный reconcile/cleanup;
+- production с seeded `preview_review` row и preview с выключенным flag
+  отклоняются до number reservation, draft/operational row, audit или R2 write;
+- отдельный permanent `0023 → 0024` populated-upgrade fixture содержит approved
+  provider/template rows и зависимые offers/artifacts; после migration проверяет
+  полное сохранение полей/FK/triggers и forbidden scope/basis pairings;
+- exact evidence paths: `tests/unit/contract-template-bundles.test.ts`,
+  `tests/unit/contract-storage.test.ts`,
+  `tests/unit/admin-contracts-preview-gate.test.ts`, focused preview cases в
+  `tests/integration/contracts-d1.test.ts`, recovery/concurrency suite
+  `tests/integration/contract-template-install-d1.test.ts` и permanent fixture
+  `tests/integration/migration-upgrade-d1.test.ts`;
 - four template IDs; обе group-модели используют monthly fee, individual —
   configured delivered-unit rate with default 3000 cents/45 minutes, Nachhilfe —
   fixed third-party-funded 3000 cents/45 minutes;

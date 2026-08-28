@@ -31,7 +31,18 @@ import { IndividualRequestService } from '$lib/server/requests/request-service';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
 import type { ContractArtifactStore } from '$lib/server/contracts/storage';
-import { buildDependencySet, buildRunFingerprint } from '$lib/server/import/canonical';
+import {
+	buildContractTemplateBundle,
+	contractTemplateBundleHashes,
+	contractTemplateResourceManifest,
+	serializeContractTemplateBundle,
+} from '$lib/server/contracts/templates';
+import {
+	buildDependencySet,
+	buildRunFingerprint,
+	canonicalJson,
+	hashCanonical,
+} from '$lib/server/import/canonical';
 import { ImportRepository } from '$lib/server/import/import-repository';
 import { parsePriceWorkbook } from '$lib/server/import/local/price-workbook';
 import type { AcademicPeriodRow } from '$lib/server/import/types';
@@ -97,6 +108,12 @@ class MemoryPrivateStore implements ContractArtifactStore, PrivacyArtifactStore 
 
 	async put(key: string, body: Uint8Array, _sha256: string): Promise<void> {
 		this.values.set(key, Uint8Array.from(body));
+	}
+
+	async putIfAbsent(key: string, body: Uint8Array): Promise<boolean> {
+		if (this.values.has(key)) return false;
+		this.values.set(key, Uint8Array.from(body));
+		return true;
 	}
 
 	async get(key: string): Promise<{ body: ArrayBuffer; size: number } | null> {
@@ -297,10 +314,31 @@ async function installSyntheticWithdrawalTemplate(
 	now: string
 ): Promise<string> {
 	const basisHash = sha256('synthetic-widerruf-applicable-basis-v1');
-	const bundleKey = 'contract-templates/synthetic/group_yearly/withdrawal-v1.json';
-	const bundle = new TextEncoder().encode('synthetic withdrawal template bundle');
-	const bundleHash = sha256(bundle);
-	await store.put(bundleKey, bundle, bundleHash);
+	const baseTemplate = await new ContractRepository(db).loadTemplate(
+		'contract-template:synthetic:group_yearly:v1'
+	);
+	if (!baseTemplate) throw new Error('Synthetic base template fixture is missing.');
+	const bundle = buildContractTemplateBundle({
+		templateId: 'group_yearly',
+		templateVersion: 'synthetic-withdrawal-v1',
+		usageScope: 'synthetic_test',
+		snapshotHashes: {
+			providerSnapshotHash: await hashCanonical(
+				JSON.parse(baseTemplate.provider_snapshot_json)
+			),
+			paymentTermsHash: baseTemplate.provider_payment_terms_hash,
+			legalSnapshotHash: await hashCanonical({
+				clauseSetVersion: baseTemplate.clause_set_version,
+				distanceLegalProfile: 'widerruf_applicable',
+				distanceLegalBasisHash: basisHash,
+			}),
+			mediaSnapshotHash: baseTemplate.media_contact_snapshot_hash!,
+		},
+	});
+	const bundleBytes = serializeContractTemplateBundle(bundle);
+	const bundleHashes = await contractTemplateBundleHashes(bundle);
+	const bundleKey = 'contract-templates/synthetic/group_yearly/synthetic-withdrawal-v1.json';
+	await store.putIfAbsent(bundleKey, bundleBytes);
 	await db.run({
 		sql: `INSERT INTO contract_template_versions
 			(id, template_id, template_version, render_schema_version,
@@ -314,8 +352,7 @@ async function installSyntheticWithdrawalTemplate(
 			 approved_by, approved_at, valid_from, valid_to, created_at)
 		SELECT ?, template_id, 'synthetic-withdrawal-v1', render_schema_version,
 			clause_set_version, provider_version_id, media_contact_version_id,
-			?, ?, html_source_hash, css_source_hash, asset_manifest_json,
-			font_manifest_json, required_fields_json, renderer_id,
+			?, ?, ?, ?, ?, ?, ?, renderer_id,
 			renderer_contract_version, worker_compatibility_date, 'synthetic_test',
 			'approved', 'synthetic_fixture', 'widerruf_applicable',
 			'synthetic-widerruf-basis-v1', ?, 0, 1, ?, ?, NULL, NULL, ?
@@ -324,7 +361,12 @@ async function installSyntheticWithdrawalTemplate(
 		params: [
 			SYNTHETIC_WITHDRAWAL_TEMPLATE_ID,
 			bundleKey,
-			bundleHash,
+			bundleHashes.bundleHash,
+			bundleHashes.htmlSourceHash,
+			bundleHashes.cssSourceHash,
+			contractTemplateResourceManifest(bundle.assets),
+			contractTemplateResourceManifest(bundle.fonts),
+			canonicalJson(bundle.requiredFields),
 			basisHash,
 			ADMIN_ID,
 			now,
