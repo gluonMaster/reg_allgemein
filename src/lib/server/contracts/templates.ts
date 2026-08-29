@@ -35,8 +35,11 @@ p, li { orphans: 3; widows: 3; }
 `;
 
 export const PREVIEW_REVIEW_TEMPLATE_VERSION = 'preview-review-v1' as const;
+export const PREVIEW_REVIEW_TEMPLATE_V2_VERSION = 'preview-review-v2' as const;
 export const PREVIEW_REVIEW_CLAUSE_SET_VERSION = 'preview-review-clauses-v1' as const;
-export const CONTRACT_TEMPLATE_BUNDLE_SCHEMA_VERSION = 'contract-render-source-bundle-v1' as const;
+export const CONTRACT_TEMPLATE_BUNDLE_SCHEMA_VERSION = 'contract-render-source-bundle-v2' as const;
+export const CONTRACT_HTML_RENDERER_V1 = 'contract-html-renderer-v1' as const;
+export const CONTRACT_HTML_RENDERER_V2 = 'contract-html-renderer-v2' as const;
 export const CONTRACT_TEMPLATE_IDS = [
 	'group_yearly',
 	'group_monthly',
@@ -232,6 +235,7 @@ const bundleSchema = z
 			.strict(),
 		renderer: z
 			.object({
+				engineVersion: z.string().min(1),
 				rendererId: z.string().min(1),
 				adapterContractVersion: z.string().min(1),
 				workerCompatibilityDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
@@ -313,6 +317,7 @@ export interface ContractTemplateBundle {
 		embeddedResourceVersion: string;
 	};
 	renderer: {
+		engineVersion: string;
 		rendererId: string;
 		adapterContractVersion: string;
 		workerCompatibilityDate: string;
@@ -367,6 +372,11 @@ export function buildContractTemplateBundle(input: {
 	snapshotHashes: ContractTemplateBundle['snapshots'];
 }): ContractTemplateBundle {
 	const previewReview = input.usageScope === 'preview_review';
+	const rendererEngineVersion =
+		input.templateVersion === PREVIEW_REVIEW_TEMPLATE_V2_VERSION
+			? CONTRACT_HTML_RENDERER_V2
+			: CONTRACT_HTML_RENDERER_V1;
+	const rendererEngineV2 = rendererEngineVersion === CONTRACT_HTML_RENDERER_V2;
 	return {
 		bundleSchemaVersion: CONTRACT_TEMPLATE_BUNDLE_SCHEMA_VERSION,
 		templateId: input.templateId,
@@ -375,12 +385,15 @@ export function buildContractTemplateBundle(input: {
 		usageScope: input.usageScope,
 		clauseSetVersion: previewReview ? PREVIEW_REVIEW_CLAUSE_SET_VERSION : 'synthetic-clause-v1',
 		helpers: {
-			htmlEscapeVersion: 'escape-html-v1',
-			currencyFormatVersion: 'intl-de-de-eur-v1',
-			tokenInterpolationVersion: 'interp-v1',
+			htmlEscapeVersion: rendererEngineV2 ? 'escape-html-v2' : 'escape-html-v1',
+			currencyFormatVersion: rendererEngineV2
+				? 'deterministic-de-de-eur-v2'
+				: 'deterministic-de-de-eur-v1',
+			tokenInterpolationVersion: rendererEngineV2 ? 'interp-v2' : 'interp-v1',
 			embeddedResourceVersion: 'embedded-data-resource-v1',
 		},
 		renderer: {
+			engineVersion: rendererEngineVersion,
 			rendererId: previewReview ? 'cloudflare-browser-run-pdf-v1' : 'synthetic-test-pdf-v1',
 			adapterContractVersion: 'pdf-adapter-v1',
 			workerCompatibilityDate: '2026-03-24',
@@ -431,15 +444,19 @@ function parseSchemaBundle(value: unknown): ContractTemplateBundle {
 
 function parseSupportedBundle(value: unknown): ContractTemplateBundle {
 	const bundle = parseSchemaBundle(value);
+	if (!contractHtmlRenderers[bundle.renderer.engineVersion]) {
+		throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_RENDERER_UNSUPPORTED');
+	}
 	const supported = supportedTemplateVersions[bundle.templateVersion];
 	if (
 		!supported ||
 		bundle.usageScope !== supported.usageScope ||
 		bundle.clauseSetVersion !== supported.clauseSetVersion ||
 		bundle.renderSchemaVersion !== CONTRACT_RENDER_SCHEMA_VERSION ||
-		bundle.helpers.htmlEscapeVersion !== 'escape-html-v1' ||
-		bundle.helpers.currencyFormatVersion !== 'intl-de-de-eur-v1' ||
-		bundle.helpers.tokenInterpolationVersion !== 'interp-v1' ||
+		bundle.renderer.engineVersion !== supported.rendererEngineVersion ||
+		bundle.helpers.htmlEscapeVersion !== supported.htmlEscapeVersion ||
+		bundle.helpers.currencyFormatVersion !== supported.currencyFormatVersion ||
+		bundle.helpers.tokenInterpolationVersion !== supported.tokenInterpolationVersion ||
 		bundle.helpers.embeddedResourceVersion !== 'embedded-data-resource-v1' ||
 		bundle.renderer.rendererId !== supported.rendererId ||
 		bundle.renderer.adapterContractVersion !== 'pdf-adapter-v1' ||
@@ -466,6 +483,14 @@ const supportedTemplateVersions: Readonly<
 			usageScope: 'synthetic_test' | 'preview_review';
 			clauseSetVersion: string;
 			rendererId: 'synthetic-test-pdf-v1' | 'cloudflare-browser-run-pdf-v1';
+			rendererEngineVersion:
+				| typeof CONTRACT_HTML_RENDERER_V1
+				| typeof CONTRACT_HTML_RENDERER_V2;
+			htmlEscapeVersion: 'escape-html-v1' | 'escape-html-v2';
+			currencyFormatVersion:
+				| 'deterministic-de-de-eur-v1'
+				| 'deterministic-de-de-eur-v2';
+			tokenInterpolationVersion: 'interp-v1' | 'interp-v2';
 		}
 	>
 > = Object.freeze({
@@ -473,16 +498,37 @@ const supportedTemplateVersions: Readonly<
 		usageScope: 'synthetic_test',
 		clauseSetVersion: 'synthetic-clause-v1',
 		rendererId: 'synthetic-test-pdf-v1',
+		rendererEngineVersion: CONTRACT_HTML_RENDERER_V1,
+		htmlEscapeVersion: 'escape-html-v1',
+		currencyFormatVersion: 'deterministic-de-de-eur-v1',
+		tokenInterpolationVersion: 'interp-v1',
 	},
 	'synthetic-withdrawal-v1': {
 		usageScope: 'synthetic_test',
 		clauseSetVersion: 'synthetic-clause-v1',
 		rendererId: 'synthetic-test-pdf-v1',
+		rendererEngineVersion: CONTRACT_HTML_RENDERER_V1,
+		htmlEscapeVersion: 'escape-html-v1',
+		currencyFormatVersion: 'deterministic-de-de-eur-v1',
+		tokenInterpolationVersion: 'interp-v1',
 	},
 	[PREVIEW_REVIEW_TEMPLATE_VERSION]: {
 		usageScope: 'preview_review',
 		clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
 		rendererId: 'cloudflare-browser-run-pdf-v1',
+		rendererEngineVersion: CONTRACT_HTML_RENDERER_V1,
+		htmlEscapeVersion: 'escape-html-v1',
+		currencyFormatVersion: 'deterministic-de-de-eur-v1',
+		tokenInterpolationVersion: 'interp-v1',
+	},
+	[PREVIEW_REVIEW_TEMPLATE_V2_VERSION]: {
+		usageScope: 'preview_review',
+		clauseSetVersion: PREVIEW_REVIEW_CLAUSE_SET_VERSION,
+		rendererId: 'cloudflare-browser-run-pdf-v1',
+		rendererEngineVersion: CONTRACT_HTML_RENDERER_V2,
+		htmlEscapeVersion: 'escape-html-v2',
+		currencyFormatVersion: 'deterministic-de-de-eur-v2',
+		tokenInterpolationVersion: 'interp-v2',
 	},
 });
 
@@ -549,6 +595,7 @@ export async function contractTemplateBundleHashes(bundle: ContractTemplateBundl
 			kindCopy: supported.source.kindCopy,
 			previewOverrides: supported.source.previewOverrides,
 			helpers: supported.helpers,
+			rendererEngineVersion: supported.renderer.engineVersion,
 			renderSchemaVersion: supported.renderSchemaVersion,
 		}),
 		hashCanonical({
@@ -579,7 +626,7 @@ async function assertEmbeddedResourceHashes(bundle: ContractTemplateBundle): Pro
 	);
 }
 
-function escapeHtml(value: unknown): string {
+function escapeHtmlV1(value: unknown): string {
 	return String(value)
 		.replaceAll('&', '&amp;')
 		.replaceAll('<', '&lt;')
@@ -588,13 +635,17 @@ function escapeHtml(value: unknown): string {
 		.replaceAll("'", '&#39;');
 }
 
-function money(cents: number): string {
-	return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
-		cents / 100
-	);
+function moneyV1(cents: number): string {
+	const sign = cents < 0 ? '-' : '';
+	const absoluteCents = Math.abs(cents);
+	const euros = Math.floor(absoluteCents / 100)
+		.toString()
+		.replace(/\B(?=(\d{3})+(?!\d))/gu, '.');
+	const remainder = (absoluteCents % 100).toString().padStart(2, '0');
+	return `${sign}${euros},${remainder}\u00a0€`;
 }
 
-function interpolate(source: string, values: Readonly<Record<string, string>>): string {
+function interpolateV1(source: string, values: Readonly<Record<string, string>>): string {
 	const rendered = source.replace(/\{\{([A-Za-z][A-Za-z0-9]*)\}\}/gu, (_match, key: string) => {
 		const value = values[key];
 		if (value === undefined)
@@ -607,7 +658,7 @@ function interpolate(source: string, values: Readonly<Record<string, string>>): 
 	return rendered;
 }
 
-function renderBundleCss(bundle: ContractTemplateBundle): string {
+function renderBundleCssV1(bundle: ContractTemplateBundle): string {
 	const [regular, bold] = bundle.fonts;
 	if (
 		bundle.fonts.length !== 2 ||
@@ -630,78 +681,238 @@ function renderBundleCss(bundle: ContractTemplateBundle): string {
 	return css;
 }
 
-function renderBundleHtml(input: ContractRenderInput, bundle: ContractTemplateBundle): string {
+function renderBundleHtmlV1(input: ContractRenderInput, bundle: ContractTemplateBundle): string {
 	const copy = bundle.source.kindCopy;
 	const schedule = input.service.scheduleLines.length
-		? `<ul>${input.service.scheduleLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`
-		: `<p>${escapeHtml(bundle.source.fixedCopy.scheduleFallback)}</p>`;
+		? `<ul>${input.service.scheduleLines.map((line) => `<li>${escapeHtmlV1(line)}</li>`).join('')}</ul>`
+		: `<p>${escapeHtmlV1(bundle.source.fixedCopy.scheduleFallback)}</p>`;
 	const lineItems = input.billing.lineItems
 		.map(
 			(item) =>
-				`<li><strong>${escapeHtml(item.description)}:</strong> ${escapeHtml(money(item.amountCents))} — ${escapeHtml(item.basis)}</li>`
+				`<li><strong>${escapeHtmlV1(item.description)}:</strong> ${escapeHtmlV1(moneyV1(item.amountCents))} — ${escapeHtmlV1(item.basis)}</li>`
 		)
 		.join('');
 	const previewReview = bundle.usageScope === 'preview_review';
 	const previewPreamble = previewReview
-		? `<div class="preview-review-watermark">${escapeHtml(bundle.source.fixedCopy.previewWatermark)}</div>
-<div class="preview-review-footer">${escapeHtml(bundle.source.fixedCopy.previewFooter)}</div>
-<div class="preview-review-banner">${escapeHtml(bundle.source.fixedCopy.previewBanner)}</div>`
+		? `<div class="preview-review-watermark">${escapeHtmlV1(bundle.source.fixedCopy.previewWatermark)}</div>
+<div class="preview-review-footer">${escapeHtmlV1(bundle.source.fixedCopy.previewFooter)}</div>
+<div class="preview-review-banner">${escapeHtmlV1(bundle.source.fixedCopy.previewBanner)}</div>`
 		: '';
 	const previewAppendix = previewReview
-		? interpolate(bundle.source.previewAppendix, { kindClause: bundle.source.kindClause })
+		? interpolateV1(bundle.source.previewAppendix, { kindClause: bundle.source.kindClause })
 		: '';
-	return interpolate(bundle.source.baseBody, {
-		title: escapeHtml(copy.title),
-		contractNumber: escapeHtml(input.contractNumber),
-		css: renderBundleCss(bundle),
-		renderSchemaVersion: escapeHtml(bundle.renderSchemaVersion),
-		templateId: escapeHtml(bundle.templateId),
+	return interpolateV1(bundle.source.baseBody, {
+		title: escapeHtmlV1(copy.title),
+		contractNumber: escapeHtmlV1(input.contractNumber),
+		css: renderBundleCssV1(bundle),
+		renderSchemaVersion: escapeHtmlV1(bundle.renderSchemaVersion),
+		templateId: escapeHtmlV1(bundle.templateId),
 		previewPreamble,
-		offerNumber: escapeHtml(input.offerNumber),
-		effectiveFrom: escapeHtml(input.service.effectiveFrom),
+		offerNumber: escapeHtmlV1(input.offerNumber),
+		effectiveFrom: escapeHtmlV1(input.service.effectiveFrom),
 		effectiveTo: input.service.effectiveTo
-			? ` bis einschließlich ${escapeHtml(input.service.effectiveTo)}`
+			? ` bis einschließlich ${escapeHtmlV1(input.service.effectiveTo)}`
 			: '',
-		providerName: escapeHtml(input.provider.fullName),
-		providerAddress: input.provider.addressLines.map(escapeHtml).join('<br>'),
+		providerName: escapeHtmlV1(input.provider.fullName),
+		providerAddress: input.provider.addressLines.map(escapeHtmlV1).join('<br>'),
 		providerExtra: [input.provider.registrationLines, input.provider.contactLines]
 			.flatMap((lines) => lines ?? [])
-			.map((line) => `<br>${escapeHtml(line)}`)
+			.map((line) => `<br>${escapeHtmlV1(line)}`)
 			.join(''),
-		parentName: escapeHtml(input.parent.fullName),
-		parentAddress: input.parent.addressLines.map(escapeHtml).join('<br>'),
-		childName: escapeHtml(input.child.fullName),
-		serviceTitle: escapeHtml(copy.serviceTitle),
-		subject: escapeHtml(input.service.subject),
+		parentName: escapeHtmlV1(input.parent.fullName),
+		parentAddress: input.parent.addressLines.map(escapeHtmlV1).join('<br>'),
+		childName: escapeHtmlV1(input.child.fullName),
+		serviceTitle: escapeHtmlV1(copy.serviceTitle),
+		subject: escapeHtmlV1(input.service.subject),
 		schedule,
-		billingLead: escapeHtml(copy.billingLead),
-		finalPrice: escapeHtml(money(input.billing.finalPriceCents)),
+		billingLead: escapeHtmlV1(copy.billingLead),
+		finalPrice: escapeHtmlV1(moneyV1(input.billing.finalPriceCents)),
 		unitSuffix: input.billing.unitMinutes
 			? ` je ${input.billing.unitMinutes} Minuten`
 			: ' monatlich',
-		paymentTerms: escapeHtml(input.provider.paymentTermsVersion),
+		paymentTerms: escapeHtmlV1(input.provider.paymentTermsVersion),
 		paymentDue: input.billing.paymentDueDay
 			? `<br>Fälligkeit spätestens am ${input.billing.paymentDueDay}. des Folgemonats.`
 			: '',
 		lineItems,
 		basePriceDisclaimer: input.billing.basePriceDisclaimer
-			? `<p class="notice">${escapeHtml(bundle.source.fixedCopy.basePriceDisclaimer)}</p>`
+			? `<p class="notice">${escapeHtmlV1(bundle.source.fixedCopy.basePriceDisclaimer)}</p>`
 			: '',
-		termLead: escapeHtml(copy.termLead),
-		initialTerm: escapeHtml(input.term.initialTermText),
-		renewal: escapeHtml(input.term.renewalText),
-		ordinaryTermination: escapeHtml(input.term.ordinaryTerminationText),
-		extraordinaryTermination: escapeHtml(input.term.extraordinaryTerminationText),
-		privacyNotice: escapeHtml(input.legal.privacyNoticeVersion),
-		withdrawalText: escapeHtml(input.legal.withdrawalTextVersion),
-		distanceLegalProfile: escapeHtml(input.legal.distanceLegalProfile),
+		termLead: escapeHtmlV1(copy.termLead),
+		initialTerm: escapeHtmlV1(input.term.initialTermText),
+		renewal: escapeHtmlV1(input.term.renewalText),
+		ordinaryTermination: escapeHtmlV1(input.term.ordinaryTerminationText),
+		extraordinaryTermination: escapeHtmlV1(input.term.extraordinaryTerminationText),
+		privacyNotice: escapeHtmlV1(input.legal.privacyNoticeVersion),
+		withdrawalText: escapeHtmlV1(input.legal.withdrawalTextVersion),
+		distanceLegalProfile: escapeHtmlV1(input.legal.distanceLegalProfile),
 		mediaClause: input.legal.mediaClauseVersion
-			? `<p>Medienhinweis: ${escapeHtml(input.legal.mediaClauseVersion)}. Eine Entscheidung hierzu ist freiwillig und von der Vertragsannahme getrennt.</p>`
+			? `<p>Medienhinweis: ${escapeHtmlV1(input.legal.mediaClauseVersion)}. Eine Entscheidung hierzu ist freiwillig und von der Vertragsannahme getrennt.</p>`
 			: '',
-		clauseSet: escapeHtml(input.legal.clauseSetVersion),
-		attachments: input.legal.attachments.map((item) => `<li>${escapeHtml(item)}</li>`).join(''),
+		clauseSet: escapeHtmlV1(input.legal.clauseSetVersion),
+		attachments: input.legal.attachments
+			.map((item) => `<li>${escapeHtmlV1(item)}</li>`)
+			.join(''),
 		previewAppendix,
 	});
+}
+
+// Renderer engines are intentionally duplicated instead of sharing output-affecting
+// helpers. Once an engine version is registered, changes for a later engine cannot
+// alter the executable path used by an already stored bundle.
+function escapeHtmlV2(value: unknown): string {
+	return String(value)
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&apos;');
+}
+
+function moneyV2(cents: number): string {
+	const sign = cents < 0 ? '-' : '';
+	const absoluteCents = Math.abs(cents);
+	const euros = Math.floor(absoluteCents / 100)
+		.toString()
+		.replace(/\B(?=(\d{3})+(?!\d))/gu, '.');
+	const remainder = (absoluteCents % 100).toString().padStart(2, '0');
+	return `${sign}${euros},${remainder}\u00a0EUR`;
+}
+
+function interpolateV2(source: string, values: Readonly<Record<string, string>>): string {
+	const rendered = source.replace(/\{\{([A-Za-z][A-Za-z0-9]*)\}\}/gu, (_match, key: string) => {
+		const value = values[key];
+		if (value === undefined)
+			throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED');
+		return value;
+	});
+	if (/\{\{[^{}]+\}\}/u.test(rendered)) {
+		throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED');
+	}
+	return rendered;
+}
+
+function renderBundleCssV2(bundle: ContractTemplateBundle): string {
+	const [regular, bold] = bundle.fonts;
+	if (
+		bundle.fonts.length !== 2 ||
+		bundle.assets.length !== 0 ||
+		regular?.id !== 'dejavu-sans-contract-regular-v1' ||
+		regular.mediaType !== 'font/woff' ||
+		regular.sha256 !== DEJAVU_SANS_CONTRACT_V1_SHA256 ||
+		bold?.id !== 'dejavu-sans-contract-bold-v1' ||
+		bold.mediaType !== 'font/woff' ||
+		bold.sha256 !== DEJAVU_SANS_BOLD_CONTRACT_V1_SHA256
+	) {
+		throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED');
+	}
+	const css = bundle.source.css
+		.replaceAll('__KOLIBRI_CONTRACT_FONT_REGULAR_V1__', regular.dataBase64)
+		.replaceAll('__KOLIBRI_CONTRACT_FONT_BOLD_V1__', bold.dataBase64);
+	if (
+		css.includes('__KOLIBRI_CONTRACT_FONT_REGULAR_V1__') ||
+		css.includes('__KOLIBRI_CONTRACT_FONT_BOLD_V1__')
+	) {
+		throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED');
+	}
+	return css;
+}
+
+function renderBundleHtmlV2(input: ContractRenderInput, bundle: ContractTemplateBundle): string {
+	const copy = bundle.source.kindCopy;
+	const schedule = input.service.scheduleLines.length
+		? `<ul>${input.service.scheduleLines.map((line) => `<li>${escapeHtmlV2(line)}</li>`).join('')}</ul>`
+		: `<p>${escapeHtmlV2(bundle.source.fixedCopy.scheduleFallback)}</p>`;
+	const lineItems = input.billing.lineItems
+		.map(
+			(item) =>
+				`<li><strong>${escapeHtmlV2(item.description)}:</strong> ${escapeHtmlV2(moneyV2(item.amountCents))} — ${escapeHtmlV2(item.basis)}</li>`
+		)
+		.join('');
+	const previewReview = bundle.usageScope === 'preview_review';
+	const previewPreamble = previewReview
+		? `<div class="preview-review-watermark">${escapeHtmlV2(bundle.source.fixedCopy.previewWatermark)}</div>
+<div class="preview-review-footer">${escapeHtmlV2(bundle.source.fixedCopy.previewFooter)}</div>
+<div class="preview-review-banner">${escapeHtmlV2(bundle.source.fixedCopy.previewBanner)}</div>`
+		: '';
+	const previewAppendix = previewReview
+		? interpolateV2(bundle.source.previewAppendix, { kindClause: bundle.source.kindClause })
+		: '';
+	return interpolateV2(bundle.source.baseBody, {
+		title: escapeHtmlV2(copy.title),
+		contractNumber: escapeHtmlV2(input.contractNumber),
+		css: renderBundleCssV2(bundle),
+		renderSchemaVersion: escapeHtmlV2(bundle.renderSchemaVersion),
+		templateId: escapeHtmlV2(bundle.templateId),
+		previewPreamble,
+		offerNumber: escapeHtmlV2(input.offerNumber),
+		effectiveFrom: escapeHtmlV2(input.service.effectiveFrom),
+		effectiveTo: input.service.effectiveTo
+			? ` bis einschließlich ${escapeHtmlV2(input.service.effectiveTo)}`
+			: '',
+		providerName: escapeHtmlV2(input.provider.fullName),
+		providerAddress: input.provider.addressLines.map(escapeHtmlV2).join('<br>'),
+		providerExtra: [input.provider.registrationLines, input.provider.contactLines]
+			.flatMap((lines) => lines ?? [])
+			.map((line) => `<br>${escapeHtmlV2(line)}`)
+			.join(''),
+		parentName: escapeHtmlV2(input.parent.fullName),
+		parentAddress: input.parent.addressLines.map(escapeHtmlV2).join('<br>'),
+		childName: escapeHtmlV2(input.child.fullName),
+		serviceTitle: escapeHtmlV2(copy.serviceTitle),
+		subject: escapeHtmlV2(input.service.subject),
+		schedule,
+		billingLead: escapeHtmlV2(copy.billingLead),
+		finalPrice: escapeHtmlV2(moneyV2(input.billing.finalPriceCents)),
+		unitSuffix: input.billing.unitMinutes
+			? ` je ${input.billing.unitMinutes} Minuten`
+			: ' monatlich',
+		paymentTerms: escapeHtmlV2(input.provider.paymentTermsVersion),
+		paymentDue: input.billing.paymentDueDay
+			? `<br>Fälligkeit spätestens am ${input.billing.paymentDueDay}. des Folgemonats.`
+			: '',
+		lineItems,
+		basePriceDisclaimer: input.billing.basePriceDisclaimer
+			? `<p class="notice">${escapeHtmlV2(bundle.source.fixedCopy.basePriceDisclaimer)}</p>`
+			: '',
+		termLead: escapeHtmlV2(copy.termLead),
+		initialTerm: escapeHtmlV2(input.term.initialTermText),
+		renewal: escapeHtmlV2(input.term.renewalText),
+		ordinaryTermination: escapeHtmlV2(input.term.ordinaryTerminationText),
+		extraordinaryTermination: escapeHtmlV2(input.term.extraordinaryTerminationText),
+		privacyNotice: escapeHtmlV2(input.legal.privacyNoticeVersion),
+		withdrawalText: escapeHtmlV2(input.legal.withdrawalTextVersion),
+		distanceLegalProfile: escapeHtmlV2(input.legal.distanceLegalProfile),
+		mediaClause: input.legal.mediaClauseVersion
+			? `<p>Medienhinweis: ${escapeHtmlV2(input.legal.mediaClauseVersion)}. Eine Entscheidung hierzu ist freiwillig und von der Vertragsannahme getrennt.</p>`
+			: '',
+		clauseSet: escapeHtmlV2(input.legal.clauseSetVersion),
+		attachments: input.legal.attachments
+			.map((item) => `<li>${escapeHtmlV2(item)}</li>`)
+			.join(''),
+		previewAppendix,
+	});
+}
+
+type ContractHtmlRenderer = (
+	input: ContractRenderInput,
+	bundle: ContractTemplateBundle
+) => string;
+
+const contractHtmlRenderers: Readonly<Record<string, ContractHtmlRenderer>> = Object.freeze({
+	[CONTRACT_HTML_RENDERER_V1]: renderBundleHtmlV1,
+	[CONTRACT_HTML_RENDERER_V2]: renderBundleHtmlV2,
+});
+
+function renderBundleWithVersionedEngine(
+	input: ContractRenderInput,
+	bundle: ContractTemplateBundle
+): string {
+	const renderer = contractHtmlRenderers[bundle.renderer.engineVersion];
+	if (!renderer) {
+		throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_RENDERER_UNSUPPORTED');
+	}
+	return renderer(input, bundle);
 }
 
 export interface RenderedContractSource {
@@ -710,6 +921,7 @@ export interface RenderedContractSource {
 	renderInputHash: string;
 	sourceManifest: {
 		renderSchemaVersion: string;
+		rendererEngineVersion: string;
 		templateId: ContractTemplateId;
 		templateVersion: string;
 		bundleHash: string;
@@ -742,7 +954,7 @@ export async function renderContractSource(
 		throw new ContractTemplateBundleError('CONTRACT_TEMPLATE_SOURCE_MISMATCH');
 	}
 	const canonicalInputJson = canonicalJson(input);
-	const html = renderBundleHtml(input, bundle);
+	const html = renderBundleWithVersionedEngine(input, bundle);
 	const [renderInputHash, sourceHashes, renderedHtmlHash] = await Promise.all([
 		hashCanonical(input),
 		contractTemplateBundleHashes(bundle),
@@ -750,6 +962,7 @@ export async function renderContractSource(
 	]);
 	const sourceManifest = {
 		renderSchemaVersion: bundle.renderSchemaVersion,
+		rendererEngineVersion: bundle.renderer.engineVersion,
 		templateId: input.templateId,
 		templateVersion: bundle.templateVersion,
 		bundleHash: sourceHashes.bundleHash,

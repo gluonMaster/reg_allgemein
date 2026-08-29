@@ -28,7 +28,10 @@ import {
 	SyntheticContractPdfAdapter,
 	type ContractPdfAdapter,
 } from './pdf';
-import type { ContractArtifactStore } from './storage';
+import {
+	ContractObjectReadError,
+	type ContractArtifactStore,
+} from './storage';
 import {
 	PREVIEW_REVIEW_CLAUSE_SET_VERSION,
 	PREVIEW_REVIEW_TEMPLATE_VERSION,
@@ -45,6 +48,7 @@ import type { StorageIntentRepository } from '$lib/server/operations/storage-int
 import { contractArtifactDownloadPurposeSchema } from '$lib/server/security/download-purpose';
 
 type DraftRenderInput = Omit<ContractRenderInput, 'offerNumber' | 'contractNumber'>;
+const CONTRACT_TEMPLATE_BUNDLE_MAX_BYTES = 2 * 1024 * 1024;
 
 const PREVIEW_REVIEW_PROVIDER: ContractRenderInput['provider'] = {
 	fullName: 'Kinder- und Elternzentrum „Kolibri“ e. V.',
@@ -126,34 +130,56 @@ export class ContractService {
 	}
 
 	private async putImmutableTemplateBundle(input: {
-		intentId: string;
+		intentFamilyId: string;
 		key: string;
 		sourceRef: string;
 		bundle: Uint8Array;
 		bundleHash: string;
 		now: string;
-	}): Promise<string> {
+		installerOwner: string;
+		installerLeaseUntil: string;
+	}): Promise<{ id: string; objectKey: string; generation: number }> {
 		if (!this.store.putIfAbsent) {
 			throw new ContractServiceError('CONTRACT_TEMPLATE_CONDITIONAL_STORE_REQUIRED');
 		}
-		if (input.bundle.byteLength > 2 * 1024 * 1024) {
+		if (input.bundle.byteLength > CONTRACT_TEMPLATE_BUNDLE_MAX_BYTES) {
 			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_TOO_LARGE');
 		}
-		const intentId = await this.repository.stageTemplateBundleIntent({
-			id: input.intentId,
+		const intent = await this.repository.stageTemplateBundleIntent({
+			id: input.intentFamilyId,
 			objectKey: input.key,
 			sourceRef: input.sourceRef,
 			sha256: input.bundleHash,
 			sizeBytes: input.bundle.byteLength,
 			now: input.now,
+			installerOwner: input.installerOwner,
+			installerLeaseUntil: input.installerLeaseUntil,
 		});
 		let created = false;
 		try {
-			created = await this.store.putIfAbsent(input.key, input.bundle, input.bundleHash);
+			created = await this.store.putIfAbsent(
+				intent.objectKey,
+				input.bundle,
+				input.bundleHash
+			);
 		} catch {
 			// A provider timeout may still have committed the conditional put.
 		}
-		const winner = await this.store.get(input.key);
+		let winner;
+		try {
+			winner = await this.store.get(intent.objectKey, {
+				maximumSizeBytes: CONTRACT_TEMPLATE_BUNDLE_MAX_BYTES,
+				expectedSizeBytes: input.bundle.byteLength,
+			});
+		} catch (error) {
+			if (
+				error instanceof ContractObjectReadError &&
+				error.code === 'CONTRACT_OBJECT_TOO_LARGE'
+			) {
+				throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_TOO_LARGE');
+			}
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_CONFLICT');
+		}
 		if (!winner) {
 			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_WRITE_UNRESOLVED');
 		}
@@ -172,7 +198,7 @@ export class ContractService {
 		if (!created) {
 			// The losing writer is idempotent only after exact bounded winner verification above.
 		}
-		return intentId;
+		return intent;
 	}
 
 	private assertDraftTemplateGate(
@@ -193,11 +219,21 @@ export class ContractService {
 	private async loadVerifiedTemplateBundle(
 		template: Awaited<ReturnType<ContractRepository['loadTemplate']>> & {}
 	): Promise<ContractTemplateBundle> {
-		const object = await this.store.get(template.template_bundle_r2_key);
-		if (!object) throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_MISSING');
-		if (object.size > 2 * 1024 * 1024) {
-			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_TOO_LARGE');
+		let object;
+		try {
+			object = await this.store.get(template.template_bundle_r2_key, {
+				maximumSizeBytes: CONTRACT_TEMPLATE_BUNDLE_MAX_BYTES,
+			});
+		} catch (error) {
+			if (
+				error instanceof ContractObjectReadError &&
+				error.code === 'CONTRACT_OBJECT_TOO_LARGE'
+			) {
+				throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_TOO_LARGE');
+			}
+			throw new ContractServiceError('CONTRACT_TEMPLATE_BUNDLE_INTEGRITY_FAILED');
 		}
+		if (!object) throw new ContractServiceError('CONTRACT_TEMPLATE_SOURCE_MISSING');
 		const bytes = new Uint8Array(object.body);
 		if (
 			bytes.byteLength !== object.size ||
@@ -275,6 +311,8 @@ export class ContractService {
 		approvalBasis: 'synthetic_fixture' | 'internal_preview_review';
 	}): Promise<string[]> {
 		const now = this.now();
+		const installerOwner = `contract-template-installer:${crypto.randomUUID()}`;
+		const installerLeaseUntil = new Date(Date.parse(now) + 5 * 60_000).toISOString();
 		const providerSnapshotJson = canonicalJson(input.provider);
 		const providerSnapshotHash = await hashCanonical(input.provider);
 		const providerPaymentTermsHash = await hashCanonical({
@@ -310,14 +348,16 @@ export class ContractService {
 					input.usageScope === 'preview_review' ? 'preview-review' : 'synthetic';
 				const key = `contract-templates/${scopePath}/${templateId}/${input.templateVersion}.json`;
 				const sourceRef = `contract-template:${input.usageScope}:${templateId}:${input.templateVersion}`;
-				const intentId = `storage-intent:${sourceRef}`;
-				await this.putImmutableTemplateBundle({
-					intentId,
+				const intentFamilyId = `storage-intent:${sourceRef}`;
+				const intent = await this.putImmutableTemplateBundle({
+					intentFamilyId,
 					key,
 					sourceRef,
 					bundle: bundleBytes,
 					bundleHash: hashes.bundleHash,
 					now,
+					installerOwner,
+					installerLeaseUntil,
 				});
 				return {
 					id:
@@ -328,7 +368,7 @@ export class ContractService {
 					templateVersion: input.templateVersion,
 					renderSchemaVersion: bundle.renderSchemaVersion,
 					clauseSetVersion: input.clauseSetVersion,
-					bundleKey: key,
+					bundleKey: intent.objectKey,
 					bundleHash: hashes.bundleHash,
 					bundleSizeBytes: bundleBytes.byteLength,
 					htmlSourceHash: hashes.htmlSourceHash,
@@ -351,7 +391,8 @@ export class ContractService {
 							: (0 as const),
 					earlyPerformanceSupported:
 						input.usageScope === 'preview_review' ? (1 as const) : (0 as const),
-					storageIntentId: intentId,
+					storageIntentId: intent.id,
+					storageIntentGeneration: intent.generation,
 					storageIntentSourceRef: sourceRef,
 				};
 			})
@@ -1473,7 +1514,18 @@ export class ContractService {
 		const actor = requireParent(input.actor);
 		const artifact = await this.repository.loadArtifactForOwner(actor.id, input.artifactId);
 		if (!artifact) throw new ContractServiceError('CONTRACT_ARTIFACT_NOT_FOUND');
-		const object = await this.store.get(artifact.private_r2_key);
+		let object;
+		try {
+			object = await this.store.get(artifact.private_r2_key, {
+				maximumSizeBytes:
+					artifact.content_type === 'application/pdf'
+						? this.config.contracts.maxPdfBytes
+						: this.config.contracts.maxHtmlBytes,
+				expectedSizeBytes: artifact.size_bytes,
+			});
+		} catch {
+			throw new ContractServiceError('CONTRACT_ARTIFACT_INTEGRITY_FAILED');
+		}
 		if (
 			!object ||
 			object.size !== artifact.size_bytes ||
@@ -1513,7 +1565,18 @@ export class ContractService {
 			input.artifactId
 		);
 		if (!artifact) throw new ContractServiceError('CONTRACT_ARTIFACT_NOT_FOUND');
-		const object = await this.store.get(artifact.private_r2_key);
+		let object;
+		try {
+			object = await this.store.get(artifact.private_r2_key, {
+				maximumSizeBytes:
+					artifact.content_type === 'application/pdf'
+						? this.config.contracts.maxPdfBytes
+						: this.config.contracts.maxHtmlBytes,
+				expectedSizeBytes: artifact.size_bytes,
+			});
+		} catch {
+			throw new ContractServiceError('CONTRACT_ARTIFACT_INTEGRITY_FAILED');
+		}
 		if (
 			!object ||
 			object.size !== artifact.size_bytes ||

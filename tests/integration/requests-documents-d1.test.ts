@@ -1014,6 +1014,7 @@ describe('stage 08 request and private document workflow in D1', () => {
 		await concurrentStore.delete(countClaimed[0].object_key);
 		expect(await storageIntents.completeDelete(
 			countClaimed[0].id,
+			countClaimed[0].generation,
 			'concurrent-count-cleanup',
 			countCleanupNow
 		)).toBe(true);
@@ -1106,6 +1107,7 @@ describe('stage 08 request and private document workflow in D1', () => {
 		await concurrentStore.delete(byteClaimed[0].object_key);
 		expect(await storageIntents.completeDelete(
 			byteClaimed[0].id,
+			byteClaimed[0].generation,
 			'concurrent-bytes-cleanup',
 			byteCleanupNow
 		)).toBe(true);
@@ -1332,14 +1334,16 @@ describe('stage 08 request and private document workflow in D1', () => {
 			leaseUntil: '2026-07-17T10:20:00.000Z',
 			limit: 10,
 		});
-		expect(claimed).toEqual([{
+			expect(claimed).toEqual([{
 			id: intent!.id,
 			storage_class: 'quarantine',
 			object_key: intent!.object_key,
+			generation: 1,
 		}]);
 		await orphanStore.delete(intent!.object_key);
 		expect(await storageIntents.completeDelete(
 			intent!.id,
+			claimed[0].generation,
 			'upload-cleanup-owner',
 			cleanupNow
 		)).toBe(true);

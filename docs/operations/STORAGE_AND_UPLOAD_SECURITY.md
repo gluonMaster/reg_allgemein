@@ -59,6 +59,14 @@ Claim повторяет `NOT referenced` в conditional update, поэтому 
 зафиксированная ссылка выигрывает у cleanup. Duplicate/stale Worker delivery
 ограничивается lease owner и не завершает чужую попытку.
 
+Contract-template installer дополнительно использует immutable intent family,
+монотонную generation, generation-specific R2 key и отдельную installer lease.
+Cleanup claim/complete/delete всегда fenced exact `id + generation + owner`.
+Истёкший `processing` либо уже `deleted` intent не блокирует safe retry:
+installer создаёт следующую generation с тем же exact bundle binding. Старый
+cleaner может удалить только object своей generation и не затрагивает новый.
+Append-only `storage_intent_generations` сохраняет lineage/hash/size/key.
+
 Для deterministic immutable template key обычная последовательность
 `GET-if-missing → PUT` запрещена как TOCTOU. R2 `put` обязан использовать
 atomic create-if-absent precondition через Workers binding `onlyIf`; failed
@@ -75,6 +83,14 @@ semantics сверяются по
 [D1 batch contract](https://developers.cloudflare.com/d1/worker-api/d1-database/#batch):
 conditional R2 `put` при failed precondition не записывает object, а ошибка
 statement в D1 batch откатывает всю последовательность.
+
+Любое чтение contract template/HTML/PDF сначала выполняет metadata-only `head`
+и отклоняет declared size выше domain ceiling. Body читается только bounded
+range длиной `maximum + 1`, conditional по ETag из `head`; metadata-only ответ
+на failed condition, изменившийся ETag/size, truncated body, max+1 или hash
+mismatch завершаются fail-closed. `arrayBuffer()` допускается только для такого
+уже bounded response. Это правило одинаково для normal load, winning/losing
+installer verification, recovery, owner/admin download и email attachment.
 
 Configured ceilings, если они ниже hard default, входят в тот же conditional D1
 batch: document INSERT проверяет актуальные `COUNT`/`SUM(size_bytes)` на момент
@@ -224,4 +240,10 @@ processing, AVV/DPA, subprocessor/no-training/no-retention review.
 - ambiguous D1 result после R2 put не вызывает eager delete; reconciler связывает
   referenced object, а orphan cleanup не claim-ит object при появившейся D1
   ссылке и соблюдает 15-минутный grace/lease;
+- oversized contract object отклоняется по metadata до body read; exact max
+  читается bounded range, max+1 отклоняется; changed ETag, truncated range и
+  integrity mismatch не принимаются ни normal load, ни installer verification;
+- aged staged intent можно повторно установить во время/после cleanup через
+  следующую generation; stale cleaner удаляет только старый key, повторные
+  retries идемпотентны, а D1/R2 остаются согласованными без orphan/corrupt object;
 - logs/outbox не содержат filename, document body и PII.

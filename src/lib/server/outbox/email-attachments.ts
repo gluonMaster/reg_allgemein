@@ -66,7 +66,15 @@ export class ContractEmailAttachmentResolver implements EmailAttachmentResolver 
 		) {
 			throw new OutboxTemplateError('CONTRACT_EMAIL_ATTACHMENT_INVALID');
 		}
-		const stored = await this.store.get(artifact.private_r2_key);
+		let stored;
+		try {
+			stored = await this.store.get(artifact.private_r2_key, {
+				maximumSizeBytes: this.maxPdfBytes,
+				expectedSizeBytes: artifact.size_bytes,
+			});
+		} catch {
+			throw new OutboxTemplateError('CONTRACT_EMAIL_ATTACHMENT_INVALID');
+		}
 		if (!stored || stored.size !== artifact.size_bytes) {
 			throw new OutboxTemplateError('CONTRACT_EMAIL_ATTACHMENT_MISSING');
 		}

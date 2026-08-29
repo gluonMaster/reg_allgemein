@@ -1,5 +1,7 @@
 # Ежедневная эксплуатация и реагирование
 
+<!-- stage-13-current-review-status: pending_independent_review -->
+
 Ревизия: 2026-08-20.
 
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
@@ -567,7 +569,8 @@ admin; Browser/private archive bindings; Resend key; SHA-256 адреса тол
 контролируемых test recipients в `PREVIEW_EMAIL_RECIPIENT_HASHES`;
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_PREVIEW_REVIEW_ENABLED=true`,
 `CONTRACT_RENDERER=browser_run`; новый remediation candidate после exact
-`fa7aeeb…` NO-GO имеет separate independent GO; migration `0024` и все
+`02d7cbc…` NO-GO пока имеет статус `pending independent review`. Только после
+отдельного independent GO могут быть разрешены migration `0024`, `0025` и все
 последующие required append-only migrations applied. До apply подтверждены
 complete exact-version render bundle, D1 storage intent, atomic R2
 create-if-absent, exact D1 install assertion и populated-upgrade regression.

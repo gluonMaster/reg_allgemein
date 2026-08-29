@@ -1,18 +1,88 @@
 # Handoff этапа 13: hardening и production readiness
 
-Ревизия: 2026-08-27.
+<!-- stage-13-current-review-status: pending_independent_review -->
+
+Ревизия: 2026-08-29.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
-`fa7aeeb40726089a72396b41b27ce93db1f2a096` с direct parent
-`c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9` прошёл mandatory local commands,
-но отдельно порученный independent read-only review вернул **NO-GO** с 2 HIGH и
-2 MEDIUM. До нового remediation candidate и нового independent GO запрещены
-`0024` apply, Worker/config deploy, D1/R2 writes, provider sends и bootstrap.
+`02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` с direct parent
+`fa7aeeb40726089a72396b41b27ce93db1f2a096` получил **NO-GO** с 3 HIGH и
+2 MEDIUM. Новый local remediation candidate подготовлен, но имеет статус
+`pending independent review`; эта сессия не объявляет GO. До отдельного GO и
+отдельной authorization запрещены `0024`/`0025` apply, Worker/config deploy,
+D1/R2 writes, provider sends и bootstrap.
 Исторический exact `2bedc73c9b39a4cb43296046986a3f48e039b022` сохраняет GO только
 для своего более узкого IMPORT-08 docs/test scope и не одобряет новый contract
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+## Remediation нового NO-GO — 2026-08-29
+
+- **Renderer isolation:** canonical bundle schema v2 обязательно содержит
+  `renderer.engineVersion`. Exact registry связывает template version с engine и
+  helper versions. `contract-html-renderer-v1` и реальный
+  `contract-html-renderer-v2` имеют раздельные output-affecting escape/currency/
+  interpolation/CSS/HTML implementations; unknown engine fail-closed. Unit
+  regression реально рендерит v2, сравнивает v1 byte/hash golden и доказывает,
+  что отличающийся v2 helper не меняет v1 output.
+- **Bounded R2 reads:** contract R2 adapter сначала выполняет `head`, проверяет
+  maximum/expected size, затем выполняет только `range max+1` GET с
+  `onlyIf.etagMatches`. Conditional miss, changed ETag/size, truncated body,
+  max+1 и hash mismatch fail-closed. Template normal load, winner/loser install
+  verification, downloads и email attachment передают explicit bounds.
+- **Recoverable intent cleanup:** append-only migration
+  `0025_contract_storage_intent_generations.sql` добавляет immutable family/
+  generation lineage, installer lease и append-only generation audit. Retry из
+  aged `processing`, `delete_pending` или `deleted` создаёт отдельные intent ID и
+  R2 key; cleanup claim/complete fenced exact generation. Поэтому stale cleaner
+  удаляет только старый key. Ephemeral-D1 regressions покрывают processing/deleted
+  retry, concurrent installers, stale cleaner, repeated replay и final D1/R2
+  consistency без orphan/corrupt current object.
+- **E2E ownership:** каждый `npm run test:e2e` получает unique port и один
+  `reg-allgemein-e2e-run-*` temp root с ownership marker. Runtime secret,
+  Wrangler state/log/config находятся только внутри него; success/failure и
+  supported SIGINT/SIGTERM/SIGHUP проходят единый cleanup. Unit tests покрывают
+  success/failure, collision-free roots, сохранение sibling и signal cleanup на
+  платформах, где Node доставляет signal handler (Windows case явно skipped).
+- **Status continuity:** текущий статус во всех status-bearing Stage 13 docs —
+  `pending_independent_review`. Checker требует одинаковый structured marker и
+  отклоняет запрещённую Russian/English GO-формулировку о current candidate;
+  преждевременная строка runbook удалена.
+- **Focused verification:** exact Windows command
+  `npm.cmd test -- --maxWorkers=1 tests/unit/contract-template-bundles.test.ts tests/unit/contract-storage.test.ts tests/unit/admin-contracts-preview-gate.test.ts tests/unit/e2e-run-lifecycle.test.ts tests/unit/stage13-review-status.test.ts tests/integration/storage-intents-d1.test.ts tests/integration/contract-template-install-d1.test.ts tests/integration/contracts-d1.test.ts tests/integration/migration-upgrade-d1.test.ts tests/integration/production-readiness-flow-d1.test.ts`
+  завершилась exit `0`: 10 files, 38 passed и 1 skipped из 39, 602.98 s. Skip —
+  только POSIX signal-delivery subprocess на Windows; success, failure, parallel
+  roots и ownership cleanup исполнялись и прошли. Exact migration upgrade suite
+  отдельно прошёл 5/5, включая populated `0023 → 0024` и `0024 → 0025`.
+- **Полная локальная цепочка:** `npm.cmd test -- --maxWorkers=1` — exit `0`,
+  75/75 files, 559 passed и тот же 1 Windows-only skip из 560, 2787.22 s;
+  `npm.cmd run check` — exit `0`, 0 errors/0 warnings; `npm.cmd run build` — exit
+  `0`; `npm.cmd run test:e2e` — exit `0`, Chromium 18/18 за 3.2 min на уникальном
+  локальном порту `58960`; `npm.cmd audit --omit=dev` — exit `0`, 0
+  vulnerabilities; `npm.cmd run docs:check` — exit `0`, 170 links/56 files, 109
+  commands и Stage-13 continuity passed; `npm.cmd run release:scan` — exit `0`,
+  562/562 text files, без prohibited artifacts/high-confidence secrets/PII;
+  `git diff --check` — exit `0`.
+- **E2E cleanup evidence:** после финального реального run отдельный read-only
+  audit дал 0 `reg-allgemein-e2e-run-*` roots, 0 `runtime.env`, 0 listeners на
+  `58960`, 0 новых Node/browser PID; fixed legacy config/log dirs и repository-root
+  `.wrangler/e2e-runtime` отсутствуют. Исторические generated leftovers из
+  rejected helper (30 log, 2 config и 14 runtime files) были удалены только из
+  трёх точно проверенных generated roots; unrelated paths не затронуты.
+- Четыре pre-existing ignored `tmp/release-verify-*` копии от 14/17 августа имеют
+  собственный nested `.wrangler/e2e-runtime`, но не содержат `runtime.env`, не
+  менялись этим run и не принадлежат новому `reg-allgemein-e2e-run-*` lifecycle.
+  Они сохранены как unrelated user state и исключены из run-owned delta.
+- Первый промежуточный E2E run выявил отсутствие teardown handshake и зависание
+  Vite close, а один ранний foundation assertion был transient. Исправленный
+  global teardown/shutdown повторно прошёл foundation 3/3, затем полный 18/18 и
+  финальный 18/18 после port logging; незавершённый run-owned root был удалён
+  тем же ownership-guarded cleanup. Эти ранние runs не используются как green
+  evidence.
+- Новое independent review остаётся обязательным; remote D1/R2/Workers/Pages,
+  provider, secrets, Git remotes, официальный сайт и production в remediation не
+  изменялись.
 
 ## Owner clarification 2026-08-26: рабочий preview до approvals
 

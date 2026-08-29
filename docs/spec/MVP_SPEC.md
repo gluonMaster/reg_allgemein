@@ -499,20 +499,29 @@ release gates сохраняются.
   ссылку на текущую функцию, а фактически исполняемое base body, общие и
   kind-specific clauses, фиксированный текст, CSS, fonts/assets, версии
   helper/schema/adapter и hashes всех provider/payment/legal/media snapshots;
-  отдельно сохраняется hash полученного self-contained HTML. Runtime разрешает
-  только exact зарегистрированные `template_version`/`render_schema_version` и
-  не подменяет неизвестную или прежнюю version текущим/synthetic fallback.
+  отдельно сохраняется hash полученного self-contained HTML. Bundle однозначно
+  называет renderer engine version; каждый engine version имеет отдельный
+  immutable dispatch и собственные output-affecting helpers без вызова
+  изменяемых helpers другой версии. Runtime разрешает только exact
+  зарегистрированные `template_version`/`render_schema_version`/engine version
+  и не подменяет неизвестную или прежнюю version текущим/synthetic fallback.
   Новый deploy или новая template version не меняют источник уже установленной
   версии; отсутствие её полного bundle завершает draft/render fail-closed.
 - **CONTRACT-23.** Установка template version является recoverable и
   conflict-safe между D1 и R2. До object write создаётся D1 storage intent;
   deterministic R2 key записывается атомарным create-if-absent, а проигравший
-  concurrent writer перечитывает и проверяет exact bytes/size/SHA-256 вместо
-  overwrite. Provider/media/template rows, link assertions и успешный install
+  concurrent writer выполняет metadata-first, ETag-bound bounded read и
+  проверяет exact bytes/size/SHA-256 вместо overwrite или unbounded body read.
+  Normal load/recovery/download используют тот же max+1 bound и fail closed для
+  oversized, truncated либо изменившегося между metadata/body объекта.
+  Provider/media/template rows, link assertions и успешный install
   audit фиксируются одной exact-state D1 transaction: count-only либо
   post-commit client verification недостаточны. Byte-identical replay
   идемпотентен, conflicting replay не оставляет partial rows или ложный success
-  audit. `preview_review` environment/feature/synthetic gates проверяются до
+  audit. Template intents используют immutable family/generation, generation-
+  specific key и installer/cleanup fencing: retry после aged/deleted generation
+  создаёт безопасную следующую generation, а stale cleaner не может удалить её
+  object. `preview_review` environment/feature/synthetic gates проверяются до
   reservation contract number, draft/operational record или любого другого
   business side effect.
 

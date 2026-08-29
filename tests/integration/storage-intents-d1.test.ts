@@ -43,9 +43,9 @@ describe('stage 13 D1/R2 write-ahead storage intents', () => {
 			leaseUntil: LATER,
 			limit: 10,
 		})).toEqual([{ id: intentId, storage_class: 'quarantine',
-			object_key: 'quarantine/stage-13-orphan' }]);
-		expect(await repository.completeDelete(intentId, 'cleanup-owner-b', NOW)).toBe(false);
-		expect(await repository.completeDelete(intentId, 'cleanup-owner-a', NOW)).toBe(true);
+			object_key: 'quarantine/stage-13-orphan', generation: 1 }]);
+		expect(await repository.completeDelete(intentId, 1, 'cleanup-owner-b', NOW)).toBe(false);
+		expect(await repository.completeDelete(intentId, 1, 'cleanup-owner-a', NOW)).toBe(true);
 		expect(await repository.claimCleanup({
 			now: LATER,
 			stagedBefore: LATER,

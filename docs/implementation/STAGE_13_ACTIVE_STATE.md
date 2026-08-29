@@ -1,14 +1,17 @@
 # Stage 13: активное состояние
 
+<!-- stage-13-current-review-status: pending_independent_review -->
+
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-27T20:47:31Z
-reviewed_candidate: fa7aeeb40726089a72396b41b27ce93db1f2a096
-last_completed_gate: full-manual-preview-remediation-local-candidate-gates
-next_gate: full-manual-preview-remediation-independent-review
+updated_utc: 2026-08-29T21:46:00Z
+reviewed_candidate: 02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8
+last_completed_gate: full-manual-preview-remediation-independent-review-no-go
+next_gate: full-manual-preview-new-remediation-candidate-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
+current_review_status: pending_independent_review
 -->
 
 Этот файл — короткий tracked operational checkpoint, а не источник
@@ -33,7 +36,38 @@ Browser-contract/upload и обязательные security/accessibility сц�
 вне-MVP или production-only unsafe эффекта, но не вместо обязательного MVP-
 контура. Один deploy, login, import или bootstrap эту цель не закрывает.
 
-## Текущий blocking review
+## Текущий remediation checkpoint — independent review pending
+
+- Independent review exact candidate
+  `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, parent
+  `fa7aeeb40726089a72396b41b27ce93db1f2a096`, завершился **NO-GO**: 3 HIGH и
+  2 MEDIUM. Предыдущие local green claims не считаются доказательством закрытия.
+- HIGH findings: HTML renderer v1 зависел от общих mutable helpers; R2 body
+  materialize выполнялся до size enforcement и без ETag-bound bounded read;
+  deterministic template storage intent после cleanup в `processing/deleted`
+  навсегда блокировал installer retry.
+- MEDIUM findings: E2E helper оставлял fixed Wrangler config/log/runtime
+  artifacts; operations runbook преждевременно утверждал independent GO, а
+  continuity check не обнаруживал противоречие.
+- Текущая implementation/remediation фиксирует explicit immutable HTML-engine
+  dispatch v1/v2 и v1 rendered golden; metadata-first ETag-bound range reads;
+  append-only migration `0025` с immutable intent/R2 generations и fencing;
+  уникальный run-owned E2E temp root с cleanup; structured pending-review markers
+  и regression check преждевременного GO.
+- Локальная verification на remediation tree завершена: focused set — 10 files,
+  38 passed и 1 Windows signal skip из 39; полный последовательный Vitest —
+  75 files, 559 passed и тот же 1 skip из 560; Svelte check — 0/0; build — passed;
+  Chromium — 18/18; production dependency audit — 0; docs — 170 links в 56
+  files, 109 commands и continuity passed; release scan — 562/562; diff check —
+  passed. После финального E2E порт `58960` закрыт, run-owned/legacy runtime
+  artifacts и `runtime.env` отсутствуют, новых Node/browser процессов нет.
+- Статус — `remediation candidate prepared; independent review pending`.
+  Точный SHA является финальным local commit этой сессии и намеренно не
+  записывается внутрь самого commit. Remote D1/R2/Worker/provider/CMS state не
+  менялся. Следующий gate — новый independent review отдельной ролью; эта
+  remediation session не присваивает GO.
+
+## Предыдущий blocking review — исторический контекст
 
 - Exact candidate `fa7aeeb40726089a72396b41b27ce93db1f2a096`, direct parent
   `c02b1bf1067e46c178dd0ead6f55bf1f0ede09b9`, прошёл отдельно порученный
@@ -66,7 +100,7 @@ Browser-contract/upload и обязательные security/accessibility сц�
   новый independent exact-SHA review. До его GO запрещены `0024` apply,
   Worker/config deploy, R2/D1 write, provider send, bootstrap и production.
 
-## Local remediation 2026-08-27 — independent review pending
+## Исторический remediation 2026-08-27 — позднее отклонён candidate `02d7cbc…`
 
 - Рабочее состояние: `remediated_candidate_pending_independent_review`.
   Исторический verdict `fa7aeeb…` остаётся NO-GO; эта implementation session не

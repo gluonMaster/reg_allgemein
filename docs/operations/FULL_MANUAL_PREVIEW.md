@@ -1,5 +1,7 @@
 # Полный ручной preview
 
+<!-- stage-13-current-review-status: pending_independent_review -->
+
 Этот runbook определяет checkpoint `full-manual-preview`: рабочую тестовую
 систему на синтетических данных, а не production release. Канонический origin —
 `https://preview.example.com/`; Cloudflare
@@ -27,24 +29,24 @@ Telegram, а D1/R2/Browser используют только отдельные 
 
 ## Порядок достижения checkpoint
 
-1. Exact candidate `fa7aeeb40726089a72396b41b27ce93db1f2a096` содержит migration
-   `0024`, preview-only contract/email gates, штатные upload/manual-review и
-   Telegram smoke tools; его local/full verification зелёная, но independent
-   review вернул **NO-GO**.
-2. Оба HIGH и оба MEDIUM локально исправлены: complete immutable render-source/
-   version binding; D1-intent + atomic create-if-absent R2 и exact-state D1
-   installation; pre-draft environment/feature isolation; permanent populated
-   `0023 → 0024` migration regression. Полная local chain прошла; текущий gate —
-   один immutable commit и отдельный independent read-only exact-SHA review.
-   Старый verdict не наследуется; до нового GO recovery/apply/deploy запрещены,
-   а любой BLOCKER/HIGH снова означает NO-GO.
+1. Exact candidate `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, direct child
+   `fa7aeeb40726089a72396b41b27ce93db1f2a096`, содержит migration `0024`,
+   preview-only contract/email gates и прежнюю remediation. Последний
+   independent review вернул **NO-GO** с 3 HIGH/2 MEDIUM.
+2. Новая локальная remediation устраняет все пять findings реализацией и
+   regressions: immutable v1/v2 renderer-engine dispatch; metadata-first
+   ETag-bound bounded R2 reads; append-only intent generations/fencing через
+   migration `0025`; unique owned E2E lifecycle cleanup; continuity gate против
+   преждевременного GO. Текущий статус — remediation candidate prepared,
+   `pending independent review`. Старый verdict не наследуется; до нового GO
+   recovery/apply/deploy запрещены, а любой BLOCKER/HIGH снова означает NO-GO.
 3. Fresh candidate-bound preview D1 recovery point и isolated restore; проверить
    migration inventory, per-table counts, FK/quick-check и protected evidence.
 4. Согласовать без публикации значений: два owner-controlled email accounts,
    dedicated preview Telegram bot + exact numeric destination/type, текущий
    approved local AV label/version и факт готовности отдельной quarantine-папки.
-5. Только после нового independent GO применить `0024` и, если remediation
-   добавит следующую append-only migration, весь exact reviewed ledger только к
+5. Только после нового independent GO применить `0024`, `0025` и весь exact
+   reviewed append-only ledger только к
    preview и candidate-bound recovery copy. Развернуть exact reviewed candidate
    в тот же Access-protected origin с fail-closed конфигурацией и выполнить
    health/auth smoke до внешней отправки.
@@ -81,8 +83,8 @@ Telegram, а D1/R2/Browser используют только отдельные 
 - ручной local-AV шаг, который физически выполняет оператор на скачанном файле;
 - independent exact-SHA verdict отдельной ролью.
 
-Пока findings exact `fa7aeeb…` не исправлены и новый candidate не получил
-independent GO, recovery/apply/deploy/provider-send scope не запрашивается:
+Пока remediation findings exact `02d7cbc…` не подтверждены отдельным
+independent GO для нового candidate, recovery/apply/deploy/provider-send scope не запрашивается:
 следующий gate полностью local/read-only.
 
 Если один параметр отсутствует, остальные локальные и read-only проверки

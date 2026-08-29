@@ -47,6 +47,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0022_reconciliation_completion_downstream_fence.sql',
 			'0023_legacy_projection_lookup_indexes.sql',
 			'0024_contract_preview_review.sql',
+			'0025_contract_storage_intent_generations.sql',
 		]);
 
 		const result = await context.db
@@ -81,6 +82,7 @@ describe('foundation D1 migration and repositories', () => {
 				'outbox_admin_actions',
 				'scheduled_job_runs',
 				'storage_object_intents',
+				'storage_intent_generations',
 				'admin_bootstrap_control',
 				'admin_bootstrap_actions',
 				'admin_bootstrap_assertions',

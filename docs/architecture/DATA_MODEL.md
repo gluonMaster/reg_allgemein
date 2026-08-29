@@ -201,12 +201,17 @@ run в `failed` и не прекращает обработку остальны
 до side effect требует active admin audit. Exact Cron expression выбирает только
 фиксированную группу jobs; неизвестный Cron отклоняется.
 
-### `storage_object_intents`, `storage_intent_link_assertions`
+### `storage_object_intents`, `storage_intent_generations`, `storage_intent_link_assertions`
 
 - intent хранит `storage_class` (`archive|quarantine`), opaque `object_key`,
   `object_kind`, optional `source_ref`, SHA-256, size, state
   (`staged|linked|delete_pending|processing|deleted`), lease/attempt/error и
   timestamps; `UNIQUE(storage_class, object_key)`;
+- contract-template installer дополнительно использует immutable
+  `intent_family_id`, монотонную `generation`, `installer_owner` и
+  `installer_lease_until`; object key уникален для каждой generation;
+- `storage_intent_generations` является append-only exact history family,
+  generation, object key, hash/size и installer owner; update/delete запрещены;
 - link assertion append-only связывает один intent с authoritative target после
   одной D1 transaction.
 
@@ -215,7 +220,11 @@ R2 body записывается только после `staged`. Domain commit
 result сначала восстанавливает `linked`; cleanup claim допускает только object,
 который всё ещё нигде не referenced, и повторяет это условие в conditional
 `UPDATE`. Для orphan `staged` применяется технический grace 15 минут, затем
-lease; это recovery delay, не business retention period.
+lease; это recovery delay, не business retention period. Cleanup завершает
+только claimed exact generation. Истёкшая `staged|processing` либо `deleted`
+generation не блокирует installer навсегда: exact-byte retry создаёт следующую
+generation и generation-specific key, поэтому stale cleaner не может удалить
+новый object.
 
 ### `admin_bootstrap_control`, `admin_bootstrap_actions`, `admin_bootstrap_assertions`
 
@@ -948,10 +957,10 @@ Approved versions не изменяются. `compliance_assessment_status=passe
   `css_source_hash`;
 - `asset_manifest_json`, `font_manifest_json`, `required_fields_json`;
 - `renderer_id`, `renderer_contract_version`, `worker_compatibility_date`;
-- `usage_scope` (`synthetic_test|production`);
+- `usage_scope` (`synthetic_test|preview_review|production`);
 - `approval_status` (`draft|approved|retired`);
 - `approval_basis`
-  (`synthetic_fixture|authorized_verein_approval|legal_review`);
+  (`synthetic_fixture|internal_preview_review|authorized_verein_approval|legal_review`);
 - `distance_legal_profile`
   (`offline_only|widerruf_applicable|widerruf_not_applicable_312g_2_9`),
   `distance_legal_basis_version`, `distance_legal_basis_hash`,

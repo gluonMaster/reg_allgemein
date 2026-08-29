@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ContractTemplateId } from '$lib/server/contracts/contracts';
 import {
+	CONTRACT_HTML_RENDERER_V1,
 	PREVIEW_REVIEW_TEMPLATE_VERSION,
+	PREVIEW_REVIEW_TEMPLATE_V2_VERSION,
 	buildContractTemplateBundle,
 	contractTemplateBundleHashes,
 	renderContractSource,
@@ -136,6 +138,7 @@ describe('contract render-source bundles', () => {
 			(value) => (value.helpers.htmlEscapeVersion = 'escape-html-v2'),
 			(value) => (value.helpers.embeddedResourceVersion = 'embedded-data-resource-v2'),
 			(value) => (value.renderer.adapterContractVersion = 'pdf-adapter-v2'),
+			(value) => (value.renderer.engineVersion = 'contract-html-renderer-v99'),
 			(value) => (value.renderer.workerCompatibilityDate = '2026-03-25'),
 			(value) => (value.clauseSetVersion += '-changed'),
 			(value) => value.requiredFields.push('changedField'),
@@ -195,7 +198,7 @@ describe('contract render-source bundles', () => {
 		expect(new Set(hashes)).toHaveLength(templateIds.length);
 	});
 
-	it('keeps v1 stable when v2 is added and rejects unknown, missing, or mismatched source', async () => {
+	it('dispatches real independent v1/v2 engines and preserves the committed v1 golden', async () => {
 		const v1 = buildContractTemplateBundle({
 			templateId: 'group_yearly',
 			templateVersion: PREVIEW_REVIEW_TEMPLATE_VERSION,
@@ -206,24 +209,45 @@ describe('contract render-source bundles', () => {
 		const v1HashesBefore = await contractTemplateBundleHashes(v1);
 		const v1HashBefore = v1HashesBefore.bundleHash;
 		const v1RenderBefore = await renderContractSource(renderInput(), v1);
-		expect(v1BytesBefore.byteLength).toBe(125256);
+		expect(v1.renderer.engineVersion).toBe(CONTRACT_HTML_RENDERER_V1);
+		expect(v1BytesBefore.byteLength).toBe(125309);
 		expect(v1HashesBefore).toEqual({
-			bundleHash: 'ac9ccae8a9d74b342e390bf9da6e94257fa19eb7326a8f71cb43007925778549',
-			htmlSourceHash: 'f04824122195fd7ff0119ad71e52cdc38f38dffb544cdc6d49336c2177fc19f0',
+			bundleHash: '0f22345df6231aa09770b2d91506c77434aacb7a1ece6d1488b2a49384871737',
+			htmlSourceHash: '230b7c4841230598c56faca76346fbf0e1490ac4a698f76e39682d4f875aedeb',
 			cssSourceHash: 'b4665a710c0958971a992f5166eadb2162fd3d5f1abd5d151486897f2c16370e',
 		});
-		const v2 = clone(v1);
-		v2.templateVersion = 'preview-review-v2';
-		v2.source.fixedCopy.scheduleFallback += ' v2';
+		expect(v1RenderBefore.sourceManifest.renderedHtmlHash).toBe(
+			'855a7e7f4ff6cb33d339272a8348abbeb6543f68a9f5eec5df89e57c3842222e'
+		);
+		expect(v1RenderBefore.html).toContain('46,00\u00a0€');
+
+		const v2 = buildContractTemplateBundle({
+			templateId: 'group_yearly',
+			templateVersion: PREVIEW_REVIEW_TEMPLATE_V2_VERSION,
+			usageScope: 'preview_review',
+			snapshotHashes,
+		});
+		const v2Render = await renderContractSource(renderInput(), v2);
+		expect(v2.renderer.engineVersion).toBe('contract-html-renderer-v2');
+		expect(v2Render.html).toContain('46,00\u00a0EUR');
+		expect(v2Render.html).not.toBe(v1RenderBefore.html);
 		expect((await contractTemplateBundleHashes(v2)).bundleHash).not.toBe(v1HashBefore);
 		expect(serializeContractTemplateBundle(v1)).toEqual(v1BytesBefore);
 		expect((await contractTemplateBundleHashes(v1)).bundleHash).toBe(v1HashBefore);
 		expect(await renderContractSource(renderInput(), v1)).toEqual(v1RenderBefore);
+		expect((await renderContractSource(renderInput(), v1)).sourceManifest.renderedHtmlHash).toBe(
+			'855a7e7f4ff6cb33d339272a8348abbeb6543f68a9f5eec5df89e57c3842222e'
+		);
 
 		const unknown = clone(v1);
 		unknown.templateVersion = 'unknown-template-v99';
 		await expect(renderContractSource(renderInput(), unknown)).rejects.toMatchObject({
 			code: 'CONTRACT_TEMPLATE_SOURCE_UNSUPPORTED',
+		});
+		const unknownRenderer = clone(v1);
+		unknownRenderer.renderer.engineVersion = 'contract-html-renderer-v99';
+		await expect(renderContractSource(renderInput(), unknownRenderer)).rejects.toMatchObject({
+			code: 'CONTRACT_TEMPLATE_RENDERER_UNSUPPORTED',
 		});
 		const mismatch = clone(v1);
 		mismatch.renderSchemaVersion = 'contract-render-v99';

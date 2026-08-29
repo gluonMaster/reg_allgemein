@@ -5,7 +5,10 @@ import { canonicalJson, hashCanonical } from '$lib/server/import/canonical';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
 import { ContractFamilyCorrectionContributor } from '$lib/server/contracts/boundaries';
-import type { ContractArtifactStore } from '$lib/server/contracts/storage';
+import type {
+	ContractArtifactStore,
+	ContractObjectReadLimits,
+} from '$lib/server/contracts/storage';
 import {
 	buildContractTemplateBundle,
 	contractTemplateBundleHashes,
@@ -49,6 +52,7 @@ const admin = requireAdmin({
 
 class MemoryStore implements ContractArtifactStore {
 	readonly values = new Map<string, Uint8Array>();
+	readonly reads: Array<{ key: string; limits: ContractObjectReadLimits }> = [];
 	beforeGet?: (key: string) => Promise<void>;
 	async put(key: string, body: Uint8Array) {
 		this.values.set(key, Uint8Array.from(body));
@@ -58,7 +62,8 @@ class MemoryStore implements ContractArtifactStore {
 		this.values.set(key, Uint8Array.from(body));
 		return true;
 	}
-	async get(key: string) {
+	async get(key: string, limits?: ContractObjectReadLimits) {
+		if (limits) this.reads.push({ key, limits: { ...limits } });
 		const value = this.values.get(key);
 		if (!value) return null;
 		const copy = Uint8Array.from(value);
@@ -672,10 +677,15 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		expect(Array.from(store.values, ([key, value]) => [key, Array.from(value)])).toEqual(
 			objectsBeforeDeniedDrafts
 		);
+		store.reads.length = 0;
 		const created = await previewService.createDraft({
 			admin,
 			requestId: 'create-preview-review-contract',
 			payload: previewDraftPayload,
+		});
+		expect(store.reads).toContainEqual({
+			key: 'contract-templates/preview-review/group_yearly/preview-review-v1.json',
+			limits: { maximumSizeBytes: 2 * 1024 * 1024 },
 		});
 		const rendered = await previewService.renderAndSend({
 			admin,

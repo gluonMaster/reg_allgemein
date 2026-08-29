@@ -444,18 +444,29 @@ blocked gates и local suite их не заменяет.
 - complete canonical render-source bundle включает base body, kind clauses,
   fixed copy, CSS/fonts/assets и helper/schema/adapter versions; mutation каждой
   составляющей меняет source manifest/hash и hash фактического HTML;
-- exact-version registry сохраняет v1 behavior/hash после добавления v2 и
-  отклоняет unknown/missing/retired version без current/synthetic fallback;
+- настоящий v2 регистрируется и реально рендерится отдельным engine/helper
+  dispatch; committed v1 golden HTML/hash остаётся byte-for-byte прежним после
+  добавления и изменения v2, unknown engine/version отклоняется без fallback;
 - template install использует D1 staged storage intent и conditional
   create-if-absent R2 put: concurrent same-bytes replay даёт один object/link/
   success audit, concurrent different bytes не overwrite-ит winner и не
   оставляет partial/ложную D1 installation; crash после intent и после object
   write проходит штатный reconcile/cleanup;
+- normal load и winner/loser verification делают metadata-first ETag-bound
+  bounded `maximum + 1` read: exact max проходит, max+1 не вызывает full-body
+  read, changed/truncated/hash-invalid object fail closed;
+- aged staged intent → cleanup processing → concurrent installer retry и
+  aged staged → deleted → retry создают/reuse следующую immutable generation;
+  stale cleaner удаляет только старый key, повторный retry не создаёт лишнюю
+  generation, итоговые D1/R2/history не содержат orphan/corrupt object;
 - production с seeded `preview_review` row и preview с выключенным flag
   отклоняются до number reservation, draft/operational row, audit или R2 write;
 - отдельный permanent `0023 → 0024` populated-upgrade fixture содержит approved
   provider/template rows и зависимые offers/artifacts; после migration проверяет
   полное сохранение полей/FK/triggers и forbidden scope/basis pairings;
+- отдельный permanent `0024 → 0025` populated-upgrade fixture проверяет intent
+  field/status preservation, generation-1 backfill, immutable lineage/key,
+  append-only generation history и FK;
 - exact evidence paths: `tests/unit/contract-template-bundles.test.ts`,
   `tests/unit/contract-storage.test.ts`,
   `tests/unit/admin-contracts-preview-gate.test.ts`, focused preview cases в
@@ -740,6 +751,9 @@ blocked gates и local suite их не заменяет.
   scheduler side effect;
 - R2 write-ahead intent: grace boundary, current/stale lease, wrong-owner
   finalize, authoritative reference before claim и ambiguous-result reconcile;
+- contract-template intent generation: cleanup processing/deleted retry,
+  concurrent restage/install, stale-cleaner fencing, repeated idempotency и
+  D1/R2/history consistency;
 - contract/document/privacy R2 paths не делают eager delete после ambiguous D1
   response и не удаляют object, который мог быть linked;
 - один binding object для archive/quarantine отклоняется, а allowed
@@ -748,6 +762,13 @@ blocked gates и local suite их не заменяет.
   расположен до финального PDF xref/EOF, а также escaped PDF name `/Encrypt`;
 - acceptance IP hash получает технический expiry 30×24h; cleanup до expiry не
   проходит, после expiry null-ит только IP value и сохраняет immutable evidence.
+- E2E harness создаёт уникальный owner-marked temp root для каждого parallel run
+  и удаляет runtime env/config/log/state после success/failure и поддерживаемых
+  termination signals, не затрагивая sibling files; реальный Playwright run не
+  оставляет новый root, runtime secret, listener либо Node/Playwright process.
+- Stage-13 continuity check требует одинаковый structured
+  `pending_independent_review` marker во всех status-bearing документах и
+  отклоняет преждевременное current/latest independent GO на русском и английском.
 
 ## Quality gates
 

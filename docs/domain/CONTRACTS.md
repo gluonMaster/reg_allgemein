@@ -105,23 +105,38 @@ CSS, embedded fonts/assets, версии helper/schema/adapter и manifest hashe
 provider/payment/legal/media snapshots. Source hash нельзя строить только из
 `Function.toString()` функции-обёртки, если она делегирует внешним helper/copy;
 отдельно сохраняется hash фактически собранного self-contained HTML. Runtime
-разрешает только exact зарегистрированную пару `template_version` +
-`render_schema_version`; неизвестная/retired/отсутствующая версия не получает
-current либо synthetic fallback. Bundle прежней версии остаётся доступен после
-нового deploy, а изменение любого перечисленного source выпускает новую version
-и новый hash.
+разрешает только exact зарегистрированную тройку `template_version` +
+`render_schema_version` + `renderer.engineVersion`; неизвестная, retired,
+отсутствующая либо несовместимая версия не получает current/synthetic fallback.
+Каждый engine version имеет отдельный immutable dispatch и собственные
+output-affecting helpers (escaping, interpolation, money formatting и HTML
+assembly). V1 не вызывает изменяемые общие helpers v2. Bundle прежней версии
+остаётся доступен после нового deploy, а изменение любого перечисленного source
+или engine/helper implementation выпускает новую version и новый hash.
 
 Установка выполняется через storage intent из
 [STORAGE_AND_UPLOAD_SECURITY.md](../operations/STORAGE_AND_UPLOAD_SECURITY.md).
 Deterministic R2 key получает provider-supported atomic create-if-absent
 precondition. Если concurrent writer уже создал объект, проигравшая операция не
-перезаписывает его, а перечитывает и сверяет exact bytes/size/SHA-256. Затем
+перезаписывает его, а сначала делает metadata-only `head`, проверяет declared
+size, затем читает только bounded range `maximum + 1`, связанный с проверенным
+ETag conditional request, и сверяет exact bytes/size/SHA-256. Oversized,
+truncated, changed-between-requests и integrity-invalid object отклоняется до
+unbounded/full-body read. Затем
 provider/media/template rows, storage link assertions и success audit проходят
 одну exact-state D1 transaction с server-side terminal assertion. Проверка
 только количества строк либо client-side проверка после commit не доказывает
 успешную установку. Byte-identical replay идемпотентен; conflicting concurrency,
 crash или ambiguous result оставляют recoverable intent и не создают partial
 installation/ложный installed audit.
+
+Contract-template intent имеет immutable `intent_family_id`, монотонную
+`generation`, generation-specific object key и installer lease. Cleanup может
+claim/delete только exact generation, которой он владеет. После aged `staged`,
+`processing` с истёкшей lease или `deleted` безопасный installer создаёт либо
+идемпотентно переиспользует следующую generation. Поэтому stale cleaner не
+удаляет restaged/new object, а append-only generation history сохраняет exact
+bundle binding и audit trail.
 
 Реализация использует `CONTRACT_PREVIEW_REVIEW_ENABLED=true` только совместно с
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_RENDERER=browser_run` и
@@ -151,6 +166,13 @@ Append-only migration `0024_contract_preview_review.sql` расширяет та
 затем применяет `0024` и проверяет byte/field preservation, FK, recreated
 triggers и запрет несовместимых scope/basis pairings. Empty-install test эту
 проверку не заменяет.
+
+Append-only migration `0025_contract_storage_intent_generations.sql` добавляет
+intent family/generation, installer fencing lease и append-only
+`storage_intent_generations`; существующие intents backfill-ятся как generation
+1 без изменения их object/status evidence. Permanent populated regression
+проверяет exact upgrade `0024 → 0025`, immutable lineage/key, generation audit и
+FK integrity. Применённые migrations не переписываются.
 
 ## Production PDF renderer
 

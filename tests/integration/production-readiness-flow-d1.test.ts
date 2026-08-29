@@ -30,7 +30,10 @@ import { IndividualRequestRepository } from '$lib/server/requests/request-reposi
 import { IndividualRequestService } from '$lib/server/requests/request-service';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
-import type { ContractArtifactStore } from '$lib/server/contracts/storage';
+import type {
+	ContractArtifactStore,
+	ContractObjectReadLimits,
+} from '$lib/server/contracts/storage';
 import {
 	buildContractTemplateBundle,
 	contractTemplateBundleHashes,
@@ -116,7 +119,10 @@ class MemoryPrivateStore implements ContractArtifactStore, PrivacyArtifactStore 
 		return true;
 	}
 
-	async get(key: string): Promise<{ body: ArrayBuffer; size: number } | null> {
+	async get(
+		key: string,
+		_limits?: ContractObjectReadLimits
+	): Promise<{ body: ArrayBuffer; size: number } | null> {
 		const value = this.values.get(key);
 		if (!value) return null;
 		const copy = Uint8Array.from(value);

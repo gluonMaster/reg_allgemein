@@ -342,6 +342,8 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
+<!-- stage-13-current-review-status: pending_independent_review -->
+
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
 выполняет production deploy, remote production migration, реальный PII import
@@ -392,16 +394,18 @@ provider и training approvals остаются следующими release gat
 reversible evidence до точного внешнего gate, а owner input запрашивает только
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
-Exact full-manual-preview candidate
-`fa7aeeb40726089a72396b41b27ce93db1f2a096` прошёл полную local gate-цепочку,
-но independent read-only review 2026-08-27 вернул **NO-GO** с 2 HIGH и 2 MEDIUM.
-До любого `0024` apply/deploy обязательны: полный immutable renderer-source
-bundle и exact version resolution без fallback; D1 storage intent + atomic R2
-create-if-absent + server-side exact D1 install assertion; preview isolation до
-number/draft side effects; permanent populated `0023 → 0024` regression с
-existing templates/offers/artifacts/FK/triggers. Следующий gate — local
-remediation, полный proportional/final verification, новый immutable candidate
-и отдельный independent review. Remote preview/production state не менялся.
+Latest full-manual-preview candidate
+`02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, parent `fa7aeeb…`, получил новый
+independent **NO-GO** с 3 HIGH и 2 MEDIUM: renderer v1 зависел от mutable global
+helpers; R2 body materialize предшествовал size enforcement и не был
+ETag-bound; cleanup навсегда блокировал deterministic installer intent в
+`processing/deleted`; E2E оставлял fixed generated artifacts; status docs
+преждевременно заявляли GO. Local remediation добавляет bundle-bound immutable
+HTML engines v1/v2, metadata-first conditional range reads, append-only `0025`
+с generation-specific intent/R2 keys, run-owned E2E lifecycle и machine-checked
+pending-review status. Новый candidate имеет только статус
+`pending independent review`. До отдельного GO запрещены migration apply,
+deploy, remote D1/R2/provider actions и переход к manual preview.
 
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,

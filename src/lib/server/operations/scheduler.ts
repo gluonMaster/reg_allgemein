@@ -293,9 +293,13 @@ async function executeJob(
 							? config.r2ArchiveBucket
 							: config.r2QuarantineBucket;
 					await bucket.delete(intent.object_key);
-					if (await repository.completeDelete(intent.id, owner, now)) deleted += 1;
+					if (await repository.completeDelete(intent.id, intent.generation, owner, now)) {
+						deleted += 1;
+					}
 				} catch {
-					await repository.failDelete(intent.id, owner, now).catch(() => undefined);
+					await repository
+						.failDelete(intent.id, intent.generation, owner, now)
+						.catch(() => undefined);
 					failed += 1;
 				}
 			}

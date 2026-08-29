@@ -134,7 +134,27 @@ export interface ContractTemplateInstallRecord {
 	kuendigungFunctionRequired: 0 | 1;
 	earlyPerformanceSupported: 0 | 1;
 	storageIntentId: string;
+	storageIntentGeneration: number;
 	storageIntentSourceRef: string;
+}
+
+export interface StagedTemplateBundleIntent {
+	id: string;
+	objectKey: string;
+	generation: number;
+}
+
+function templateBundleGenerationKey(baseKey: string, generation: number): string {
+	if (generation === 1) return baseKey;
+	const extensionIndex = baseKey.lastIndexOf('.');
+	if (extensionIndex <= baseKey.lastIndexOf('/')) {
+		return `${baseKey}.generation-${generation}`;
+	}
+	return `${baseKey.slice(0, extensionIndex)}.generation-${generation}${baseKey.slice(extensionIndex)}`;
+}
+
+function templateBundleGenerationId(familyId: string, generation: number): string {
+	return generation === 1 ? familyId : `${familyId}:generation:${generation}`;
 }
 
 interface ContractTemplateSetInstall {
@@ -226,14 +246,17 @@ export class ContractRepository {
 		sha256: string;
 		sizeBytes: number;
 		now: string;
-	}): Promise<string> {
+		installerOwner: string;
+		installerLeaseUntil: string;
+	}): Promise<StagedTemplateBundleIntent> {
 		try {
 			await this.db.run({
 				sql: `INSERT OR IGNORE INTO storage_object_intents
 					(id, storage_class, object_key, object_kind, source_ref, sha256,
-					 size_bytes, status, attempts, created_at, updated_at)
+					 size_bytes, status, attempts, created_at, updated_at,
+					 intent_family_id, generation, installer_owner, installer_lease_until)
 				VALUES (?, 'archive', ?, 'contract_template_bundle', ?, ?, ?,
-					'staged', 0, ?, ?)`,
+					'staged', 0, ?, ?, ?, 1, ?, ?)`,
 				params: [
 					input.id,
 					input.objectKey,
@@ -242,12 +265,15 @@ export class ContractRepository {
 					input.sizeBytes,
 					input.now,
 					input.now,
+					input.id,
+					input.installerOwner,
+					input.installerLeaseUntil,
 				],
 			});
 		} catch (cause) {
 			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_STAGE_REJECTED', { cause });
 		}
-		const authoritative = await this.db.first<{
+		const family = await this.db.all<{
 			id: string;
 			storage_class: string;
 			object_key: string;
@@ -256,29 +282,105 @@ export class ContractRepository {
 			sha256: string;
 			size_bytes: number;
 			status: string;
+			intent_family_id: string | null;
+			generation: number;
+			installer_lease_until: string | null;
 		}>({
 			sql: `SELECT id, storage_class, object_key, object_kind, source_ref,
-				sha256, size_bytes, status
+				sha256, size_bytes, status, intent_family_id, generation,
+				installer_lease_until
 			FROM storage_object_intents
-			WHERE id = ? OR (storage_class = 'archive' AND object_key = ?)
-			ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END
-			LIMIT 1`,
-			params: [input.id, input.objectKey, input.id],
+			WHERE intent_family_id = ? OR id = ?
+			ORDER BY generation DESC, id DESC`,
+			params: [input.id, input.id],
+		});
+		if (family.results.length === 0) {
+			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_CONFLICT');
+		}
+		for (const generation of family.results) {
+			if (
+				generation.intent_family_id !== input.id ||
+				generation.storage_class !== 'archive' ||
+				generation.object_key !==
+					templateBundleGenerationKey(input.objectKey, generation.generation) ||
+				generation.object_kind !== 'contract_template_bundle' ||
+				generation.source_ref !== input.sourceRef ||
+				generation.sha256 !== input.sha256 ||
+				generation.size_bytes !== input.sizeBytes
+			) {
+				throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_CONFLICT');
+			}
+		}
+		const linked = family.results.find((generation) => generation.status === 'linked');
+		if (linked) {
+			return { id: linked.id, objectKey: linked.object_key, generation: linked.generation };
+		}
+		const latest = family.results[0];
+		if (
+			latest.status === 'staged' &&
+			latest.installer_lease_until !== null &&
+			latest.installer_lease_until > input.now
+		) {
+			return { id: latest.id, objectKey: latest.object_key, generation: latest.generation };
+		}
+
+		const nextGeneration = latest.generation + 1;
+		const next = {
+			id: templateBundleGenerationId(input.id, nextGeneration),
+			objectKey: templateBundleGenerationKey(input.objectKey, nextGeneration),
+			generation: nextGeneration,
+		};
+		try {
+			await this.db.run({
+				sql: `INSERT OR IGNORE INTO storage_object_intents
+					(id, storage_class, object_key, object_kind, source_ref, sha256,
+					 size_bytes, status, attempts, created_at, updated_at,
+					 intent_family_id, generation, installer_owner, installer_lease_until)
+				VALUES (?, 'archive', ?, 'contract_template_bundle', ?, ?, ?,
+					'staged', 0, ?, ?, ?, ?, ?, ?)`,
+				params: [
+					next.id,
+					next.objectKey,
+					input.sourceRef,
+					input.sha256,
+					input.sizeBytes,
+					input.now,
+					input.now,
+					input.id,
+					next.generation,
+					input.installerOwner,
+					input.installerLeaseUntil,
+				],
+			});
+		} catch (cause) {
+			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_STAGE_REJECTED', { cause });
+		}
+		const authoritative = await this.db.first<{
+			id: string;
+			object_key: string;
+			generation: number;
+			status: string;
+			source_ref: string | null;
+			sha256: string;
+			size_bytes: number;
+		}>({
+			sql: `SELECT id, object_key, generation, status, source_ref, sha256, size_bytes
+			FROM storage_object_intents
+			WHERE intent_family_id = ? AND generation = ?`,
+			params: [input.id, nextGeneration],
 		});
 		if (
 			!authoritative ||
-			authoritative.id !== input.id ||
-			authoritative.storage_class !== 'archive' ||
-			authoritative.object_key !== input.objectKey ||
-			authoritative.object_kind !== 'contract_template_bundle' ||
+			authoritative.id !== next.id ||
+			authoritative.object_key !== next.objectKey ||
+			authoritative.status !== 'staged' ||
 			authoritative.source_ref !== input.sourceRef ||
 			authoritative.sha256 !== input.sha256 ||
-			authoritative.size_bytes !== input.sizeBytes ||
-			!['staged', 'delete_pending', 'linked'].includes(authoritative.status)
+			authoritative.size_bytes !== input.sizeBytes
 		) {
 			throw new ContractRepositoryError('CONTRACT_TEMPLATE_INTENT_CONFLICT');
 		}
-		return authoritative.id;
+		return next;
 	}
 
 	private templateSetExactCondition(
@@ -384,6 +486,7 @@ export class ContractRepository {
 					sourceRef: template.storageIntentSourceRef,
 					sha256: template.bundleHash,
 					size: template.bundleSizeBytes,
+					generation: template.storageIntentGeneration,
 				})}
 				WHERE intent.id = json_extract(expected.value, '$.id')
 					AND intent.storage_class = 'archive'
@@ -392,6 +495,7 @@ export class ContractRepository {
 					AND intent.source_ref = json_extract(expected.value, '$.sourceRef')
 					AND intent.sha256 = json_extract(expected.value, '$.sha256')
 					AND intent.size_bytes = json_extract(expected.value, '$.size')
+					AND intent.generation = json_extract(expected.value, '$.generation')
 					AND intent.status = 'linked')`);
 		}
 		conditions.push(`EXISTS (SELECT 1 FROM audit_events audit
@@ -535,11 +639,12 @@ export class ContractRepository {
 			})),
 			...input.templates.map<StatementSpec>((template) => ({
 				sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
-					updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+					updated_at = ?, lease_owner = NULL, lease_until = NULL,
+					installer_owner = NULL, installer_lease_until = NULL, last_error_code = NULL
 				WHERE id = ? AND status IN ('staged','delete_pending')
 					AND storage_class = 'archive' AND object_key = ?
 					AND object_kind = 'contract_template_bundle' AND source_ref = ?
-					AND sha256 = ? AND size_bytes = ?
+					AND sha256 = ? AND size_bytes = ? AND generation = ?
 					AND EXISTS (SELECT 1 FROM contract_template_versions installed
 						WHERE installed.id = ? AND installed.template_bundle_r2_key = ?
 							AND installed.bundle_hash = ?)`,
@@ -551,6 +656,7 @@ export class ContractRepository {
 					template.storageIntentSourceRef,
 					template.bundleHash,
 					template.bundleSizeBytes,
+					template.storageIntentGeneration,
 					template.id,
 					template.bundleKey,
 					template.bundleHash,
@@ -561,7 +667,8 @@ export class ContractRepository {
 					(id, intent_id, target_kind, target_id, assertion_passed, created_at)
 				VALUES (?, ?, 'contract_template_version', ?, CASE WHEN
 					EXISTS (SELECT 1 FROM storage_object_intents WHERE id = ?
-						AND status = 'linked' AND object_key = ? AND sha256 = ?)
+						AND status = 'linked' AND object_key = ? AND sha256 = ?
+						AND generation = ?)
 					AND EXISTS (SELECT 1 FROM contract_template_versions WHERE id = ?
 						AND template_bundle_r2_key = ? AND bundle_hash = ?)
 				THEN 1 ELSE 0 END, ?)`,
@@ -572,6 +679,7 @@ export class ContractRepository {
 					template.storageIntentId,
 					template.bundleKey,
 					template.bundleHash,
+					template.storageIntentGeneration,
 					template.id,
 					template.bundleKey,
 					template.bundleHash,

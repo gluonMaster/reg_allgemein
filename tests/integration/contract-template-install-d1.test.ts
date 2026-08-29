@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { loadRuntimeConfig } from '$lib/server/config/runtime';
 import { ContractRepository } from '$lib/server/contracts/contract-repository';
 import { ContractService } from '$lib/server/contracts/contract-service';
-import type { ContractArtifactStore } from '$lib/server/contracts/storage';
+import {
+	ContractObjectReadError,
+	type ContractArtifactStore,
+	type ContractObjectReadLimits,
+} from '$lib/server/contracts/storage';
 import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
+import { StorageIntentRepository } from '$lib/server/operations/storage-intents';
 import { requireAdmin } from '$lib/server/security/authorization';
 import { createMigratedTestD1 } from '../helpers/d1';
 
@@ -19,6 +24,7 @@ const admin = requireAdmin({
 
 class AtomicMemoryStore implements ContractArtifactStore {
 	readonly values = new Map<string, Uint8Array>();
+	readonly reads: Array<{ key: string; limits: ContractObjectReadLimits }> = [];
 	failCreates = false;
 	throwAfterCreate = false;
 
@@ -34,9 +40,19 @@ class AtomicMemoryStore implements ContractArtifactStore {
 		return true;
 	}
 
-	async get(key: string) {
+	async get(key: string, limits: ContractObjectReadLimits) {
+		this.reads.push({ key, limits: { ...limits } });
 		const value = this.values.get(key);
 		if (!value) return null;
+		if (value.byteLength > limits.maximumSizeBytes) {
+			throw new ContractObjectReadError('CONTRACT_OBJECT_TOO_LARGE');
+		}
+		if (
+			limits.expectedSizeBytes !== undefined &&
+			value.byteLength !== limits.expectedSizeBytes
+		) {
+			throw new ContractObjectReadError('CONTRACT_OBJECT_SIZE_MISMATCH');
+		}
 		const copy = Uint8Array.from(value);
 		return { body: copy.buffer, size: copy.byteLength };
 	}
@@ -170,6 +186,14 @@ describe('contract template installation recovery in D1', () => {
 			]);
 			expect(first).toEqual(concurrent);
 			expect(store.values.size).toBe(4);
+			expect(store.reads.length).toBeGreaterThanOrEqual(8);
+			expect(
+				store.reads.every(
+					(read) =>
+						read.limits.maximumSizeBytes === 2 * 1024 * 1024 &&
+						read.limits.expectedSizeBytes !== undefined
+				)
+			).toBe(true);
 			expect(
 				await count(db, 'contract_template_versions', "usage_scope = 'preview_review'")
 			).toBe(4);
@@ -655,6 +679,158 @@ describe('contract template installation recovery in D1', () => {
 			).toBe(0);
 		} finally {
 			await templateConflictContext.dispose();
+		}
+	}, 240_000);
+
+	it('restages fenced generations after processing or deleted cleanup without stale deletion', async () => {
+		const firstNow = '2026-08-27T10:00:00.000Z';
+		const cleanupNow = '2026-08-27T10:20:00.000Z';
+		const cleanupLeaseUntil = '2026-08-27T10:25:00.000Z';
+
+		const processingContext = await createMigratedTestD1();
+		try {
+			const db = new DatabaseBoundary(processingContext.db);
+			await seedAdmin(db);
+			const store = new AtomicMemoryStore();
+			const crashing = new ContractService(
+				new ContractRepository(new ThrowBeforeBatchOnceBoundary(processingContext.db)),
+				store,
+				previewConfig(processingContext.db),
+				undefined,
+				() => firstNow
+			);
+			await expect(crashing.installPreviewReviewTemplates(admin)).rejects.toMatchObject({
+				code: 'CONTRACT_TEMPLATE_INSTALL_REJECTED',
+			});
+			expect(store.values.size).toBe(4);
+
+			const cleanup = new StorageIntentRepository(db);
+			const claimed = await cleanup.claimCleanup({
+				now: cleanupNow,
+				stagedBefore: firstNow,
+				leaseOwner: 'stale-template-cleaner',
+				leaseUntil: cleanupLeaseUntil,
+				limit: 10,
+			});
+			expect(claimed).toHaveLength(4);
+			expect(claimed.every((intent) => intent.generation === 1)).toBe(true);
+
+			const retry = () =>
+				new ContractService(
+					new ContractRepository(db),
+					store,
+					previewConfig(processingContext.db),
+					undefined,
+					() => cleanupNow
+				).installPreviewReviewTemplates(admin);
+			const [retryA, retryB] = await Promise.all([retry(), retry()]);
+			expect(retryA).toEqual(retryB);
+			expect(store.values.size).toBe(8);
+
+			for (const stale of claimed) {
+				await store.delete(stale.object_key);
+				expect(
+					await cleanup.completeDelete(
+						stale.id,
+						stale.generation,
+						'stale-template-cleaner',
+						cleanupNow
+					)
+				).toBe(true);
+			}
+
+			const intents = (
+				await db.all<{
+					id: string;
+					object_key: string;
+					generation: number;
+					status: string;
+				}>({
+					sql: `SELECT id, object_key, generation, status
+						FROM storage_object_intents
+						WHERE object_kind = 'contract_template_bundle'
+						ORDER BY intent_family_id, generation`,
+				})
+			).results;
+			expect(intents.filter((intent) => intent.status === 'deleted')).toHaveLength(4);
+			expect(intents.filter((intent) => intent.status === 'linked')).toHaveLength(4);
+			expect(intents.filter((intent) => intent.generation === 2)).toHaveLength(4);
+			expect(store.values.size).toBe(4);
+			for (const linked of intents.filter((intent) => intent.status === 'linked')) {
+				expect(store.values.has(linked.object_key)).toBe(true);
+			}
+			expect(await count(db, 'storage_intent_generations')).toBe(8);
+			await expect(retry()).resolves.toEqual(retryA);
+			expect(await count(db, 'storage_object_intents')).toBe(8);
+			expect(store.values.size).toBe(4);
+		} finally {
+			await processingContext.dispose();
+		}
+
+		const deletedContext = await createMigratedTestD1();
+		try {
+			const db = new DatabaseBoundary(deletedContext.db);
+			await seedAdmin(db);
+			const store = new AtomicMemoryStore();
+			store.failCreates = true;
+			const failed = new ContractService(
+				new ContractRepository(db),
+				store,
+				previewConfig(deletedContext.db),
+				undefined,
+				() => firstNow
+			);
+			await expect(failed.installPreviewReviewTemplates(admin)).rejects.toMatchObject({
+				code: 'CONTRACT_TEMPLATE_BUNDLE_WRITE_UNRESOLVED',
+			});
+
+			const cleanup = new StorageIntentRepository(db);
+			const claimed = await cleanup.claimCleanup({
+				now: cleanupNow,
+				stagedBefore: firstNow,
+				leaseOwner: 'completed-template-cleaner',
+				leaseUntil: cleanupLeaseUntil,
+				limit: 10,
+			});
+			for (const intent of claimed) {
+				expect(
+					await cleanup.completeDelete(
+						intent.id,
+						intent.generation,
+						'completed-template-cleaner',
+						cleanupNow
+					)
+				).toBe(true);
+			}
+
+			store.failCreates = false;
+			const retry = new ContractService(
+				new ContractRepository(db),
+				store,
+				previewConfig(deletedContext.db),
+				undefined,
+				() => cleanupNow
+			);
+			await expect(retry.installPreviewReviewTemplates(admin)).resolves.toHaveLength(4);
+			expect(
+				await count(
+					db,
+					'storage_object_intents',
+					"object_kind = 'contract_template_bundle' AND status = 'deleted' AND generation = 1"
+				)
+			).toBe(4);
+			expect(
+				await count(
+					db,
+					'storage_object_intents',
+					"object_kind = 'contract_template_bundle' AND status = 'linked' AND generation = 2"
+				)
+			).toBe(4);
+			expect(store.values.size).toBe(4);
+			await expect(retry.installPreviewReviewTemplates(admin)).resolves.toHaveLength(4);
+			expect(await count(db, 'storage_object_intents')).toBe(8);
+		} finally {
+			await deletedContext.dispose();
 		}
 	}, 240_000);
 });

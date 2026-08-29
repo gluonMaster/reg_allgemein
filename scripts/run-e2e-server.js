@@ -1,67 +1,79 @@
 // @ts-check
 import { randomBytes } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const wranglerRoot = resolve(repositoryRoot, '.wrangler');
-const runtimeRoot = resolve(wranglerRoot, 'e2e-runtime');
-const expectedRelativeTarget = join('.wrangler', 'e2e-runtime');
-const actualRelativeTarget = relative(repositoryRoot, runtimeRoot);
-const runtimeEnvironmentFile = resolve(runtimeRoot, 'runtime.env');
-const wranglerLogRoot = resolve(tmpdir(), 'reg-allgemein-wrangler-e2e-logs');
-const wranglerConfigRoot = resolve(tmpdir(), 'reg-allgemein-wrangler-e2e-config');
-
-if (
-	actualRelativeTarget !== expectedRelativeTarget ||
-	runtimeRoot !== resolve(repositoryRoot, expectedRelativeTarget) ||
-	runtimeRoot === repositoryRoot
-) {
-	throw new Error('Refusing to reset an E2E path outside .wrangler/e2e-runtime.');
+const runtimeRoot = process.env.KOLIBRI_E2E_RUNTIME_ROOT;
+if (!runtimeRoot) {
+	throw new Error('KOLIBRI_E2E_RUNTIME_ROOT must be owned by the E2E wrapper.');
 }
-
-if (existsSync(wranglerRoot) && lstatSync(wranglerRoot).isSymbolicLink()) {
-	throw new Error('Refusing to reset E2E state through a symbolic .wrangler directory.');
+const run = {
+	root: resolve(runtimeRoot),
+	runtimeEnvironmentFile: join(resolve(runtimeRoot), 'runtime.env'),
+	stateRoot: join(resolve(runtimeRoot), 'state'),
+	logRoot: join(resolve(runtimeRoot), 'logs'),
+	configRoot: join(resolve(runtimeRoot), 'config'),
+};
+const port = Number(process.env.KOLIBRI_E2E_PORT ?? '4173');
+if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+	throw new Error('KOLIBRI_E2E_PORT must be a valid TCP port.');
 }
-if (existsSync(runtimeRoot) && lstatSync(runtimeRoot).isSymbolicLink()) {
-	throw new Error('Refusing to reset a symbolic .wrangler/e2e-runtime path.');
-}
-
-rmSync(runtimeRoot, { recursive: true, force: true });
-mkdirSync(runtimeRoot, { recursive: true });
-mkdirSync(wranglerLogRoot, { recursive: true });
-mkdirSync(wranglerConfigRoot, { recursive: true });
 
 const syntheticJwtSecret = randomBytes(48).toString('base64url');
-writeFileSync(runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n`, {
+writeFileSync(run.runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n`, {
 	encoding: 'utf8',
 	mode: 0o600,
 });
 
 const wranglerBin = resolve(repositoryRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
-const persistedState = join('.wrangler', 'e2e-runtime');
 const wranglerConfig = 'wrangler.e2e.toml';
 const localWranglerEnvironment = {
 	...process.env,
-	WRANGLER_LOG_PATH: wranglerLogRoot,
-	XDG_CONFIG_HOME: wranglerConfigRoot,
+	CI: '1',
+	WRANGLER_LOG_PATH: run.logRoot,
+	XDG_CONFIG_HOME: run.configRoot,
 };
 
 /** @param {string[]} arguments_ */
 function runWrangler(arguments_) {
 	const result = spawnSync(process.execPath, [wranglerBin, ...arguments_], {
 		cwd: repositoryRoot,
-		env: { ...localWranglerEnvironment, CI: '1' },
+		env: localWranglerEnvironment,
 		stdio: 'inherit',
 	});
 	if (result.error) throw result.error;
 	if (result.status !== 0) {
 		throw new Error(`Local E2E Wrangler command failed with status ${result.status}.`);
 	}
+}
+
+let vite;
+let runtimeEnvironmentWatch;
+let stopping;
+
+async function shutdown(exitCode) {
+	if (stopping) return stopping;
+	if (runtimeEnvironmentWatch) clearInterval(runtimeEnvironmentWatch);
+	// Vite can wait indefinitely for keep-alive browser connections during a
+	// Playwright-owned shutdown. The process exit is the lifecycle boundary, so
+	// close active sockets first and let Node release the listener immediately.
+	vite?.httpServer?.closeAllConnections?.();
+	stopping = Promise.resolve(exitCode);
+	return stopping;
+}
+
+function requestShutdown(exitCode) {
+	void shutdown(exitCode)
+		.then((code) => process.exit(code))
+		.catch(() => process.exit(1));
+}
+
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+	process.once(signal, () => requestShutdown(0));
 }
 
 try {
@@ -74,7 +86,7 @@ try {
 		'--config',
 		wranglerConfig,
 		'--persist-to',
-		persistedState,
+		run.stateRoot,
 	]);
 	runWrangler([
 		'd1',
@@ -84,66 +96,36 @@ try {
 		'--config',
 		wranglerConfig,
 		'--persist-to',
-		persistedState,
+		run.stateRoot,
 		'--file',
 		'tests/e2e/fixtures/authenticated-seed.sql',
 		'--yes',
 	]);
-} catch (error) {
-	rmSync(runtimeEnvironmentFile, { force: true });
-	throw error;
-}
 
-process.env.KOLIBRI_E2E = '1';
-process.env.WRANGLER_LOG_PATH = wranglerLogRoot;
-process.env.XDG_CONFIG_HOME = wranglerConfigRoot;
+	process.env.KOLIBRI_E2E = '1';
+	process.env.KOLIBRI_E2E_PORT = String(port);
+	process.env.KOLIBRI_E2E_RUNTIME_ROOT = run.root;
+	process.env.WRANGLER_LOG_PATH = run.logRoot;
+	process.env.XDG_CONFIG_HOME = run.configRoot;
 
-const removeGeneratedEnvironment = () => rmSync(runtimeEnvironmentFile, { force: true });
-const vite = await createServer({
-	root: repositoryRoot,
-	server: {
-		host: '127.0.0.1',
-		port: 4173,
-		strictPort: true,
-	},
-});
-
-try {
+	vite = await createServer({
+		root: repositoryRoot,
+		server: {
+			host: '127.0.0.1',
+			port,
+			strictPort: true,
+		},
+	});
 	await vite.listen();
 	vite.printUrls();
+	runtimeEnvironmentWatch = setInterval(() => {
+		if (!existsSync(run.runtimeEnvironmentFile)) requestShutdown(1);
+	}, 250);
+	vite.httpServer?.once('error', () => requestShutdown(1));
+	vite.httpServer?.once('close', () => {
+		if (!stopping) requestShutdown(1);
+	});
 } catch (error) {
-	removeGeneratedEnvironment();
+	await shutdown(1);
 	throw error;
 }
-
-let stopping = false;
-const runtimeEnvironmentWatch = setInterval(() => {
-	if (!existsSync(runtimeEnvironmentFile)) stop();
-}, 250);
-
-function stop() {
-	if (stopping) return;
-	stopping = true;
-	clearInterval(runtimeEnvironmentWatch);
-	removeGeneratedEnvironment();
-	process.exit(0);
-}
-
-process.once('SIGINT', () => {
-	stop();
-});
-process.once('SIGTERM', () => {
-	stop();
-});
-process.once('exit', removeGeneratedEnvironment);
-
-vite.httpServer?.once('error', () => {
-	clearInterval(runtimeEnvironmentWatch);
-	removeGeneratedEnvironment();
-	process.exit(1);
-});
-vite.httpServer?.once('close', () => {
-	clearInterval(runtimeEnvironmentWatch);
-	removeGeneratedEnvironment();
-	if (!stopping) process.exit(1);
-});

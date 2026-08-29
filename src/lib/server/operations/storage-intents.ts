@@ -6,6 +6,7 @@ export interface StorageIntent {
 	id: string;
 	storage_class: StorageClass;
 	object_key: string;
+	generation: number;
 }
 
 function assertLimit(limit: number): void {
@@ -28,22 +29,25 @@ export class StorageIntentRepository {
 	}): Promise<string> {
 		const id = crypto.randomUUID();
 		const result = await this.db.run({
-			sql: `INSERT INTO storage_object_intents
+				sql: `INSERT INTO storage_object_intents
 				(id, storage_class, object_key, object_kind, source_ref, sha256, size_bytes,
 				 status, attempts, lease_owner, lease_until, last_error_code, linked_at,
-				 deleted_at, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, 'staged', 0, NULL, NULL, NULL, NULL, NULL, ?, ?)`,
+				 deleted_at, created_at, updated_at, intent_family_id, generation,
+				 installer_owner, installer_lease_until)
+			VALUES (?, ?, ?, ?, ?, ?, ?, 'staged', 0, NULL, NULL, NULL, NULL, NULL, ?, ?,
+				?, 1, NULL, NULL)`,
 			params: [id, input.storageClass, input.objectKey, input.objectKind,
-				input.sourceRef ?? null, input.sha256, input.sizeBytes, input.now, input.now],
+				input.sourceRef ?? null, input.sha256, input.sizeBytes, input.now, input.now, id],
 		});
-		if ((result.meta.changes ?? 0) !== 1) throw new Error('STORAGE_INTENT_STAGE_FAILED');
+		if ((result.meta.changes ?? 0) < 1) throw new Error('STORAGE_INTENT_STAGE_FAILED');
 		return id;
 	}
 
 	async markLinked(id: string, now: string): Promise<boolean> {
 		const result = await this.db.run({
 			sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
-				updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+				updated_at = ?, lease_owner = NULL, lease_until = NULL,
+				installer_owner = NULL, installer_lease_until = NULL, last_error_code = NULL
 			WHERE id = ? AND status = 'staged'`,
 			params: [now, now, id],
 		});
@@ -53,7 +57,8 @@ export class StorageIntentRepository {
 	async markDeletePending(id: string, now: string): Promise<void> {
 		await this.db.run({
 			sql: `UPDATE storage_object_intents SET status = 'delete_pending', updated_at = ?,
-				lease_owner = NULL, lease_until = NULL
+				lease_owner = NULL, lease_until = NULL,
+				installer_owner = NULL, installer_lease_until = NULL
 			WHERE id = ? AND status IN ('staged','processing')`,
 			params: [now, id],
 		});
@@ -84,7 +89,8 @@ export class StorageIntentRepository {
 		assertLimit(limit);
 		const result = await this.db.run({
 			sql: `UPDATE storage_object_intents SET status = 'linked', linked_at = ?,
-				updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
+				updated_at = ?, lease_owner = NULL, lease_until = NULL,
+				installer_owner = NULL, installer_lease_until = NULL, last_error_code = NULL
 			WHERE id IN (SELECT intent.id FROM storage_object_intents intent
 				WHERE intent.status IN ('staged','delete_pending')
 					AND (${this.referencedObjectSql('intent')})
@@ -103,14 +109,15 @@ export class StorageIntentRepository {
 	}): Promise<StorageIntent[]> {
 		assertLimit(input.limit);
 		const candidates = await this.db.all<StorageIntent>({
-			sql: `SELECT intent.id, intent.storage_class, intent.object_key
+			sql: `SELECT intent.id, intent.storage_class, intent.object_key, intent.generation
 			FROM storage_object_intents intent
 			WHERE ((intent.status = 'delete_pending')
-				OR (intent.status = 'staged' AND intent.created_at <= ?)
+				OR (intent.status = 'staged' AND intent.created_at <= ?
+					AND (intent.installer_lease_until IS NULL OR intent.installer_lease_until <= ?))
 				OR (intent.status = 'processing' AND intent.lease_until <= ?))
 				AND NOT (${this.referencedObjectSql('intent')})
 			ORDER BY intent.created_at, intent.id LIMIT ?`,
-			params: [input.stagedBefore, input.now, input.limit],
+			params: [input.stagedBefore, input.now, input.now, input.limit],
 		});
 		const claimed: StorageIntent[] = [];
 		for (const candidate of candidates.results) {
@@ -118,33 +125,42 @@ export class StorageIntentRepository {
 				sql: `UPDATE storage_object_intents AS intent
 					SET status = 'processing', attempts = attempts + 1,
 					lease_owner = ?, lease_until = ?, last_error_code = NULL, updated_at = ?
-				WHERE intent.id = ? AND ((intent.status IN ('staged','delete_pending'))
+				WHERE intent.id = ? AND intent.generation = ?
+					AND ((intent.status = 'delete_pending')
+					OR (intent.status = 'staged'
+						AND (intent.installer_lease_until IS NULL OR intent.installer_lease_until <= ?))
 					OR (intent.status = 'processing' AND intent.lease_until <= ?))
 					AND NOT (${this.referencedObjectSql('intent')})`,
-				params: [input.leaseOwner, input.leaseUntil, input.now, candidate.id, input.now],
+				params: [input.leaseOwner, input.leaseUntil, input.now, candidate.id,
+					candidate.generation, input.now, input.now],
 			});
 			if ((result.meta.changes ?? 0) === 1) claimed.push(candidate);
 		}
 		return claimed;
 	}
 
-	async completeDelete(id: string, leaseOwner: string, now: string): Promise<boolean> {
+	async completeDelete(
+		id: string,
+		generation: number,
+		leaseOwner: string,
+		now: string
+	): Promise<boolean> {
 		const result = await this.db.run({
 			sql: `UPDATE storage_object_intents SET status = 'deleted', deleted_at = ?,
 				updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL
-			WHERE id = ? AND status = 'processing' AND lease_owner = ?`,
-			params: [now, now, id, leaseOwner],
+			WHERE id = ? AND generation = ? AND status = 'processing' AND lease_owner = ?`,
+			params: [now, now, id, generation, leaseOwner],
 		});
 		return (result.meta.changes ?? 0) === 1;
 	}
 
-	async failDelete(id: string, leaseOwner: string, now: string): Promise<void> {
+	async failDelete(id: string, generation: number, leaseOwner: string, now: string): Promise<void> {
 		await this.db.run({
 			sql: `UPDATE storage_object_intents SET status = 'delete_pending',
 				last_error_code = 'R2_DELETE_FAILED', updated_at = ?,
 				lease_owner = NULL, lease_until = NULL
-			WHERE id = ? AND status = 'processing' AND lease_owner = ?`,
-			params: [now, id, leaseOwner],
+			WHERE id = ? AND generation = ? AND status = 'processing' AND lease_owner = ?`,
+			params: [now, id, generation, leaseOwner],
 		});
 	}
 }

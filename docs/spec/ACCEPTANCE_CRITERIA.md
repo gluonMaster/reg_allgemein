@@ -564,9 +564,11 @@ MVP готов, когда:
   изменении base body, kind clause, fixed copy, helper/schema/adapter, CSS/font/
   asset либо связанного snapshot hash. Он строится из полного canonical bundle,
   а не только `Function.toString()` delegating wrapper; hash фактически
-  полученного self-contained HTML сохраняется отдельно. Cross-deploy regression
-  доказывает, что установленная v1 продолжает разрешаться из exact v1 bundle
-  после добавления v2, а unknown/missing v1 завершается fail-closed без fallback.
+  полученного self-contained HTML сохраняется отдельно. Exact bundle содержит
+  renderer engine version; v1 и v2 имеют разные immutable dispatch paths и
+  собственные output-affecting helpers. Committed v1 golden HTML/hash остаётся
+  byte-for-byte тем же после реальной регистрации/render v2 и изменения v2
+  helper, а unknown/missing engine завершается fail-closed без fallback.
   (`CONTRACT-03`, `CONTRACT-13`, `CONTRACT-22`)
 - **AC-CONTRACT-03.** Два concurrent install одной version с одинаковыми bytes
   создают один неизменяемый R2 object, одну exact D1 installation и один success
@@ -574,7 +576,10 @@ MVP готов, когда:
   atomic create-if-absent не позволяет второму writer перезаписать object, а D1
   не оставляет partial provider/media/template rows либо ложный installed audit.
   Crash/ambiguous windows `intent → R2 → D1 link` восстанавливаются штатным
-  reconciler. (`REL-01`, `CONTRACT-23`)
+  reconciler. Aged staged intent во время/после cleanup получает новую immutable
+  generation/key; stale cleaner не удаляет новый object, expired processing не
+  блокирует retry, а повторный retry остаётся идемпотентным. Финальные D1/R2 и
+  append-only generation audit согласованы. (`REL-01`, `CONTRACT-23`)
 - **AC-CONTRACT-04.** Seeded `preview_review` row в production либо выключенный
   preview flag отклоняются до `prepareNumber`, draft/operational record,
   idempotency/audit и любого другого D1/R2 side effect; direct service/API и UI
@@ -586,6 +591,16 @@ MVP готов, когда:
   сохранены, разрешённые preview scope/basis работают, а forbidden pairings
   отклоняются. Fresh empty migration sequence этот regression не заменяет.
   (`CONTRACT-21`, `CONTRACT-23`)
+- **AC-CONTRACT-06.** Normal template/artifact load, winning/losing installer
+  verification, recovery, owner/admin download и email attachment отклоняют
+  oversized object по metadata до body read. Exact maximum читается только
+  bounded `maximum + 1` range, связанный ETag conditional request с проверенным
+  metadata; max+1, truncated, changed-between-requests и hash-invalid object
+  fail closed без unbounded/full-body `arrayBuffer()`. (`CONTRACT-23`, `SEC-01`)
+- **AC-CONTRACT-07.** Permanent populated migration test применяет append-only
+  `0025` к схеме `0001`–`0024`, сохраняет прежние intent fields/status/object
+  keys, backfill-ит generation 1, создаёт immutable generation history и
+  запрещает missing/mutable lineage; FK остаются целыми. (`CONTRACT-23`, `REL-01`)
 - Browser Run получает только self-contained inline HTML; successful attempt
   сохраняет PDF/hash/browser-ms в private R2 до `sent`. 429/5xx ограничены тремя
   retry, budget/size excess и final failure оставляют offer в `draft`.

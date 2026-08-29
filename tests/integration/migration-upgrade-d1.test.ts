@@ -1,38 +1,8 @@
 import { applyTestD1Migrations, createMigratedTestD1, listTestD1MigrationIds } from '../helpers/d1';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import { PrivacyRepository } from '$lib/server/privacy/privacy-repository';
-import { loadRuntimeConfig } from '$lib/server/config/runtime';
-import { ContractRepository } from '$lib/server/contracts/contract-repository';
-import { ContractService } from '$lib/server/contracts/contract-service';
-import type { ContractArtifactStore } from '$lib/server/contracts/storage';
-import { requireAdmin } from '$lib/server/security/authorization';
 
 const SYNTHETIC_NOW = '2026-07-22T10:00:00.000Z';
-
-class MigrationContractStore implements ContractArtifactStore {
-	readonly values = new Map<string, Uint8Array>();
-
-	async put(key: string, body: Uint8Array) {
-		this.values.set(key, Uint8Array.from(body));
-	}
-
-	async putIfAbsent(key: string, body: Uint8Array) {
-		if (this.values.has(key)) return false;
-		this.values.set(key, Uint8Array.from(body));
-		return true;
-	}
-
-	async get(key: string) {
-		const value = this.values.get(key);
-		if (!value) return null;
-		const copy = Uint8Array.from(value);
-		return { body: copy.buffer, size: copy.byteLength };
-	}
-
-	async delete(key: string) {
-		this.values.delete(key);
-	}
-}
 
 describe('D1 production migration upgrade', () => {
 	it('upgrades a populated pre-production schema without losing synthetic records', async () => {
@@ -596,14 +566,7 @@ describe('D1 production migration upgrade', () => {
 		try {
 			expect(context.migrationIds.at(-1)).toBe('0023_legacy_projection_lookup_indexes.sql');
 			const db = new DatabaseBoundary(context.db);
-			const admin = requireAdmin({
-				id: 'contract-upgrade-admin',
-				role: 'admin',
-				emailVerified: true,
-				sessionId: 'contract-upgrade-admin-session',
-				sessionVersion: 1,
-				csrfHash: 'contract-upgrade-admin-csrf',
-			});
+			const adminId = 'contract-upgrade-admin';
 			await db.batch([
 				{
 					sql: `INSERT INTO academic_periods
@@ -654,7 +617,7 @@ describe('D1 production migration upgrade', () => {
 					1,
 				],
 				[
-					admin.id,
+					adminId,
 					'contract-upgrade-admin@example.test',
 					'admin',
 					null,
@@ -714,118 +677,155 @@ describe('D1 production migration upgrade', () => {
 				},
 			]);
 
-			const store = new MigrationContractStore();
-			const config = loadRuntimeConfig({
-				APP_ENV: 'test',
-				PORTAL_PUBLIC_ORIGIN: 'https://portal.example.test',
-				DB: context.db,
-				R2_ARCHIVE: { get() {}, put() {}, delete() {} } as unknown as R2Bucket,
-				R2_QUARANTINE: { get() {}, put() {}, delete() {} } as unknown as R2Bucket,
-				CONTRACT_SEND_ENABLED: 'true',
-				CONTRACT_RENDERER: 'synthetic_test',
-			});
-			const repository = new ContractRepository(db);
-			const service = new ContractService(
-				repository,
-				store,
-				config,
-				undefined,
-				() => SYNTHETIC_NOW
-			);
-			await service.installSyntheticTestFixtures(admin);
-			const created = await service.createDraft({
-				admin,
-				requestId: 'contract-upgrade-create',
-				payload: {
-					userId: 'contract-upgrade-parent',
-					childId: 'contract-upgrade-child',
-					academicPeriodId: 'contract-upgrade-period',
-					templateVersionId: 'contract-template:synthetic:group_yearly:v1',
-					renderInput: {
-						schemaVersion: 'contract-render-v1',
-						templateId: 'group_yearly',
-						provider: {
-							fullName: 'Synthetic provider',
-							addressLines: ['Synthetic address'],
-							role: 'provider',
-							payerRole: false,
-							paymentTermsVersion: 'synthetic-payment-v1',
-						},
-						parent: {
-							fullName: 'Synthetic parent',
-							addressLines: ['Synthetic address'],
-							role: 'contracting_parent',
-							payerRole: true,
-						},
-						child: {
-							fullName: 'Synthetic child',
-							addressLines: ['Synthetic address'],
-							role: 'child',
-							payerRole: false,
-							birthDate: '2017-03-04',
-						},
-						service: {
-							relation: 'course',
-							courseGroupId: 'contract-upgrade-course',
-							requestId: null,
-							requestKind: null,
-							fundingAuthorizationId: null,
-							subject: 'Mathematik',
-							scheduleLines: ['Synthetic schedule'],
-							effectiveFrom: '2026-08-01',
-							effectiveTo: null,
-						},
-						billing: {
-							model: 'monthly_group_fee',
-							currency: 'EUR',
-							unitMinutes: null,
-							priceSource: 'excel_yearly',
-							priceMode: 'rule_derived',
-							basePriceCents: 4600,
-							finalPriceCents: 4600,
-							amountSemantics: 'base_price',
-							paymentArrangement: 'manual_payment',
-							paymentDueDay: 7,
-							billingPeriodCode: 'calendar_month',
-							lineItems: [
-								{
-									code: 'base',
-									description: 'Synthetic base price',
-									amountCents: 4600,
-									semantics: 'base_price',
-									basis: 'synthetic fixture',
-								},
-							],
-							basePriceDisclaimer: true,
-						},
-						term: {
-							initialTermText: 'Synthetic initial term.',
-							renewalText: 'Synthetic renewal.',
-							ordinaryTerminationText: 'Synthetic ordinary termination.',
-							extraordinaryTerminationText: 'Synthetic extraordinary termination.',
-						},
-						legal: {
-							clauseSetVersion: 'synthetic-clause-v1',
-							attachments: ['Synthetic privacy notice'],
-							privacyNoticeVersion: 'privacy-v1',
-							distanceLegalProfile: 'offline_only',
-							distanceLegalBasisHash: null,
-							withdrawalTextVersion: 'synthetic-withdrawal-v1',
-							earlyPerformanceRequestVersion: null,
-							wertersatzNoticeVersion: null,
-							mediaClauseVersion: 'synthetic-media-v1',
-						},
-					},
-					expiresAt: '2026-09-05T10:00:00.000Z',
-					idempotencyKey: 'contract-upgrade-create',
+			// Seed with the exact pre-0024 schema instead of invoking current runtime
+			// code, which intentionally requires the later 0025 generation columns.
+			const created = { offerId: 'contract-upgrade-offer' };
+			const hashes = {
+				payment: '1'.repeat(64),
+				media: '2'.repeat(64),
+				bundle: '3'.repeat(64),
+				html: '4'.repeat(64),
+				css: '5'.repeat(64),
+				renderInput: '6'.repeat(64),
+				source: '7'.repeat(64),
+				offer: '8'.repeat(64),
+				htmlArtifact: '9'.repeat(64),
+				pdfArtifact: 'a'.repeat(64),
+			};
+			await db.batch([
+				{
+					sql: `INSERT INTO contract_provider_versions
+							(id, version, provider_snapshot_json, payment_terms_version,
+							 payment_terms_hash, approval_status, approved_by, approved_at, created_at)
+						 VALUES ('contract-provider:synthetic-v1', 'synthetic-provider-v1', '{}',
+							 'synthetic-payment-v1', ?, 'approved', ?, ?, ?)`,
+					params: [hashes.payment, adminId, SYNTHETIC_NOW, SYNTHETIC_NOW],
 				},
-			});
-			await service.renderAndSend({
-				admin,
-				offerId: created.offerId,
-				idempotencyKey: 'contract-upgrade-render',
-				requestId: 'contract-upgrade-render',
-			});
+				{
+					sql: `INSERT INTO media_withdrawal_contact_versions
+							(id, version, contact_snapshot_json, snapshot_hash, german_text_version,
+							 approval_status, compliance_assessment_status, approved_by, approved_at,
+							 created_at)
+						 VALUES ('media-contact:synthetic-v1', 'synthetic-media-v1', '{}', ?,
+							 'synthetic-media-text-v1', 'approved', 'not_assessed', ?, ?, ?)`,
+					params: [hashes.media, adminId, SYNTHETIC_NOW, SYNTHETIC_NOW],
+				},
+				{
+					sql: `INSERT INTO contract_template_versions
+							(id, template_id, template_version, render_schema_version,
+							 clause_set_version, provider_version_id, media_contact_version_id,
+							 template_bundle_r2_key, bundle_hash, html_source_hash, css_source_hash,
+							 asset_manifest_json, font_manifest_json, required_fields_json,
+							 renderer_id, renderer_contract_version, worker_compatibility_date,
+							 usage_scope, approval_status, approval_basis, distance_legal_profile,
+							 distance_legal_basis_version, distance_legal_basis_hash,
+							 kuendigung_function_required, early_performance_supported,
+							 approved_by, approved_at, valid_from, valid_to, created_at)
+						 VALUES ('contract-template:synthetic:group_yearly:v1', 'group_yearly',
+							 'synthetic-template-v1', 'contract-render-v1', 'synthetic-clause-v1',
+							 'contract-provider:synthetic-v1', 'media-contact:synthetic-v1',
+							 'contract-templates/synthetic/group-yearly-v1.json', ?, ?, ?, '{}', '{}',
+							 '[]', 'synthetic-test-pdf-v1', 'pdf-adapter-v1', '2026-03-24',
+							 'synthetic_test', 'approved', 'synthetic_fixture', 'offline_only',
+							 NULL, NULL, 0, 0, ?, ?, '2026-01-01', NULL, ?)`,
+					params: [
+						hashes.bundle,
+						hashes.html,
+						hashes.css,
+						adminId,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+					],
+				},
+				{
+					sql: `INSERT INTO enrollments
+							(id, user_id, child_id, course_group_id, legacy_enrollment_id,
+							 lesson_kind, status, contract_kind, active_from, active_until,
+							 current_price_cents, price_source, price_mode, price_effective_from,
+							 manual_override_reason, manual_override_by, manual_override_at,
+							 source, created_at, updated_at)
+						 VALUES ('contract-upgrade-enrollment', 'contract-upgrade-parent',
+							 'contract-upgrade-child', 'contract-upgrade-course', NULL, 'group',
+							 'contract_offered', 'group_yearly', '2026-08-01', NULL, 4600,
+							 'excel_yearly', 'rule_derived', '2026-08-01', NULL, NULL, NULL,
+							 'admin', ?, ?)`,
+					params: [SYNTHETIC_NOW, SYNTHETIC_NOW],
+				},
+				{
+					sql: `INSERT INTO contract_offers
+							(id, series_id, version, offer_number, contract_number, user_id, child_id,
+							 family_number_id_at_issue, family_display_id_at_issue,
+							 family_version_at_issue, academic_period_id, course_group_id, enrollment_id,
+							 contract_kind, template_version_id, render_schema_version, effective_from,
+							 billing_model, currency, price_source, price_mode, base_price_cents,
+							 price_cents, amount_semantics, payment_arrangement, payment_due_day,
+							 billing_period_code, provider_snapshot_json, party_snapshot_json,
+							 service_snapshot_json, schedule_snapshot_json, billing_snapshot_json,
+							 line_items_json, term_snapshot_json, termination_snapshot_json,
+							 withdrawal_snapshot_json, distance_legal_profile_snapshot_json,
+							 clauses_manifest_json, attachments_manifest_json, privacy_notice_version,
+							 media_clause_version, render_input_json, render_input_hash,
+							 source_manifest_json, source_manifest_hash, contract_html_r2_key,
+							 contract_pdf_r2_key, contract_hash, render_status, status, sent_at,
+							 expires_at, created_by_admin_user_id, created_at, updated_at)
+						 VALUES (?, 'contract-upgrade-series', 1, 'OFFER-UPGRADE-1', '2. 9876-1',
+							 'contract-upgrade-parent', 'contract-upgrade-child',
+							 'contract-upgrade-family', '2. 9876', 1, 'contract-upgrade-period',
+							 'contract-upgrade-course', 'contract-upgrade-enrollment', 'group_yearly',
+							 'contract-template:synthetic:group_yearly:v1', 'contract-render-v1',
+							 '2026-08-01', 'monthly_group_fee', 'EUR', 'excel_yearly', 'rule_derived',
+							 4600, 4600, 'base_price', 'manual_payment', 7, 'calendar_month', '{}',
+							 '{}', '{}', '[]', '{}', '[]', '{}', '{}', '{}', '{}', '{}',
+							 '[]', 'privacy-v1', 'synthetic-media-v1', '{}', ?, '{}', ?,
+							 'contract-artifacts/upgrade/offer.html',
+							 'contract-artifacts/upgrade/offer.pdf', ?, 'ready', 'sent', ?,
+							 '2026-09-05T10:00:00.000Z', ?, ?, ?)`,
+					params: [
+						created.offerId,
+						hashes.renderInput,
+						hashes.source,
+						hashes.offer,
+						SYNTHETIC_NOW,
+						adminId,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+					],
+				},
+				{
+					sql: `INSERT INTO contract_artifacts
+							(id, contract_offer_id, formation_certificate_id, artifact_kind,
+							 private_r2_key, content_type, size_bytes, sha256, source_hash,
+							 template_version_id, renderer_id, renderer_contract_version,
+							 worker_compatibility_date, created_at)
+						 VALUES ('contract-upgrade-html', ?, NULL, 'offer_html',
+							 'contract-artifacts/upgrade/offer.html', 'text/html; charset=utf-8',
+							 127, ?, ?, 'contract-template:synthetic:group_yearly:v1',
+							 'synthetic-test-pdf-v1', 'pdf-adapter-v1', '2026-03-24', ?)`,
+					params: [created.offerId, hashes.htmlArtifact, hashes.source, SYNTHETIC_NOW],
+				},
+				{
+					sql: `INSERT INTO contract_artifacts
+							(id, contract_offer_id, formation_certificate_id, artifact_kind,
+							 private_r2_key, content_type, size_bytes, sha256, source_hash,
+							 template_version_id, renderer_id, renderer_contract_version,
+							 worker_compatibility_date, created_at)
+						 VALUES ('contract-upgrade-pdf', ?, NULL, 'offer_pdf',
+							 'contract-artifacts/upgrade/offer.pdf', 'application/pdf', 256, ?, ?,
+							 'contract-template:synthetic:group_yearly:v1', 'synthetic-test-pdf-v1',
+							 'pdf-adapter-v1', '2026-03-24', ?)`,
+					params: [created.offerId, hashes.pdfArtifact, hashes.source, SYNTHETIC_NOW],
+				},
+				{
+					sql: `INSERT INTO contract_deliveries
+							(id, contract_offer_id, contract_id, artifact_kind, artifact_hash, channel,
+							 recipient_role, recipient_user_id, delivery_status, dedupe_key,
+							 delivered_at, access_expires_at, created_at)
+						 VALUES ('contract-upgrade-delivery', ?, NULL, 'offer_pdf', ?, 'fake_email',
+							 'parent', 'contract-upgrade-parent', 'delivered',
+							 'contract-upgrade-delivery', ?, NULL, ?)`,
+					params: [created.offerId, hashes.pdfArtifact, SYNTHETIC_NOW, SYNTHETIC_NOW],
+				},
+			]);
 
 			const snapshot = async () => ({
 				provider: await db.first({
@@ -864,7 +864,10 @@ describe('D1 production migration upgrade', () => {
 			expect(before.deliveries).toHaveLength(1);
 			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
 
-			const applied = await applyTestD1Migrations(context.db, { after: '0023' });
+			const applied = await applyTestD1Migrations(context.db, {
+				after: '0023',
+				through: '0024',
+			});
 			expect(applied).toEqual(['0024_contract_preview_review.sql']);
 			expect(await snapshot()).toEqual(before);
 			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
@@ -1016,6 +1019,197 @@ describe('D1 production migration upgrade', () => {
 					contract_pdf_r2_key: 'contract-artifacts/upgrade/mismatch.pdf',
 				})
 			).rejects.toThrow('contract template kind mismatch');
+			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
+		} finally {
+			await context.dispose();
+		}
+	}, 120_000);
+
+	it('backfills immutable storage-intent generations across exact 0024 to 0025', async () => {
+		const context = await createMigratedTestD1({ through: '0024' });
+		try {
+			const db = new DatabaseBoundary(context.db);
+			const oldRows = [
+				{
+					id: 'storage-intent:upgrade:staged',
+					objectKey: 'contract-templates/upgrade/staged.json',
+					status: 'staged',
+					deletedAt: null,
+				},
+				{
+					id: 'storage-intent:upgrade:deleted',
+					objectKey: 'contract-templates/upgrade/deleted.json',
+					status: 'deleted',
+					deletedAt: '2026-07-22T10:20:00.000Z',
+				},
+			] as const;
+
+			for (const row of oldRows) {
+				await db.run({
+					sql: `INSERT INTO storage_object_intents
+							(id, storage_class, object_key, object_kind, source_ref, sha256,
+							 size_bytes, status, attempts, lease_owner, lease_until,
+							 last_error_code, linked_at, deleted_at, created_at, updated_at)
+						 VALUES (?, 'archive', ?, 'contract_template_bundle', ?, ?, 127, ?, 0,
+							 NULL, NULL, NULL, NULL, ?, ?, ?)`,
+					params: [
+						row.id,
+						row.objectKey,
+						`template-version:${row.id}`,
+						'a'.repeat(64),
+						row.status,
+						row.deletedAt,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+					],
+				});
+			}
+
+			const before = (
+				await db.all<{
+					id: string;
+					object_key: string;
+					status: string;
+					deleted_at: string | null;
+				}>({
+					sql: `SELECT id, object_key, status, deleted_at
+						 FROM storage_object_intents ORDER BY id`,
+				})
+			).results;
+
+			const applied = await applyTestD1Migrations(context.db, {
+				after: '0024',
+				through: '0025',
+			});
+			expect(applied).toEqual(['0025_contract_storage_intent_generations.sql']);
+
+			const after = (
+				await db.all<{
+					id: string;
+					object_key: string;
+					status: string;
+					deleted_at: string | null;
+					intent_family_id: string;
+					generation: number;
+					installer_owner: string | null;
+					installer_lease_until: string | null;
+				}>({
+					sql: `SELECT id, object_key, status, deleted_at, intent_family_id, generation,
+							installer_owner, installer_lease_until
+						 FROM storage_object_intents ORDER BY id`,
+				})
+			).results;
+			expect(
+				after.map(({ intent_family_id, generation, installer_owner, installer_lease_until, ...row }) =>
+					row
+				)
+			).toEqual(before);
+			expect(after).toEqual(
+				expect.arrayContaining(
+					oldRows.map((row) =>
+						expect.objectContaining({
+							id: row.id,
+							intent_family_id: row.id,
+							generation: 1,
+							installer_owner: null,
+							installer_lease_until: null,
+						})
+					)
+				)
+			);
+			expect(
+				(
+					await db.all<{
+						intent_id: string;
+						intent_family_id: string;
+						generation: number;
+						object_key: string;
+					}>({
+						sql: `SELECT intent_id, intent_family_id, generation, object_key
+							 FROM storage_intent_generations ORDER BY intent_id`,
+					})
+				).results
+			).toEqual(
+				oldRows
+					.map((row) => ({
+						intent_id: row.id,
+						intent_family_id: row.id,
+						generation: 1,
+						object_key: row.objectKey,
+					}))
+					.sort((left, right) => left.intent_id.localeCompare(right.intent_id))
+			);
+
+			await expect(
+				db.run({
+					sql: `UPDATE storage_object_intents SET object_key = ? WHERE id = ?`,
+					params: ['contract-templates/upgrade/replaced.json', oldRows[0].id],
+				})
+			).rejects.toThrow('storage intent generation is immutable');
+			await expect(
+				db.run({
+					sql: `UPDATE storage_object_intents SET intent_family_id = NULL WHERE id = ?`,
+					params: [oldRows[0].id],
+				})
+			).rejects.toThrow('storage intent generation is immutable');
+			await expect(
+				db.run({
+					sql: `INSERT INTO storage_object_intents
+							(id, storage_class, object_key, object_kind, source_ref, sha256,
+							 size_bytes, status, attempts, created_at, updated_at)
+						 VALUES (?, 'archive', ?, 'contract_template_bundle', ?, ?, 127,
+							 'staged', 0, ?, ?)`,
+					params: [
+						'storage-intent:upgrade:missing-lineage',
+						'contract-templates/upgrade/missing-lineage.json',
+						'template-version:missing-lineage',
+						'b'.repeat(64),
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+					],
+				})
+			).rejects.toThrow('storage intent lineage is required');
+
+			await db.run({
+				sql: `INSERT INTO storage_object_intents
+						(id, storage_class, object_key, object_kind, source_ref, sha256,
+						 size_bytes, status, attempts, created_at, updated_at,
+						 intent_family_id, generation, installer_owner, installer_lease_until)
+					 VALUES (?, 'archive', ?, 'contract_template_bundle', ?, ?, 127,
+						 'staged', 0, ?, ?, ?, 2, ?, ?)`,
+				params: [
+					'storage-intent:upgrade:staged:generation:2',
+					'contract-templates/upgrade/staged.generation-2.json',
+					'template-version:storage-intent:upgrade:staged',
+					'a'.repeat(64),
+					SYNTHETIC_NOW,
+					SYNTHETIC_NOW,
+					oldRows[0].id,
+					'installer:upgrade',
+					'2026-07-22T10:05:00.000Z',
+				],
+			});
+			expect(
+				await db.first({
+					sql: `SELECT intent_family_id, generation, object_key, installer_owner
+						 FROM storage_intent_generations WHERE intent_id = ?`,
+					params: ['storage-intent:upgrade:staged:generation:2'],
+				})
+			).toEqual({
+				intent_family_id: oldRows[0].id,
+				generation: 2,
+				object_key: 'contract-templates/upgrade/staged.generation-2.json',
+				installer_owner: 'installer:upgrade',
+			});
+			await expect(
+				db.run({
+					sql: `UPDATE storage_intent_generations SET object_key = ? WHERE intent_id = ?`,
+					params: [
+						'contract-templates/upgrade/staged.changed.json',
+						'storage-intent:upgrade:staged:generation:2',
+					],
+				})
+			).rejects.toThrow('storage intent generations are append-only');
 			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
 		} finally {
 			await context.dispose();

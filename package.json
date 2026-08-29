@@ -14,7 +14,7 @@
 		"test": "vitest run",
 		"test:unit": "vitest run tests/unit",
 		"test:integration": "vitest run tests/integration",
-		"test:e2e": "playwright test",
+		"test:e2e": "node scripts/run-playwright-e2e.js",
 		"test:watch": "vitest",
 		"docs:check": "tsx scripts/check-doc-links.ts && tsx scripts/check-doc-commands.ts && tsx scripts/check-stage13-continuity.ts",
 		"release:scan": "tsx scripts/release-scan.ts",
