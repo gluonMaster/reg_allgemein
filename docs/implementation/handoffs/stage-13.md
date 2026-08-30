@@ -5,9 +5,9 @@
 Ревизия: 2026-08-30.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
-`f33885257019ea0aeec9f839595fc5596f004240` с direct parent
-`1ba7d49b0212a5897e25f468f16184f73ae2a0d2` получил **NO-GO**: 0 BLOCKER /
-0 HIGH / 2 MEDIUM. Новый local remediation candidate имеет статус
+`df49837be5889559b928b8b9a14136eb5ac8db65` с direct parent
+`f33885257019ea0aeec9f839595fc5596f004240` получил **NO-GO**: 0 BLOCKER /
+0 HIGH / 1 MEDIUM. Новый local remediation candidate имеет статус
 `pending independent review`; эта сессия не объявляет GO. До отдельного GO и
 отдельной authorization запрещены `0024`/`0025` apply, Worker/config deploy,
 D1/R2 writes, provider sends и bootstrap.
@@ -16,6 +16,54 @@ D1/R2 writes, provider sends и bootstrap.
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+## Третья continuity remediation после review `df49837` — 2026-08-30
+
+- **Provenance:** iteration 3 rejected candidate — exact
+  `df49837be5889559b928b8b9a14136eb5ac8db65`, direct parent
+  `f33885257019ea0aeec9f839595fc5596f004240`. Independent verdict — **NO-GO**,
+  0 BLOCKER / 0 HIGH / 1 MEDIUM; reviewer сохранил exact HEAD/parent и worktree
+  clean и не выполнял tracked/remote/provider/production/CMS mutation.
+- **Reviewer gates для rejected SHA:** focused 10-file set — 10/10 files,
+  40 passed + 1 Windows-only signal skip; full Vitest — 75/75 files, 561 passed +
+  1 skip из 562 за 2844.11 s; check/build/docs/audit/release scan passed; real
+  E2E — 18/18 за 3.4 min на port `58874`; intentional no-tests failure завершился
+  ожидаемым exit 1 на port `60577`. Оба E2E ownership audit clean; docs — 170
+  links/56 files + 109 commands, release scan — 562/562, exact diff passed.
+- **MEDIUM — completion/negation polarity:** ordinary English `completed` и
+  `concluded` отсутствовали в positive completion vocabulary, а direct positive
+  check выполнялся до explicit outcome negation. Поэтому natural completion
+  claim мог быть пропущен, а `not received` — ошибочно отклонён.
+- **Regression first:** shared direct/adjacent completion fixtures и mandatory
+  `not received`/`did not return` controls дали ожидаемые 4 failed / 0 passed в
+  focused unit и 48 contract-проблем в actual `docs:check`. Дополнительные
+  contraction/future/RU negative controls дали ожидаемые 3 failed / 1 passed до
+  semantic fix.
+- **Один production validator:** positive vocabulary теперь включает direct и
+  adjacent completion/conclusion forms. Explicit auxiliary negation,
+  contractions, `has yet to` и RU `не` polarity обрабатываются до positive
+  outcome; исторические и pending controls сохраняются.
+- **Executable contract:** shared positive/negative fixtures проверяются pure
+  API и инъецируются через actual validator для каждого из семи status paths;
+  CLI и tests не дублируют matcher rules.
+- **Scope:** runtime source, migrations `0024`/`0025`, D1/R2 semantics, Worker,
+  E2E lifecycle и deployment configuration не меняются. Remote/provider/
+  production/CMS operations не выполнялись.
+- **Focused после fix:** continuity unit — 1/1 file, 4/4 tests за 1.46 s; actual
+  `docs:check` — 171 links/56 files + 109 commands + continuity; release scan —
+  562/562; diff check — passed. `npm run check` вернул 0 errors/0 warnings и
+  build passed на тех же неизменённых checker/runtime bytes до последующих
+  docs-only policy edits.
+- **Proportional verification:** полный Vitest/E2E/audit не повторялись, потому
+  что diff не меняет runtime, migrations, dependencies, config или E2E harness.
+  Exact rejected runtime ancestor `df49837…` уже независимо прошёл full 75/75
+  files, 561 pass + 1 Windows skip, E2E 18/18 и audit 0 (evidence выше). Один
+  начатый до owner clarification полный Vitest был остановлен; его результат не
+  заявляется. Новые правила закреплены в root `AGENTS.md`, roadmap, test plan и
+  active remediation prompt.
+- После immutable direct-child commit обязателен fresh independent reviewer с
+  тем же focused proportional scope; эта implementation session не присваивает
+  себе GO.
 
 ## Вторая continuity remediation после review `f338852` — 2026-08-30
 
@@ -122,7 +170,8 @@ Production readiness: **`blocked` / NO-GO**
 | Iteration | Rejected/reviewed candidate | Direct parent | Verdict | Findings | Next candidate state |
 | --------- | --------------------------- | ------------- | ------- | -------- | -------------------- |
 | 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Next candidate `f338852…`, later reviewed NO-GO |
-| 2 | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Commit containing this record: `pending_independent_review` |
+| 2 | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Next candidate `df49837…`, later reviewed NO-GO |
+| 3 | `df49837be5889559b928b8b9a14136eb5ac8db65` | `f33885257019ea0aeec9f839595fc5596f004240` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM completion/negation polarity gap | Commit containing this record: `pending_independent_review` |
 
 ## Предыдущая runtime/E2E remediation — 2026-08-29
 

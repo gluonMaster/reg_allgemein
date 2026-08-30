@@ -1,6 +1,6 @@
 # Стратегия тестирования
 
-Ревизия: 2026-08-17.
+Ревизия: 2026-08-30.
 
 ## Принципы
 
@@ -13,6 +13,10 @@
   только happy path.
 - Browser/e2e runner — Playwright согласно `ADR-011`; этап 01 создает harness,
   последующие этапы добавляют свои критические сценарии.
+- Test selection risk-proportional: сначала определяется изменённая production
+  surface и запускаются exact suites этой поверхности и непосредственных
+  consumers. Повтор полного suite без нового покрываемого риска не является
+  дополнительным evidence и не допускается только ради формальности.
 - Тест не использует production/local PII source напрямую. Реальные source
   файлы допускаются только в отдельном ручном local validation run с
   обезличенным отчетом и после отдельного прямого поручения; обычный stage run
@@ -770,20 +774,44 @@ blocked gates и local suite их не заменяет.
   требует один согласованный `pending_independent_review` marker во всех семи
   status-bearing документах и отклоняет mandatory RU/EN premature claims при
   прямом/обратном порядке слов, punctuation, case, line-wrap и adjacent
-  `pending|requires` + completed-GO; actual `docs:check` исполняет те же
-  adversarial fixtures, allowed historical/pending controls, сверяет active
+  `pending|requires` + positive outcome; direct/adjacent `completed|concluded`
+  распознаются, а explicit `not received|did not return`, contractions,
+  future-polarity и RU negative controls разрешаются до positive match. Actual
+  `docs:check` исполняет те же fixtures для каждого path, сверяет active
   latest-reviewed assertion с metadata SHA и запускает missing/mismatch/
   premature/stale-SHA per-path probes.
 
 ## Quality gates
 
-Для каждого этапа:
+Для каждого изменения обязательно:
+
+1. перечислить затронутые runtime/docs/data/config surfaces;
+2. выполнить exact unit/integration/browser suites для этих surfaces;
+3. выполнить relevant static/docs/build gates;
+4. записать команды, результаты и причину, почему полный suite применим либо
+   осознанно не применим.
+
+Docs/prompt/agent-instruction/test-only и локальный text-validator diff не требуют
+полного Vitest/E2E, когда runtime, migrations, dependencies и deployment config
+не изменились, а exact ancestor уже прошёл полную цепочку. Для такого diff
+достаточны affected unit/checker tests, `docs:check`, `git diff --check` и
+`release:scan`; `check`/`build` добавляются при затронутом TypeScript/build
+контракте. Independent reviewer использует тот же proportional scope.
+
+Полная цепочка:
 
 ```bash
 npm run check
 npm test
 npm run build
 ```
+
+обязательна перед release/deploy после материального runtime, migration,
+dependency/toolchain/shared-infrastructure или cross-cutting изменения, когда
+impact нельзя надёжно ограничить, либо по прямому поручению. Один уже зелёный
+full-suite exact ancestor можно использовать как inherited evidence для
+последующего docs/checker-only child; handoff обязан назвать этот SHA и доказать
+ограниченный diff.
 
 Перед release дополнительно:
 

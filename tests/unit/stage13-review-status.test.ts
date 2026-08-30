@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	STAGE_13_ADJACENT_PENDING_GO_FIXTURES,
 	STAGE_13_ALLOWED_GO_CONTROLS,
+	STAGE_13_COMPLETION_POLARITY_GO_FIXTURES,
 	STAGE_13_CURRENT_STATUS_PATHS,
 	STAGE_13_PENDING_REVIEW,
 	STAGE_13_PREMATURE_GO_FIXTURES,
@@ -113,6 +114,44 @@ describe('Stage 13 current review continuity', () => {
 					),
 					`${path}: ${claim}`
 				).toBe(true);
+			}
+
+			for (const claim of STAGE_13_COMPLETION_POLARITY_GO_FIXTURES) {
+				const completionProblems = validateStage13ReviewStatusDocuments(
+					{
+						...pendingDocuments(),
+						[path]: `${pendingMarker}\n${claim}`,
+					},
+					STAGE_13_PENDING_REVIEW,
+					reviewedCandidate
+				);
+				expect(
+					completionProblems.some(
+						(problem) =>
+							problem.startsWith(`${path}:`) &&
+							problem.includes('must not claim independent GO')
+					),
+					`${path}: ${claim}`
+				).toBe(true);
+			}
+
+			for (const control of STAGE_13_ALLOWED_GO_CONTROLS) {
+				const allowedProblems = validateStage13ReviewStatusDocuments(
+					{
+						...pendingDocuments(),
+						[path]: `${pendingMarker}\n${control}`,
+					},
+					STAGE_13_PENDING_REVIEW,
+					reviewedCandidate
+				);
+				expect(
+					allowedProblems.some(
+						(problem) =>
+							problem.startsWith(`${path}:`) &&
+							problem.includes('must not claim independent GO')
+					),
+					`${path}: ${control}`
+				).toBe(false);
 			}
 
 			const staleReviewedProblems = validateStage13ReviewStatusDocuments(

@@ -17,6 +17,14 @@ export const STAGE_13_ADJACENT_PENDING_GO_FIXTURES = [
 	'Текущий кандидат требует независимой проверки. Независимая проверка вернула итог GO.',
 ] as const;
 
+export const STAGE_13_COMPLETION_POLARITY_GO_FIXTURES = [
+	"The current candidate's independent review completed with GO.",
+	"The current candidate's independent review concluded with GO.",
+	'The current candidate is pending independent review. The independent review completed with GO.',
+	'The current candidate requires independent review. The independent review concluded with GO.',
+	'Независимая проверка текущего кандидата вернула GO.',
+] as const;
+
 export const STAGE_13_PREMATURE_GO_FIXTURES = [
 	'The current candidate passed an independent review with verdict GO.',
 	'The latest candidate independent review returned GO.',
@@ -31,6 +39,7 @@ export const STAGE_13_PREMATURE_GO_FIXTURES = [
 	'The current candidate passed an independent review. Verdict: GO.',
 	'GO. Результат независимой проверки текущего кандидата.',
 	...STAGE_13_ADJACENT_PENDING_GO_FIXTURES,
+	...STAGE_13_COMPLETION_POLARITY_GO_FIXTURES,
 ] as const;
 
 export const STAGE_13_ALLOWED_GO_CONTROLS = [
@@ -39,6 +48,15 @@ export const STAGE_13_ALLOWED_GO_CONTROLS = [
 	'Исторический exact candidate 2bedc73c получил GO; текущий кандидат ожидает отдельный review.',
 	'Exact f33885257019ea0aeec9f839595fc5596f004240 received independent GO. The current remediation candidate is pending independent review.',
 	'Exact f33885257019ea0aeec9f839595fc5596f004240 получил independent GO; текущий кандидат ожидает отдельный review.',
+	'The current candidate has not received an independent GO.',
+	'The current candidate did not receive an independent GO.',
+	"The current candidate's independent review did not return GO.",
+	"The current candidate's independent review has not concluded with GO.",
+	"The current candidate hasn't received an independent GO.",
+	"The current candidate's independent review didn't return GO.",
+	'The current candidate has yet to receive an independent GO.',
+	'Текущий кандидат не получил независимый GO.',
+	'Независимая проверка текущего кандидата не вернула GO.',
 ] as const;
 
 const reviewStatusMarkerPattern =
@@ -53,7 +71,11 @@ const independentReviewPattern = new RegExp(
 	'u'
 );
 const completedReviewClaimPattern = new RegExp(
-	'(?:^|\\s)(?:passed|received|returned|verdict|result|outcome|got|has|прош(?:ёл|ел|ла|ли|ло)|получ(?:ил[аио]?|ен[аоы]?)|вердикт|итог[\\p{L}]*|результат[\\p{L}]*|имеет|заверш(?:ил[аио]?|ён|ен[аоы]?))(?=\\s|$)',
+	'(?:^|\\s)(?:pass(?:ed|es)?|receiv(?:e|ed|es)|return(?:ed|s)?|complet(?:e|ed|es)|conclud(?:e|ed|es)|verdict|result|outcome|got|has|прош(?:ёл|ел|ла|ли|ло)|получ(?:ил[аио]?|ен[аоы]?)|вернул[аио]?|вердикт|итог[\\p{L}]*|результат[\\p{L}]*|имеет|заверш(?:ил[аио]?|ён|ен[аоы]?))(?=\\s|$)',
+	'u'
+);
+const negatedReviewOutcomePattern = new RegExp(
+	'(?:^|\\s)(?:(?:did|does|has|have|had|is|was|were)\\s+not\\s+(?:yet\\s+)?(?:pass(?:ed)?|receiv(?:e|ed)|return(?:ed)?|complet(?:e|ed)|conclud(?:e|ed))|(?:has|have|had)\\s+yet\\s+to\\s+(?:pass|receive|return|complete|conclude)|(?:not|never)\\s+(?:yet\\s+)?(?:pass(?:ed)?|receiv(?:e|ed)|return(?:ed)?|complet(?:e|ed)|conclud(?:e|ed))|(?:no|without)\\s+(?:an?\\s+)?(?:independent\\s+)?go|(?:никогда\\s+)?не\\s+(?:прош[\\p{L}]*|получ[\\p{L}]*|вернул[аио]?|заверш[\\p{L}]*))(?=\\s|$)',
 	'u'
 );
 const pendingOrFutureCandidatePattern = new RegExp(
@@ -87,6 +109,7 @@ function normalizedReviewStatements(content: string): string[] {
 	return content
 		.normalize('NFKC')
 		.replace(/\r\n?/gu, '\n')
+		.replace(/\b(has|have|had|did|does|is|was|were)n['’]t\b/giu, '$1 not')
 		.replace(/\bno\s*(?:[-–—]\s*|\s+)go\b/giu, ' nogo ')
 		.replace(/\n[\t ]*\n/gu, ';')
 		.toLocaleLowerCase('en-US')
@@ -99,6 +122,7 @@ export function hasPrematureCurrentIndependentGoClaim(content: string): boolean 
 	const statements = normalizedReviewStatements(content);
 	const hasCompletedClaim = (statement: string): boolean => {
 		const tokens = statement.split(/\s+/u);
+		if (negatedReviewOutcomePattern.test(statement)) return false;
 		return (
 			tokens.includes('go') &&
 			currentCandidatePattern.test(statement) &&
@@ -293,6 +317,30 @@ export function stage13ReviewStatusContractProblems(): string[] {
 			);
 			if (!hasPathProblem(adjacentProblems, path, 'must not claim independent GO')) {
 				problems.push(`${path}: contract did not reject adjacent pending/GO contradiction`);
+			}
+		}
+
+		for (const claim of STAGE_13_COMPLETION_POLARITY_GO_FIXTURES) {
+			const completionClaim = { ...cleanDocuments, [path]: `${pendingMarker}\n${claim}` };
+			const completionProblems = validateStage13ReviewStatusDocuments(
+				completionClaim,
+				STAGE_13_PENDING_REVIEW,
+				reviewedCandidate
+			);
+			if (!hasPathProblem(completionProblems, path, 'must not claim independent GO')) {
+				problems.push(`${path}: contract did not reject completed/concluded GO claim`);
+			}
+		}
+
+		for (const control of STAGE_13_ALLOWED_GO_CONTROLS) {
+			const allowedControl = { ...cleanDocuments, [path]: `${pendingMarker}\n${control}` };
+			const allowedProblems = validateStage13ReviewStatusDocuments(
+				allowedControl,
+				STAGE_13_PENDING_REVIEW,
+				reviewedCandidate
+			);
+			if (hasPathProblem(allowedProblems, path, 'must not claim independent GO')) {
+				problems.push(`${path}: contract rejected an allowed negative/historical control`);
 			}
 		}
 

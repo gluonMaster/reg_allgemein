@@ -52,7 +52,32 @@ origin и runtime-ресурсами. Официальный сайт `kolibri-d
 
 ## Проверки
 
-Перед завершением реализации выполнять:
+Проверки выбираются пропорционально фактическому риску и изменённой поверхности.
+Перед запуском агент кратко фиксирует, какие production paths затронуты, какие
+tests их покрывают и почему выбранный набор достаточен. Нельзя автоматически
+запускать полный suite после каждого небольшого изменения.
+
+- Для изменения бизнес-логики запускать exact unit/integration suites
+  изменённых модулей и их непосредственных consumers.
+- Для docs/prompt/agent-instruction/test-only изменений запускать только
+  релевантные docs/checker/unit tests. Если изменён исполняемый TypeScript
+  checker, дополнительно выполнять `npm run check`; `npm run build` нужен, когда
+  изменение может затронуть сборку либо когда это быстрый candidate sanity gate.
+- Для UI/route/runtime изменения добавлять affected browser/E2E scenarios, но
+  не весь E2E suite, если impact надёжно ограничен.
+- Полный `npm test` и полный E2E обязательны перед release/deploy после
+  материального runtime, shared-infrastructure, migration, dependency/toolchain
+  или cross-cutting изменения; при невозможности надёжно ограничить impact; либо
+  по прямому поручению владельца/reviewer.
+- Если exact ancestor уже прошёл полный suite, а новый diff ограничен
+  docs/checker/tests и не меняет runtime, migrations, dependencies или config,
+  полный suite не повторять. В handoff указать reused exact SHA/evidence и
+  фактически выполненные focused checks.
+- Независимый review применяет ту же risk-proportional матрицу. Новый reviewer
+  не должен повторять сотни unrelated tests только ради docs-only или локального
+  validator diff.
+
+Типовая полная release-цепочка, когда она действительно применима:
 
 ```bash
 npm run check
@@ -60,6 +85,7 @@ npm test
 npm run build
 ```
 
-Если какая-либо проверка неприменима или не проходит по внешней причине, это
-нужно явно указать в результате. Deploy и операции с production выполняются
-только по отдельному прямому поручению.
+В результате явно перечислять выполненные и осознанно не запущенные проверки с
+обоснованием. Assertion failure релевантного test нельзя списывать на
+неприменимость. Deploy и операции с production выполняются только по отдельному
+прямому поручению.

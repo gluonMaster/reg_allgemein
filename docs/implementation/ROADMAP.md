@@ -1,6 +1,6 @@
 # Roadmap реализации MVP
 
-Ревизия: 2026-08-20.
+Ревизия: 2026-08-30.
 
 Roadmap определяет порядок и quality gates, но не является источником
 бизнес-правил. Каждый этап читает [спецификацию](../spec/MVP_SPEC.md),
@@ -33,13 +33,26 @@ Roadmap определяет порядок и quality gates, но не явля
 могут лишь помогать исполнению и не являются prerequisite или дополнительным
 источником требований.
 
-После этапа:
+После этапа выполняется минимальный достаточный risk-proportional gate. Exact
+unit/integration/browser suites выбираются по изменённой production surface;
+выбор и сознательно пропущенные unrelated suites фиксируются в handoff.
+Безусловный полный прогон после docs-only, prompt-only, test-only или локального
+checker diff запрещён, если exact runtime ancestor уже имеет зелёный full-suite
+evidence и runtime/migrations/dependencies/config не менялись.
+
+Полная цепочка:
 
 ```bash
 npm run check
 npm test
 npm run build
 ```
+
+обязательна перед release/deploy после материального runtime, migration,
+dependency/toolchain, shared-infrastructure или cross-cutting изменения, при
+неограниченном impact либо по прямому поручению. Для ограниченного diff нужны
+focused tests и только релевантные дополнительные gates согласно
+[TEST_PLAN.md](TEST_PLAN.md).
 
 ## Этапы
 
@@ -395,13 +408,13 @@ reversible evidence до точного внешнего gate, а owner input з
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
 Latest reviewed full-manual-preview candidate
-`f33885257019ea0aeec9f839595fc5596f004240`, parent `1ba7d49…`, получил
-independent **NO-GO** с 0 BLOCKER / 0 HIGH / 2 MEDIUM: pending current-candidate
-statement подавлял соседний completed-GO, а stale PR-A18/PR-I04/full-preview
-assertions противоречили active `reviewed_candidate`. Local remediation оставляет
-runtime/migrations неизменными, связывает adjacent contradiction без ложного
-отклонения historical controls и сверяет active latest-reviewed SHA с metadata.
-Actual `docs:check` исполняет новые RU/EN и stale-SHA per-path injections.
+`df49837be5889559b928b8b9a14136eb5ac8db65`, parent `f338852…`, получил
+independent **NO-GO** с 0 BLOCKER / 0 HIGH / 1 MEDIUM: English completion/
+conclusion wording не распознавалась, а explicit negative outcome мог ошибочно
+считаться positive. Local remediation оставляет runtime/migrations неизменными,
+расширяет direct/adjacent completion vocabulary и применяет explicit negation/
+future polarity до positive match. Actual `docs:check` исполняет shared positive
+и allowed negative RU/EN controls для каждого status path.
 Новый candidate имеет только статус `pending independent review`. До отдельного
 положительного verdict запрещены migration apply, deploy, remote D1/R2/provider
 actions и переход к manual preview.

@@ -29,15 +29,17 @@ Telegram, а D1/R2/Browser используют только отдельные 
 
 ## Порядок достижения checkpoint
 
-1. Exact reviewed candidate `f33885257019ea0aeec9f839595fc5596f004240`,
-   direct child `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, содержит runtime/
-   migration `0024`/`0025`/E2E и первую continuity remediation. Последний
-   independent review вернул **NO-GO** с 0 BLOCKER / 0 HIGH / 2 MEDIUM.
+1. Exact reviewed candidate `df49837be5889559b928b8b9a14136eb5ac8db65`,
+   direct child `f33885257019ea0aeec9f839595fc5596f004240`, содержит неизменённые
+   runtime/migration `0024`/`0025`/E2E boundaries и вторую continuity
+   remediation. Этот independent review вернул **NO-GO** с 0 BLOCKER /
+   0 HIGH / 1 MEDIUM.
 2. Новая локальная remediation не меняет runtime или migrations: один pure
-   validator обслуживает CLI/tests, связывает adjacent pending/requires с
-   completed independent GO, сохраняет historical controls и сверяет active
-   reviewed-candidate assertions с metadata SHA. `docs:check` сам исполняет RU/EN
-   contradiction и stale-SHA probes во всех семи status paths. Текущий статус —
+   validator обслуживает CLI/tests, распознаёт direct/adjacent completion и
+   conclusion wording, применяет explicit negative/future polarity до positive
+   match, сохраняет historical controls и сверяет active reviewed-candidate
+   assertions с metadata SHA. `docs:check` сам исполняет positive/negative RU/EN
+   probes во всех семи status paths. Текущий статус —
    remediation candidate prepared, `pending independent review`. Старый verdict
    не наследуется; до отдельного положительного verdict recovery/apply/deploy
    запрещены, а любой BLOCKER/HIGH снова означает NO-GO.
@@ -84,7 +86,7 @@ Telegram, а D1/R2/Browser используют только отдельные 
 - ручной local-AV шаг, который физически выполняет оператор на скачанном файле;
 - independent exact-SHA verdict отдельной ролью.
 
-Пока remediation findings exact `f338852…` не подтверждены отдельным
+Пока remediation finding exact `df49837…` не закрыт отдельным
 independent GO для нового candidate, recovery/apply/deploy/provider-send scope не запрашивается:
 следующий gate полностью local/read-only.
 
