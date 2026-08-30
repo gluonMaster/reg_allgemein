@@ -2,12 +2,12 @@
 
 <!-- stage-13-current-review-status: pending_independent_review -->
 
-Ревизия: 2026-08-29.
+Ревизия: 2026-08-30.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
-`02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` с direct parent
-`fa7aeeb40726089a72396b41b27ce93db1f2a096` получил **NO-GO** с 3 HIGH и
-2 MEDIUM. Новый local remediation candidate подготовлен, но имеет статус
+`1ba7d49b0212a5897e25f468f16184f73ae2a0d2` с direct parent
+`02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` получил **NO-GO** без
+BLOCKER/HIGH и с одним MEDIUM. Новый local remediation candidate имеет статус
 `pending independent review`; эта сессия не объявляет GO. До отдельного GO и
 отдельной authorization запрещены `0024`/`0025` apply, Worker/config deploy,
 D1/R2 writes, provider sends и bootstrap.
@@ -17,7 +17,63 @@ runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
-## Remediation нового NO-GO — 2026-08-29
+## Continuity remediation после review `1ba7d49b` — 2026-08-30
+
+- **Provenance:** iteration 1 rejected candidate — exact
+  `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, direct parent
+  `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`; clean initial worktree и
+  `git diff --check 02d7cbc… 1ba7d49…` подтверждены. Independent verdict —
+  **NO-GO**, 0 BLOCKER / 0 HIGH / 1 MEDIUM.
+- **MEDIUM:** production detector покрывал только узкую последовательность слов
+  и пропускал обычные RU/EN формулировки, reverse order, punctuation и line-wrap.
+  Его обязательные adversarial fixtures не являлись исполняемой частью
+  `docs:check`.
+- **Regression first:** неизменённый helper воспроизвёл `[false, false, false,
+  false]` на четырёх representative phrases, а прежний `docs:check` ошибочно
+  прошёл 170 links / 56 files, 109 commands и continuity. После добавления
+  regression unit test ожидаемо упал на первой ранее пропущенной English phrase.
+- **Один production validator:** `scripts/stage13-review-status.ts` теперь
+  содержит pure text/data semantic detector и shared validation API;
+  `scripts/check-stage13-continuity.ts` и unit tests используют именно их, без
+  параллельной копии правил.
+- **Executable adversarial contract:** сам `docs:check` импортирует и выполняет
+  восемь mandatory RU/EN rejected fixtures, allowed historical/pending controls,
+  case/punctuation/line-wrap semantics, а также missing/mismatched marker и
+  premature-claim probes для каждого из семи status-bearing paths.
+- **Scope:** runtime source, migrations `0024`/`0025`, D1/R2 semantics, Worker,
+  E2E lifecycle и deployment configuration не меняются. Remote/provider/
+  production/CMS operations не выполнялись.
+- **Focused verification:** regression-first unit ожидаемо был red на первой
+  ранее пропущенной phrase; после исправления continuity unit — 4/4, `check` —
+  0 errors/0 warnings, `docs:check` — 170 links / 56 files, 109 commands и
+  executable continuity contract passed, build — passed.
+- **Полная local gate chain:** `npm.cmd run check` — 0/0;
+  `npm.cmd test -- --maxWorkers=1` — 75/75 files, 561 passed и один ожидаемый
+  Windows-only signal skip из 562, 2868.75 s; `npm.cmd run build` — passed;
+  `npm.cmd run test:e2e` — Chromium 18/18 за 3.4 min на unique port `61881`;
+  `npm.cmd audit --omit=dev` — 0 vulnerabilities; `npm.cmd run docs:check` —
+  170/56 + 109 + continuity passed; `npm.cmd run release:scan` — 562/562;
+  `git diff --check` — passed.
+- **E2E ownership audit:** до/после run — 0 `reg-allgemein-e2e-run-*`, 0
+  `runtime.env`, repository `.wrangler/e2e-runtime` отсутствует, port `61881`
+  закрыт, четыре unrelated `tmp/release-verify-*` timestamp не изменились.
+  Кратковременный post-run Chrome PID завершился сам; более поздний Chrome churn
+  был read-only классифицирован как child pre-existing baseline Chrome без
+  E2E/Playwright command marker. Новых E2E-owned Node/Playwright/Wrangler
+  процессов нет; пользовательские browser processes не завершались.
+- **Cloudflare contract cold-read:** official 2026-08 docs, installed Wrangler
+  `4.120.1`, local `config-schema.json` и `@cloudflare/workers-types` повторно
+  подтверждают используемые R2 `onlyIf`/`range` и D1 `batch` boundaries. Это был
+  только read-only review; remote preflight/mutation не выполнялись.
+- После immutable commit обязательны exact parent/HEAD/status checks и short
+  recurrence `check` + continuity unit + `docs:check` + build; их result не может
+  быть самоссылочно записан внутрь этого candidate commit.
+
+| Iteration | Rejected/reviewed candidate | Direct parent | Verdict | Findings | Next candidate state |
+| --------- | --------------------------- | ------------- | ------- | -------- | -------------------- |
+| 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Commit containing this record: `pending_independent_review` |
+
+## Предыдущая runtime/E2E remediation — 2026-08-29
 
 - **Renderer isolation:** canonical bundle schema v2 обязательно содержит
   `renderer.engineVersion`. Exact registry связывает template version с engine и
@@ -45,10 +101,11 @@ Production readiness: **`blocked` / NO-GO**
   supported SIGINT/SIGTERM/SIGHUP проходят единый cleanup. Unit tests покрывают
   success/failure, collision-free roots, сохранение sibling и signal cleanup на
   платформах, где Node доставляет signal handler (Windows case явно skipped).
-- **Status continuity:** текущий статус во всех status-bearing Stage 13 docs —
-  `pending_independent_review`. Checker требует одинаковый structured marker и
-  отклоняет запрещённую Russian/English GO-формулировку о current candidate;
-  преждевременная строка runbook удалена.
+- **Initial status continuity attempt:** во всех status-bearing Stage 13 docs
+  появился одинаковый `pending_independent_review` marker, а преждевременная
+  строка runbook была удалена. Последующий review `1ba7d49b` показал, что
+  detector и его self-test оставались слишком узкими; это закрывает текущая
+  continuity remediation выше.
 - **Focused verification:** exact Windows command
   `npm.cmd test -- --maxWorkers=1 tests/unit/contract-template-bundles.test.ts tests/unit/contract-storage.test.ts tests/unit/admin-contracts-preview-gate.test.ts tests/unit/e2e-run-lifecycle.test.ts tests/unit/stage13-review-status.test.ts tests/integration/storage-intents-d1.test.ts tests/integration/contract-template-install-d1.test.ts tests/integration/contracts-d1.test.ts tests/integration/migration-upgrade-d1.test.ts tests/integration/production-readiness-flow-d1.test.ts`
   завершилась exit `0`: 10 files, 38 passed и 1 skipped из 39, 602.98 s. Skip —

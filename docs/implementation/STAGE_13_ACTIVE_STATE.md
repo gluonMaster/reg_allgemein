@@ -4,8 +4,8 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-29T21:46:00Z
-reviewed_candidate: 02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8
+updated_utc: 2026-08-30T12:03:03Z
+reviewed_candidate: 1ba7d49b0212a5897e25f468f16184f73ae2a0d2
 last_completed_gate: full-manual-preview-remediation-independent-review-no-go
 next_gate: full-manual-preview-new-remediation-candidate-independent-review
 nearest_milestone: full-manual-preview
@@ -39,28 +39,28 @@ Browser-contract/upload и обязательные security/accessibility сц�
 ## Текущий remediation checkpoint — independent review pending
 
 - Independent review exact candidate
-  `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, parent
-  `fa7aeeb40726089a72396b41b27ce93db1f2a096`, завершился **NO-GO**: 3 HIGH и
-  2 MEDIUM. Предыдущие local green claims не считаются доказательством закрытия.
-- HIGH findings: HTML renderer v1 зависел от общих mutable helpers; R2 body
-  materialize выполнялся до size enforcement и без ETag-bound bounded read;
-  deterministic template storage intent после cleanup в `processing/deleted`
-  навсегда блокировал installer retry.
-- MEDIUM findings: E2E helper оставлял fixed Wrangler config/log/runtime
-  artifacts; operations runbook преждевременно утверждал independent GO, а
-  continuity check не обнаруживал противоречие.
-- Текущая implementation/remediation фиксирует explicit immutable HTML-engine
-  dispatch v1/v2 и v1 rendered golden; metadata-first ETag-bound range reads;
-  append-only migration `0025` с immutable intent/R2 generations и fencing;
-  уникальный run-owned E2E temp root с cleanup; structured pending-review markers
-  и regression check преждевременного GO.
-- Локальная verification на remediation tree завершена: focused set — 10 files,
-  38 passed и 1 Windows signal skip из 39; полный последовательный Vitest —
-  75 files, 559 passed и тот же 1 skip из 560; Svelte check — 0/0; build — passed;
-  Chromium — 18/18; production dependency audit — 0; docs — 170 links в 56
-  files, 109 commands и continuity passed; release scan — 562/562; diff check —
-  passed. После финального E2E порт `58960` закрыт, run-owned/legacy runtime
-  artifacts и `runtime.env` отсутствуют, новых Node/browser процессов нет.
+  `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, parent
+  `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, завершился **NO-GO** без
+  BLOCKER/HIGH и с одним MEDIUM. Предыдущие local green claims не считаются
+  доказательством закрытия.
+- MEDIUM finding: production continuity detector пропускал обычные RU/EN
+  преждевременные положительные release claims при другом порядке слов,
+  пунктуации и переносах; обязательные adversarial fixtures не исполнялись самим
+  `docs:check`.
+- Текущая remediation оставляет runtime, migrations и Cloudflare boundaries без
+  изменений. Один pure text/data validator теперь используется CLI и unit
+  tests, проверяет восемь обязательных RU/EN формулировок, case/punctuation/
+  line-wrap variants, разрешённые historical/pending controls, exact marker
+  agreement и missing/mismatch/premature-GO во всех семи status-bearing docs.
+  `docs:check` исполняет этот adversarial contract напрямую.
+- Regression-first воспроизведение завершилось ожидаемым unit-test failure на
+  ранее пропущенной English формулировке. После исправления: focused unit 4/4;
+  check 0/0; full Vitest 75 files, 561 passed + 1 Windows signal skip из 562 за
+  2868.75 s; build passed; Chromium 18/18 за 3.4 min на unique port `61881`;
+  audit 0; docs 170 links в
+  56 files + 109 commands + continuity; release scan 562/562; diff check passed.
+  После E2E owned roots/runtime secret/listener отсутствуют, новых E2E-owned
+  Node/Playwright/Wrangler процессов нет. Exact evidence находится в handoff.
 - Статус — `remediation candidate prepared; independent review pending`.
   Точный SHA является финальным local commit этой сессии и намеренно не
   записывается внутрь самого commit. Remote D1/R2/Worker/provider/CMS state не

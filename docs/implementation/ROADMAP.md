@@ -394,18 +394,17 @@ provider и training approvals остаются следующими release gat
 reversible evidence до точного внешнего gate, а owner input запрашивает только
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
-Latest full-manual-preview candidate
-`02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, parent `fa7aeeb…`, получил новый
-independent **NO-GO** с 3 HIGH и 2 MEDIUM: renderer v1 зависел от mutable global
-helpers; R2 body materialize предшествовал size enforcement и не был
-ETag-bound; cleanup навсегда блокировал deterministic installer intent в
-`processing/deleted`; E2E оставлял fixed generated artifacts; status docs
-преждевременно заявляли GO. Local remediation добавляет bundle-bound immutable
-HTML engines v1/v2, metadata-first conditional range reads, append-only `0025`
-с generation-specific intent/R2 keys, run-owned E2E lifecycle и machine-checked
-pending-review status. Новый candidate имеет только статус
-`pending independent review`. До отдельного GO запрещены migration apply,
-deploy, remote D1/R2/provider actions и переход к manual preview.
+Latest reviewed full-manual-preview candidate
+`1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, parent `02d7cbc…`, получил
+independent **NO-GO** без BLOCKER/HIGH и с одним MEDIUM: continuity detector
+пропускал обычные RU/EN преждевременные положительные claims, а обязательный
+adversarial fixture contract не исполнялся самим `docs:check`. Local remediation
+оставляет runtime и migrations неизменными, использует один pure text/data
+validator в CLI/tests и self-checks mandatory wording, allowed controls,
+missing/mismatched markers и premature claims во всех семи status documents.
+Новый candidate имеет только статус `pending independent review`. До отдельного
+положительного verdict запрещены migration apply, deploy, remote D1/R2/provider
+actions и переход к manual preview.
 
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,

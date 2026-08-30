@@ -29,17 +29,17 @@ Telegram, а D1/R2/Browser используют только отдельные 
 
 ## Порядок достижения checkpoint
 
-1. Exact candidate `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, direct child
-   `fa7aeeb40726089a72396b41b27ce93db1f2a096`, содержит migration `0024`,
-   preview-only contract/email gates и прежнюю remediation. Последний
-   independent review вернул **NO-GO** с 3 HIGH/2 MEDIUM.
-2. Новая локальная remediation устраняет все пять findings реализацией и
-   regressions: immutable v1/v2 renderer-engine dispatch; metadata-first
-   ETag-bound bounded R2 reads; append-only intent generations/fencing через
-   migration `0025`; unique owned E2E lifecycle cleanup; continuity gate против
-   преждевременного GO. Текущий статус — remediation candidate prepared,
-   `pending independent review`. Старый verdict не наследуется; до нового GO
-   recovery/apply/deploy запрещены, а любой BLOCKER/HIGH снова означает NO-GO.
+1. Exact reviewed candidate `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`,
+   direct child `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, содержит runtime/
+   migration `0024`/`0025`/E2E remediation. Последний independent review вернул
+   **NO-GO** без BLOCKER/HIGH и с одним MEDIUM по continuity detector/self-test.
+2. Новая локальная remediation не меняет runtime или migrations: один pure
+   validator обслуживает CLI/tests, а `docs:check` сам исполняет mandatory RU/EN
+   adversarial fixtures, allowed controls и marker missing/mismatch/premature
+   probes во всех семи status paths. Текущий статус — remediation candidate
+   prepared, `pending independent review`. Старый verdict не наследуется; до
+   отдельного положительного verdict recovery/apply/deploy запрещены, а любой
+   BLOCKER/HIGH снова означает NO-GO.
 3. Fresh candidate-bound preview D1 recovery point и isolated restore; проверить
    migration inventory, per-table counts, FK/quick-check и protected evidence.
 4. Согласовать без публикации значений: два owner-controlled email accounts,

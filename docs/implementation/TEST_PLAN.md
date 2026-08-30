@@ -766,9 +766,12 @@ blocked gates и local suite их не заменяет.
   и удаляет runtime env/config/log/state после success/failure и поддерживаемых
   termination signals, не затрагивая sibling files; реальный Playwright run не
   оставляет новый root, runtime secret, listener либо Node/Playwright process.
-- Stage-13 continuity check требует одинаковый structured
-  `pending_independent_review` marker во всех status-bearing документах и
-  отклоняет преждевременное current/latest independent GO на русском и английском.
+- Stage-13 continuity check использует один pure validator для CLI/unit tests,
+  требует один согласованный `pending_independent_review` marker во всех семи
+  status-bearing документах и отклоняет mandatory RU/EN premature claims при
+  прямом/обратном порядке слов, punctuation, case и line-wrap; actual
+  `docs:check` исполняет те же adversarial fixtures, allowed historical/pending
+  controls и missing/mismatch/per-path probes.
 
 ## Quality gates
 

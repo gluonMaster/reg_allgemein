@@ -568,10 +568,11 @@ Production contract send остаётся `feature_disabled`. Ниже опис�
 admin; Browser/private archive bindings; Resend key; SHA-256 адреса только
 контролируемых test recipients в `PREVIEW_EMAIL_RECIPIENT_HASHES`;
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_PREVIEW_REVIEW_ENABLED=true`,
-`CONTRACT_RENDERER=browser_run`; новый remediation candidate после exact
-`02d7cbc…` NO-GO пока имеет статус `pending independent review`. Только после
-отдельного independent GO могут быть разрешены migration `0024`, `0025` и все
-последующие required append-only migrations applied. До apply подтверждены
+`CONTRACT_RENDERER=browser_run`; новый continuity-only remediation candidate
+после exact `1ba7d49…` NO-GO пока имеет статус `pending independent review`.
+Только после отдельного положительного verdict могут быть разрешены migration
+`0024`, `0025` и все последующие required append-only migrations applied. До
+apply подтверждены
 complete exact-version render bundle, D1 storage intent, atomic R2
 create-if-absent, exact D1 install assertion и populated-upgrade regression.
 Реальные клиенты и Office/PII запрещены.

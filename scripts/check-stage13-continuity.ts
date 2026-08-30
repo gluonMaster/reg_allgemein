@@ -2,9 +2,10 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+	STAGE_13_CURRENT_STATUS_PATHS,
 	STAGE_13_PENDING_REVIEW,
-	hasPrematureCurrentIndependentGoClaim,
-	stage13ReviewStatusMarker,
+	stage13ReviewStatusContractProblems,
+	validateStage13ReviewStatusDocuments,
 } from './stage13-review-status';
 
 const repositoryRoot = resolve(process.cwd());
@@ -13,16 +14,6 @@ const promptReadmePath = 'docs/prompts/README.md';
 const activeStatePath = 'docs/implementation/STAGE_13_ACTIVE_STATE.md';
 const handoffPath = 'docs/implementation/handoffs/stage-13.md';
 const checklistPath = 'docs/operations/PRODUCTION_READINESS_CHECKLIST.md';
-const currentStatusPaths = [
-	activeStatePath,
-	'docs/implementation/ROADMAP.md',
-	handoffPath,
-	checklistPath,
-	'docs/implementation/STAGE_13_TRACEABILITY.md',
-	'docs/operations/FULL_MANUAL_PREVIEW.md',
-	'docs/operations/OPERATIONS_RUNBOOK.md',
-] as const;
-
 const problems: string[] = [];
 const read = (path: string) => readFileSync(resolve(repositoryRoot, path), 'utf8');
 
@@ -135,21 +126,13 @@ if (candidate && !/^[0-9a-f]{40}$/u.test(candidate)) {
 }
 
 const currentReviewStatus = metadata.get('current_review_status');
-for (const path of currentStatusPaths) {
-	const content = read(path);
-	const marker = stage13ReviewStatusMarker(content);
-	if (marker !== currentReviewStatus) {
-		problems.push(
-			`${path}: stage-13 current review marker must be ${currentReviewStatus ?? 'defined'}, received ${marker ?? 'missing'}`
-		);
-	}
-	if (
-		currentReviewStatus === STAGE_13_PENDING_REVIEW &&
-		hasPrematureCurrentIndependentGoClaim(content)
-	) {
-		problems.push(`${path}: current remediation candidate must not claim independent GO`);
-	}
-}
+const currentStatusDocuments = Object.fromEntries(
+	STAGE_13_CURRENT_STATUS_PATHS.map((path) => [path, read(path)])
+);
+problems.push(...stage13ReviewStatusContractProblems());
+problems.push(
+	...validateStage13ReviewStatusDocuments(currentStatusDocuments, currentReviewStatus)
+);
 
 if (problems.length > 0) {
 	for (const problem of problems) console.error(problem);
