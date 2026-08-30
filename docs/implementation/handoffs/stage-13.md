@@ -1,21 +1,42 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-08-30.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
-`6ebf4761712c07de262fbac0bb3d532f98fd74c3` с direct parent
-`df49837be5889559b928b8b9a14136eb5ac8db65` получил **NO-GO**: 0 BLOCKER /
-0 HIGH / 1 MEDIUM. Новый local remediation candidate имеет статус
-`pending independent review`; эта сессия не объявляет GO. До отдельного GO и
-отдельной authorization запрещены `0024`/`0025` apply, Worker/config deploy,
-D1/R2 writes, provider sends и bootstrap.
+`1607d6de55491afe7a2bea059e5f36e8718e0b8c` с direct parent
+`6ebf4761712c07de262fbac0bb3d532f98fd74c3` получил fresh independent **GO**:
+0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Это закрывает local continuity/review
+gate, но не даёт authority на `0024`/`0025` apply, Worker/config deploy, D1/R2
+writes, provider sends или bootstrap; каждое remote действие требует отдельного
+прямого разрешения и candidate-bound recovery evidence.
 Исторический exact `2bedc73c9b39a4cb43296046986a3f48e039b022` сохраняет GO только
 для своего более узкого IMPORT-08 docs/test scope и не одобряет новый contract
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+## Independent GO для exact `1607d6d` — 2026-08-30
+
+- **Provenance:** exact candidate
+  `1607d6de55491afe7a2bea059e5f36e8718e0b8c`, direct parent
+  `6ebf4761712c07de262fbac0bb3d532f98fd74c3`; fresh separate reviewer verdict —
+  **GO**, 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Exact HEAD/parent/worktree были
+  подтверждены до и после read-only review.
+- **Scoped evidence:** все 8 mixed-polarity вариантов отклонены во всех семи
+  status paths, 8 pure-negative controls дают 0 false rejection; missing/
+  mismatch/metadata paths — 7/7. Focused unit — 1 file/4 tests; check — 0/0;
+  docs — 171 links/56 files + 109 commands; build, release scan 562/562 и exact
+  diff check прошли.
+- **Proportional scope:** runtime/migrations/dependencies/config/E2E harness не
+  менялись, поэтому full Vitest/E2E осознанно не повторялись. Reviewer принял
+  inherited exact runtime evidence: 75/75 files, 561 pass + 1 Windows skip,
+  E2E 18/18 и audit 0.
+- **Boundary:** этот status-recording child фиксирует внешний verdict, но не
+  становится новой implementation candidate и не запускает новый review loop.
+  Reviewed implementation SHA остаётся `1607d6d…`; remote/provider/production/
+  CMS mutation не выполнялась и не авторизована.
 
 ## Четвёртая continuity remediation после review `6ebf476` — 2026-08-30
 
@@ -44,9 +65,9 @@ Production readiness: **`blocked` / NO-GO**
   actual docs — 171/56 + 109 + continuity; check — 0 errors/0 warnings; build —
   passed; release scan — 562/562; diff check — passed.
 - **Scope:** runtime/migrations/dependencies/config/E2E harness byte-identical к
-  rejected parent; remote/provider/production/CMS actions не выполнялись. Новый
-  direct-child candidate требует ещё одного fresh scoped independent review и
-  не получает self-authored GO.
+  rejected parent; remote/provider/production/CMS actions не выполнялись. Эта
+  remediation создала exact `1607d6d…`, который затем получил отдельный GO,
+  зафиксированный выше.
 
 ## Третья continuity remediation после review `df49837` — 2026-08-30
 
@@ -203,7 +224,8 @@ Production readiness: **`blocked` / NO-GO**
 | 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Next candidate `f338852…`, later reviewed NO-GO |
 | 2 | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Next candidate `df49837…`, later reviewed NO-GO |
 | 3 | `df49837be5889559b928b8b9a14136eb5ac8db65` | `f33885257019ea0aeec9f839595fc5596f004240` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM completion/negation polarity gap | Next candidate `6ebf476…`, later reviewed NO-GO |
-| 4 | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | `df49837be5889559b928b8b9a14136eb5ac8db65` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM mixed-clause negation bypass | Commit containing this record: `pending_independent_review` |
+| 4 | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | `df49837be5889559b928b8b9a14136eb5ac8db65` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM mixed-clause negation bypass | Next candidate `1607d6d…`, later reviewed GO |
+| 5 | `1607d6de55491afe7a2bea059e5f36e8718e0b8c` | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | GO | 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW | Local continuity gate complete; remote actions separately authorized |
 
 ## Предыдущая runtime/E2E remediation — 2026-08-29
 

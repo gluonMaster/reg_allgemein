@@ -4,6 +4,7 @@ import {
 	STAGE_13_ALLOWED_GO_CONTROLS,
 	STAGE_13_COMPLETION_POLARITY_GO_FIXTURES,
 	STAGE_13_CURRENT_STATUS_PATHS,
+	STAGE_13_INDEPENDENT_GO,
 	STAGE_13_MIXED_POLARITY_GO_FIXTURES,
 	STAGE_13_PENDING_REVIEW,
 	STAGE_13_PREMATURE_GO_FIXTURES,
@@ -14,6 +15,7 @@ import {
 } from '../../scripts/stage13-review-status';
 
 const pendingMarker = '<!-- stage-13-current-review-status: pending_independent_review -->';
+const independentGoMarker = '<!-- stage-13-current-review-status: independent_go -->';
 const reviewedCandidate = '1111111111111111111111111111111111111111';
 const staleReviewedCandidate = '2222222222222222222222222222222222222222';
 
@@ -22,6 +24,15 @@ function pendingDocuments(): Record<string, string> {
 		STAGE_13_CURRENT_STATUS_PATHS.map((path) => [
 			path,
 			`${pendingMarker}\nThe current remediation candidate is pending independent review.`,
+		])
+	);
+}
+
+function independentGoDocuments(): Record<string, string> {
+	return Object.fromEntries(
+		STAGE_13_CURRENT_STATUS_PATHS.map((path) => [
+			path,
+			`${independentGoMarker}\nLatest independently reviewed target: ${reviewedCandidate}. Its independent review concluded with GO.`,
 		])
 	);
 }
@@ -57,6 +68,17 @@ describe('Stage 13 current review continuity', () => {
 
 	it('keeps the executable docs-check adversarial contract green', () => {
 		expect(stage13ReviewStatusContractProblems()).toEqual([]);
+	});
+
+	it('accepts an agreed independent GO marker for the exact reviewed candidate', () => {
+		expect(stage13ReviewStatusMarker(independentGoMarker)).toBe(STAGE_13_INDEPENDENT_GO);
+		expect(
+			validateStage13ReviewStatusDocuments(
+				independentGoDocuments(),
+				STAGE_13_INDEPENDENT_GO,
+				reviewedCandidate
+			)
+		).toEqual([]);
 	});
 
 	it('rejects missing or mismatched markers and premature GO in every status document', () => {

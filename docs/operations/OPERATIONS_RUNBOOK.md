@@ -1,6 +1,6 @@
 # Ежедневная эксплуатация и реагирование
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-08-20.
 
@@ -568,11 +568,12 @@ Production contract send остаётся `feature_disabled`. Ниже опис�
 admin; Browser/private archive bindings; Resend key; SHA-256 адреса только
 контролируемых test recipients в `PREVIEW_EMAIL_RECIPIENT_HASHES`;
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_PREVIEW_REVIEW_ENABLED=true`,
-`CONTRACT_RENDERER=browser_run`; новый continuity-only remediation candidate
-после exact `6ebf476…` NO-GO пока имеет статус `pending independent review`.
-Только после отдельного положительного verdict могут быть разрешены migration
-`0024`, `0025` и все последующие required append-only migrations applied. До
-apply подтверждены
+`CONTRACT_RENDERER=browser_run`. Exact continuity-only candidate
+`1607d6d…`, parent `6ebf476…`, получил fresh independent GO с 0 findings.
+Этот verdict закрывает local review gate, но не авторизует remote mutation:
+migration `0024`, `0025` и все последующие required append-only migrations
+могут быть applied только после отдельного прямого разрешения и fresh
+candidate-bound recovery evidence. До apply подтверждены
 complete exact-version render bundle, D1 storage intent, atomic R2
 create-if-absent, exact D1 install assertion и populated-upgrade regression.
 Реальные клиенты и Office/PII запрещены.

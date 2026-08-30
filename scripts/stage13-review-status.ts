@@ -1,4 +1,5 @@
 export const STAGE_13_PENDING_REVIEW = 'pending_independent_review' as const;
+export const STAGE_13_INDEPENDENT_GO = 'independent_go' as const;
 
 export const STAGE_13_CURRENT_STATUS_PATHS = [
 	'docs/implementation/STAGE_13_ACTIVE_STATE.md',

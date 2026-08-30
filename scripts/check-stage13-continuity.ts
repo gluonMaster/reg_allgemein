@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
 	STAGE_13_CURRENT_STATUS_PATHS,
+	STAGE_13_INDEPENDENT_GO,
 	STAGE_13_PENDING_REVIEW,
 	stage13ReviewStatusContractProblems,
 	validateStage13ReviewStatusDocuments,
@@ -90,7 +91,7 @@ const requiredMetadata: Record<string, string | undefined> = {
 	nearest_milestone: 'full-manual-preview',
 	manual_preview_status: 'blocked',
 	production_status: 'blocked',
-	current_review_status: STAGE_13_PENDING_REVIEW,
+	current_review_status: undefined,
 };
 for (const [key, expected] of Object.entries(requiredMetadata)) {
 	const actual = metadata.get(key);
@@ -103,6 +104,17 @@ for (const [key, expected] of Object.entries(requiredMetadata)) {
 const updatedUtc = metadata.get('updated_utc');
 if (updatedUtc && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(updatedUtc)) {
 	problems.push(`${activeStatePath}: updated_utc must be second-precision UTC`);
+}
+
+const currentReviewStatus = metadata.get('current_review_status');
+const supportedReviewStatuses = new Set<string>([
+	STAGE_13_PENDING_REVIEW,
+	STAGE_13_INDEPENDENT_GO,
+]);
+if (currentReviewStatus && !supportedReviewStatuses.has(currentReviewStatus)) {
+	problems.push(
+		`${activeStatePath}: current_review_status must be ${STAGE_13_PENDING_REVIEW} or ${STAGE_13_INDEPENDENT_GO}, received ${currentReviewStatus}`
+	);
 }
 
 const candidate = metadata.get('reviewed_candidate');
@@ -125,7 +137,6 @@ if (candidate && !/^[0-9a-f]{40}$/u.test(candidate)) {
 	}
 }
 
-const currentReviewStatus = metadata.get('current_review_status');
 const currentStatusDocuments = Object.fromEntries(
 	STAGE_13_CURRENT_STATUS_PATHS.map((path) => [path, read(path)])
 );

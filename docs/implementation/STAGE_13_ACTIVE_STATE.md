@@ -1,17 +1,17 @@
 # Stage 13: активное состояние
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-30T17:40:30Z
-reviewed_candidate: 6ebf4761712c07de262fbac0bb3d532f98fd74c3
-last_completed_gate: full-manual-preview-remediation-independent-review-no-go
-next_gate: full-manual-preview-new-remediation-candidate-independent-review
+updated_utc: 2026-08-30T18:12:11Z
+reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
+last_completed_gate: full-manual-preview-remediation-independent-review-go
+next_gate: full-manual-preview-owner-authorized-recovery-apply-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: pending_independent_review
+current_review_status: independent_go
 -->
 
 Этот файл — короткий tracked operational checkpoint, а не источник
@@ -36,34 +36,28 @@ Browser-contract/upload и обязательные security/accessibility сц�
 вне-MVP или production-only unsafe эффекта, но не вместо обязательного MVP-
 контура. Один deploy, login, import или bootstrap эту цель не закрывает.
 
-## Текущий remediation checkpoint — independent review pending
+## Текущий remediation checkpoint — independent GO
 
-- Independent review exact candidate
-  `6ebf4761712c07de262fbac0bb3d532f98fd74c3`, parent
-  `df49837be5889559b928b8b9a14136eb5ac8db65`, завершился **NO-GO**: 0 BLOCKER /
-  0 HIGH / 1 MEDIUM. Предыдущие local green claims не считаются доказательством
-  закрытия.
-- MEDIUM finding: negation predicate применялся ко всему statement, поэтому
-  отрицание unrelated comments/findings могло подавить отдельный положительный
-  review clause в том же предложении; public validator принимал такую инъекцию
-  во всех семи status paths.
-- Текущая remediation оставляет runtime, migrations и Cloudflare boundaries без
-  изменений. Completion tokens теперь получают локальную polarity: negated
-  `receive` не скрывает отдельный positive `concluded/passed`, а чистые negative
-  outcome controls остаются разрешёнными. Actual `docs:check` инъецирует четыре
-  EN/RU mixed-polarity fixtures в обоих clause orders для каждого status path.
-- Regression-first: focused unit дал ожидаемые 3 failed / 1 passed, actual
-  `docs:check` — 32 contract-проблем. После token-local fix unit прошёл 4/4;
-  docs — 171 links/56 files + 109 commands + continuity; check — 0/0; build —
+- Exact candidate `1607d6de55491afe7a2bea059e5f36e8718e0b8c`, direct parent
+  `6ebf4761712c07de262fbac0bb3d532f98fd74c3`, прошёл fresh independent review с
+  verdict **GO**: 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Reviewer подтвердил
+  exact HEAD/parent и clean worktree.
+- Исправление оставляет runtime, migrations, dependencies, config и E2E harness
+  неизменными. Completion tokens получают локальную polarity: отрицательный
+  comments/findings clause больше не скрывает отдельный positive review clause;
+  8 mixed-polarity вариантов отклоняются во всех семи status paths, а 8
+  pure-negative controls не дают false rejection.
+- Fresh scoped reviewer gates: focused continuity unit — 1 file/4 tests; actual
+  contract/self-check — 0 проблем; docs — 171 links/56 files + 109 commands;
+  check — 0 errors/0 warnings; build passed; release scan — 562/562; diff check
   passed. По owner-approved proportional policy unrelated full Vitest/E2E не
-  повторялись: runtime exact `df49837…` уже имеет independent full 75/75 files,
-  561 pass + 1 Windows skip и E2E 18/18; exact `6ebf476…` подтвердил unchanged
-  runtime boundary scoped review.
-- Статус — `remediation candidate prepared; independent review pending`.
-  Точный SHA является финальным local commit этой сессии и намеренно не
-  записывается внутрь самого commit. Remote D1/R2/Worker/provider/CMS state не
-  менялся. Следующий gate — новый independent review отдельной ролью; эта
-  remediation session не присваивает GO.
+  повторялись: runtime ancestor `df49837…` уже имеет independent full 75/75
+  files, 561 pass + 1 Windows skip и E2E 18/18, а scoped reviews подтвердили
+  неизменность runtime boundary.
+- `independent_go` закрывает только local continuity/review gate. Remote
+  D1/R2/Worker/provider/CMS state не менялся и этим verdict не авторизован.
+  Следующий gate — отдельно разрешённые candidate-bound recovery, migration
+  apply и preview deploy; production остаётся `blocked`.
 
 ## Предыдущий blocking review — исторический контекст
 

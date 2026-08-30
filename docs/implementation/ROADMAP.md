@@ -355,7 +355,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
@@ -408,16 +408,16 @@ reversible evidence до точного внешнего gate, а owner input з
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
 Latest reviewed full-manual-preview candidate
-`6ebf4761712c07de262fbac0bb3d532f98fd74c3`, parent `df49837…`, получил
-independent **NO-GO** с 0 BLOCKER / 0 HIGH / 1 MEDIUM: statement-wide negation
-подавлял отдельный positive review clause при mixed polarity. Local remediation
-оставляет runtime/migrations неизменными и привязывает negation к конкретному
-completion token. Actual `docs:check` исполняет четыре EN/RU mixed-polarity
-fixtures в обоих clause orders для каждого status path, сохраняя pure-negative
-controls.
-Новый candidate имеет только статус `pending independent review`. До отдельного
-положительного verdict запрещены migration apply, deploy, remote D1/R2/provider
-actions и переход к manual preview.
+`1607d6de55491afe7a2bea059e5f36e8718e0b8c`, parent `6ebf476…`, получил fresh
+independent **GO** с 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Token-local polarity
+закрывает mixed-clause negation finding; actual contract проверяет 8 EN/RU
+mixed-polarity вариантов и 8 pure-negative controls во всех семи status paths.
+Runtime, migrations, dependencies, config и E2E harness не менялись; scoped
+check/unit/docs/build/scan/diff прошли, а полные runtime/E2E evidence безопасно
+унаследованы от проверенного ancestor по proportional-testing policy.
+Local continuity/review gate закрыт. Этот GO не разрешает migration apply,
+deploy, remote D1/R2/provider actions или production: следующий gate требует
+отдельной owner authorization и fresh candidate-bound recovery evidence.
 
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,
