@@ -4,6 +4,7 @@ import {
 	STAGE_13_ALLOWED_GO_CONTROLS,
 	STAGE_13_COMPLETION_POLARITY_GO_FIXTURES,
 	STAGE_13_CURRENT_STATUS_PATHS,
+	STAGE_13_MIXED_POLARITY_GO_FIXTURES,
 	STAGE_13_PENDING_REVIEW,
 	STAGE_13_PREMATURE_GO_FIXTURES,
 	hasPrematureCurrentIndependentGoClaim,
@@ -127,6 +128,25 @@ describe('Stage 13 current review continuity', () => {
 				);
 				expect(
 					completionProblems.some(
+						(problem) =>
+							problem.startsWith(`${path}:`) &&
+							problem.includes('must not claim independent GO')
+					),
+					`${path}: ${claim}`
+				).toBe(true);
+			}
+
+			for (const claim of STAGE_13_MIXED_POLARITY_GO_FIXTURES) {
+				const mixedProblems = validateStage13ReviewStatusDocuments(
+					{
+						...pendingDocuments(),
+						[path]: `${pendingMarker}\n${claim}`,
+					},
+					STAGE_13_PENDING_REVIEW,
+					reviewedCandidate
+				);
+				expect(
+					mixedProblems.some(
 						(problem) =>
 							problem.startsWith(`${path}:`) &&
 							problem.includes('must not claim independent GO')

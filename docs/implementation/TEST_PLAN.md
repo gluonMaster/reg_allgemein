@@ -776,7 +776,9 @@ blocked gates и local suite их не заменяет.
   прямом/обратном порядке слов, punctuation, case, line-wrap и adjacent
   `pending|requires` + positive outcome; direct/adjacent `completed|concluded`
   распознаются, а explicit `not received|did not return`, contractions,
-  future-polarity и RU negative controls разрешаются до positive match. Actual
+  future-polarity и RU negative controls разрешаются до positive match.
+  Negation привязан к outcome token: EN/RU mixed-polarity с unrelated negative
+  clause и positive review clause отклоняется в обоих порядках. Actual
   `docs:check` исполняет те же fixtures для каждого path, сверяет active
   latest-reviewed assertion с metadata SHA и запускает missing/mismatch/
   premature/stale-SHA per-path probes.

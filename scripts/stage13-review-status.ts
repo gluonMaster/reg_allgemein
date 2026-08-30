@@ -25,6 +25,13 @@ export const STAGE_13_COMPLETION_POLARITY_GO_FIXTURES = [
 	'Независимая проверка текущего кандидата вернула GO.',
 ] as const;
 
+export const STAGE_13_MIXED_POLARITY_GO_FIXTURES = [
+	'The current candidate did not receive additional comments, but its independent review concluded with GO.',
+	"The current candidate's independent review concluded with GO, but it did not receive additional comments.",
+	'Текущий кандидат не получил замечаний, но прошёл независимую проверку с итогом GO.',
+	'Текущий кандидат прошёл независимую проверку с итогом GO, но не получил дополнительных комментариев.',
+] as const;
+
 export const STAGE_13_PREMATURE_GO_FIXTURES = [
 	'The current candidate passed an independent review with verdict GO.',
 	'The latest candidate independent review returned GO.',
@@ -40,6 +47,7 @@ export const STAGE_13_PREMATURE_GO_FIXTURES = [
 	'GO. Результат независимой проверки текущего кандидата.',
 	...STAGE_13_ADJACENT_PENDING_GO_FIXTURES,
 	...STAGE_13_COMPLETION_POLARITY_GO_FIXTURES,
+	...STAGE_13_MIXED_POLARITY_GO_FIXTURES,
 ] as const;
 
 export const STAGE_13_ALLOWED_GO_CONTROLS = [
@@ -70,12 +78,8 @@ const independentReviewPattern = new RegExp(
 	'(?:^|\\s)(?:independent\\s+(?:review|go)|независим[\\p{L}]*\\s+(?:review|ревью|провер[\\p{L}]*|go))(?=\\s|$)',
 	'u'
 );
-const completedReviewClaimPattern = new RegExp(
-	'(?:^|\\s)(?:pass(?:ed|es)?|receiv(?:e|ed|es)|return(?:ed|s)?|complet(?:e|ed|es)|conclud(?:e|ed|es)|verdict|result|outcome|got|has|прош(?:ёл|ел|ла|ли|ло)|получ(?:ил[аио]?|ен[аоы]?)|вернул[аио]?|вердикт|итог[\\p{L}]*|результат[\\p{L}]*|имеет|заверш(?:ил[аио]?|ён|ен[аоы]?))(?=\\s|$)',
-	'u'
-);
-const negatedReviewOutcomePattern = new RegExp(
-	'(?:^|\\s)(?:(?:did|does|has|have|had|is|was|were)\\s+not\\s+(?:yet\\s+)?(?:pass(?:ed)?|receiv(?:e|ed)|return(?:ed)?|complet(?:e|ed)|conclud(?:e|ed))|(?:has|have|had)\\s+yet\\s+to\\s+(?:pass|receive|return|complete|conclude)|(?:not|never)\\s+(?:yet\\s+)?(?:pass(?:ed)?|receiv(?:e|ed)|return(?:ed)?|complet(?:e|ed)|conclud(?:e|ed))|(?:no|without)\\s+(?:an?\\s+)?(?:independent\\s+)?go|(?:никогда\\s+)?не\\s+(?:прош[\\p{L}]*|получ[\\p{L}]*|вернул[аио]?|заверш[\\p{L}]*))(?=\\s|$)',
+const completedReviewClaimTokenPattern = new RegExp(
+	'^(?:pass(?:ed|es)?|receiv(?:e|ed|es)|return(?:ed|s)?|complet(?:e|ed|es)|conclud(?:e|ed|es)|verdict|result|outcome|got|has|прош(?:ёл|ел|ла|ли|ло)|получ(?:ил[аио]?|ен[аоы]?)|вернул[аио]?|вердикт|итог[\\p{L}]*|результат[\\p{L}]*|имеет|заверш(?:ил[аио]?|ён|ен[аоы]?))$',
 	'u'
 );
 const pendingOrFutureCandidatePattern = new RegExp(
@@ -120,14 +124,40 @@ function normalizedReviewStatements(content: string): string[] {
 
 export function hasPrematureCurrentIndependentGoClaim(content: string): boolean {
 	const statements = normalizedReviewStatements(content);
+	const isNegatedCompletionToken = (tokens: string[], index: number): boolean => {
+		const token = tokens[index];
+		const previous = tokens[index - 1];
+		const twoBack = tokens[index - 2];
+		const threeBack = tokens[index - 3];
+		const next = tokens[index + 1];
+		const twoAhead = tokens[index + 2];
+
+		if (['not', 'never', 'no', 'without', 'не'].includes(previous)) return true;
+		if (previous === 'yet' && ['not', 'never'].includes(twoBack)) return true;
+		if (
+			previous === 'to' &&
+			twoBack === 'yet' &&
+			['has', 'have', 'had'].includes(threeBack)
+		) {
+			return true;
+		}
+		if (token === 'has' || token === 'имеет') {
+			if (['not', 'never', 'no', 'without', 'не'].includes(next)) return true;
+			if (next === 'yet' && twoAhead === 'to') return true;
+		}
+		return false;
+	};
 	const hasCompletedClaim = (statement: string): boolean => {
 		const tokens = statement.split(/\s+/u);
-		if (negatedReviewOutcomePattern.test(statement)) return false;
 		return (
 			tokens.includes('go') &&
 			currentCandidatePattern.test(statement) &&
 			independentReviewPattern.test(statement) &&
-			completedReviewClaimPattern.test(statement)
+			tokens.some(
+				(token, index) =>
+					completedReviewClaimTokenPattern.test(token) &&
+					!isNegatedCompletionToken(tokens, index)
+			)
 		);
 	};
 	const hasUnboundCompletedClaim = (statement: string): boolean =>
@@ -329,6 +359,18 @@ export function stage13ReviewStatusContractProblems(): string[] {
 			);
 			if (!hasPathProblem(completionProblems, path, 'must not claim independent GO')) {
 				problems.push(`${path}: contract did not reject completed/concluded GO claim`);
+			}
+		}
+
+		for (const claim of STAGE_13_MIXED_POLARITY_GO_FIXTURES) {
+			const mixedClaim = { ...cleanDocuments, [path]: `${pendingMarker}\n${claim}` };
+			const mixedProblems = validateStage13ReviewStatusDocuments(
+				mixedClaim,
+				STAGE_13_PENDING_REVIEW,
+				reviewedCandidate
+			);
+			if (!hasPathProblem(mixedProblems, path, 'must not claim independent GO')) {
+				problems.push(`${path}: contract did not reject mixed-polarity GO claim`);
 			}
 		}
 

@@ -5,8 +5,8 @@
 Ревизия: 2026-08-30.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
-`df49837be5889559b928b8b9a14136eb5ac8db65` с direct parent
-`f33885257019ea0aeec9f839595fc5596f004240` получил **NO-GO**: 0 BLOCKER /
+`6ebf4761712c07de262fbac0bb3d532f98fd74c3` с direct parent
+`df49837be5889559b928b8b9a14136eb5ac8db65` получил **NO-GO**: 0 BLOCKER /
 0 HIGH / 1 MEDIUM. Новый local remediation candidate имеет статус
 `pending independent review`; эта сессия не объявляет GO. До отдельного GO и
 отдельной authorization запрещены `0024`/`0025` apply, Worker/config deploy,
@@ -16,6 +16,37 @@ D1/R2 writes, provider sends и bootstrap.
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+## Четвёртая continuity remediation после review `6ebf476` — 2026-08-30
+
+- **Provenance:** iteration 4 rejected candidate — exact
+  `6ebf4761712c07de262fbac0bb3d532f98fd74c3`, direct parent
+  `df49837be5889559b928b8b9a14136eb5ac8db65`. Fresh independent verdict —
+  **NO-GO**, 0 BLOCKER / 0 HIGH / 1 MEDIUM; exact HEAD/parent/worktree clean.
+- **Scoped reviewer gates:** check 0/0 за 40.84 s; continuity unit — 1 file/4
+  tests, 0 skips; docs — 171 links/56 files + 109 commands + continuity; build —
+  passed за 26.11 s; release scan — 562/562; diff check passed. Full Vitest/E2E
+  осознанно не повторялись; reviewer подтвердил unchanged runtime/migrations/
+  dependencies/config/harness и inherited `df49837…` full evidence.
+- **MEDIUM — mixed-clause negation:** statement-wide negative predicate скрывал
+  отдельный positive review clause, когда unrelated comments/findings clause
+  содержал отрицательный completion-like verb. Public validator принимал EN и
+  RU reproduction во всех семи status paths.
+- **Regression first:** четыре shared EN/RU mixed-polarity fixtures в обоих
+  clause orders дали ожидаемые 3 failed / 1 passed в focused unit и 32 явные
+  contract-проблемы в actual `docs:check`.
+- **Fix:** completion vocabulary теперь проверяется token-by-token; только
+  локально связанная auxiliary/`not|never|no|without|не`/`has yet to` polarity
+  исключает token. Отдельный non-negated `completed|concluded|passed|returned`
+  сохраняет positive claim; все pure-negative/historical/pending controls
+  остаются разрешёнными.
+- **Focused после fix:** continuity unit — 1 file/4 tests, 0 skips, passed;
+  actual docs — 171/56 + 109 + continuity; check — 0 errors/0 warnings; build —
+  passed; release scan — 562/562; diff check — passed.
+- **Scope:** runtime/migrations/dependencies/config/E2E harness byte-identical к
+  rejected parent; remote/provider/production/CMS actions не выполнялись. Новый
+  direct-child candidate требует ещё одного fresh scoped independent review и
+  не получает self-authored GO.
 
 ## Третья continuity remediation после review `df49837` — 2026-08-30
 
@@ -171,7 +202,8 @@ Production readiness: **`blocked` / NO-GO**
 | --------- | --------------------------- | ------------- | ------- | -------- | -------------------- |
 | 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Next candidate `f338852…`, later reviewed NO-GO |
 | 2 | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Next candidate `df49837…`, later reviewed NO-GO |
-| 3 | `df49837be5889559b928b8b9a14136eb5ac8db65` | `f33885257019ea0aeec9f839595fc5596f004240` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM completion/negation polarity gap | Commit containing this record: `pending_independent_review` |
+| 3 | `df49837be5889559b928b8b9a14136eb5ac8db65` | `f33885257019ea0aeec9f839595fc5596f004240` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM completion/negation polarity gap | Next candidate `6ebf476…`, later reviewed NO-GO |
+| 4 | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | `df49837be5889559b928b8b9a14136eb5ac8db65` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM mixed-clause negation bypass | Commit containing this record: `pending_independent_review` |
 
 ## Предыдущая runtime/E2E remediation — 2026-08-29
 

@@ -29,17 +29,17 @@ Telegram, а D1/R2/Browser используют только отдельные 
 
 ## Порядок достижения checkpoint
 
-1. Exact reviewed candidate `df49837be5889559b928b8b9a14136eb5ac8db65`,
-   direct child `f33885257019ea0aeec9f839595fc5596f004240`, содержит неизменённые
-   runtime/migration `0024`/`0025`/E2E boundaries и вторую continuity
+1. Exact reviewed candidate `6ebf4761712c07de262fbac0bb3d532f98fd74c3`,
+   direct child `df49837be5889559b928b8b9a14136eb5ac8db65`, содержит неизменённые
+   runtime/migration `0024`/`0025`/E2E boundaries и третью continuity
    remediation. Этот independent review вернул **NO-GO** с 0 BLOCKER /
    0 HIGH / 1 MEDIUM.
 2. Новая локальная remediation не меняет runtime или migrations: один pure
-   validator обслуживает CLI/tests, распознаёт direct/adjacent completion и
-   conclusion wording, применяет explicit negative/future polarity до positive
-   match, сохраняет historical controls и сверяет active reviewed-candidate
-   assertions с metadata SHA. `docs:check` сам исполняет positive/negative RU/EN
-   probes во всех семи status paths. Текущий статус —
+   validator обслуживает CLI/tests и связывает negation только с конкретным
+   completion token. Unrelated negative clause больше не подавляет отдельный
+   positive review clause; pure-negative/historical controls сохраняются.
+   `docs:check` сам исполняет mixed-polarity RU/EN probes в обоих clause orders
+   во всех семи status paths. Текущий статус —
    remediation candidate prepared, `pending independent review`. Старый verdict
    не наследуется; до отдельного положительного verdict recovery/apply/deploy
    запрещены, а любой BLOCKER/HIGH снова означает NO-GO.
@@ -86,7 +86,7 @@ Telegram, а D1/R2/Browser используют только отдельные 
 - ручной local-AV шаг, который физически выполняет оператор на скачанном файле;
 - independent exact-SHA verdict отдельной ролью.
 
-Пока remediation finding exact `df49837…` не закрыт отдельным
+Пока remediation finding exact `6ebf476…` не закрыт отдельным
 independent GO для нового candidate, recovery/apply/deploy/provider-send scope не запрашивается:
 следующий gate полностью local/read-only.
 

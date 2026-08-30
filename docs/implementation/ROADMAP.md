@@ -408,13 +408,13 @@ reversible evidence до точного внешнего gate, а owner input з
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
 Latest reviewed full-manual-preview candidate
-`df49837be5889559b928b8b9a14136eb5ac8db65`, parent `f338852…`, получил
-independent **NO-GO** с 0 BLOCKER / 0 HIGH / 1 MEDIUM: English completion/
-conclusion wording не распознавалась, а explicit negative outcome мог ошибочно
-считаться positive. Local remediation оставляет runtime/migrations неизменными,
-расширяет direct/adjacent completion vocabulary и применяет explicit negation/
-future polarity до positive match. Actual `docs:check` исполняет shared positive
-и allowed negative RU/EN controls для каждого status path.
+`6ebf4761712c07de262fbac0bb3d532f98fd74c3`, parent `df49837…`, получил
+independent **NO-GO** с 0 BLOCKER / 0 HIGH / 1 MEDIUM: statement-wide negation
+подавлял отдельный positive review clause при mixed polarity. Local remediation
+оставляет runtime/migrations неизменными и привязывает negation к конкретному
+completion token. Actual `docs:check` исполняет четыре EN/RU mixed-polarity
+fixtures в обоих clause orders для каждого status path, сохраняя pure-negative
+controls.
 Новый candidate имеет только статус `pending independent review`. До отдельного
 положительного verdict запрещены migration apply, deploy, remote D1/R2/provider
 actions и переход к manual preview.

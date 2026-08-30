@@ -4,8 +4,8 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-30T17:10:45Z
-reviewed_candidate: df49837be5889559b928b8b9a14136eb5ac8db65
+updated_utc: 2026-08-30T17:40:30Z
+reviewed_candidate: 6ebf4761712c07de262fbac0bb3d532f98fd74c3
 last_completed_gate: full-manual-preview-remediation-independent-review-no-go
 next_gate: full-manual-preview-new-remediation-candidate-independent-review
 nearest_milestone: full-manual-preview
@@ -39,27 +39,26 @@ Browser-contract/upload и обязательные security/accessibility сц�
 ## Текущий remediation checkpoint — independent review pending
 
 - Independent review exact candidate
-  `df49837be5889559b928b8b9a14136eb5ac8db65`, parent
-  `f33885257019ea0aeec9f839595fc5596f004240`, завершился **NO-GO**: 0 BLOCKER /
+  `6ebf4761712c07de262fbac0bb3d532f98fd74c3`, parent
+  `df49837be5889559b928b8b9a14136eb5ac8db65`, завершился **NO-GO**: 0 BLOCKER /
   0 HIGH / 1 MEDIUM. Предыдущие local green claims не считаются доказательством
   закрытия.
-- MEDIUM finding: completion/conclusion verbs отсутствовали в положительной
-  English polarity, а явное отрицание результата проверялось после positive
-  match. Поэтому естественная completed-form пропускалась, а `not received`
-  ошибочно считалась положительной.
+- MEDIUM finding: negation predicate применялся ко всему statement, поэтому
+  отрицание unrelated comments/findings могло подавить отдельный положительный
+  review clause в том же предложении; public validator принимал такую инъекцию
+  во всех семи status paths.
 - Текущая remediation оставляет runtime, migrations и Cloudflare boundaries без
-  изменений. Shared pure validator распознаёт direct/adjacent `completed` и
-  `concluded`, применяет explicit negation/future polarity до positive match и
-  сохраняет historical/pending controls. Actual `docs:check` инъецирует те же
-  positive и negative fixtures в каждый из семи status paths.
-- Regression-first: четыре mandatory positive/negative fixtures дали ожидаемые
-  unit 4/4 failed и 48 contract-проблем в прежнем `docs:check`; расширенные
-  contractions/future/RU controls отдельно дали ожидаемые 3 failed / 1 passed.
-  После semantic fix focused unit прошёл 4/4; actual docs — 171 links/56 files +
-  109 commands + continuity; release scan — 562/562; diff check passed. Check
-  0/0 и build прошли на тех же TS/runtime bytes. По owner-approved proportional
-  policy unrelated full Vitest/E2E не повторялись: runtime exact `df49837…` уже
-  имеет independent full 75/75 files, 561 pass + 1 Windows skip и E2E 18/18.
+  изменений. Completion tokens теперь получают локальную polarity: negated
+  `receive` не скрывает отдельный positive `concluded/passed`, а чистые negative
+  outcome controls остаются разрешёнными. Actual `docs:check` инъецирует четыре
+  EN/RU mixed-polarity fixtures в обоих clause orders для каждого status path.
+- Regression-first: focused unit дал ожидаемые 3 failed / 1 passed, actual
+  `docs:check` — 32 contract-проблем. После token-local fix unit прошёл 4/4;
+  docs — 171 links/56 files + 109 commands + continuity; check — 0/0; build —
+  passed. По owner-approved proportional policy unrelated full Vitest/E2E не
+  повторялись: runtime exact `df49837…` уже имеет independent full 75/75 files,
+  561 pass + 1 Windows skip и E2E 18/18; exact `6ebf476…` подтвердил unchanged
+  runtime boundary scoped review.
 - Статус — `remediation candidate prepared; independent review pending`.
   Точный SHA является финальным local commit этой сессии и намеренно не
   записывается внутрь самого commit. Remote D1/R2/Worker/provider/CMS state не
