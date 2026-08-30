@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	STAGE_13_ADJACENT_PENDING_GO_FIXTURES,
 	STAGE_13_ALLOWED_GO_CONTROLS,
 	STAGE_13_CURRENT_STATUS_PATHS,
 	STAGE_13_PENDING_REVIEW,
@@ -11,6 +12,8 @@ import {
 } from '../../scripts/stage13-review-status';
 
 const pendingMarker = '<!-- stage-13-current-review-status: pending_independent_review -->';
+const reviewedCandidate = '1111111111111111111111111111111111111111';
+const staleReviewedCandidate = '2222222222222222222222222222222222222222';
 
 function pendingDocuments(): Record<string, string> {
 	return Object.fromEntries(
@@ -89,6 +92,41 @@ describe('Stage 13 current review continuity', () => {
 				prematureProblems.some(
 					(problem) =>
 						problem.startsWith(`${path}:`) && problem.includes('must not claim independent GO')
+				),
+				path
+			).toBe(true);
+
+			for (const claim of STAGE_13_ADJACENT_PENDING_GO_FIXTURES) {
+				const adjacentProblems = validateStage13ReviewStatusDocuments(
+					{
+						...pendingDocuments(),
+						[path]: `${pendingMarker}\n${claim}`,
+					},
+					STAGE_13_PENDING_REVIEW,
+					reviewedCandidate
+				);
+				expect(
+					adjacentProblems.some(
+						(problem) =>
+							problem.startsWith(`${path}:`) &&
+							problem.includes('must not claim independent GO')
+					),
+					`${path}: ${claim}`
+				).toBe(true);
+			}
+
+			const staleReviewedProblems = validateStage13ReviewStatusDocuments(
+				{
+					...pendingDocuments(),
+					[path]: `${pendingMarker}\nLatest independently reviewed target: ${reviewedCandidate}.\nLatest independently reviewed target: ${staleReviewedCandidate}.`,
+				},
+				STAGE_13_PENDING_REVIEW,
+				reviewedCandidate
+			);
+			expect(
+				staleReviewedProblems.some(
+					(problem) =>
+						problem.startsWith(`${path}:`) && problem.includes('reviewed_candidate')
 				),
 				path
 			).toBe(true);

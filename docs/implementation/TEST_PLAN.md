@@ -769,9 +769,11 @@ blocked gates и local suite их не заменяет.
 - Stage-13 continuity check использует один pure validator для CLI/unit tests,
   требует один согласованный `pending_independent_review` marker во всех семи
   status-bearing документах и отклоняет mandatory RU/EN premature claims при
-  прямом/обратном порядке слов, punctuation, case и line-wrap; actual
-  `docs:check` исполняет те же adversarial fixtures, allowed historical/pending
-  controls и missing/mismatch/per-path probes.
+  прямом/обратном порядке слов, punctuation, case, line-wrap и adjacent
+  `pending|requires` + completed-GO; actual `docs:check` исполняет те же
+  adversarial fixtures, allowed historical/pending controls, сверяет active
+  latest-reviewed assertion с metadata SHA и запускает missing/mismatch/
+  premature/stale-SHA per-path probes.
 
 ## Quality gates
 

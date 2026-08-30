@@ -5,9 +5,9 @@
 Ревизия: 2026-08-30.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
-`1ba7d49b0212a5897e25f468f16184f73ae2a0d2` с direct parent
-`02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` получил **NO-GO** без
-BLOCKER/HIGH и с одним MEDIUM. Новый local remediation candidate имеет статус
+`f33885257019ea0aeec9f839595fc5596f004240` с direct parent
+`1ba7d49b0212a5897e25f468f16184f73ae2a0d2` получил **NO-GO**: 0 BLOCKER /
+0 HIGH / 2 MEDIUM. Новый local remediation candidate имеет статус
 `pending independent review`; эта сессия не объявляет GO. До отдельного GO и
 отдельной authorization запрещены `0024`/`0025` apply, Worker/config deploy,
 D1/R2 writes, provider sends и bootstrap.
@@ -17,7 +17,57 @@ runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
-## Continuity remediation после review `1ba7d49b` — 2026-08-30
+## Вторая continuity remediation после review `f338852` — 2026-08-30
+
+- **Provenance:** iteration 2 rejected candidate — exact
+  `f33885257019ea0aeec9f839595fc5596f004240`, direct parent
+  `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`. Independent verdict — **NO-GO**,
+  0 BLOCKER / 0 HIGH / 2 MEDIUM; reviewer сохранил candidate/worktree clean и не
+  выполнял remote/provider/production/CMS mutation.
+- **Reviewer gates для rejected SHA:** focused 10-file set — 10/10 files,
+  40 passed + 1 Windows-only signal skip; full Vitest — 75/75 files, 561 passed +
+  1 skip из 562, 2902.21 s; check/build/docs/audit/release scan passed; real E2E —
+  18/18 за 3.5 min на port `49347`; intentional no-tests failure завершилась
+  ожидаемым exit 1 на port `51258`. Оба E2E пути оставили 0 owned roots/runtime/
+  listener/E2E-owned process, четыре unrelated release roots не изменились.
+- **MEDIUM 1 — contextual bypass:** pending/future candidate statement вызывал
+  ранний `continue`, поэтому соседний unbound completed positive-review claim не
+  связывался с тем же текущим объектом проверки.
+- **MEDIUM 2 — stale current reviewed SHA:** checklist PR-A18/PR-I04 и
+  full-preview current gate продолжали называть `02d7cbc…` latest/base, хотя
+  active metadata уже указывала `1ba7d49…`; прежний `docs:check` не сверял такие
+  assertions с metadata.
+- **Regression first:** четыре shared EN/RU adjacent pending/requires + GO
+  fixtures дали ожидаемые unit 3 failed / 1 passed и четыре явных ошибки в
+  реальном `docs:check`. После detector fix unit прошёл 4/4, затем усиленный
+  `docs:check` ожидаемо стал red на реальных stale checklist/full-preview claims
+  до их исправления.
+- **Один production validator:** pending/future statement теперь проверяет
+  соседний unbound completed independent-GO, но explicit historical candidate
+  controls остаются разрешёнными. Тот же pure API извлекает active latest/last
+  reviewed SHA assertions и сверяет их с `reviewed_candidate` metadata.
+- **Executable contract:** actual `docs:check` исполняет все shared fixtures и
+  для каждого из семи status paths инъецирует четыре adjacent contradictions и
+  stale reviewed-SHA assertion; CLI и unit tests не имеют копии detector rules.
+- **Scope:** runtime source, migrations `0024`/`0025`, D1/R2 semantics, Worker,
+  E2E lifecycle и deployment configuration не меняются. Remote/provider/
+  production/CMS operations не выполнялись.
+- **Полная local gate chain нового tree:** `npm.cmd run check` — 0 errors/
+  0 warnings; `npm.cmd test -- --maxWorkers=1` — 75/75 files, 561 passed + один
+  ожидаемый Windows-only signal skip из 562, 2889.43 s; build — passed; Chromium
+  E2E — 18/18 за 3.6 min на unique port `50886`; production audit — 0;
+  `docs:check` — 170 links/56 files + 109 commands + continuity; release scan —
+  562/562; `git diff --check` — passed.
+- **E2E ownership audit:** до/после run — 0 `reg-allgemein-e2e-run-*`, 0
+  `runtime.env`, repository `.wrangler/e2e-runtime` отсутствует, port `50886`
+  закрыт, 0 новых tracked Node/Chrome/Playwright/Wrangler PID; четыре unrelated
+  `tmp/release-verify-*` timestamp не изменились. Пользовательские процессы не
+  завершались.
+- После immutable direct-child commit обязательны exact parent/HEAD/status checks
+  и short recurrence `check` + continuity unit + `docs:check` + build; результат
+  post-commit проверки не записывается самоссылочно внутрь candidate.
+
+## Предыдущая continuity remediation после review `1ba7d49b` — 2026-08-30
 
 - **Provenance:** iteration 1 rejected candidate — exact
   `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, direct parent
@@ -71,7 +121,8 @@ Production readiness: **`blocked` / NO-GO**
 
 | Iteration | Rejected/reviewed candidate | Direct parent | Verdict | Findings | Next candidate state |
 | --------- | --------------------------- | ------------- | ------- | -------- | -------------------- |
-| 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Commit containing this record: `pending_independent_review` |
+| 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Next candidate `f338852…`, later reviewed NO-GO |
+| 2 | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Commit containing this record: `pending_independent_review` |
 
 ## Предыдущая runtime/E2E remediation — 2026-08-29
 

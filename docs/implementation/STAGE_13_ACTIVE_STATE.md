@@ -4,8 +4,8 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-30T12:03:03Z
-reviewed_candidate: 1ba7d49b0212a5897e25f468f16184f73ae2a0d2
+updated_utc: 2026-08-30T14:59:40Z
+reviewed_candidate: f33885257019ea0aeec9f839595fc5596f004240
 last_completed_gate: full-manual-preview-remediation-independent-review-no-go
 next_gate: full-manual-preview-new-remediation-candidate-independent-review
 nearest_milestone: full-manual-preview
@@ -39,28 +39,29 @@ Browser-contract/upload и обязательные security/accessibility сц�
 ## Текущий remediation checkpoint — independent review pending
 
 - Independent review exact candidate
-  `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, parent
-  `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, завершился **NO-GO** без
-  BLOCKER/HIGH и с одним MEDIUM. Предыдущие local green claims не считаются
+  `f33885257019ea0aeec9f839595fc5596f004240`, parent
+  `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, завершился **NO-GO**: 0 BLOCKER /
+  0 HIGH / 2 MEDIUM. Предыдущие local green claims не считаются
   доказательством закрытия.
-- MEDIUM finding: production continuity detector пропускал обычные RU/EN
-  преждевременные положительные release claims при другом порядке слов,
-  пунктуации и переносах; обязательные adversarial fixtures не исполнялись самим
-  `docs:check`.
+- MEDIUM findings: pending/requires statement о current candidate подавлял
+  contextual detection соседнего completed independent GO; checklist PR-A18/
+  PR-I04 и full-preview current gate продолжали называть `02d7cbc…` latest/base,
+  хотя metadata уже указывала `1ba7d49…`.
 - Текущая remediation оставляет runtime, migrations и Cloudflare boundaries без
-  изменений. Один pure text/data validator теперь используется CLI и unit
-  tests, проверяет восемь обязательных RU/EN формулировок, case/punctuation/
-  line-wrap variants, разрешённые historical/pending controls, exact marker
-  agreement и missing/mismatch/premature-GO во всех семи status-bearing docs.
-  `docs:check` исполняет этот adversarial contract напрямую.
-- Regression-first воспроизведение завершилось ожидаемым unit-test failure на
-  ранее пропущенной English формулировке. После исправления: focused unit 4/4;
-  check 0/0; full Vitest 75 files, 561 passed + 1 Windows signal skip из 562 за
-  2868.75 s; build passed; Chromium 18/18 за 3.4 min на unique port `61881`;
-  audit 0; docs 170 links в
-  56 files + 109 commands + continuity; release scan 562/562; diff check passed.
-  После E2E owned roots/runtime secret/listener отсутствуют, новых E2E-owned
-  Node/Playwright/Wrangler процессов нет. Exact evidence находится в handoff.
+  изменений. Shared pure validator теперь связывает pending current-candidate
+  statement с соседним unbound completed-GO, сохраняя historical controls, и
+  сверяет active `latest/last reviewed` assertions с metadata SHA. Actual
+  `docs:check` исполняет четыре новые RU/EN contradiction fixtures и stale-SHA
+  injection для каждого из семи status paths.
+- Regression-first: unit получил ожидаемые 3 failed / 1 passed, а прежний
+  `docs:check` перечислил четыре пропущенных adjacent claims. После detector fix
+  unit прошёл 4/4, а реальный `docs:check` ожидаемо обнаружил stale operational
+  assertions до их исправления. Финальная verification: check 0/0; full Vitest
+  75/75 files, 561 passed + 1 Windows signal skip из 562 за 2889.43 s; build
+  passed; Chromium 18/18 за 3.6 min на unique port `50886`; audit 0; docs 170/56 +
+  109 + continuity; release scan 562/562; diff check passed. После E2E отсутствуют
+  owned roots/runtime/listener и новые tracked test/browser PID; exact evidence —
+  в handoff.
 - Статус — `remediation candidate prepared; independent review pending`.
   Точный SHA является финальным local commit этой сессии и намеренно не
   записывается внутрь самого commit. Remote D1/R2/Worker/provider/CMS state не

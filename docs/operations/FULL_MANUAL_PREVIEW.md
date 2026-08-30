@@ -29,17 +29,18 @@ Telegram, а D1/R2/Browser используют только отдельные 
 
 ## Порядок достижения checkpoint
 
-1. Exact reviewed candidate `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`,
-   direct child `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8`, содержит runtime/
-   migration `0024`/`0025`/E2E remediation. Последний independent review вернул
-   **NO-GO** без BLOCKER/HIGH и с одним MEDIUM по continuity detector/self-test.
+1. Exact reviewed candidate `f33885257019ea0aeec9f839595fc5596f004240`,
+   direct child `1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, содержит runtime/
+   migration `0024`/`0025`/E2E и первую continuity remediation. Последний
+   independent review вернул **NO-GO** с 0 BLOCKER / 0 HIGH / 2 MEDIUM.
 2. Новая локальная remediation не меняет runtime или migrations: один pure
-   validator обслуживает CLI/tests, а `docs:check` сам исполняет mandatory RU/EN
-   adversarial fixtures, allowed controls и marker missing/mismatch/premature
-   probes во всех семи status paths. Текущий статус — remediation candidate
-   prepared, `pending independent review`. Старый verdict не наследуется; до
-   отдельного положительного verdict recovery/apply/deploy запрещены, а любой
-   BLOCKER/HIGH снова означает NO-GO.
+   validator обслуживает CLI/tests, связывает adjacent pending/requires с
+   completed independent GO, сохраняет historical controls и сверяет active
+   reviewed-candidate assertions с metadata SHA. `docs:check` сам исполняет RU/EN
+   contradiction и stale-SHA probes во всех семи status paths. Текущий статус —
+   remediation candidate prepared, `pending independent review`. Старый verdict
+   не наследуется; до отдельного положительного verdict recovery/apply/deploy
+   запрещены, а любой BLOCKER/HIGH снова означает NO-GO.
 3. Fresh candidate-bound preview D1 recovery point и isolated restore; проверить
    migration inventory, per-table counts, FK/quick-check и protected evidence.
 4. Согласовать без публикации значений: два owner-controlled email accounts,
@@ -83,7 +84,7 @@ Telegram, а D1/R2/Browser используют только отдельные 
 - ручной local-AV шаг, который физически выполняет оператор на скачанном файле;
 - independent exact-SHA verdict отдельной ролью.
 
-Пока remediation findings exact `02d7cbc…` не подтверждены отдельным
+Пока remediation findings exact `f338852…` не подтверждены отдельным
 independent GO для нового candidate, recovery/apply/deploy/provider-send scope не запрашивается:
 следующий gate полностью local/read-only.
 

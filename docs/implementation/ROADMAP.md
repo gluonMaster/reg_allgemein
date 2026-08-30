@@ -395,13 +395,13 @@ reversible evidence до точного внешнего gate, а owner input з
 непосредственно перед нужным credential, remote mutation, deploy или send.
 
 Latest reviewed full-manual-preview candidate
-`1ba7d49b0212a5897e25f468f16184f73ae2a0d2`, parent `02d7cbc…`, получил
-independent **NO-GO** без BLOCKER/HIGH и с одним MEDIUM: continuity detector
-пропускал обычные RU/EN преждевременные положительные claims, а обязательный
-adversarial fixture contract не исполнялся самим `docs:check`. Local remediation
-оставляет runtime и migrations неизменными, использует один pure text/data
-validator в CLI/tests и self-checks mandatory wording, allowed controls,
-missing/mismatched markers и premature claims во всех семи status documents.
+`f33885257019ea0aeec9f839595fc5596f004240`, parent `1ba7d49…`, получил
+independent **NO-GO** с 0 BLOCKER / 0 HIGH / 2 MEDIUM: pending current-candidate
+statement подавлял соседний completed-GO, а stale PR-A18/PR-I04/full-preview
+assertions противоречили active `reviewed_candidate`. Local remediation оставляет
+runtime/migrations неизменными, связывает adjacent contradiction без ложного
+отклонения historical controls и сверяет active latest-reviewed SHA с metadata.
+Actual `docs:check` исполняет новые RU/EN и stale-SHA per-path injections.
 Новый candidate имеет только статус `pending independent review`. До отдельного
 положительного verdict запрещены migration apply, deploy, remote D1/R2/provider
 actions и переход к manual preview.

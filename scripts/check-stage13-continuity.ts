@@ -131,7 +131,7 @@ const currentStatusDocuments = Object.fromEntries(
 );
 problems.push(...stage13ReviewStatusContractProblems());
 problems.push(
-	...validateStage13ReviewStatusDocuments(currentStatusDocuments, currentReviewStatus)
+	...validateStage13ReviewStatusDocuments(currentStatusDocuments, currentReviewStatus, candidate)
 );
 
 if (problems.length > 0) {
