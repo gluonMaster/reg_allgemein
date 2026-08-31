@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T17:35:55Z
+updated_utc: 2026-08-31T17:39:46Z
 reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-last_completed_gate: phase-1-candidate-bound-recovery-verified
-next_gate: phase-1-apply-0024-0025-to-recovery
+last_completed_gate: phase-1-recovery-migrations-applied-and-verified
+next_gate: phase-1-apply-0024-0025-to-preview
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-1-recovery-schema
-last_atomic_action: restore-dpapi-export-to-isolated-recovery-d1
+last_atomic_action: apply-0024-0025-to-recovery-d1
 last_atomic_result: success
-next_atomic_action: apply-0024-0025-to-recovery-d1
+next_atomic_action: apply-0024-0025-to-preview-d1
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-isolated-recovery-migration-with-exact-pending-set-and-integrity-postcondition
+mode_reason_plain: planned-preview-migration-with-exact-pending-set-verified-recovery-and-no-downgrade
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -110,7 +110,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | Фаза | Статус | Результат | Минимальная проверка |
 | --- | --- | --- | --- |
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
-| 1. Recovery/schema | `in_progress` | CurrentUser DPAPI export/round-trip and isolated restore exact: 527 objects, 142 tables, 95,573 rows, current `2 + 1703`, FK 0, local quick-check ok; plaintext removed; `0024`/`0025` remain | ledger, FK, quick-check, key counts |
+| 1. Recovery/schema | `in_progress` | DPAPI restore exact and plaintext removed; recovery applied `0024`/`0025`: pending 0, ledger 25, 535 objects, lineage 8/4, current `2 + 1703`, FK 0; preview apply remains | ledger, FK, quick-check, key counts |
 | 2. Worker deploy | `blocked_on_phase_1` | exact reviewed Worker deployed fail-closed | Access/root/health/version/bindings smoke |
 | 3. Auth/roles | `blocked_on_phase_2_and_owner_input` | Resend allowlist, два verified accounts, one-shot bootstrap | real test email, audit/replay denial, role split |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
@@ -153,21 +153,21 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: restore-dpapi-export-to-isolated-recovery-d1
-observed_utc: 2026-08-31T17:35:55Z
+atomic_action: apply-0024-0025-to-recovery-d1
+observed_utc: 2026-08-31T17:39:46Z
 phase: phase-1-recovery-schema
 authorization_scope: owner-authorized-preview-only-phases-1-2
 target_fingerprint: preview-d1-ccdeb22bb2a1-new-recovery-d1-4b2802119d09
 candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-before: exact-recovery-d1-empty-unbound-and-local-dpapi-roundtrip-quick-check-green
-after: exact-export-restore-schema-and-table-counts-and-current-pair-match-fk-zero-local-quick-check-ok-plaintext-removed
+before: isolated-recovery-exactly-restored-at-migrations-1-through-23-with-fk-zero
+after: recovery-pending-zero-ledger-25-max-25-schema-535-lineage-8-objects-4-columns-current-2-plus-1703-fk-zero
 result: success
-evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-resource-and-restore-manifests
-rollback_or_containment: not-needed-recovery-remains-unbound-plaintext-removed-dpapi-artifact-retained
-next_atomic_action: apply-0024-0025-to-recovery-d1
+evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-migration-verification
+rollback_or_containment: no-downgrade-recovery-remains-unbound-forward-fix-or-separate-cleanup-only
+next_atomic_action: apply-0024-0025-to-preview-d1
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-isolated-recovery-migration-with-exact-pending-set-and-integrity-postcondition
+mode_reason_plain: planned-preview-migration-with-exact-pending-set-verified-recovery-and-no-downgrade
 ```
 
 После первой mutation этот block заменяется её фактическим record; результаты
