@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T14:21:21Z
+updated_utc: 2026-08-31T15:49:19Z
 reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-last_completed_gate: full-manual-preview-remediation-independent-review-go
-next_gate: full-manual-preview-owner-authorized-recovery-apply-deploy
+last_completed_gate: phase-0-read-only-target-lock
+next_gate: phase-1-owner-authorized-candidate-bound-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-0-target-lock
-last_atomic_action: none-since-independent-go
-last_atomic_result: not_started
-next_atomic_action: phase-0-read-only-target-lock
+current_phase: phase-1-recovery-schema
+last_atomic_action: phase-0-read-only-target-lock
+last_atomic_result: success
+next_atomic_action: candidate-bound-recovery-snapshot-and-isolated-restore
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
@@ -46,10 +46,40 @@ NO-GO до собственных approvals и отдельного поруче
   Runtime, migrations, dependencies, deployment config и E2E harness после
   reviewed full-suite ancestor не менялись. Status/docs descendants не создают
   новый implementation candidate и не требуют нового review-loop.
-- Следующий gate: fresh read-only target reconciliation, candidate-bound
-  recovery evidence/isolated recovery, apply pending `0024`/`0025` только к
-  preview/recovery и deploy exact reviewed Worker только в preview. Требуется
-  отдельное прямое разрешение владельца; production не разрешён.
+- Следующий gate: candidate-bound recovery evidence/isolated recovery, затем
+  apply pending `0024`/`0025` только к preview/recovery и deploy exact reviewed
+  Worker только в preview. Fresh target reconciliation завершён; пакет
+  recovery/apply/deploy требует отдельного прямого разрешения владельца.
+  Production не разрешён.
+
+### Phase 0 target lock — 2026-08-31
+
+- Clean `HEAD=cc5c83b…`; reviewed `1607d6d…` is an ancestor. Descendant changes
+  are limited to docs/checker/tests and do not change runtime, migrations,
+  dependencies, deployment config or E2E harness.
+- Protected config/control agree on one preview account/Worker/D1, two distinct
+  private EEUR R2 buckets and the canonical preview origin. Production/CMS
+  targets are absent. Active Worker remains one version at 100%; the protected
+  compatible rollback version is still available.
+- Exactly `0024_contract_preview_review.sql` and
+  `0025_contract_storage_intent_generations.sql` are pending. Preview and the
+  distinct existing recovery D1 both have FK violations `0`, one current
+  academic period, synthetic current counts `2 + 1703`, users/admins/bootstrap
+  actions/contract offers/Telegram rows `0`.
+- Both preview R2 buckets remain private/EEUR and empty. Deployed fail-closed
+  vars, D1/R2/Browser/assets bindings and the three existing secret names match;
+  Telegram secret remains absent. All nine latest scheduled-job states are
+  `succeeded|feature_disabled`; two historical failed rows are from 2026-08-25
+  and are not current.
+- Fresh anonymous and invalid Access probes return `302` to the same login host;
+  no bypass was observed. There is no existing authenticated browser session,
+  so no OTP/login was initiated. Fresh valid root/health remains an obligatory
+  Phase-2 post-deploy smoke with owner Access login.
+- Remote `PRAGMA quick_check` made no write and returned safe Cloudflare/D1
+  `SQLITE_NOMEM` code `7500`; FK and targeted counts succeeded. Phase 1 must run
+  the full integrity check on the fresh isolated restore before apply. The old
+  recovery record is verified but expired and bound to an older candidate, so
+  it cannot authorize this deploy.
 
 ## Последнее известное preview state
 
@@ -77,7 +107,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 
 | Фаза | Статус | Результат | Минимальная проверка |
 | --- | --- | --- | --- |
-| 0. Target lock | `next` | exact candidate/preview targets/rollback/recovery source сверены read-only | no drift, production/CMS absent |
+| 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny-side `302` |
 | 1. Recovery/schema | `blocked_on_owner_permission` | fresh recovery + `0024`/`0025` только preview/recovery | ledger, FK, quick-check, key counts |
 | 2. Worker deploy | `blocked_on_phase_1` | exact reviewed Worker deployed fail-closed | Access/root/health/version/bindings smoke |
 | 3. Auth/roles | `blocked_on_phase_2_and_owner_input` | Resend allowlist, два verified accounts, one-shot bootstrap | real test email, audit/replay denial, role split |
@@ -118,29 +148,29 @@ no-write timeout, косметика и локализованная docs-оши
 
 ### Последний atomic record
 
-До первой remote mutation текущего продолжения baseline фиксируется явно:
+До первой remote mutation текущего продолжения последняя выполненная read-only
+фаза фиксируется явно:
 
 ```text
-atomic_action: none-since-independent-go
-observed_utc: 2026-08-31T14:21:21Z
-phase: phase-0-target-lock
-authorization_scope: docs-only-no-remote-mutation
-target_fingerprint: preview-only-protected-record-fresh-reconciliation-required
+atomic_action: phase-0-read-only-target-lock
+observed_utc: 2026-08-31T15:49:19Z
+phase: phase-1-recovery-schema
+authorization_scope: read-only-no-remote-mutation
+target_fingerprint: preview-only-account-5dbd04a4763a-worker-242c1796e930-d1-ccdeb22bb2a1-origin-88ed782ba25a
 candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-before: last-known-preview-state-recorded-below
-after: no-remote-state-change-claimed
-result: not_started
-evidence: current-independent-go-and-persistent-handoff
+before: last-known-preview-state-required-fresh-reconciliation
+after: exact-preview-target-and-compatible-rollback-match-two-pending-migrations-fk-zero-empty-r2-access-deny-side-closed
+result: success
+evidence: protected-ignored-imports-stage13-phase0-target-lock-20260831-json
 rollback_or_containment: not-needed
-next_atomic_action: phase-0-read-only-target-lock
+next_atomic_action: candidate-bound-recovery-snapshot-and-isolated-restore
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
 ```
 
-После первой mutation этот block заменяется её фактическим record; `not_started`
-разрешён только для исходного baseline, а результаты попыток принимают ровно
-`success|failed|ambiguous`.
+После первой mutation этот block заменяется её фактическим record; результаты
+попыток принимают ровно `success|failed|ambiguous`.
 
 ## Что не повторять
 

@@ -23,6 +23,13 @@ Production readiness: **`blocked` / NO-GO**
   `1607d6de55491afe7a2bea059e5f36e8718e0b8c`. Новый review-loop не нужен;
   следующий gate по-прежнему owner-authorized candidate-bound recovery, apply
   `0024`/`0025` и fail-closed preview Worker deploy.
+- **Fresh Phase 0 target lock:** clean `HEAD=cc5c83b…` сохраняет reviewed runtime
+  ancestor; descendants are docs/checker/tests only. Protected preview target,
+  active 100% Worker, compatible rollback, exact pending `0024`/`0025`, D1 FK
+  `0`/synthetic `2 + 1703`, two empty private EEUR R2 buckets, fail-closed
+  vars/bindings/secrets and Access anonymous/invalid `302` all match. Old
+  recovery is expired and bound to an older candidate; fresh candidate-bound
+  recovery remains required. No remote mutation or OTP/login occurred.
 - **Приоритет:** root `AGENTS.md`, roadmap и test plan теперь требуют связать
   findings с ближайшим milestone. До продвижения исправляются `P0/P1`;
   `P2/P3` не задерживают preview и уходят в backlog. Связанные мелкие fixes
