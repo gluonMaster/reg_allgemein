@@ -1,6 +1,6 @@
 # Roadmap реализации MVP
 
-Ревизия: 2026-08-30.
+Ревизия: 2026-08-31.
 
 Roadmap определяет порядок и quality gates, но не является источником
 бизнес-правил. Каждый этап читает [спецификацию](../spec/MVP_SPEC.md),
@@ -53,6 +53,13 @@ dependency/toolchain, shared-infrastructure или cross-cutting изменен�
 неограниченном impact либо по прямому поручению. Для ограниченного diff нужны
 focused tests и только релевантные дополнительные gates согласно
 [TEST_PLAN.md](TEST_PLAN.md).
+
+Ближайший явно установленный владельцем milestone имеет приоритет над
+необязательной полировкой. До продвижения исправляются `P0/P1` из `AGENTS.md`;
+`P2/P3` записываются в backlog и сами по себе не переоткрывают завершённый gate.
+Deployment разбивается на короткие target-bound фазы с отдельными expected
+result, focused verification и rollback. Без drift/material diff/
+воспроизводимого `P0/P1` зелёная фаза не повторяется.
 
 ## Этапы
 
@@ -362,62 +369,25 @@ Exit gate:
 выполняет production deploy, remote production migration, реальный PII import
 или внешнюю отправку без отдельного прямого поручения.
 
-Текущий статус: fresh Ultra audit закрыл local traceability gate PR-A06
-2026-08-12, но production readiness остаётся `blocked`. Матрица проверена для
-всех normative MVP IDs и acceptance bullets, найденные dual-control,
-configured-upload, privacy-handler и parent-route gaps исправлены; полный
-финальный local-only worktree `release:verify` прошёл за 619.5 s: check 0/0,
-Vitest 54 files/340 tests, Chromium 8 files/18 tests, build, production audit 0,
-docs 136 links/51 files + 82 commands и scan 500/500; отдельный полный
-`npm audit` вернул total 0. Focused contract atomicity/replay прошёл 6/6,
-полный contracts D1 suite 13/13, independent final re-review дал GO без
-HIGH/BLOCKER. Commit, содержащий эту ревизию, является новым локальным Stage-13
-candidate; его exact SHA определяется после commit через `git rev-parse HEAD`.
-Он ещё не прошёл отдельную clean-clone verification и не развёрнут: preview
-остаётся на `200268f39ece1d43c5e091dcb7db6569d41275af`.
-
-Preview Worker/D1/private EU R2/Cron/empty 204|503 monitoring signal и
-independent HEAD alert delivery/recovery проверены; public browser smoke прошёл.
-Tracked local Chromium harness прошёл 8 files/18 tests: access/session/CSRF;
-broad child/trial/price/message/privacy IDOR plus carrier-bound request/document/
-contract-end-attendance-media cases; individual request create→approved; exact catalog €46 and
-trial requested→confirmed→cancelled; support and structured absence through
-final admin answer plus email/Telegram outbox deltas; price €46→€50 through
-parent acceptance and distinct admin confirmation to `scheduled`. Browser
-contract accept/form/activate не заявляется: renderer/send намеренно disabled.
-Accessibility 4/4 требует пустые `violations` и `incomplete` для всех default
-axe rules и покрывает inline login-error semantics, 390px parent/admin и 640px
-200%-zoom-equivalent reflow.
-
-PR-A12/13/14 всё ещё `blocked`: отсутствуют register/verify/claim, funded
-Nachhilfe upload/document review, enabled contract lifecycle, price admin-send
-и scheduled apply; disabled upload mutation, оставшиеся enrollment/group-service
-и guessed/admin-purpose permission variants; literal/manual zoom,
-assistive-technology/glyph review и preview/provider authenticated evidence.
-Provider/manual smoke, job-specific alerts, post-apply recovery rehearsal и внешние release
-inputs также отсутствуют.
-`feature_disabled` не считается завершением полного MVP.
-
-По `SYS-04`/`OQ-036` ближайший Stage-13 checkpoint также не может считаться
-`full-manual-preview`, пока synthetic Browser-contract/R2/email,
-Telegram normal-outbox и document upload/quarantine/manual-AV/business-review
-не пройдены фактически на выделенных preview resources. Production legal,
-provider и training approvals остаются следующими release gates; они не
-заменяют работающий тестовый контур. Агент готовит локальные candidates и
-reversible evidence до точного внешнего gate, а owner input запрашивает только
-непосредственно перед нужным credential, remote mutation, deploy или send.
+Ближайший checkpoint — `full-manual-preview` по `SYS-04`/`OQ-036`: реальные
+synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
+quarantine/manual-AV/business-review paths на выделенных preview resources.
+`feature_disabled` не считается завершением обязательного MVP-контура.
 
 Latest reviewed full-manual-preview candidate
 `1607d6de55491afe7a2bea059e5f36e8718e0b8c`, parent `6ebf476…`, получил fresh
-independent **GO** с 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Token-local polarity
-закрывает mixed-clause negation finding; actual contract проверяет 8 EN/RU
-mixed-polarity вариантов и 8 pure-negative controls во всех семи status paths.
-Runtime, migrations, dependencies, config и E2E harness не менялись; scoped
-check/unit/docs/build/scan/diff прошли, а полные runtime/E2E evidence безопасно
-унаследованы от проверенного ancestor по proportional-testing policy.
-Local continuity/review gate закрыт. Этот GO не разрешает migration apply,
-deploy, remote D1/R2/provider actions или production: следующий gate требует
-отдельной owner authorization и fresh candidate-bound recovery evidence.
+independent **GO** с 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Runtime, migrations,
+dependencies, config и E2E harness после полного reviewed ancestor не менялись;
+scoped continuity/check/docs/build/scan/diff прошли и full-suite evidence
+унаследовано по proportional-testing policy. Новый review-loop не нужен.
+
+Следующий gate — отдельно разрешённые candidate-bound recovery, применение
+pending `0024`/`0025` к preview/recovery и exact reviewed Worker deploy с
+fail-closed providers/auth. Затем следуют controlled auth/two accounts/bootstrap,
+реальные provider/document/contract flows и owner exploratory pass по
+[FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
+[owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production
+readiness остаётся `blocked`; GO не разрешает production, CMS или real PII.
 
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,

@@ -1,118 +1,167 @@
-# Продолжение Stage 13 до полного manual preview и production
+# Продолжение Stage 13 до полного manual preview
 
-Открой этот файл полностью и выполняй последовательно. Это постоянный tracked
-entry-point, а не snapshot отдельного gate. Не выбирай другой локальный
-`stage-13-*` prompt по имени или дате: одноразовые prompts могут быть
+Открой этот файл полностью и выполняй последовательно. Это единственный
+постоянный tracked entry-point текущего preview deployment. Не выбирай другой
+локальный `stage-13-*` prompt по имени или дате: одноразовые prompts могут быть
 историческими, Git-ignored или role-specific.
 
-## Постоянная цель
+## Цель этой программы
 
-Ближайшая проверяемая цель — Access-protected preview, в котором владелец может
-вручную проверить весь MVP end-to-end на синтетических данных без PII. По
-`SYS-04`/`OQ-036` это требует реально включённых preview-only contract/
-Browser/R2/email, Telegram normal-outbox и document upload/quarantine/manual-AV/
-business-review paths; production approval или `feature_disabled` не заменяет
-их проверку. После достижения этого milestone продолжай Stage 13 до production
-readiness и отдельно разрешённого production deploy. Один local fix, review,
-import, deploy, login или bootstrap не завершает процесс.
+Как можно быстрее передать владельцу Access-protected preview, в котором он
+сможет глазами и руками проверить весь MVP end-to-end на синтетических данных.
+По `SYS-04`/`OQ-036` обязательны реальные preview-only Browser/R2/email,
+Telegram normal-outbox и document upload/quarantine/manual-AV/business-review
+paths. Stub, fake transport, `feature_disabled` или один automated test не
+являются evidence работоспособности такого контура.
 
-## Обязательный старт
+Эта программа заканчивается полным manual-preview checkpoint и его handoff.
+Production readiness/deploy, официальный сайт, реальные PII/Office sources и
+реальные клиенты — отдельная будущая программа с отдельным разрешением.
+
+## Быстрый обязательный старт
 
 1. Полностью прочитай `AGENTS.md`, `docs/README.md`,
-   `docs/spec/MVP_SPEC.md`, `docs/spec/ACCEPTANCE_CRITERIA.md`,
-   `docs/spec/OPEN_QUESTIONS.md`, Stage 13 в
-   `docs/implementation/ROADMAP.md`, previous-stage handoff, весь
-   `docs/implementation/handoffs/stage-13.md`,
-   [активное состояние](../implementation/STAGE_13_ACTIVE_STATE.md),
-   `docs/operations/PRODUCTION_READINESS.md`,
-   `docs/operations/PRODUCTION_READINESS_CHECKLIST.md`,
-   `docs/operations/PRODUCTION_DEPLOYMENT.md` и тематический runbook следующего
-   gate. Для всех preview-функций обязательно прочитай
-   `docs/operations/FULL_MANUAL_PREVIEW.md`.
-2. Выполни `git status --short`, `git rev-parse HEAD` и fresh read-only
-   reconciliation только тех remote ресурсов, которые нужны для следующего
-   gate. Сохрани чужие изменения; не делай reset/checkout/cleanup.
-3. Сопоставь actual state с metadata и разделами active-state. Если есть drift,
-   не повторяй старый gate: сначала установи sanitized provenance, обнови
-   checkpoint/handoff/checklist и выбери фактический следующий prerequisite.
-4. Составь короткий working plan и сразу выполняй все разрешённые
-   local/read-only/reversible шаги. Не проси подтверждения для каждого такого
-   шага и не останавливайся после промежуточного успеха.
+   `docs/spec/MVP_SPEC.md` и `docs/spec/OPEN_QUESTIONS.md`.
+2. Прочитай Stage 13 в `docs/implementation/ROADMAP.md`, previous-stage handoff,
+   весь [active state](../implementation/STAGE_13_ACTIVE_STATE.md),
+   [full-manual-preview runbook](../operations/FULL_MANUAL_PREVIEW.md) и
+   [инструкцию владельца](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md).
+3. Из acceptance criteria, test plan, readiness checklist и большого deployment/
+   operations runbook читай разделы только текущей фазы и прямые ссылки active
+   state. В `handoffs/stage-13.md` прочитай верхний current-continuation блок;
+   исторические разделы открывай лишь для конкретного evidence/provenance.
+4. Выполни `git status --short`, `git rev-parse HEAD` и короткую read-only
+   reconciliation только ресурсов текущей фазы. Не повторяй многочасовой общий
+   аудит уже зафиксированного состояния и не делай reset/checkout/cleanup.
+5. Одной короткой записью назови: текущую фазу, exact target/candidate/rollback,
+   затронутые production paths, минимальные проверки и одну пакетную permission,
+   если она уже нужна. Затем сразу выполняй всё разрешённое.
 
-## Приоритет independent NO-GO
+## Outcome-first triage
 
-Если active-state фиксирует independent `NO-GO`, его remediation становится
-первым hard gate независимо от старых зелёных tests или historical GO другого
-scope. Полностью прочитай записанные findings, соответствующие canonical
-requirements/acceptance/test plan и local exact remediation prompt, если он
-назван в handoff. Исправь все BLOCKER/HIGH и обязательные MEDIUM, выполни
-focused regression плюс полную gate-цепочку и подготовь новый immutable
-candidate. Не присваивай своему candidate independent GO: на role boundary
-подготовь exact read-only review prompt для другой session/identity.
+Следуй классификации `P0`–`P3` из `AGENTS.md`. Исправление до продвижения
+обязательно только для воспроизводимого `P0/P1`: безопасность/PII/ownership,
+неверный remote target или rollback, либо фактически сломанный обязательный
+preview flow. `P2/P3` занеси в backlog и не открывай ради них новый review-loop.
 
-До нового independent GO не запрашивай и не выполняй candidate-bound recovery,
-migration apply, deploy, config/secret mutation, provider send или bootstrap.
-Для Cloudflare Workers/D1/R2 remediation загрузи `cloudflare` и
-`workers-best-practices`, а перед Wrangler commands — `wrangler`; exact API/
-binding semantics сверяй с текущими official docs/types/schema. Historical
-review verdict не переносится на changed candidate.
+Не начинай рефакторинг, общую полировку или расширение scope во время deploy,
+если без этого текущий обязательный flow работает и безопасен. Несколько
+связанных мелких исправлений объединяй в один пакет с одним focused test run.
 
-## Правило продвижения
+## Review status
 
-После каждого успешного gate:
+Review status и exact reviewed candidate бери только из active-state metadata.
 
-1. обнови `docs/implementation/STAGE_13_ACTIVE_STATE.md`, readiness checklist и
-   `docs/implementation/handoffs/stage-13.md`;
-2. обнови deployment/operations/import/DR runbook, если изменилось фактическое
-   operational evidence; canonical requirement/acceptance — только если
-   изменилось поведение;
-3. выполни `npm run check`, `npm test`, `npm run build`, применимые
-   `npm run docs:check`, `npm run release:scan` и `git diff --check`;
-4. самостоятельно переходи к следующему разрешённому prerequisite.
+- При `independent_go` не запрашивай новый review и не создавай новый candidate
+  из-за status/docs-only child. Переходи к remote preview фазе.
+- При настоящем independent `NO-GO` сначала проверь связь findings с текущим
+  milestone. Исправь `BLOCKER/HIGH` и доказанно milestone-blocking `MEDIUM`,
+  выполни focused regression изменённой поверхности и только необходимые gates.
+  Новый immutable runtime candidate требует отдельного independent exact-SHA
+  review; автор не присваивает себе GO.
+- Нерелевантные LOW/обычные MEDIUM не должны заставлять повторять сотни tests
+  или задерживать рабочий preview.
 
-Остановка допустима только на настоящем human/permission gate, независимой role
-boundary или при небезопасной потере context. Перед остановкой заверши всю
-безопасную подготовку и задай один точный вопрос: environment, scope, expected
-result, stop condition и rollback. Разрешение одного remote scope не переносится
-на другой. Legal/provider/training approval, нужный только для production, не
-является причиной останавливать подготовку synthetic preview lifecycle.
+## Квазиатомарные фазы
 
-## Permission boundary
+Не смешивай все операции в один длинный непрозрачный запуск. После каждой фазы
+зафиксируй коротко `result / evidence / next / rollback` и сразу продолжай.
 
-Без нового вопроса разрешены local/read-only inspection, implementation,
-tests/build/docs и read-only remote reconciliation без PII/secrets.
+### Фаза 0 — lock цели
 
-Отдельное exact permission обязательно перед D1/R2 write, migration/import
-transition, Worker deploy/rollback/traffic, Access/flag/var/secret mutation,
-email/Telegram send, bootstrap/role/session mutation, production, DNS/CMS и
-официальным сайтом. Владелец лично вводит passwords, OTP и verification links;
-никогда не проси их прислать. Реальный Access/Office PII не попадает в ordinary
-preview.
+Read-only подтверди exact reviewed candidate, preview Worker/D1/R2/origin,
+Access perimeter, pending migrations, предыдущую совместимую Worker version и
+fresh candidate-bound recovery source. Любая production/CMS цель или drift —
+stop. Без drift прежние зелёные фазы не переигрываются.
 
-Независимые import/recovery/review роли нельзя изображать одной identity. Для
-role boundary сначала обнови persistent evidence, затем создай минимальный
-role-specific local prompt и прямо скажи владельцу начать новую сессию с этим
-файлом. Постоянная цель и active-state при этом не меняются.
+### Фаза 1 — recovery и schema
 
-## Context rollover
+После одной exact owner authorization создай fresh candidate-bound recovery
+evidence/isolated recovery, затем примени только ожидаемые append-only migrations
+к preview и предусмотренной recovery copy. Проверь migration inventory, FK,
+quick-check и ключевые counts. Не выполняй downgrade и не переписывай migration.
 
-Перед remote mutation, provider send, irreversible security action, production
-gate и independent review проверь, можешь ли однозначно назвать actual target,
-candidate provenance, permission, stop condition и rollback source. Если нет:
+### Фаза 2 — fail-closed Worker deploy
 
-1. выполни разрешённую read-only reconciliation;
-2. обнови active-state, handoff, checklist и нужный runbook;
-3. выполни docs/diff checks;
-4. создай обезличенный self-contained role/scope prompt только если он
-   действительно нужен;
-5. сообщи владельцу точный файл и фразу для новой сессии.
+Сделай candidate-bound dry-run и deploy exact reviewed Worker только в preview.
+Сначала providers/public auth остаются fail-closed. Минимальный smoke: Access не
+обходится, canonical root/health отвечает ожидаемо, exact Worker version активна,
+D1/R2/Cron bindings не дрейфовали. При ошибке — containment и заранее
+зафиксированный compatible Worker rollback; D1 не откатывается вслепую.
 
-Не жди полной потери контекста, но не создавай новую сессию только из-за обычной
-длины, пока безопасная работа уверенно продолжается.
+### Фаза 3 — controlled auth и роли
 
-## Финальный отчёт каждой сессии
+После отдельной пакетной authorization включи Resend/public auth только для
+двух owner-controlled test recipients. Владелец сам вводит passwords/OTP и
+открывает verification links. После двух verified synthetic accounts выполни
+one-shot admin bootstrap штатной CLI, проверь audit/replay denial/session revoke
+и отдельную parent-only роль второго account.
 
-Финальный ответ обязан быть self-contained и сообщать: достигнутый outcome,
-реально пройденные проверки, untouched scope, status ближайшего manual-preview
-milestone, production verdict, exact next gate и одно требуемое действие
-владельца — только если без него действительно нельзя продолжить.
+### Фаза 4 — реальные MVP-контуры preview
+
+Включай и проверяй небольшими блоками:
+
+1. parent/admin/catalog/trial/request/price/support/absence/privacy;
+2. synthetic document → private quarantine R2 → forced admin download → current
+   local AV → hash-bound attestation → отдельный business decision → cleanup;
+3. четыре marked preview-review PDF через реальный Browser Run/private R2/email,
+   включая один accept → different-admin formation/activation → certificate;
+4. dedicated Telegram bot/channel: read-only preflight и ровно один отдельно
+   разрешённый PII-free normal-outbox send с verify/reconcile policy.
+
+Fake provider используется только для локальной regression, но не как evidence
+этой фазы. Один сломанный блок не отменяет evidence уже завершённых независимых
+блоков; исправляется только его affected surface.
+
+### Фаза 5 — owner exploratory pass
+
+Передай владельцу URL и guided checklist. Он проверяет desktop/mobile, тексты,
+навигацию и основные роли глазами; агент параллельно смотрит только безопасные
+correlation IDs/status/counts. Реальные дефекты классифицируются `P0`–`P3`.
+`P0/P1` исправляются focused-пакетом, `P2/P3` идут в backlog.
+
+Checkpoint достигнут только после реального owner pass всех обязательных
+контуров. После этого обнови active state/checklist/handoff и останови программу
+с отдельным production verdict; автоматически переходить к production нельзя.
+
+## Проверки без пустых многочасовых прогонов
+
+До каждой проверки перечисли изменённую surface и почему выбранный набор её
+покрывает. Применяй правила `AGENTS.md` и `TEST_PLAN.md`:
+
+- remote config/secret/migration/deploy без runtime diff получает target-specific
+  preflight, postcondition и smoke, а не повтор полного local suite;
+- docs/status-only diff получает `docs:check`, `release:scan` и
+  `git diff --check`;
+- unchanged reviewed runtime наследует exact full-suite evidence из active
+  state; не запускать его ещё раз «для уверенности»;
+- material runtime/migration/dependency/cross-cutting diff перед deploy требует
+  релевантных focused tests и полной release-цепочки только в случаях,
+  перечисленных в `AGENTS.md`;
+- assertion failure релевантного test нельзя игнорировать, но unrelated suite не
+  становится обязательным из-за одного documentation/config шага.
+
+## Permission и human boundary
+
+Без вопроса разрешены local/read-only inspection, docs, focused checks и
+read-only remote reconciliation без PII/secrets. Exact permission нужна перед
+D1/R2 write, migration/import transition, Worker deploy/rollback/traffic,
+Access/flag/var/secret mutation, email/Telegram send, bootstrap/role/session
+mutation и любой production/CMS action.
+
+Группируй однородные preview mutations в одну заранее описанную фазу и проси
+одно пакетное разрешение с exact target, результатом, stop condition и rollback.
+Пароли, OTP, verification links и secret values владелец вводит лично; не проси
+присылать их в чат и не выводи их в evidence.
+
+Остановка допустима только непосредственно перед таким human/permission gate,
+независимой role boundary или настоящим hard blocker. До остановки заверши всю
+безопасную подготовку и задай один точный вопрос. Отсутствующий production-only
+approval не блокирует synthetic preview.
+
+## Финальный отчёт сессии
+
+Сообщи: достигнутый пользовательский outcome, реально выполненные focused
+проверки, сознательно не запущенные тяжёлые suites и почему, untouched scope,
+статус full-manual-preview, production verdict, следующую фазу и ровно одно
+действие владельца — только если без него продолжение невозможно.

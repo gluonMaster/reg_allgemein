@@ -2,12 +2,18 @@
 
 <!-- stage-13-current-review-status: independent_go -->
 
-Актуально на 2026-08-30. Это текущий release ledger, а не обещание будущей
+Актуально на 2026-08-31. Это текущий release ledger, а не обещание будущей
 готовности.
 
 **Итог:** `blocked` — портал нельзя объявлять production-ready и нельзя
 развёртывать в production по этому документу. Обязательные paths выключены либо
 не имеют production evidence; remote actions отдельно не авторизованы.
+
+Ближайший operational маршрут — preview phases из
+[active state](../implementation/STAGE_13_ACTIVE_STATE.md) и краткой
+[owner guide](OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Исторические blocked
+production rows ниже не должны задерживать synthetic `full-manual-preview`, если
+они не являются prerequisite его текущей фазы.
 
 ## Release record
 

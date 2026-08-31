@@ -12,6 +12,8 @@ Telegram, а D1/R2/Browser используют только отдельные 
 [MVP_SPEC.md](../spec/MVP_SPEC.md), критерии в
 [ACCEPTANCE_CRITERIA.md](../spec/ACCEPTANCE_CRITERIA.md), детальные процедуры в
 [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md). Этот документ не заменяет их.
+Краткие действия владельца и готовый goal prompt находятся в
+[OWNER_FULL_MANUAL_PREVIEW_GUIDE.md](OWNER_FULL_MANUAL_PREVIEW_GUIDE.md).
 
 ## Неподвижные границы
 
@@ -26,6 +28,21 @@ Telegram, а D1/R2/Browser используют только отдельные 
 - deploy, secret/provider mutation и первая внешняя отправка выполняются только
   после точной остановки и подтверждения владельца; independent review выполняет
   отдельная роль/сессия и не симулируется автором кандидата.
+
+## Приоритет и темп
+
+Ближайший результат — работающий preview, который владелец видит и проверяет
+руками. На этом пути немедленно блокируют только `P0/P1` из `AGENTS.md`:
+безопасность/PII/ownership/target/rollback либо воспроизводимый отказ
+обязательного flow. `P2/P3` фиксируются в backlog и не запускают новый цикл
+полировки или independent review.
+
+Работа делится на короткие фазы: target/recovery → migrations → fail-closed
+Worker deploy → auth/accounts/bootstrap → реальные provider/document/contract
+контуры → owner exploratory pass. Успешная фаза не повторяется без drift,
+material diff или воспроизводимого `P0/P1`. Проверки каждой фазы покрывают только
+её изменённую surface; unchanged reviewed runtime наследует уже записанный
+full-suite evidence.
 
 ## Порядок достижения checkpoint
 

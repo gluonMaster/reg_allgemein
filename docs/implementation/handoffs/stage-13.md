@@ -2,7 +2,7 @@
 
 <!-- stage-13-current-review-status: independent_go -->
 
-Ревизия: 2026-08-30.
+Ревизия: 2026-08-31.
 
 Статус этапа: `in_progress` — latest full-manual-preview review target
 `1607d6de55491afe7a2bea059e5f36e8718e0b8c` с direct parent
@@ -16,6 +16,48 @@ writes, provider sends или bootstrap; каждое remote действие т
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+## Current continuation: быстрый путь к full manual preview — 2026-08-31
+
+- **Outcome:** local continuity/review остаётся закрыт independent GO exact
+  `1607d6de55491afe7a2bea059e5f36e8718e0b8c`. Новый review-loop не нужен;
+  следующий gate по-прежнему owner-authorized candidate-bound recovery, apply
+  `0024`/`0025` и fail-closed preview Worker deploy.
+- **Приоритет:** root `AGENTS.md`, roadmap и test plan теперь требуют связать
+  findings с ближайшим milestone. До продвижения исправляются `P0/P1`;
+  `P2/P3` не задерживают preview и уходят в backlog. Связанные мелкие fixes
+  получают один focused regression run.
+- **Deployment:** постоянный tracked prompt разделён на короткие target-bound
+  фазы: lock → recovery/schema → fail-closed deploy → auth/accounts/bootstrap →
+  product/document/contract/Telegram blocks → owner exploratory pass. У каждой
+  фазы есть минимальная проверка и rollback; зелёная фаза без drift/material
+  diff/`P0/P1` не повторяется.
+- **Context cost:** active state сокращён до current operational truth. Новый
+  session читает верхний current handoff block и открывает 2500-line history
+  только для конкретного provenance/evidence, а не перечитывает её автоматически.
+- **Owner guide:** создан
+  `docs/operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md` с reasoning `High` для
+  детерминированного deploy, готовым goal prompt, действиями владельца, manual
+  matrix и stop/rollback rules. `Max` оставлен для реального drift/recovery/
+  security-design incident.
+- **Known inputs:** роли двух owner-controlled mailbox уже известны локальному
+  operator context и не записаны в Git. Private Telegram invite link не является
+  Bot API binding; ещё нужны protected dedicated bot token, exact signed-decimal
+  chat ID, type `channel` и bot-admin `Post Messages` permission.
+- **Focused verification:** `npm.cmd run docs:check` passed — 187 links / 57
+  files, 109 executable command lines и Stage-13 continuity; `npm.cmd run
+  release:scan` passed — 563/563 text files, no prohibited artifact/high-confidence
+  secret/PII; `git diff --check` passed.
+- **Осознанно не запускались:** `npm run check`, full Vitest, E2E, build и audit.
+  Diff ограничен docs/prompt/agent instructions, не меняет runtime, migrations,
+  dependencies или deployment config; используется inherited reviewed evidence
+  75/75 files, 561 pass + 1 Windows skip, E2E 18/18, build и audit 0.
+- **Untouched:** remote Worker/D1/R2/Access/Resend/Telegram, secrets, provider
+  sends, bootstrap, production, DNS/CMS, официальный сайт и real PII не менялись.
+
+Exact next action владельца: начать новую `High` session готовым prompt из owner
+guide; его текст даёт ограниченное прямое разрешение на preview Фазы 0–2 и
+оставляет auth/secrets/bootstrap/provider sends отдельным пакетным gate.
 
 ## Independent GO для exact `1607d6d` — 2026-08-30
 

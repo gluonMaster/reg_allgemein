@@ -1,6 +1,6 @@
 # Развёртывание портала регистрации
 
-Ревизия: 2026-08-24.
+Ревизия: 2026-08-31.
 
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Локальная
 реализация Stage 13 не заменяет clean-room rehearsal и закрытие release gates из
@@ -32,46 +32,31 @@ Placeholder в угловых скобках, например `<PREVIEW_CONFIG>
 и локальные upstream paths не копируются в терминальный transcript или
 checklist.
 
-### Непрерывный multi-session deployment protocol
+### Квазиатомарный preview deployment protocol
 
-Цель Stage 13 — не выполнение одного изолированного deploy-шага, а
-последовательное доведение самостоятельного портала регистрации до полностью
-функционального production-состояния с закрытыми release gates. Эта цель
-сохраняется при каждой передаче между сессиями. Конкретный continuation prompt
-задаёт ближайший безопасный gate, но не превращает его в конечную цель: после
-успешного шага агент обновляет evidence и продолжает к следующему разрешённому
-prerequisite, пока не возникнет участие владельца, stop condition или
-необходимость новой сессии.
+Ближайшая программа заканчивается полным manual preview, а не автоматически
+продолжается до production. Короткий маршрут и действия владельца находятся в
+[OWNER_FULL_MANUAL_PREVIEW_GUIDE.md](OWNER_FULL_MANUAL_PREVIEW_GUIDE.md), current
+target/status — в
+[STAGE_13_ACTIVE_STATE.md](../implementation/STAGE_13_ACTIVE_STATE.md).
 
-Перед каждой remote mutation, provider send, irreversible security action,
-production gate и независимым review агент обязан оценить достаточность
-контекста. Новая сессия требуется, если история уже сжималась, точное remote
-состояние нельзя уверенно восстановить из текущего transcript и handoff,
-следующий ответственный шаг требует clean-room reasoning либо должна измениться
-роль независимого оператора. До остановки агент:
+Deploy делится на target lock, recovery/schema, fail-closed Worker deploy,
+auth/accounts/bootstrap, реальные provider/document/contract blocks и owner
+exploratory pass. Перед фазой фиксируются exact target, expected result,
+минимальная проверка и rollback; однородные mutations получают одно пакетное
+разрешение. После зелёной фазы агент сразу продолжает и не повторяет её без
+drift, material diff или воспроизводимого `P0/P1` из `AGENTS.md`.
 
-1. выполняет только допустимую read-only reconciliation фактического состояния;
-2. обновляет Stage 13 handoff, readiness checklist и соответствующий runbook,
-   указывая UTC-время, завершённые gates, exact следующий gate, stop/rollback
-   состояние и сознательно не затронутый scope;
-3. создаёт self-contained ignored continuation prompt, который заново фиксирует
-   общую цель до функционального production, обязательные источники истины,
-   permissions, exact targets, проверяемые prerequisites и rollover protocol;
-4. запускает применимые documentation/diff checks и сообщает владельцу точный
-   путь prompt и одну команду-поручение для новой сессии.
-
-Обычная длина работы сама по себе не является поводом дробить безопасные local и
-read-only шаги. Если требуется участие владельца, агент простым языком объясняет
-причину, даёт точные последовательные действия, ожидаемый результат и отдельно
-указывает, какие пароли, OTP, cookies или tokens нельзя передавать агенту. После
-ответа работа продолжается к общей цели, а не считается завершённой на этом
-human gate.
+Новая сессия или новый independent review не создаются после каждого шага.
+Rollover нужен только при потере точного target/permission/rollback context либо
+реальной role boundary. Исторический 2500-line handoff не перечитывается целиком:
+используются active state, верхний current handoff block и только адресно
+необходимое evidence.
 
 Общая цель не расширяет разрешения автоматически. Production deploy/migration,
 реальный PII import, external provider sends, secrets/Access/flags, DNS/CMS и
-официальный сайт остаются отдельными exact-scope gates согласно этой инструкции
-и текущему прямому поручению владельца. Безопасные local preparation и read-only
-проверки не следует искусственно разбивать на микрогейты.
+официальный сайт остаются отдельными exact-scope gates. Пароли, OTP, cookies и
+tokens владелец вводит лично и не передаёт в transcript.
 
 ## Текущее состояние реализации
 
@@ -444,10 +429,12 @@ review и preview schema migration `0017` прошли, но exact candidate Wor
 target-pinned provider preflight/send/failure/alert/operator rehearsal не
 выполнялись, поэтому PR-F12–PR-F15 имеют `blocked`.
 
-**Prerequisites:** provider/privacy approval, владелец bot account и exact bureau
-chat подтверждены out-of-band; bot не используется для parent identity, inbound
-commands/replies, документов или свободного клиентского текста; отдельно
-разрешена ровно одна synthetic preview send.
+**Prerequisites для synthetic preview:** владелец bot account и exact dedicated
+test channel подтверждены out-of-band; bot не используется для parent identity,
+inbound commands/replies, документов или свободного клиентского текста; отдельно
+разрешена ровно одна synthetic preview send. Финальные provider/privacy approval
+нужны для production, но не подменяют и не блокируют PII-free preview smoke по
+`OQ-036`.
 
 **Config/secrets contract локального кандидата:**
 
@@ -895,19 +882,17 @@ dedupe/dead/stale-lock и job-specific failure/backlog alerts.
 
 ## 10. Preview deploy и smoke
 
-**Prerequisites:** шаги 1–9 имеют evidence; preview resources отделены;
-production credentials/PII отсутствуют; legacy-import rehearsal использует
-только deterministic synthetic/no-PII bundle; remote preview deploy, import
-stage/promote/rollback и provider send разрешаются раздельно exact scope.
+**Prerequisites:** current reviewed candidate/status берутся только из
+[active state](../implementation/STAGE_13_ACTIVE_STATE.md); preview resources
+отделены; production credentials/PII отсутствуют; fresh candidate-bound recovery
+создана; ожидаемые pending migrations применены и проверены на preview/recovery.
+Remote deploy и provider/auth enablement — разные фазы.
 
-На checkpoint 2026-08-20 ближайший разрешаемый отдельно scope уже:
-развернуть exact reviewed Worker candidate поверх применённой preview schema
-`0001`–`0022` и выполнить только post-deploy read-only smoke. До mutation нужно
-подтвердить пустой `src`/`migrations`/`tests` diff от final review seal
-`2bedc73c`, unchanged ignored `wrangler.preview.toml` SHA-256
-`d0292d875b148da0cca0d97f8c188b2c8eae11a94c4d81fbfe1b25b18188cac9`, exact
-account/Worker/D1/R2/origin binding, active previous Worker version и D1 pending 0. Config остаётся source of truth; неожиданный remote var/binding/cron — stop,
-а не основание автоматически использовать `--keep-vars`.
+До mutation нужно подтвердить exact reviewed runtime tree, unchanged protected
+preview config digest, exact account/Worker/D1/R2/origin bindings, Access
+perimeter, active compatible previous Worker version и D1 pending `0`. Config
+остаётся source of truth; неожиданный remote var/binding/cron — stop, а не
+основание автоматически использовать `--keep-vars`.
 
 **Команды:**
 
@@ -920,43 +905,35 @@ node node_modules/wrangler/bin/wrangler.js deploy --strict --config wrangler.pre
 
 **Ожидаемый безопасный результат:** опубликован только preview Worker;
 `PORTAL_PUBLIC_ORIGIN` равен preview HTTPS origin; cookies host-only; providers
-disabled; real sends невозможны. `wrangler deploy` создаёт новую version и сразу
-переводит её на 100% traffic, поэтому exact previous version ID и rollback
-совместимость фиксируются в protected evidence до команды deploy.
+и public auth disabled; real sends невозможны. `wrangler deploy` создаёт новую
+version и сразу переводит её на 100% traffic, поэтому exact previous version ID
+и rollback compatibility фиксируются в protected evidence до команды deploy.
 
 Минимальный post-deploy check этого узкого gate: новая version одна обслуживает
 100% traffic; anonymous/invalid-token запрос Worker не достигает; valid Access
 service token получает root `200` и operations health `HEAD 204`; registration
-остаётся service-unavailable/fail-closed; D1 ledger остаётся `0001`–`0022`,
-pending 0, FK/business empty-state invariants не меняются; два R2 bindings,
+остаётся service-unavailable/fail-closed; D1 ledger содержит ровно ожидаемые
+migrations, pending 0, FK/business invariants не меняются; два R2 bindings,
 оба Cron и secret-name inventory сохраняются. POST, OTP, bootstrap, import,
 provider send и feature enablement в этот smoke не входят.
 
-**Проверка:** synthetic register → cabinet → request/trial → contract → price
-review → message → privacy closure; cross-user/RBAC/CSRF; German keyboard/mobile;
-Browser glyph/font/long-name/pagination/quota; Cron manual-run; R2 isolation;
-logs redacted. Отдельные обязательные checks: exact-target synthetic legacy
-baseline plan→stage→review→recovery-evidence(`none`)→promote→verify, затем
-candidate plan→stage→review→recovery-evidence(`previous`)→promote→verify→
-rollback/roll-forward с first-import restore;
-Telegram Bot API one-way minimized delivery и `delivery_unknown` operator path —
-только после собственных разрешений и без client PII.
+**Проверка:** в этой фазе только candidate/version/Access/root/health/bindings/
+schema smoke. Authenticated register/cabinet, Browser contract, R2 upload и
+providers выполняются следующими независимыми блоками по
+[FULL_MANUAL_PREVIEW.md](FULL_MANUAL_PREVIEW.md). Их failure не заставляет
+повторять deploy smoke, если Worker/schema не менялись.
 
-**Stop condition:** нет preview approval/resources, config содержит production
-ID/secret, обязательный smoke отсутствует либо authenticated Browser/provider/
-manual-failure wiring не проходит current tests/rehearsal. Preview Worker, D1,
-private EU R2, automatic Cron, aggregate alert, public HTTP/desktop/mobile/
-keyboard smoke и stored-log review уже подтверждены; remote authenticated/IDOR/
-axe, real-token public auth, provider delivery, Browser Run, manual/dedupe/
-failure, bootstrap и Telegram Bot API smoke части остаются `blocked`; synthetic
-baseline first-import recovery и полный candidate promote/repeat/rollback/
-roll-forward lifecycle пройдены 2026-08-25.
+**Stop condition:** нет exact preview permission/recovery/compatible rollback;
+config содержит production ID/secret; candidate или bindings не совпадают с
+active state/protected record; Access bypass; schema/smoke fail. Отсутствующие
+auth/provider inputs не блокируют этот fail-closed deploy и переходят в следующую
+фазу.
 
 **Rollback/recovery:** отключить affected feature; rollback preview Worker к
 известной совместимой version либо исправить forward. Для текущего exact gate
 rollback возвращает только захваченную до deploy Worker version и не откатывает
 D1 down; если rollback не был явно pre-authorized, сначала containment и
-отдельное разрешение. D1/R2 не удалять и migrations `0001`–`0023` не менять.
+отдельное разрешение. D1/R2 не удалять и applied migrations не менять.
 
 ## 11. Production deploy и post-deploy smoke
 

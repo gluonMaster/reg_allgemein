@@ -1,6 +1,6 @@
 # Стратегия тестирования
 
-Ревизия: 2026-08-30.
+Ревизия: 2026-08-31.
 
 ## Принципы
 
@@ -17,6 +17,15 @@
   surface и запускаются exact suites этой поверхности и непосредственных
   consumers. Повтор полного suite без нового покрываемого риска не является
   дополнительным evidence и не допускается только ради формальности.
+- Проверки служат ближайшему пользовательскому milestone. После неизменённого
+  independently reviewed runtime remote migration/config/deploy phase получает
+  target-specific preflight/postcondition/smoke; она не переоткрывает полный
+  local suite. Несколько мелких исправлений одного flow объединяются и проходят
+  один focused regression run.
+- Manual exploratory pass владельца обязателен для `full-manual-preview` и
+  дополняет, а не дублирует automation: interface, тексты, навигация, роли и
+  реальные preview provider paths проверяются глазами. Обнаруженный дефект
+  запускает affected tests; уже завершённые unrelated blocks не повторяются.
 - Тест не использует production/local PII source напрямую. Реальные source
   файлы допускаются только в отдельном ручном local validation run с
   обезличенным отчетом и после отдельного прямого поручения; обычный stage run

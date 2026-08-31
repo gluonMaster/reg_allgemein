@@ -1,6 +1,6 @@
 # Документация проекта
 
-Актуально на 2026-08-27. Документация разделена по назначению, чтобы требования,
+Актуально на 2026-08-31. Документация разделена по назначению, чтобы требования,
 архитектура и рабочие материалы не конкурировали как источники истины.
 
 ## С чего начинать
@@ -55,6 +55,7 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 | Развёртывание портала                       | [operations/PRODUCTION_DEPLOYMENT.md](operations/PRODUCTION_DEPLOYMENT.md)                           |
 | Ежедневная эксплуатация и incident response | [operations/OPERATIONS_RUNBOOK.md](operations/OPERATIONS_RUNBOOK.md)                                 |
 | Полный ручной preview checkpoint            | [operations/FULL_MANUAL_PREVIEW.md](operations/FULL_MANUAL_PREVIEW.md)                               |
+| Краткие действия владельца для preview      | [operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md](operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md)       |
 | Backup, rollback и disaster recovery        | [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)                                   |
 | Текущий production readiness ledger         | [operations/PRODUCTION_READINESS_CHECKLIST.md](operations/PRODUCTION_READINESS_CHECKLIST.md)         |
 | Этапы реализации                            | [implementation/ROADMAP.md](implementation/ROADMAP.md)                                               |

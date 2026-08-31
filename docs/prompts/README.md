@@ -11,6 +11,10 @@
 [Stage 13 active state](../implementation/STAGE_13_ACTIVE_STATE.md), readiness
 checklist и persistent handoff.
 
+Краткий owner-facing запуск, включая готовый текст goal prompt и только личные
+действия владельца, находится в
+[OWNER_FULL_MANUAL_PREVIEW_GUIDE.md](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md).
+
 Остальные локальные `stage-13-*` файлы являются историческими или
 role-specific ускорителями. Их нельзя выбирать как «самый свежий» источник
 состояния. Если пользователь явно запускает такой prompt, его stop conditions и
