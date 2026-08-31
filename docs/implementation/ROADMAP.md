@@ -61,6 +61,12 @@ Deployment разбивается на короткие target-bound фазы с
 result, focused verification и rollback. Без drift/material diff/
 воспроизводимого `P0/P1` зелёная фаза не повторяется.
 
+После каждой попытки remote mutation и до следующей mutation обязателен
+persistent checkpoint по `AGENTS.md`: read-only postcondition, обновлённый active
+state, отдельный docs-only commit и понятная рекомендация `Medium|High|Max` для
+следующей сессии. `High` — обычный deploy default; `Max` не используется без
+подтверждённого серьёзного риска и его простого объяснения владельцу.
+
 ## Этапы
 
 |   № | Статус      | Результат                                                                                                                              | Зависит от              |
@@ -388,6 +394,9 @@ fail-closed providers/auth. Затем следуют controlled auth/two accoun
 [FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
 [owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production
 readiness остаётся `blocked`; GO не разрешает production, CMS или real PII.
+После каждой remote mutation current truth сохраняется в active state до
+следующей mutation; normal next-session mode для этого известного маршрута —
+`High`, пока факты не показывают серьёзный incident.
 
 Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
 обязательным Stage-13 gate. Локально реализованы v1 parser regression,

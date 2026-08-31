@@ -67,6 +67,66 @@ Review status и exact reviewed candidate бери только из active-stat
 Не смешивай все операции в один длинный непрозрачный запуск. После каждой фазы
 зафиксируй коротко `result / evidence / next / rollback` и сразу продолжай.
 
+### Обязательный post-mutation checkpoint
+
+Remote mutation здесь — D1/R2 write, migration/import transition, Worker deploy/
+rollback/traffic, Access/flag/var/secret mutation, provider send или bootstrap/
+role/session mutation. После **каждой попытки** такой атомарной операции —
+успешной, failed или ambiguous — и до следующей remote mutation:
+
+1. выполни read-only postcondition против фактической целевой среды; exit code
+   сам по себе не доказывает результат;
+2. сразу обнови metadata и таблицу текущей фазы в
+   [active state](../implementation/STAGE_13_ACTIVE_STATE.md);
+3. запиши только sanitized evidence; exact IDs, secrets и PII оставь в
+   защищённом Git-ignored evidence;
+4. при `failed|ambiguous` не продвигай фазу и не повторяй write вслепую — сначала
+   докажи containment либо зафиксируй hard blocker;
+5. до следующей remote mutation создай небольшой docs-only checkpoint commit.
+   Для него нужны только `docs:check`, `release:scan` и `git diff --check`;
+6. handoff обновляй на границе фазы/сессии, readiness checklist — только при
+   фактическом изменении gate, чтобы не раздувать историю после read-only команд.
+
+Используй этот компактный tracked record:
+
+```text
+atomic_action: <что фактически пытались изменить>
+observed_utc: <UTC>
+phase: <current phase/block>
+authorization_scope: <exact approved scope>
+target_fingerprint: <sanitized target, без полного resource ID>
+candidate_or_version: <exact SHA/version или n/a>
+before: <подтверждённый факт до операции>
+after: <read-only postcondition>
+result: success|failed|ambiguous
+evidence: <защищённый pointer или sanitized summary>
+rollback_or_containment: <not-needed|completed|pending + факт>
+next_atomic_action: <ровно одно действие>
+rollover_required: yes|no
+recommended_next_session_mode: Medium|High|Max
+mode_reason_plain: <простое объяснение>
+```
+
+После checkpoint сообщи владельцу, что реально сделано и проверено, текущий и
+следующий atomic step, нужен ли rollover и в каком режиме запускать следующую
+сессию, если она понадобится. Не создавай новую сессию после каждого шага только
+ради ритуала.
+
+- `Medium` рекомендуй для следующего чисто read-only/docs/evidence/manual шага,
+  если нет unresolved ambiguity и remote write.
+- `High` — default для обычной плановой deploy-сессии, когда exact target,
+  процедура, postcondition и rollback/containment известны.
+- `Max` рекомендуй только при реальном серьёзном риске: возможна mutation не той
+  среды/production; результат потенциально необратимой записи неоднозначен;
+  recovery/rollback отсутствует или не сработал; есть data/schema corruption,
+  Access/authorization bypass, secret exposure либо несовместимость deployed
+  code/schema. Объясни без инженерного тумана: что может быть повреждено, какой
+  факт на это указывает, почему `High` недостаточно и какое решение предстоит.
+
+Обычный provider rejection, подтверждённый no-write timeout, косметический/UI
+дефект, локализованная docs-ошибка или штатный fail-closed stop не повышают режим
+до `Max`. Рекомендация режима не даёт новых permissions.
+
 ### Фаза 0 — lock цели
 
 Read-only подтверди exact reviewed candidate, preview Worker/D1/R2/origin,
@@ -164,4 +224,6 @@ approval не блокирует synthetic preview.
 Сообщи: достигнутый пользовательский outcome, реально выполненные focused
 проверки, сознательно не запущенные тяжёлые suites и почему, untouched scope,
 статус full-manual-preview, production verdict, следующую фазу и ровно одно
-действие владельца — только если без него продолжение невозможно.
+действие владельца — только если без него продолжение невозможно. Повтори
+`rollover_required`, `recommended_next_session_mode` и простую ситуационную
+причину; это обязательно даже при `rollover_required: no`.

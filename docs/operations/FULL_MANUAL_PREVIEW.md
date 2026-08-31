@@ -44,6 +44,14 @@ material diff или воспроизводимого `P0/P1`. Проверки 
 её изменённую surface; unchanged reviewed runtime наследует уже записанный
 full-suite evidence.
 
+После каждой попытки remote mutation и до следующей mutation обязательны
+read-only postcondition, обновление tracked active state и маленький docs-only
+checkpoint commit. Владелец получает текущий/следующий atomic step,
+`rollover_required` и рекомендацию режима следующей сессии: `High` для обычного
+известного deploy, `Medium` для чисто read-only продолжения, `Max` только при
+подтверждённом серьёзном риске с понятным объяснением. Failed/ambiguous write не
+повторяется вслепую.
+
 ## Порядок достижения checkpoint
 
 1. Exact reviewed candidate `1607d6de55491afe7a2bea059e5f36e8718e0b8c`,

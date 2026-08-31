@@ -32,19 +32,31 @@ Production readiness: **`blocked` / NO-GO**
   product/document/contract/Telegram blocks → owner exploratory pass. У каждой
   фазы есть минимальная проверка и rollback; зелёная фаза без drift/material
   diff/`P0/P1` не повторяется.
+- **Persistent synchronization:** после каждой попытки remote mutation, включая
+  failed/ambiguous, до следующей mutation теперь обязательны actual read-only
+  postcondition, обновление metadata/atomic record в active state и отдельный
+  малый docs-only commit. Exit code и история чата не заменяют фактическое
+  environment evidence; blind retry запрещён до containment/reconciliation.
+- **Session mode checkpoint:** после каждой атомарной операции агент обязан
+  сообщить `rollover_required`, текущий/следующий step и рекомендацию
+  `Medium|High|Max` простыми словами. `High` — normal deploy default; `Medium` —
+  только read-only/docs/manual continuation; `Max` — лишь при подтверждённом
+  серьёзном риске неверной среды, неоднозначной необратимой записи, failure
+  recovery/rollback, corruption, security bypass/secret exposure или
+  code/schema incompatibility. Обычная fail-closed/provider/UI ошибка не
+  повышает режим автоматически.
 - **Context cost:** active state сокращён до current operational truth. Новый
   session читает верхний current handoff block и открывает 2500-line history
   только для конкретного provenance/evidence, а не перечитывает её автоматически.
 - **Owner guide:** создан
   `docs/operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md` с reasoning `High` для
   детерминированного deploy, готовым goal prompt, действиями владельца, manual
-  matrix и stop/rollback rules. `Max` оставлен для реального drift/recovery/
-  security-design incident.
+  matrix, обязательным post-mutation report и stop/rollback rules.
 - **Known inputs:** роли двух owner-controlled mailbox уже известны локальному
   operator context и не записаны в Git. Private Telegram invite link не является
   Bot API binding; ещё нужны protected dedicated bot token, exact signed-decimal
   chat ID, type `channel` и bot-admin `Post Messages` permission.
-- **Focused verification:** `npm.cmd run docs:check` passed — 187 links / 57
+- **Focused verification:** `npm.cmd run docs:check` passed — 188 links / 57
   files, 109 executable command lines и Stage-13 continuity; `npm.cmd run
   release:scan` passed — 563/563 text files, no prohibited artifact/high-confidence
   secret/PII; `git diff --check` passed.

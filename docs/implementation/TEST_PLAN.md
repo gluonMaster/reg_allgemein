@@ -26,6 +26,9 @@
   дополняет, а не дублирует automation: interface, тексты, навигация, роли и
   реальные preview provider paths проверяются глазами. Обнаруженный дефект
   запускает affected tests; уже завершённые unrelated blocks не повторяются.
+- После каждой remote mutation обязательна target-specific read-only
+  postcondition. Следующий remote write запрещён, пока фактический результат не
+  сохранён в Stage-13 active state; exit code не заменяет environment evidence.
 - Тест не использует production/local PII source напрямую. Реальные source
   файлы допускаются только в отдельном ручном local validation run с
   обезличенным отчетом и после отдельного прямого поручения; обычный stage run
@@ -801,6 +804,10 @@ blocked gates и local suite их не заменяет.
 3. выполнить relevant static/docs/build gates;
 4. записать команды, результаты и причину, почему полный suite применим либо
    осознанно не применим.
+
+Post-mutation active-state checkpoint — docs/status-only diff: для него
+достаточны `docs:check`, `release:scan` и `git diff --check`. Он не является
+основанием повторять full Vitest/E2E/build неизменённого reviewed runtime.
 
 Docs/prompt/agent-instruction/test-only и локальный text-validator diff не требуют
 полного Vitest/E2E, когда runtime, migrations, dependencies и deployment config

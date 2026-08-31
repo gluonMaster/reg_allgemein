@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T10:42:11Z
+updated_utc: 2026-08-31T14:21:21Z
 reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
 last_completed_gate: full-manual-preview-remediation-independent-review-go
 next_gate: full-manual-preview-owner-authorized-recovery-apply-deploy
@@ -12,6 +12,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
+current_phase: phase-0-target-lock
+last_atomic_action: none-since-independent-go
+last_atomic_result: not_started
+next_atomic_action: phase-0-read-only-target-lock
+rollover_required: no
+recommended_next_session_mode: High
+mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -83,6 +90,57 @@ Fresh reconciliation нужно выполнить непосредственн�
 После каждой фазы записываются только `result / evidence / next / rollback`.
 Зелёная фаза не повторяется без actual drift, material diff или воспроизводимого
 `P0/P1`. Отказ одного независимого блока не отменяет evidence остальных.
+
+## Persistent checkpoint после атомарной операции
+
+После каждой попытки remote mutation и до следующей mutation этот файл обязан
+получить фактический read-only postcondition и небольшой docs-only commit. В
+metadata обновляются `updated_utc`, `current_phase`, `last_atomic_action`,
+`last_atomic_result`, `next_atomic_action`, `rollover_required`,
+`recommended_next_session_mode` и `mode_reason_plain`; в строке фазы — её статус,
+sanitized результат и минимальная проверка. Full IDs/secrets/PII остаются только
+в protected Git-ignored evidence.
+
+`failed|ambiguous` не разрешает продвижение или слепой retry: сначала фиксируется
+`rollback_or_containment` либо hard blocker. В сообщении владельцу обязательно
+назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
+режим следующей сессии, даже если `rollover_required: no`.
+
+Текущая рекомендация — **High**: впереди обычный плановый preview deploy, exact
+candidate и rollback известны, серьёзного incident/drift сейчас не зафиксировано.
+`Medium` подходит только для следующего чисто read-only/docs/manual шага. `Max`
+нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
+потенциально необратимой записи, неработающем recovery/rollback, corruption,
+Access/authorization bypass, secret exposure или несовместимости code/schema.
+Штатная fail-closed остановка, обычный provider rejection, подтверждённый
+no-write timeout, косметика и локализованная docs-ошибка не являются причиной
+для `Max`.
+
+### Последний atomic record
+
+До первой remote mutation текущего продолжения baseline фиксируется явно:
+
+```text
+atomic_action: none-since-independent-go
+observed_utc: 2026-08-31T14:21:21Z
+phase: phase-0-target-lock
+authorization_scope: docs-only-no-remote-mutation
+target_fingerprint: preview-only-protected-record-fresh-reconciliation-required
+candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
+before: last-known-preview-state-recorded-below
+after: no-remote-state-change-claimed
+result: not_started
+evidence: current-independent-go-and-persistent-handoff
+rollback_or_containment: not-needed
+next_atomic_action: phase-0-read-only-target-lock
+rollover_required: no
+recommended_next_session_mode: High
+mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
+```
+
+После первой mutation этот block заменяется её фактическим record; `not_started`
+разрешён только для исходного baseline, а результаты попыток принимают ровно
+`success|failed|ambiguous`.
 
 ## Что не повторять
 

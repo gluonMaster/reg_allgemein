@@ -39,6 +39,10 @@ evidence.
 
 - `passed`: проверка выполнена на указанной immutable version в требуемой среде;
   указаны UTC date, owner role и sanitized evidence.
+- После remote mutation фаза не получает `passed`, пока read-only postcondition
+  и текущий/следующий atomic step не сохранены в active state. Checkpoint также
+  обязан назвать `rollover_required` и рекомендуемый `Medium|High|Max` с простой
+  причиной; один exit code или история чата не являются persistent evidence.
 - `feature_disabled`: назван конкретный fail-closed flag/path и его выключение
   проверено. Это состояние feature, а не `passed` и не release approval.
 - По `SYS-04`/`OQ-036` production status `feature_disabled` не закрывает

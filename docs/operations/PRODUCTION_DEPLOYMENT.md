@@ -53,6 +53,23 @@ Rollover нужен только при потере точного target/permi
 используются active state, верхний current handoff block и только адресно
 необходимое evidence.
 
+После каждой попытки remote mutation и **до следующей mutation** агент обязан
+read-only проверить фактическое postcondition, обновить metadata/строку фазы в
+`STAGE_13_ACTIVE_STATE.md`, сообщить владельцу текущий и следующий atomic step и
+сохранить маленький docs-only checkpoint commit. Failed/ambiguous write не
+повторяется вслепую: сначала фиксируется containment или hard blocker. Полные
+resource IDs, secrets и PII остаются только в protected ignored evidence.
+
+Каждый checkpoint содержит `rollover_required: yes|no` и situational
+`recommended_next_session_mode`: `Medium` для чисто read-only продолжения,
+`High` по умолчанию для штатного deploy с известным target/rollback, `Max` только
+для подтверждённого серьёзного риска неверной среды, неоднозначной необратимой
+записи, отказа recovery/rollback, corruption, security bypass/secret exposure
+или несовместимости code/schema. Для `Max` агент простыми словами объясняет, что
+может быть повреждено и какой факт это показывает. Обычный provider reject,
+подтверждённый no-write timeout, UI/cosmetic defect и штатный fail-closed stop не
+являются основанием повышать режим.
+
 Общая цель не расширяет разрешения автоматически. Production deploy/migration,
 реальный PII import, external provider sends, secrets/Access/flags, DNS/CMS и
 официальный сайт остаются отдельными exact-scope gates. Пароли, OTP, cookies и

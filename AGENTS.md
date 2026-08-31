@@ -80,6 +80,53 @@ Deployment выполняется короткими квазиатомарны�
 проверка и rollback/containment. Зелёная фаза не переоткрывается без фактического
 drift, нового material diff или воспроизводимого `P0/P1`.
 
+### Обязательный checkpoint после remote mutation
+
+Remote mutation — это D1/R2 write, migration/import transition, Worker deploy/
+rollback/traffic change, Access/flag/var/secret change, provider send либо
+bootstrap/role/session change. После **каждой попытки** такой атомарной операции,
+включая failed или ambiguous результат, и до следующей remote mutation агент
+обязан:
+
+1. read-only проверкой сверить фактическое postcondition в целевой среде;
+   одного exit code или текста команды недостаточно;
+2. обновить `docs/implementation/STAGE_13_ACTIVE_STATE.md`: UTC, текущую фазу,
+   разрешённый scope, sanitized target fingerprint, candidate/version,
+   факты before/after, `success|failed|ambiguous`, evidence, rollback/containment
+   и ровно одно следующее атомарное действие;
+3. не записывать в tracked state secrets, PII и полные resource IDs: они остаются
+   только в защищённом Git-ignored evidence;
+4. при failed/ambiguous результате не продвигать фазу и не повторять write
+   вслепую; сначала зафиксировать containment или hard blocker;
+5. сохранить обновлённый active state отдельным небольшим docs-only commit до
+   следующей remote mutation. Handoff обновляется на границе фазы/сессии, а
+   readiness checklist — только если изменился фактический gate.
+
+Для такого status-only commit выполняются только `docs:check`, `release:scan` и
+`git diff --check`; полный runtime suite не повторяется.
+
+После каждой атомарной операции агент также сообщает владельцу
+`rollover_required: yes|no`, `recommended_next_session_mode: Medium|High|Max` и
+простую причину выбора. Режим выбирается по фактической ситуации:
+
+- `Medium` — следующая работа только read-only/docs/evidence/manual inspection,
+  без unresolved ambiguity и без remote write;
+- `High` — обычный режим планового deploy: target, процедура, postcondition и
+  rollback/containment известны; это default для следующей deploy-сессии;
+- `Max` — только при подтверждённом серьёзном риске: возможно затронута неверная
+  среда/production; итог потенциально необратимой записи неоднозначен; recovery
+  или rollback отсутствует/не сработал; обнаружены data/schema corruption,
+  Access/authorization bypass, secret exposure либо несовместимость deployed
+  code и schema. Нужно простыми словами назвать, что может быть повреждено,
+  какое evidence это показывает, почему `High` недостаточно и какое решение
+  должна безопасно принять следующая сессия.
+
+Обычный provider rejection, подтверждённый no-write timeout, косметический/UI
+дефект, уже локализованная docs-ошибка или штатная fail-closed остановка сами по
+себе не являются основанием для `Max`. Рекомендация режима не расширяет
+разрешения и не требует rollover, если текущая сессия безопасно сохраняет точный
+context.
+
 ## Проверки
 
 Проверки выбираются пропорционально фактическому риску и изменённой поверхности.
