@@ -18,7 +18,7 @@ last_atomic_result: success
 next_atomic_action: protected-dpapi-export-and-isolated-restore
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
+mode_reason_plain: planned-isolated-restore-with-known-target-postcondition-and-containment
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
