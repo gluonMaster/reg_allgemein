@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T17:39:46Z
+updated_utc: 2026-08-31T17:43:41Z
 reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-last_completed_gate: phase-1-recovery-migrations-applied-and-verified
-next_gate: phase-1-apply-0024-0025-to-preview
+last_completed_gate: phase-1-recovery-and-preview-schema-complete
+next_gate: phase-2-candidate-bound-strict-dry-run-and-preview-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-1-recovery-schema
-last_atomic_action: apply-0024-0025-to-recovery-d1
+current_phase: phase-2-worker-deploy
+last_atomic_action: apply-0024-0025-to-preview-d1
 last_atomic_result: success
-next_atomic_action: apply-0024-0025-to-preview-d1
+next_atomic_action: deploy-reviewed-candidate-to-preview-worker
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-preview-migration-with-exact-pending-set-verified-recovery-and-no-downgrade
+mode_reason_plain: planned-preview-worker-deploy-with-exact-candidate-compatible-rollback-and-access-smoke
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -110,8 +110,8 @@ Fresh reconciliation нужно выполнить непосредственн�
 | Фаза | Статус | Результат | Минимальная проверка |
 | --- | --- | --- | --- |
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
-| 1. Recovery/schema | `in_progress` | DPAPI restore exact and plaintext removed; recovery applied `0024`/`0025`: pending 0, ledger 25, 535 objects, lineage 8/4, current `2 + 1703`, FK 0; preview apply remains | ledger, FK, quick-check, key counts |
-| 2. Worker deploy | `blocked_on_phase_1` | exact reviewed Worker deployed fail-closed | Access/root/health/version/bindings smoke |
+| 1. Recovery/schema | `passed` | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204` | ledger, FK, local quick-check plus remote exact fallback, key counts |
+| 2. Worker deploy | `in_progress` | exact reviewed Worker strict dry-run/deploy remains; all providers/public auth stay fail-closed | Access/root/health/version/bindings smoke |
 | 3. Auth/roles | `blocked_on_phase_2_and_owner_input` | Resend allowlist, два verified accounts, one-shot bootstrap | real test email, audit/replay denial, role split |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
 | 4b. Documents | `blocked_on_phase_3` | real synthetic upload → AV → review → cleanup | R2 isolation/hash/owner access |
@@ -153,21 +153,21 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: apply-0024-0025-to-recovery-d1
-observed_utc: 2026-08-31T17:39:46Z
-phase: phase-1-recovery-schema
+atomic_action: apply-0024-0025-to-preview-d1
+observed_utc: 2026-08-31T17:43:41Z
+phase: phase-2-worker-deploy
 authorization_scope: owner-authorized-preview-only-phases-1-2
-target_fingerprint: preview-d1-ccdeb22bb2a1-new-recovery-d1-4b2802119d09
+target_fingerprint: preview-d1-ccdeb22bb2a1-recovery-d1-4b2802119d09-worker-242c1796e930
 candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-before: isolated-recovery-exactly-restored-at-migrations-1-through-23-with-fk-zero
-after: recovery-pending-zero-ledger-25-max-25-schema-535-lineage-8-objects-4-columns-current-2-plus-1703-fk-zero
+before: preview-exactly-two-pending-recovery-ledger-25-fk-zero-worker-and-access-stable
+after: preview-pending-zero-ledger-25-schema-535-lineage-8-objects-4-columns-current-2-plus-1703-fk-zero-access-302-valid-root-health-200-204
 result: success
-evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-migration-verification
-rollback_or_containment: no-downgrade-recovery-remains-unbound-forward-fix-or-separate-cleanup-only
-next_atomic_action: apply-0024-0025-to-preview-d1
+evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-preview-migration-verification
+rollback_or_containment: no-downgrade-compatible-worker-or-forward-fix-only
+next_atomic_action: deploy-reviewed-candidate-to-preview-worker
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-preview-migration-with-exact-pending-set-verified-recovery-and-no-downgrade
+mode_reason_plain: planned-preview-worker-deploy-with-exact-candidate-compatible-rollback-and-access-smoke
 ```
 
 После первой mutation этот block заменяется её фактическим record; результаты
