@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T15:49:19Z
+updated_utc: 2026-08-31T15:54:19Z
 reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
 last_completed_gate: phase-0-read-only-target-lock
 next_gate: phase-1-owner-authorized-candidate-bound-recovery
@@ -72,9 +72,11 @@ NO-GO до собственных approvals и отдельного поруче
   `succeeded|feature_disabled`; two historical failed rows are from 2026-08-25
   and are not current.
 - Fresh anonymous and invalid Access probes return `302` to the same login host;
-  no bypass was observed. There is no existing authenticated browser session,
-  so no OTP/login was initiated. Fresh valid root/health remains an obligatory
-  Phase-2 post-deploy smoke with owner Access login.
+  no bypass was observed. The protected CurrentUser-DPAPI service token was
+  decrypted only in memory: root returned `200`, operations health returned
+  `204` with `no-store` and `noindex, nofollow`. No OTP/login was initiated and
+  no credential value was printed. Phase 2 must repeat the same valid-side smoke
+  after deploy.
 - Remote `PRAGMA quick_check` made no write and returned safe Cloudflare/D1
   `SQLITE_NOMEM` code `7500`; FK and targeted counts succeeded. Phase 1 must run
   the full integrity check on the fresh isolated restore before apply. The old
@@ -107,7 +109,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 
 | Фаза | Статус | Результат | Минимальная проверка |
 | --- | --- | --- | --- |
-| 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny-side `302` |
+| 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
 | 1. Recovery/schema | `blocked_on_owner_permission` | fresh recovery + `0024`/`0025` только preview/recovery | ledger, FK, quick-check, key counts |
 | 2. Worker deploy | `blocked_on_phase_1` | exact reviewed Worker deployed fail-closed | Access/root/health/version/bindings smoke |
 | 3. Auth/roles | `blocked_on_phase_2_and_owner_input` | Resend allowlist, два verified accounts, one-shot bootstrap | real test email, audit/replay denial, role split |
@@ -153,13 +155,13 @@ no-write timeout, косметика и локализованная docs-оши
 
 ```text
 atomic_action: phase-0-read-only-target-lock
-observed_utc: 2026-08-31T15:49:19Z
+observed_utc: 2026-08-31T15:54:19Z
 phase: phase-1-recovery-schema
 authorization_scope: read-only-no-remote-mutation
 target_fingerprint: preview-only-account-5dbd04a4763a-worker-242c1796e930-d1-ccdeb22bb2a1-origin-88ed782ba25a
 candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
 before: last-known-preview-state-required-fresh-reconciliation
-after: exact-preview-target-and-compatible-rollback-match-two-pending-migrations-fk-zero-empty-r2-access-deny-side-closed
+after: exact-preview-target-and-compatible-rollback-match-two-pending-migrations-fk-zero-empty-r2-access-deny-and-valid-side-closed
 result: success
 evidence: protected-ignored-imports-stage13-phase0-target-lock-20260831-json
 rollback_or_containment: not-needed

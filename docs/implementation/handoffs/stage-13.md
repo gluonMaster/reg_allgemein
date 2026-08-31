@@ -27,8 +27,9 @@ Production readiness: **`blocked` / NO-GO**
   ancestor; descendants are docs/checker/tests only. Protected preview target,
   active 100% Worker, compatible rollback, exact pending `0024`/`0025`, D1 FK
   `0`/synthetic `2 + 1703`, two empty private EEUR R2 buckets, fail-closed
-  vars/bindings/secrets and Access anonymous/invalid `302` all match. Old
-  recovery is expired and bound to an older candidate; fresh candidate-bound
+  vars/bindings/secrets and Access anonymous/invalid `302`, valid root `200` and
+  health `204` all match. Protected service-token values remained memory-only.
+  Old recovery is expired and bound to an older candidate; fresh candidate-bound
   recovery remains required. No remote mutation or OTP/login occurred.
 - **Приоритет:** root `AGENTS.md`, roadmap и test plan теперь требуют связать
   findings с ближайшим milestone. До продвижения исправляются `P0/P1`;
