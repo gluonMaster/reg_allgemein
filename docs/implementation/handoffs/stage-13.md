@@ -8,9 +8,10 @@
 `1607d6de55491afe7a2bea059e5f36e8718e0b8c` с direct parent
 `6ebf4761712c07de262fbac0bb3d532f98fd74c3` получил fresh independent **GO**:
 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Это закрывает local continuity/review
-gate, но не даёт authority на `0024`/`0025` apply, Worker/config deploy, D1/R2
-writes, provider sends или bootstrap; каждое remote действие требует отдельного
-прямого разрешения и candidate-bound recovery evidence.
+gate. Owner-authorized preview-only phases 1–2 применили `0024`/`0025` и
+deployed exact candidate только после candidate-bound recovery. Это не даёт
+authority на auth/provider sends, bootstrap, новые D1/R2 writes, production или
+CMS; каждое следующее remote действие требует отдельного прямого разрешения.
 Исторический exact `2bedc73c9b39a4cb43296046986a3f48e039b022` сохраняет GO только
 для своего более узкого IMPORT-08 docs/test scope и не одобряет новый contract
 runtime.
@@ -19,18 +20,28 @@ Production readiness: **`blocked` / NO-GO**
 
 ## Current continuation: быстрый путь к full manual preview — 2026-08-31
 
-- **Outcome:** local continuity/review остаётся закрыт independent GO exact
-  `1607d6de55491afe7a2bea059e5f36e8718e0b8c`. Новый review-loop не нужен;
-  следующий gate по-прежнему owner-authorized candidate-bound recovery, apply
-  `0024`/`0025` и fail-closed preview Worker deploy.
-- **Fresh Phase 0 target lock:** clean `HEAD=cc5c83b…` сохраняет reviewed runtime
-  ancestor; descendants are docs/checker/tests only. Protected preview target,
-  active 100% Worker, compatible rollback, exact pending `0024`/`0025`, D1 FK
+- **Outcome:** owner-authorized preview phases 1–2 complete. Exact reviewed
+  `1607d6de55491afe7a2bea059e5f36e8718e0b8c` active at 100%; next gate is
+  separately authorized controlled auth/email, two verified accounts and
+  one-shot bootstrap/RBAC. Новый review-loop не нужен без material diff.
+- **Recovery/schema:** created one distinct unbound EEUR recovery D1 (fingerprint
+  `4b2802119d09`). CurrentUser-DPAPI export round-trip, local `quick_check=ok`,
+  exact 527 objects/142 tables/95,573 rows/count/schema/current-pair digests and
+  FK 0 passed; plaintext/local scratch removed. Only `0024`/`0025` were applied
+  to recovery then preview. Both finish ledger 25/max 25, pending 0, schema 535,
+  lineage 8 objects/4 columns and FK 0.
+- **Fail-closed deploy:** strict dry-run and exact reviewed deploy passed. Active
+  version fingerprint `1a0707dc5dec`, one version at 100%; previous compatible
+  version retained. Anonymous/invalid Access `302`, valid root `200`, health
+  `204`, versioned routes `404`; D1 state, two empty private EEUR R2 buckets and
+  nine latest scheduled jobs remain healthy. Public auth, email, Telegram,
+  document and contract flags remain fail-closed; no send/login/bootstrap/PII.
+- **Phase 0 baseline:** pre-mutation lock proved reviewed runtime ancestry,
+  exact preview target, compatible rollback, exactly pending `0024`/`0025`, FK
   `0`/synthetic `2 + 1703`, two empty private EEUR R2 buckets, fail-closed
-  vars/bindings/secrets and Access anonymous/invalid `302`, valid root `200` and
-  health `204` all match. Protected service-token values remained memory-only.
-  Old recovery is expired and bound to an older candidate; fresh candidate-bound
-  recovery remains required. No remote mutation or OTP/login occurred.
+  vars/bindings/secrets and Access deny/valid-side smoke. Protected service-token
+  values remained memory-only. Phase 1–2 evidence above supersedes its pending/
+  recovery/active-version facts; no OTP/login occurred.
 - **Приоритет:** root `AGENTS.md`, roadmap и test plan теперь требуют связать
   findings с ближайшим milestone. До продвижения исправляются `P0/P1`;
   `P2/P3` не задерживают preview и уходят в backlog. Связанные мелкие fixes

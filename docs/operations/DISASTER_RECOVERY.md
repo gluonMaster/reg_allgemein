@@ -1,6 +1,6 @@
 # Аварийное восстановление
 
-Ревизия: 2026-08-25.
+Ревизия: 2026-08-31.
 
 Статус документа: `blocked`. Одноразовая репетиция 2026-08-20 доказала protected
 preview D1 export и его полное восстановление в отдельную EU D1, а также exact
@@ -16,7 +16,12 @@ candidate stage создан новый protected candidate-current export и п
 restore в новую distinct/unbound EU D1; plan-bound evidence подтвердил baseline
 как exact previous pair. Candidate затем прошёл promote, один idempotent repeat,
 rollback и roll-forward с canonical verify после каждого перехода. Финальная
-current pair — candidate; baseline остаётся previous rollback target.
+current pair — candidate; baseline остаётся previous rollback target. Fresh
+2026-08-31 candidate-bound CurrentUser-DPAPI export/full restore in a new
+unbound EU D1 reconciled exact 527 objects, 142 tables, 95,573 rows, schema/
+per-table/current-pair digests and FK 0 with local `quick_check=ok`. Only
+`0024`/`0025` were then applied recovery-first and preview; both finish ledger
+25/pending 0/FK 0. Plaintext/local scratch were removed.
 
 Наличие export или provider backup само по себе не означает возможность
 восстановления. `passed` допустим только после полного D1/R2 restore в новую
@@ -49,7 +54,7 @@ non-production environment и критического smoke. Production restore
 | D1 backup owner/location/encryption | `<APPROVED_D1_BACKUP_PROFILE>` — не задано                                                                                                                                      | `blocked`                        |
 | R2 backup owner/location/encryption | `<APPROVED_R2_BACKUP_PROFILE>` — не задано                                                                                                                                      | `blocked`                        |
 | Restore environment config          | protected ignored config создан/проверен 2026-08-20                                                                                                                             | `passed`                         |
-| Restore D1                          | отдельная unbound EU D1 восстановлена/сверена                                                                                                                                   | `passed`                         |
+| Restore D1                          | fresh candidate-bound unbound EU D1 restored/reconciled 2026-08-31; exact `0024`/`0025` then applied recovery-first                                                             | `passed`                         |
 | Restore R2                          | две private EU buckets воспроизводят текущие 0 objects/0 B                                                                                                                      | `passed`                         |
 | Production restore approval         | отдельное прямое поручение                                                                                                                                                      | `blocked`                        |
 | Legacy pre-import recovery point    | baseline и candidate: protected plan-bound points и distinct isolated restores through `0023` проверены 2026-08-25; candidate evidence привязано к exact previous baseline pair | `passed` for synthetic rehearsal |
@@ -62,14 +67,14 @@ non-production environment и критического smoke. Production restore
 
 | Назначение                   | Binding                                         | Restore target                     |
 | ---------------------------- | ----------------------------------------------- | ---------------------------------- |
-| Runtime database             | `DB`; deployed preview `0001`–`0023`, pending 0 | новая isolated non-production D1   |
+| Runtime database             | `DB`; deployed preview `0001`–`0025`, pending 0 | новая isolated non-production D1   |
 | Retained/approved archive    | `R2_ARCHIVE`                                    | новый private EU archive bucket    |
 | Quarantine/transient objects | `R2_QUARANTINE`                                 | новый private EU quarantine bucket |
 
 Полный append-only migration set `0001_foundation.sql`–
 `0015_worker_monitoring.sql`, `R2_ARCHIVE` и `R2_QUARANTINE` сверены с runtime и
 локальными migration/storage-intent тестами. Current preview имеет migrations
-`0001`–`0023`, pending 0, и физически разные private EU buckets. Репетиция
+`0001`–`0025`, pending 0, и физически разные private EU buckets. Репетиция
 2026-08-20 восстановила exact current D1 state в отдельную unbound EU D1 и
 воспроизвела текущее пустое состояние обоих source buckets в двух отдельных
 private EU restore buckets. Это не доказывает production placement, future
@@ -85,6 +90,11 @@ violations проверены; production и Worker этим не изменял
 `0023_legacy_projection_lookup_indexes.sql` отдельно разрешена и применена
 2026-08-25 только к preview и существующей distinct isolated recovery D1; exact
 23-entry ledger, пять indexes/query plans и FK `0` проверены на обеих.
+Fresh 2026-08-31 candidate-bound export/full isolated restore проверил current
+source state. Append-only `0024_contract_preview_review.sql` и
+`0025_contract_storage_intent_generations.sql` затем отдельно разрешены и
+применены recovery-first, потом к preview; обе D1 имеют exact 25-entry ledger,
+pending 0, schema 535, lineage 8 objects/4 columns и FK `0`.
 
 Initial preview migration evidence 2026-08-10 (`0001`–`0014`, 14/14, pending 0)
 сохраняется как историческая точка до monitoring migration. Append-only
@@ -274,7 +284,7 @@ npm run release:verify
 
 `npm run release:verify` проверяет typecheck, полный Vitest suite, Playwright,
 build, production dependency audit, документацию и artifact/secret/PII scan.
-Локальные проверки candidate migration set `0001`–`0023`, job inventory и
+Локальные проверки candidate migration set `0001`–`0025`, job inventory и
 fail-closed config входят в suite, но полный release gate остаётся `blocked` при
 любой неуспешной команде и до remote restore smoke.
 
@@ -317,7 +327,7 @@ D1/R2 не изменены; reason не содержит PII.
 scheduled/provider behavior и post-rollback smoke.
 
 **Stop condition:** previous code не понимает exact target schema (deployed
-preview сейчас `0001`–`0023`),
+preview сейчас `0001`–`0025`),
 known-good ID неизвестен, rollback затронет wrong Worker или проблема в data/
 import.
 
@@ -338,7 +348,7 @@ scope известны; write/external paths contained; database/security owners
 - если damage нельзя безопасно исправить — восстановить D1/R2 в isolated env и
   запросить отдельное production restore approval.
 
-Весь migration set `0001`–`0023` теперь deployed в preview и проходит local tests;
+Весь migration set `0001`–`0025` теперь deployed в preview и проходит local tests;
 representative populated upgrade применяет весь suffix после `0013`. Recovery
 compatibility получила remote apply/schema/FK evidence, но остаётся неполной без
 post-apply isolated restore и code-rollback/forward-fix rehearsal.
@@ -350,8 +360,8 @@ schema/data compatibility доказана.
 critical smoke.
 
 **Stop condition:** предложение отредактировать любую applied migration
-`0001`–`0023`, direct SQL hotfix без migration/audit, backup не восстанавливается
-или code/schema несовместимы. Все `0001`–`0023` уже applied в preview; следующее
+`0001`–`0025`, direct SQL hotfix без migration/audit, backup не восстанавливается
+или code/schema несовместимы. Все `0001`–`0025` уже applied в preview; следующее
 исправление после реально применённого набора всегда получает новый номер.
 
 **Rollback/recovery:** оставить feature disabled; подготовить reviewed forward

@@ -83,7 +83,8 @@ freshness, monitoring migration/smoke и independent aggregate HEAD alert
 delivery/recovery подтверждены. R2 restore, authenticated manual run и
 job-specific failure rehearsal остаются `blocked`.
 
-Current preview D1 inventory — migrations `0001`–`0022`, pending 0. Initial
+Current preview D1 inventory — migrations `0001`–`0025`, pending 0, FK 0,
+schema 535 and lineage 8 objects/4 columns. Initial
 preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датированным
 историческим evidence; append-only `0015_worker_monitoring.sql` была применена
 2026-08-11. Initial 14/14 не является текущим migration inventory и не доказывает
@@ -97,6 +98,8 @@ Time Travel points сохранены; exact `8c6e2a` review был NO-GO. Immut
 `b2e8548f` прошёл short gates, затем independent review вернул NO-GO с
 1 BLOCKER/1 MEDIUM. Exact docs/test remediation anchor `4ac6a491` закрывает
 findings, не меняет `src`/`migrations` и прошёл proportional exact-SHA gates.
+Subsequent authorized append-only `0023` (2026-08-25) and recovery-first
+`0024`/`0025` (2026-08-31) applies passed exact ledger/schema/lineage/FK checks.
 Финальный review target `2bedc73c9b39a4cb43296046986a3f48e039b022`
 является прямым docs-only потомком `4ac6a491`, не меняет
 `src`/`migrations`/`tests`, прошёл exact short gates и separately authorized

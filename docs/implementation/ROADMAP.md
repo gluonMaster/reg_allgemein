@@ -387,10 +387,11 @@ dependencies, config и E2E harness после полного reviewed ancestor 
 scoped continuity/check/docs/build/scan/diff прошли и full-suite evidence
 унаследовано по proportional-testing policy. Новый review-loop не нужен.
 
-Следующий gate — отдельно разрешённые candidate-bound recovery, применение
-pending `0024`/`0025` к preview/recovery и exact reviewed Worker deploy с
-fail-closed providers/auth. Затем следуют controlled auth/two accounts/bootstrap,
-реальные provider/document/contract flows и owner exploratory pass по
+Owner-authorized preview phases 1–2 завершили candidate-bound protected
+recovery, применение только `0024`/`0025` к recovery/preview и exact reviewed
+Worker deploy с fail-closed providers/auth. Следующий gate — separately
+authorized controlled auth/two accounts/bootstrap, затем реальные provider/
+document/contract flows и owner exploratory pass по
 [FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
 [owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production
 readiness остаётся `blocked`; GO не разрешает production, CMS или real PII.
@@ -412,8 +413,8 @@ failed-stage cleanup evidence, recovery-bound atomic promote/
 rollback/roll-forward и aggregate verify. Это реализуют candidate migrations
 `0016` и `0018`; populated-upgrade tests сохраняют прежние unhardened plans как
 immutable evidence, но запрещают их lifecycle и требуют новый hardened plan.
-Deployed preview D1 содержит `0001`–`0023`, pending 0; schema/object/FK
-verification после отдельно разрешённых apply 2026-08-20/25 прошла.
+Deployed preview D1 содержит `0001`–`0025`, pending 0; schema/object/lineage/FK
+verification после отдельно разрешённых apply 2026-08-20/25/31 прошла.
 Production transitions намеренно fail closed ещё до API-token lookup/network,
 пока remote transaction evidence отсутствует.
 Это не делает environment gate `passed`: remote preview plan/stage/promotion не
