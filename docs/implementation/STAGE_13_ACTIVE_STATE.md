@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T15:54:19Z
+updated_utc: 2026-08-31T16:14:13Z
 reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-last_completed_gate: phase-0-read-only-target-lock
-next_gate: phase-1-owner-authorized-candidate-bound-recovery
+last_completed_gate: phase-1-recovery-resource-created
+next_gate: phase-1-protected-dpapi-export-and-isolated-restore
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-1-recovery-schema
-last_atomic_action: phase-0-read-only-target-lock
+last_atomic_action: create-unbound-eu-recovery-d1
 last_atomic_result: success
-next_atomic_action: candidate-bound-recovery-snapshot-and-isolated-restore
+next_atomic_action: protected-dpapi-export-and-isolated-restore
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
@@ -110,7 +110,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | Фаза | Статус | Результат | Минимальная проверка |
 | --- | --- | --- | --- |
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
-| 1. Recovery/schema | `blocked_on_owner_permission` | fresh recovery + `0024`/`0025` только preview/recovery | ledger, FK, quick-check, key counts |
+| 1. Recovery/schema | `in_progress` | exact approved unbound EU recovery D1 created and read-only verified; protected export/restore and `0024`/`0025` remain | ledger, FK, quick-check, key counts |
 | 2. Worker deploy | `blocked_on_phase_1` | exact reviewed Worker deployed fail-closed | Access/root/health/version/bindings smoke |
 | 3. Auth/roles | `blocked_on_phase_2_and_owner_input` | Resend allowlist, два verified accounts, one-shot bootstrap | real test email, audit/replay denial, role split |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
@@ -150,25 +150,24 @@ no-write timeout, косметика и локализованная docs-оши
 
 ### Последний atomic record
 
-До первой remote mutation текущего продолжения последняя выполненная read-only
-фаза фиксируется явно:
+Последняя remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: phase-0-read-only-target-lock
-observed_utc: 2026-08-31T15:54:19Z
+atomic_action: create-unbound-eu-recovery-d1
+observed_utc: 2026-08-31T16:14:13Z
 phase: phase-1-recovery-schema
-authorization_scope: read-only-no-remote-mutation
-target_fingerprint: preview-only-account-5dbd04a4763a-worker-242c1796e930-d1-ccdeb22bb2a1-origin-88ed782ba25a
+authorization_scope: owner-authorized-preview-only-phases-1-2
+target_fingerprint: preview-d1-ccdeb22bb2a1-new-recovery-d1-4b2802119d09
 candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-before: last-known-preview-state-required-fresh-reconciliation
-after: exact-preview-target-and-compatible-rollback-match-two-pending-migrations-fk-zero-empty-r2-access-deny-and-valid-side-closed
+before: approved-recovery-name-absent-preview-target-lock-fresh-and-green
+after: exactly-one-approved-eu-recovery-d1-exists-distinct-from-preview-and-unbound-from-worker
 result: success
-evidence: protected-ignored-imports-stage13-phase0-target-lock-20260831-json
-rollback_or_containment: not-needed
-next_atomic_action: candidate-bound-recovery-snapshot-and-isolated-restore
+evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-resource-manifest
+rollback_or_containment: not-needed-resource-kept-isolated-and-unbound
+next_atomic_action: protected-dpapi-export-and-isolated-restore
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-preview-deploy-with-known-target-postcondition-and-rollback
+mode_reason_plain: planned-isolated-restore-with-known-target-postcondition-and-containment
 ```
 
 После первой mutation этот block заменяется её фактическим record; результаты
