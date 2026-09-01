@@ -577,6 +577,16 @@ function currentWindowsSid(): string {
 	return sid;
 }
 
+function windowsPowerShellEnvironment(
+	extra: Record<string, string>
+): NodeJS.ProcessEnv {
+	const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
+	for (const key of Object.keys(env)) {
+		if (key.toLowerCase() === 'psmodulepath') delete env[key];
+	}
+	return env;
+}
+
 function hardenWindowsArtifactAcl(path: string): void {
 	const sid = currentWindowsSid();
 	try {
@@ -584,6 +594,7 @@ function hardenWindowsArtifactAcl(path: string): void {
 			stdio: ['ignore', 'ignore', 'ignore'],
 		});
 		const script =
+			'$ErrorActionPreference="Stop"; ' +
 			'$acl=Get-Acl -LiteralPath $env:KOLIBRI_PROTECTED_ARTIFACT_PATH; ' +
 			'$items=@($acl.Access | ForEach-Object { ' +
 			'[PSCustomObject]@{ sid=$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value; inherited=$_.IsInherited; type=$_.AccessControlType.ToString() } ' +
@@ -595,7 +606,7 @@ function hardenWindowsArtifactAcl(path: string): void {
 			{
 				encoding: 'utf8',
 				stdio: ['ignore', 'pipe', 'ignore'],
-				env: { ...process.env, KOLIBRI_PROTECTED_ARTIFACT_PATH: path },
+				env: windowsPowerShellEnvironment({ KOLIBRI_PROTECTED_ARTIFACT_PATH: path }),
 			}
 		);
 		const parsed = JSON.parse(raw) as
