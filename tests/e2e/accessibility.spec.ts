@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { germanCatalog } from '../../src/lib/i18n';
+import { installSyntheticTurnstile } from './support/turnstile';
 import { e2eOrigin, login, syntheticIdentities } from './support/authenticated';
 
 const mobileViewport = { width: 390, height: 844 } as const;
@@ -88,6 +89,7 @@ test.describe('representative German accessibility paths', () => {
 		// A 1280 CSS-pixel desktop viewport reduced to 640 CSS pixels is the layout
 		// viewport equivalent used here for a deterministic 200% browser-zoom reflow check.
 		await page.setViewportSize(twoHundredPercentZoomEquivalentViewport);
+		await installSyntheticTurnstile(page);
 		const response = await page.goto('/auth/register');
 		expect(response?.status()).toBe(200);
 		await expectAccessibleStructure(page);

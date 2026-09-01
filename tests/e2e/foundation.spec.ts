@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { germanCatalog } from '../../src/lib/i18n';
 import { e2eOrigin } from './support/authenticated';
+import { installSyntheticTurnstile } from './support/turnstile';
 
 test('serves the German foundation page with a correlation ID', async ({ page }) => {
 	const response = await page.goto('/');
@@ -29,6 +30,7 @@ test('renders the mobile German registration form and protects account routes', 
 	page,
 }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
+	await installSyntheticTurnstile(page);
 	const response = await page.goto('/auth/register');
 
 	expect(response?.ok()).toBe(true);

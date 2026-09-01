@@ -22,6 +22,12 @@ export const germanCatalog = {
 	'auth.lastNameLabel': 'Nachname',
 	'auth.csrfRejected': 'Die Sicherheitsprüfung ist abgelaufen. Bitte laden Sie die Seite neu.',
 	'auth.invalidInput': 'Bitte prüfen Sie Ihre Eingaben.',
+	'auth.turnstileRequired':
+		'Bitte schließen Sie die Sicherheitsprüfung ab und versuchen Sie es erneut.',
+	'auth.turnstileUnavailable':
+		'Die Sicherheitsprüfung konnte nicht geladen werden. Bitte laden Sie die Seite neu.',
+	'auth.privacyNoticeChanged':
+		'Die Datenschutzerklärung wurde aktualisiert. Bitte lesen und akzeptieren Sie sie erneut.',
 	'auth.invalidCredentials': 'E-Mail-Adresse oder Passwort ist nicht gültig.',
 	'auth.neutralAccountMessage':
 		'Wenn die Angaben zu einem Konto passen, wurde eine E-Mail vorbereitet.',
