@@ -76,6 +76,11 @@ MVP готов, когда:
   reservation позже освобождается. (`AUTH-05`)
 - POST без валидного CSRF отклоняется; API с bearer/internal auth не смешивает
   механизмы защиты случайно. (`AUTH-06`)
+- Нативный browser form POST на Access-protected portal origin проходит при
+  exact configured `Origin`; отсутствующий либо literal `null` Origin проходит
+  только с Fetch Metadata `same-origin` + `navigate` + `document`. Cross-site,
+  malformed и incomplete metadata отклоняются до route action. (`AUTH-06`,
+  `SEC-01`, `SYS-03`)
 - Обход client-side validation не обходит server schema; SQL-injection payload
   остаётся данными параметризованного запроса, а сохранённый пользовательский
   HTML отображается экранированным. Автотесты покрывают CSRF, authorization и

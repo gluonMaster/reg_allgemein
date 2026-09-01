@@ -7,10 +7,18 @@ import { createAuthRuntime } from '$lib/server/auth/runtime';
 import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
 import { routeAccessPolicy } from '$lib/server/security/route-policy';
 import { withSecurityHeaders } from '$lib/server/security/response-headers';
+import { isPortalFormOriginAllowed } from '$lib/server/security/form-origin';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.requestId = getOrCreateRequestId(event.request.headers.get('x-request-id'));
 	const config = loadRuntimeConfig(event.platform?.env);
+	if (!isPortalFormOriginAllowed(event.request, config.portalPublicOrigin)) {
+		throw error(403, {
+			code: 'FORM_ORIGIN_FORBIDDEN',
+			message: translate('de', 'auth.invalidInput'),
+			requestId: event.locals.requestId,
+		});
+	}
 	if (config.jwtSecret) {
 		event.locals.user =
 			(await createAuthRuntime(config).sessions.authenticate(

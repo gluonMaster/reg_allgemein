@@ -274,6 +274,10 @@ blocked gates и local suite их не заменяет.
 - support/absence → admin answer → outbox;
 - server-known login role redirect (`parent -> /cabinet`, `admin -> /admin`),
   shared `/account/security` и взаимный `parent`/`admin` route denial;
+- native registration form POST за Access edge: exact configured Origin и
+  browser `Origin: null` с exact same-origin navigation Fetch Metadata проходят
+  до action validation, а cross-site/malformed/incomplete variants получают
+  `403` до route action;
 - parent A → parent B IDOR для child; request save/submit/cancel; document
   download/delete и route-request carrier; trial create/cancel; contract
   detail/artifact/end/attendance/media и route-offer carrier; price-review;
@@ -315,6 +319,9 @@ blocked gates и local suite их не заменяет.
 - registration + privacy acknowledgement atomicity, exact notice version и
   rollback without orphan evidence;
 - CSRF missing/wrong/correct;
+- form-origin boundary: configured origin, browser literal `null` + exact
+  same-origin navigation Fetch Metadata и cross-site/malformed/incomplete
+  denial;
 - rate limit boundaries;
 - atomic D1 guard buckets и fail-closed behavior при ошибке guard storage;
 - parent cannot create admin;

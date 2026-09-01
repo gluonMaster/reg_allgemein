@@ -3,9 +3,14 @@ import { BcryptPasswordHasher } from '$lib/server/auth/password';
 import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, setSessionCookies } from '$lib/server/auth/session';
 import { createRandomToken, hashCsrfToken } from '$lib/server/auth/tokens';
 import { requireCsrf } from '$lib/server/security/csrf';
-import { requireAdmin, requireObjectOwner, requireParent } from '$lib/server/security/authorization';
+import {
+	requireAdmin,
+	requireObjectOwner,
+	requireParent,
+} from '$lib/server/security/authorization';
 import { routeAccessPolicy } from '$lib/server/security/route-policy';
 import { CloudflareTurnstileVerifier } from '$lib/server/security/turnstile';
+import { isPortalFormOriginAllowed } from '$lib/server/security/form-origin';
 
 describe('auth security boundaries', () => {
 	it('rejects role injection and applies deny-by-default route policy', () => {
@@ -90,6 +95,93 @@ describe('auth security boundaries', () => {
 				submittedToken: token,
 			})
 		).rejects.toMatchObject({ code: 'CSRF_REJECTED' });
+	});
+
+	it('binds form origin checks to the validated portal origin behind the edge', () => {
+		const portalOrigin = 'https://portal-preview.example.org';
+		const formRequest = (origin?: string, contentType = 'application/x-www-form-urlencoded') =>
+			new Request('https://adapter-internal.example.invalid/auth/register', {
+				method: 'POST',
+				headers: {
+					'content-type': contentType,
+					...(origin ? { origin } : {}),
+				},
+				body: 'synthetic=1',
+			});
+
+		expect(isPortalFormOriginAllowed(formRequest(portalOrigin), portalOrigin)).toBe(true);
+		expect(
+			isPortalFormOriginAllowed(formRequest('https://attacker.example'), portalOrigin)
+		).toBe(false);
+		expect(isPortalFormOriginAllowed(formRequest(), portalOrigin)).toBe(false);
+		expect(
+			isPortalFormOriginAllowed(
+				new Request('https://adapter-internal.example.invalid/auth/register', {
+					method: 'POST',
+					headers: {
+						'content-type': 'application/x-www-form-urlencoded',
+						'sec-fetch-site': 'same-origin',
+						'sec-fetch-mode': 'navigate',
+						'sec-fetch-dest': 'document',
+					},
+					body: 'synthetic=1',
+				}),
+				portalOrigin
+			)
+		).toBe(true);
+		expect(
+			isPortalFormOriginAllowed(
+				new Request('https://adapter-internal.example.invalid/auth/register', {
+					method: 'POST',
+					headers: {
+						'content-type': 'application/x-www-form-urlencoded',
+						origin: 'null',
+						'sec-fetch-site': 'same-origin',
+						'sec-fetch-mode': 'navigate',
+						'sec-fetch-dest': 'document',
+					},
+					body: 'synthetic=1',
+				}),
+				portalOrigin
+			)
+		).toBe(true);
+		expect(
+			isPortalFormOriginAllowed(
+				new Request('https://adapter-internal.example.invalid/auth/register', {
+					method: 'POST',
+					headers: {
+						'content-type': 'application/x-www-form-urlencoded',
+						'sec-fetch-site': 'cross-site',
+						'sec-fetch-mode': 'navigate',
+						'sec-fetch-dest': 'document',
+					},
+					body: 'synthetic=1',
+				}),
+				portalOrigin
+			)
+		).toBe(false);
+		expect(isPortalFormOriginAllowed(formRequest('not-an-origin'), portalOrigin)).toBe(false);
+		expect(
+			isPortalFormOriginAllowed(
+				formRequest('http://127.0.0.1:61234'),
+				'http://127.0.0.1:4173'
+			)
+		).toBe(true);
+		expect(
+			isPortalFormOriginAllowed(
+				formRequest('https://portal-preview.example.org:444'),
+				portalOrigin
+			)
+		).toBe(false);
+		expect(
+			isPortalFormOriginAllowed(formRequest(undefined, 'application/json'), portalOrigin)
+		).toBe(true);
+		expect(
+			isPortalFormOriginAllowed(
+				new Request('https://adapter-internal.example.invalid/auth/register'),
+				portalOrigin
+			)
+		).toBe(true);
 	});
 
 	it('sets production session cookies host-only with required flags', () => {

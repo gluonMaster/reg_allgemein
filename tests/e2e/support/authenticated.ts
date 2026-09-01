@@ -24,7 +24,8 @@ export function e2eOrigin(testInfo: TestInfo): string {
 }
 
 export function newE2eContext(browser: Browser, testInfo: TestInfo): Promise<BrowserContext> {
-	return browser.newContext({ baseURL: e2eOrigin(testInfo) });
+	const origin = e2eOrigin(testInfo);
+	return browser.newContext({ baseURL: origin, extraHTTPHeaders: { origin } });
 }
 
 export async function login(

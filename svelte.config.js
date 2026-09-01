@@ -34,6 +34,10 @@ const config = {
 			config: 'wrangler.adapter.toml',
 			platformProxy,
 		}),
+		// The runtime hook applies the equivalent exact-origin check against the
+		// validated environment-specific PORTAL_PUBLIC_ORIGIN. This avoids comparing
+		// browser Origin with an edge/adapter URL while preserving fail-closed CSRF.
+		csrf: { trustedOrigins: ['*'] },
 	},
 };
 

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { germanCatalog } from '../../src/lib/i18n';
+import { e2eOrigin } from './support/authenticated';
 
 test('serves the German foundation page with a correlation ID', async ({ page }) => {
 	const response = await page.goto('/');
@@ -16,7 +17,9 @@ test('serves the German foundation page with a correlation ID', async ({ page })
 		'content',
 		germanCatalog['meta.description']
 	);
-	await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+	const faviconHref = await page.locator('link[rel="icon"]').getAttribute('href');
+	expect(faviconHref).not.toBeNull();
+	expect(new URL(faviconHref!, page.url()).pathname).toBe('/favicon.svg');
 	const faviconResponse = await page.request.get('/favicon.svg');
 	expect(faviconResponse.ok()).toBe(true);
 	expect(faviconResponse.headers()['content-type']).toContain('image/svg+xml');
@@ -44,7 +47,9 @@ test('renders the mobile German registration form and protects account routes', 
 	expect(protectedTrialResponse?.status()).toBe(401);
 	const protectedRequestResponse = await page.goto('/requests/new?kind=nachhilfe');
 	expect(protectedRequestResponse?.status()).toBe(401);
-	const protectedContractResponse = await page.goto('/contracts/00000000-0000-4000-8000-000000000001');
+	const protectedContractResponse = await page.goto(
+		'/contracts/00000000-0000-4000-8000-000000000001'
+	);
 	expect(protectedContractResponse?.status()).toBe(401);
 	const protectedPriceReviewResponse = await page.goto(
 		'/price-reviews/00000000-0000-4000-8000-000000000001'
@@ -61,7 +66,8 @@ test('renders the mobile German registration form and protects account routes', 
 test('rejects unauthenticated admin pages and direct mutation actions', async ({
 	page,
 	request,
-}) => {
+}, testInfo) => {
+	const sameOriginHeaders = { origin: e2eOrigin(testInfo) };
 	const shellResponse = await page.goto('/admin');
 	expect(shellResponse?.status()).toBe(401);
 	const requestReviewResponse = await page.goto('/admin/requests');
@@ -76,6 +82,7 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 	expect(outboxResponse?.status()).toBe(401);
 
 	const mutationResponse = await request.post('/admin/users/unknown-user?/block', {
+		headers: sameOriginHeaders,
 		form: {
 			reason: 'playwright-admin-denial',
 			idempotencyKey: 'playwright-admin-denial-0001',
@@ -84,10 +91,14 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 	expect(mutationResponse.status()).toBe(401);
 	const contractMutationResponse = await request.post(
 		'/contracts/00000000-0000-4000-8000-000000000001?/accept',
-		{ form: { expectedContractHash: 'a'.repeat(64), idempotencyKey: 'e2e-contract-denial' } }
+		{
+			headers: sameOriginHeaders,
+			form: { expectedContractHash: 'a'.repeat(64), idempotencyKey: 'e2e-contract-denial' },
+		}
 	);
 	expect(contractMutationResponse.status()).toBe(401);
 	const priceReviewMutationResponse = await request.post('/admin/price-reviews?/maintenance', {
+		headers: sameOriginHeaders,
 		form: {
 			confirmation: 'confirmed',
 			idempotencyKey: 'e2e-price-review-denial',
@@ -95,16 +106,23 @@ test('rejects unauthenticated admin pages and direct mutation actions', async ({
 	});
 	expect(priceReviewMutationResponse.status()).toBe(401);
 	const messageMutationResponse = await request.post('/messages?/create', {
+		headers: sameOriginHeaders,
 		form: {
-			category: 'technical', subject: 'Denied', message: 'Denied',
+			category: 'technical',
+			subject: 'Denied',
+			message: 'Denied',
 			idempotencyKey: 'e2e-message-denial',
 		},
 	});
 	expect(messageMutationResponse.status()).toBe(401);
 	const outboxMutationResponse = await request.post('/admin/outbox?/change', {
+		headers: sameOriginHeaders,
 		form: {
-			channel: 'telegram', outboxId: 'unknown', outboxAction: 'retry',
-			confirmation: 'confirmed', idempotencyKey: 'e2e-outbox-denial',
+			channel: 'telegram',
+			outboxId: 'unknown',
+			outboxAction: 'retry',
+			confirmation: 'confirmed',
+			idempotencyKey: 'e2e-outbox-denial',
 		},
 	});
 	expect(outboxMutationResponse.status()).toBe(401);
