@@ -5,10 +5,11 @@
 Ревизия: 2026-09-01.
 
 Статус этапа: `in_progress` — latest reviewed deployment target
-`ec11bbc43c3af69d9e60cce4064863db33c45ad2` с direct parent
-`e8a67d088ef1ddd2b362596fee494c3e68b6c985` получил fresh independent **GO**:
-0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Это закрывает local continuity/review
-gate. Owner-authorized preview-only phases 1–2 применили `0024`/`0025`, а
+`583165e316b739f4fb6a30001dae3a98ec62e1a1` с direct parent
+`3ad9527fb1d334d1a854ce69ff584ddb6d89d28d` получил fresh independent **GO**:
+0 `P0` / 0 `P1`. Это закрывает targeted registration-CSRF remediation и local
+continuity/review gate. Owner-authorized preview-only phases 1–2 применили
+`0024`/`0025`, а
 2026-09-01 отдельно разрешённый deploy exact `ec11bbc…` включил preview auth и
 Resend только для двух hashed allowlisted recipients. Это не даёт authority на
 provider send, account/verification/bootstrap, новые D1/R2 writes, production
@@ -18,6 +19,34 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Registration form remediation — exact `583165e` — 2026-09-01
+
+- Первый controlled account submit воспроизводимо вернул SvelteKit
+  `Cross-site POST form submissions are forbidden`. Read-only preview D1
+  postcondition подтвердил no-write/no-send: users/tokens/privacy/outbox/sessions/
+  audit/bootstrap остались `0`, FK `0`; checkpoint — `3ad9527…`.
+- Root cause: Access/adapter request URL не совпал с browser-facing origin, а
+  нативный submit при действующем `Referrer-Policy: no-referrer` пришёл с literal
+  `Origin: null` и Fetch Metadata `same-origin`/`navigate`/`document`.
+- Exact `583165e…` переносит form-origin boundary в runtime hook: public origin
+  принимается только при exact match с validated `PORTAL_PUBLIC_ORIGIN`, а
+  absent/literal-null — только с exact same-origin navigation metadata.
+  Cross-site/malformed/incomplete variants остаются fail-closed до route action;
+  JSON/API behavior и session-bound CSRF не меняются.
+- Fresh gates: check 0/0; full Vitest 75/75 files, 563 pass + 1 Windows skip;
+  Chromium E2E 18/18; build; audit 0; docs; release scan 564/564; diff check.
+  Initial full Vitest attempt имел четыре concurrent local-D1 timeouts; все
+  четыре прошли изолированно и затем прошли в полном run с четырьмя workers.
+- Independent verdict exact `583165e…`: **GO**, 0 `P0` / 0 `P1`. Reviewer `P2`
+  backlog: canonical raw-Origin syntax hardening и отдельный negative
+  hook-level browser case; доказанного bypass/отказа milestone нет, поэтому они
+  не блокируют deploy по Stage 13 priority policy.
+- Remote deployment исправления не выполнялся и прежним разрешением на первый
+  account не покрывается. Следующий atomic step — отдельно разрешённый preview
+  Worker deploy exact `583165e…`, затем read-only Worker/Access/D1 postcondition
+  и обязательный docs-only checkpoint. Production/CMS, D1/R2/config/secrets,
+  provider sends, account retry, второй account и bootstrap в этот шаг не входят.
 
 ## Current continuation: быстрый путь к full manual preview — 2026-09-01
 

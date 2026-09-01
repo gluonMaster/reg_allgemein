@@ -10,18 +10,17 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Latest reviewed target is `ec11bbc43c3af69d9e60cce4064863db33c45ad2`,
-direct child of `e8a67d088ef1ddd2b362596fee494c3e68b6c985`. Fresh independent review returned
-**GO** with P0/P1/P2/P3 = 0. Worker runtime, migrations, dependencies, deployment
-config and E2E harness remain unchanged after the full-suite ancestor; the exact
-descendant only fixes fail-closed ACL verification for a local operator artifact.
-Focused auth/email 71/71, ACL 25/25, check, build, strict dry-run, audit, docs,
-release scan and exact diff passed; unrelated full Vitest/E2E were not repeated
-under the owner-approved proportional-testing policy.
-This closes the local review gate only. The separately authorized preview
-auth/email Worker deploy has now passed, but account creation, provider delivery,
-bootstrap and production remain blocked until their own authorization and
-environment evidence.
+Latest reviewed target is `583165e316b739f4fb6a30001dae3a98ec62e1a1`,
+direct child of `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d`. Fresh independent review returned
+**GO** with 0 `P0` / 0 `P1`. The exact candidate replaces SvelteKit's static
+adapter-URL form-origin comparison with a runtime guard bound to validated
+`PORTAL_PUBLIC_ORIGIN`; literal/null Origin is accepted only for exact
+same-origin navigation Fetch Metadata. Full Vitest 75/75 files, 563 pass + 1
+Windows skip, Chromium E2E 18/18, check, build, audit, docs, release scan and
+exact diff passed.
+This closes the local review gate only. The remediation Worker deploy, account
+retry, provider delivery, bootstrap and production remain blocked until their
+own authorization and environment evidence.
 
 Historical `2bedc73c9b39a4cb43296046986a3f48e039b022` retains independent GO only
 for its narrower IMPORT-08 docs/test scope; it does not approve the later
