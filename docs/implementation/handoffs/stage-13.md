@@ -7,20 +7,43 @@
 Статус этапа: `in_progress` — latest reviewed deployment target
 `583165e316b739f4fb6a30001dae3a98ec62e1a1` с direct parent
 `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d` получил fresh independent **GO**:
-0 `P0` / 0 `P1`. Это закрывает targeted registration-CSRF remediation и local
-continuity/review gate. Owner-authorized preview-only phases 1–2 применили
+0 `P0` / 0 `P1` для reviewed CSRF-remediation scope. После deploy первый
+controlled retry обнаружил новый `P1`: generic invalid-input rejection до auth
+service с полным no-write/no-send postcondition и потерей hidden form state в
+failed response. Это снова блокирует обязательный registration flow до local
+remediation. Owner-authorized preview-only phases 1–2 применили
 `0024`/`0025`, а
 2026-09-01 отдельно разрешённый deploy exact `ec11bbc…` включил preview auth и
 Resend только для двух hashed allowlisted recipients, а следующий отдельно
-разрешённый deploy exact `583165e…` установил form-origin remediation. Это не
-даёт authority на provider send, account/verification/bootstrap, новые D1/R2
-writes, production или CMS; каждое следующее remote действие требует отдельного
-прямого разрешения.
+разрешённый deploy exact `583165e…` установил form-origin remediation. Failed
+registration retry не создал account/email write и не даёт authority на повтор,
+provider send, account/verification/bootstrap, новые D1/R2 writes, production
+или CMS; каждое следующее remote действие требует отдельного прямого разрешения.
 Исторический exact `2bedc73c9b39a4cb43296046986a3f48e039b022` сохраняет GO только
 для своего более узкого IMPORT-08 docs/test scope и не одобряет новый contract
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### First controlled registration retry — failed/no-write — 2026-09-01
+
+- Owner лично заполнил первую allowlisted preview registration form и выполнил
+  submit. UI очистил поля и показал generic `400` text
+  `Bitte prüfen Sie Ihre Eingaben.`; verification email не появилась.
+- Fresh read-only D1 reconciliation подтвердил users, auth tokens, privacy
+  acknowledgements, email outbox, sessions, auth audit, bootstrap actions и
+  `auth:register` rate-limit buckets ровно `0`, FK `0`. Request не дошёл до
+  auth service/Turnstile verifier/password hash/outbox/provider dispatch.
+- Failed-response DOM содержит пустые обязательные hidden values
+  `privacyNoticeVersion` и `cf-turnstile-response`; fresh authenticated GET
+  отдаёт configured privacy notice version длиной 25, а deployed binding
+  совпадает с `wrangler.preview.toml`. Generic response не позволяет доказать,
+  какое exact поле было invalid в исходном POST, поэтому это diagnostic lead,
+  а не молчаливо установленное business rule.
+- Classification: `P1` ближайшего `full-manual-preview`. Containment: не
+  повторять submit и не начинать второй account/bootstrap; сначала local
+  diagnosis/remediation, affected tests и новый review/deploy gate в зависимости
+  от material diff. Protected evidence SHA-256 prefix `bf8e23909d88`.
 
 ### Registration form remediation — exact `583165e` — 2026-09-01
 

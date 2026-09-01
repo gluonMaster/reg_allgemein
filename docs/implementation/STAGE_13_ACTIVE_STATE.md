@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-01T14:41:45Z
+updated_utc: 2026-09-01T15:13:59Z
 reviewed_candidate: 583165e316b739f4fb6a30001dae3a98ec62e1a1
 last_completed_gate: phase-3-registration-csrf-remediation-preview-deployed
-next_gate: phase-3-first-controlled-account-registration-retry
+next_gate: phase-3-registration-invalid-input-remediation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-3-auth-roles
-last_atomic_action: deploy-reviewed-registration-csrf-remediation-preview-worker
-last_atomic_result: success
-next_atomic_action: owner-authorize-retry-first-controlled-account-registration-and-verification
+last_atomic_action: submit-first-controlled-preview-account-registration
+last_atomic_result: failed
+next_atomic_action: diagnose-and-remediate-registration-invalid-input-before-any-retry
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: remediation-is-verified-in-preview-and-next-controlled-account-write-email-postcondition-and-containment-are-known
+mode_reason_plain: first-registration-retry-failed-before-auth-service-with-proven-no-write-and-local-p1-remediation-is-required-before-another-preview-submit
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -66,8 +66,18 @@ NO-GO до собственных approvals и отдельного поруче
   `200` с form, новая и предыдущая versioned routes `404`; D1 остаётся
   `25/pending 0/FK 0`, synthetic `2 + 1703`, все auth/account/outbox/session/
   bootstrap counts `0`, оба R2 пусты и latest nine jobs healthy. Rollback не
-  потребовался. Повтор первого controlled submit остаётся отдельной mutation и
-  ещё не разрешён. Production не разрешён.
+  потребовался.
+- Разрешённый retry первого controlled account затем вернул generic `400`
+  `Bitte prüfen Sie Ihre Eingaben.` и очистил форму. Read-only D1 reconciliation
+  доказал полный no-write/no-send: users/tokens/privacy acknowledgement/email
+  outbox/sessions/auth audit/bootstrap и даже `auth:register` rate-limit buckets
+  остались `0`, FK `0`. Значит request был отклонён `registerInputSchema` до
+  auth service, Turnstile verification, password hash и provider dispatch.
+  Failed-response DOM имеет пустые `privacyNoticeVersion` и
+  `cf-turnstile-response`, тогда как fresh GET отдаёт privacy version длиной 25;
+  exact исходное invalid field generic response не раскрывает. Это новый `P1`
+  текущего milestone. Повтор submit запрещён до local diagnosis/remediation;
+  production не разрешён.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -117,7 +127,8 @@ Fresh reconciliation нужно выполнить непосредственн�
 - Два отдельных preview R2 bucket private/EU и пусты.
 - Public auth и Resend включены только в Access-protected preview и ограничены
   allowlist ровно из двух уникальных SHA-256. Plaintext mailbox в config/tracked
-  evidence нет; фактической delivery, account или session ещё не было. Telegram,
+  evidence нет; failed first registration не создала delivery, account или
+  session. Telegram,
   document upload, contract send/renderer, media и public contract functions
   остаются fail-closed. Scheduled operations deployed.
 - Для Telegram известен private channel invite link, но это не Bot API target.
@@ -131,7 +142,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
 | 1. Recovery/schema | `passed` | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204` | ledger, FK, local quick-check plus remote exact fallback, key counts |
 | 2. Worker deploy | `passed` | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable |
-| 3. Auth/roles | `registration_remediation_deployed_awaiting_first_account_retry_permission` | exact `583165e…` active 100%; Access/root/health/register GET/versioned routes, bindings, D1/R2/jobs passed; auth/account/outbox/session/bootstrap counts remain zero | separately authorize and perform only the first controlled account registration/verification, then reconcile before any second account |
+| 3. Auth/roles | `blocked_on_registration_invalid_input_p1` | first controlled retry returned generic 400 before auth service; D1/account/token/outbox/session/bootstrap/rate-limit counts remain zero; failed DOM lost privacy notice and Turnstile hidden values while fresh GET has configured privacy version | diagnose and remediate affected form/action state locally; no retry or second account before focused regression, independent review/deploy as applicable, and a new checkpoint |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
 | 4b. Documents | `blocked_on_phase_3` | real synthetic upload → AV → review → cleanup | R2 isolation/hash/owner access |
 | 4c. Contracts | `blocked_on_phase_3` | 4 marked PDF + 1 accept/formation/certificate | Browser/R2/email receipts and lifecycle |
@@ -157,9 +168,10 @@ sanitized результат и минимальная проверка. Full ID
 назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
 режим следующей сессии, даже если `rollover_required: no`.
 
-Текущая рекомендация — **High**: впереди контролируемые preview auth/email,
-account и bootstrap mutations с известными target/containment; серьёзного
-incident/drift сейчас не зафиксировано.
+Текущая рекомендация — **High**: first registration retry дал воспроизводимый
+`P1`, но read-only postcondition доказал полный no-write/no-send и containment
+известен. Нужны локальная диагностика/remediation, focused regression и затем
+обычный review/deploy gate; серьёзного incident/drift сейчас не зафиксировано.
 `Medium` подходит только для следующего чисто read-only/docs/manual шага. `Max`
 нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
 потенциально необратимой записи, неработающем recovery/rollback, corruption,
@@ -173,21 +185,21 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя попытка remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: deploy-reviewed-registration-csrf-remediation-preview-worker
-observed_utc: 2026-09-01T14:41:45Z
+atomic_action: submit-first-controlled-preview-account-registration
+observed_utc: 2026-09-01T15:13:59Z
 phase: phase-3-auth-roles
-authorization_scope: owner-authorized-exact-583165e-preview-worker-deploy-only-no-d1-r2-writes-sends-accounts-bootstrap-config-secrets-production-cms
+authorization_scope: owner-authorized-first-controlled-preview-account-registration-and-verification-only-no-second-account-bootstrap-production-cms
 target_fingerprint: worker-242c1796e930-active-version-2de99c0c5815-preview-d1-ccdeb22bb2a1
 candidate_or_version: 583165e316b739f4fb6a30001dae3a98ec62e1a1
-before: one-active-100-percent-version-3f189dd10ce8-auth-email-enabled-two-hash-allowlist-d1-auth-account-outbox-session-bootstrap-counts-zero
-after: one-active-100-percent-version-2de99c0c5815-previous-3f189dd10ce8-available-access-302-302-200-204-register-get-200-form-new-and-previous-versioned-routes-404-d1-25-pending-zero-fk-zero-synthetic-2-plus-1703-auth-counts-zero-r2-empty-nine-latest-jobs-healthy
-result: success
-evidence: protected-ignored-preview-worker-deploy-evidence-20260901-registration-origin-json-sha256-prefix-1e22812b898c
-rollback_or_containment: rollback-not-needed-previous-version-3f189dd10ce8-retained-and-available
-next_atomic_action: owner-authorize-retry-first-controlled-account-registration-and-verification
+before: one-active-100-percent-version-2de99c0c5815-auth-email-enabled-two-hash-allowlist-d1-users-tokens-privacy-outbox-sessions-auth-audit-bootstrap-and-register-rate-buckets-zero
+after: generic-400-invalid-input-form-cleared-d1-users-tokens-privacy-outbox-sessions-auth-audit-bootstrap-and-register-rate-buckets-zero-fk-zero-no-provider-dispatch-failed-response-hidden-privacy-and-turnstile-values-empty-fresh-get-privacy-value-length-25
+result: failed
+evidence: protected-ignored-preview-registration-attempt-evidence-20260901-json-sha256-prefix-bf8e23909d88
+rollback_or_containment: no-write-no-send-confirmed-do-not-retry-current-form-until-local-p1-diagnosis-and-remediation
+next_atomic_action: diagnose-and-remediate-registration-invalid-input-before-any-retry
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: remediation-is-verified-in-preview-and-next-controlled-account-write-email-postcondition-and-containment-are-known
+mode_reason_plain: first-registration-retry-failed-before-auth-service-with-proven-no-write-and-local-p1-remediation-is-required-before-another-preview-submit
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
@@ -199,6 +211,10 @@ mode_reason_plain: remediation-is-verified-in-preview-and-next-controlled-accoun
   GO, 0 `P0` / 0 `P1`.
 - Не повторять deploy exact `583165e…`: preview postcondition прошёл, active
   fingerprint `2de99c0c5815`; повторный deploy без material drift запрещён.
+- Не повторять registration submit в текущей форме: failed response теряет
+  обязательные hidden values, а D1 доказал rejection до auth service. Сначала
+  локализовать и исправить `P1`, затем пройти focused regression/review/deploy
+  gate и только после нового checkpoint повторять первый account.
 - Не повторять full local gates без material diff. Exact evidence: full Vitest
   75/75 files, 563 pass + 1 Windows-only skip; Chromium E2E 18/18; check,
   build, dependency audit 0, docs, release scan и diff check прошли.
