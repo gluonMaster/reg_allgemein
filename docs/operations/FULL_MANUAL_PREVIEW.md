@@ -54,19 +54,16 @@ checkpoint commit. Владелец получает текущий/следую
 
 ## Порядок достижения checkpoint
 
-1. Exact reviewed candidate `1607d6de55491afe7a2bea059e5f36e8718e0b8c`,
-   direct child `6ebf4761712c07de262fbac0bb3d532f98fd74c3`, содержит неизменённые
-   runtime/migration `0024`/`0025`/E2E boundaries и token-local continuity
-   remediation. Fresh independent review вернул **GO** с 0 BLOCKER / 0 HIGH /
-   0 MEDIUM / 0 LOW.
-2. Зафиксированная remediation не меняет runtime или migrations: один pure
-   validator обслуживает CLI/tests и связывает negation только с конкретным
-   completion token. Unrelated negative clause больше не подавляет отдельный
-   positive review clause; pure-negative/historical controls сохраняются.
-   `docs:check` сам исполняет mixed-polarity RU/EN probes в обоих clause orders
-   во всех семи status paths. Текущий статус — `independent_go`; local
-   continuity/review gate закрыт. Remote recovery/apply/deploy остаются
-   запрещены до отдельного прямого разрешения владельца.
+1. Exact reviewed candidate `ec11bbc43c3af69d9e60cce4064863db33c45ad2`,
+   direct child `e8a67d088ef1ddd2b362596fee494c3e68b6c985`, сохраняет Worker runtime,
+   migrations `0024`/`0025`, dependency/config/E2E boundaries reviewed full-suite
+   ancestor и добавляет только fail-closed ACL verification локального operator
+   artifact. Fresh independent review вернул **GO** с P0/P1/P2/P3 = 0.
+2. Focused auth/email 71/71 и ACL 25/25, check, build, strict dry-run, audit,
+   executable docs contract, release scan и exact diff прошли. Текущий статус —
+   `independent_go`; local review gate закрыт. Recovery/schema и два Worker
+   deploy уже выполнены по отдельным разрешениям; provider sends, accounts,
+   bootstrap и production по-прежнему требуют отдельного прямого разрешения.
 3. После отдельной authorization создать fresh candidate-bound preview D1
    recovery point и isolated restore; проверить
    migration inventory, per-table counts, FK/quick-check и protected evidence.

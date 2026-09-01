@@ -2,7 +2,7 @@
 
 <!-- stage-13-current-review-status: independent_go -->
 
-Ревизия: 2026-08-30.
+Ревизия: 2026-09-01.
 
 Матрица связывает все нормативные MVP requirement ID из
 [MVP specification](../spec/MVP_SPEC.md) и acceptance bullets с
@@ -10,17 +10,18 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Latest reviewed target is `1607d6de55491afe7a2bea059e5f36e8718e0b8c`,
-direct child of `6ebf4761712c07de262fbac0bb3d532f98fd74c3`. Fresh independent review returned
-**GO** with 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. The remediation keeps runtime,
-migrations, dependencies, config and E2E harness unchanged, binds negation to
-each completion token and checks mixed-polarity plus pure-negative fixtures
-through every status path. Focused unit, executable docs contract, check, build,
+Latest reviewed target is `ec11bbc43c3af69d9e60cce4064863db33c45ad2`,
+direct child of `e8a67d088ef1ddd2b362596fee494c3e68b6c985`. Fresh independent review returned
+**GO** with P0/P1/P2/P3 = 0. Worker runtime, migrations, dependencies, deployment
+config and E2E harness remain unchanged after the full-suite ancestor; the exact
+descendant only fixes fail-closed ACL verification for a local operator artifact.
+Focused auth/email 71/71, ACL 25/25, check, build, strict dry-run, audit, docs,
 release scan and exact diff passed; unrelated full Vitest/E2E were not repeated
 under the owner-approved proportional-testing policy.
-This closes the local continuity/review gate only. Remote recovery, migration
-apply, deploy, provider sends and production remain blocked until their separate
-authorization and environment evidence.
+This closes the local review gate only. The separately authorized preview
+auth/email Worker deploy has now passed, but account creation, provider delivery,
+bootstrap and production remain blocked until their own authorization and
+environment evidence.
 
 Historical `2bedc73c9b39a4cb43296046986a3f48e039b022` retains independent GO only
 for its narrower IMPORT-08 docs/test scope; it does not approve the later

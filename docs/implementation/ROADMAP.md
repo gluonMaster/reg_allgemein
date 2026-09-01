@@ -381,16 +381,20 @@ quarantine/manual-AV/business-review paths на выделенных preview res
 `feature_disabled` не считается завершением обязательного MVP-контура.
 
 Latest reviewed full-manual-preview candidate
-`1607d6de55491afe7a2bea059e5f36e8718e0b8c`, parent `6ebf476…`, получил fresh
-independent **GO** с 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW. Runtime, migrations,
-dependencies, config и E2E harness после полного reviewed ancestor не менялись;
-scoped continuity/check/docs/build/scan/diff прошли и full-suite evidence
-унаследовано по proportional-testing policy. Новый review-loop не нужен.
+`ec11bbc43c3af69d9e60cce4064863db33c45ad2`, parent `e8a67d0…`, получил fresh
+independent **GO** с P0/P1/P2/P3 = 0. Worker runtime, migrations, dependencies,
+deployment config и E2E harness после полного reviewed ancestor не менялись;
+exact descendant исправляет только fail-closed ACL verification локального
+operator artifact. Focused auth/email 71/71, ACL 25/25, check/build/strict
+dry-run/audit/docs/scan/diff прошли; full-suite evidence унаследовано по
+proportional-testing policy. Новый review-loop не нужен.
 
 Owner-authorized preview phases 1–2 завершили candidate-bound protected
 recovery, применение только `0024`/`0025` к recovery/preview и exact reviewed
-Worker deploy с fail-closed providers/auth. Следующий gate — separately
-authorized controlled auth/two accounts/bootstrap, затем реальные provider/
+Worker deploy с fail-closed providers/auth. Отдельный exact `ec11bbc…` deploy
+включил auth+Resend только в preview для двух hashed recipients; send/account/
+bootstrap не выполнялись. Следующий gate — separately authorized controlled
+registration/verification двух accounts и bootstrap, затем реальные provider/
 document/contract flows и owner exploratory pass по
 [FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
 [owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production

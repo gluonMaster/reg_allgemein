@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-08-31T17:57:10Z
-reviewed_candidate: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-last_completed_gate: phase-2-fail-closed-worker-deploy-verified
-next_gate: phase-3-owner-authorized-auth-roles
+updated_utc: 2026-09-01T12:10:11Z
+reviewed_candidate: ec11bbc43c3af69d9e60cce4064863db33c45ad2
+last_completed_gate: phase-3-auth-email-worker-deploy-verified
+next_gate: phase-3-owner-authorized-controlled-account-registration
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-3-auth-roles
-last_atomic_action: deploy-reviewed-candidate-to-preview-worker
+last_atomic_action: enable-preview-auth-email-via-worker-deploy
 last_atomic_result: success
-next_atomic_action: owner-authorized-enable-preview-auth-email-for-controlled-recipients
+next_atomic_action: owner-authorized-register-and-verify-first-controlled-account
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: controlled-preview-auth-and-role-mutations-have-known-target-boundaries-and-fail-closed-containment
@@ -40,8 +40,8 @@ NO-GO до собственных approvals и отдельного поруче
 ## Current verdict и следующий gate
 
 - Latest independently reviewed candidate:
-  `1607d6de55491afe7a2bea059e5f36e8718e0b8c`; direct parent
-  `6ebf4761712c07de262fbac0bb3d532f98fd74c3`.
+  `ec11bbc43c3af69d9e60cce4064863db33c45ad2`; direct parent
+  `e8a67d088ef1ddd2b362596fee494c3e68b6c985`.
 - Fresh independent verdict: **GO**, 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW.
   Runtime, migrations, dependencies, deployment config и E2E harness после
   reviewed full-suite ancestor не менялись. Status/docs descendants не создают
@@ -49,9 +49,11 @@ NO-GO до собственных approvals и отдельного поруче
 - Owner-authorized preview-only phases 1–2 завершены: candidate-bound protected
   recovery/restore verified, `0024`/`0025` применены только к recovery и preview,
   exact reviewed Worker deployed и проверен с fail-closed auth/providers.
-- Следующий gate — отдельно разрешённые controlled preview auth/email, два
-  verified owner-controlled account и one-shot bootstrap/RBAC. Production не
-  разрешён.
+- Отдельно разрешённый preview-only auth/email deploy exact `ec11bbc…` завершён:
+  auth и Resend включены только для двух hashed allowlisted recipients; реальные
+  sends/accounts/bootstrap не выполнялись. Следующий gate — отдельно разрешённая
+  регистрация и verification controlled accounts, затем one-shot bootstrap/RBAC.
+  Production не разрешён.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -89,20 +91,21 @@ Fresh reconciliation нужно выполнить непосредственн�
 последнее зафиксированное состояние, которое нельзя молча считать актуальным при
 обнаружении drift.
 
-- Exact reviewed candidate `1607d6d…` обслуживает 100% preview traffic
-  (sanitized version fingerprint `1a0707dc5dec`); hostname закрыт Cloudflare
-  Access, versioned preview routes возвращают `404`. Previous compatible Worker
-  version сохранена inactive для rollback.
+- Exact reviewed candidate `ec11bbc…` обслуживает 100% preview traffic
+  (sanitized version fingerprint `3f189dd10ce8`); hostname закрыт Cloudflare
+  Access, новая и предыдущая versioned preview routes возвращают `404`.
+  Previous compatible fail-closed Worker version `1a0707dc5dec` сохранена
+  inactive для rollback.
 - Preview и candidate-bound unbound recovery D1 имеют migrations `0001`–`0025`,
   pending `0`, FK violations `0`, schema objects `535` и lineage `8/4`. Preview
   сохраняет current synthetic pair `2 + 1703`, users/admins `0`; one-shot
   bootstrap доступен и не использован.
 - Два отдельных preview R2 bucket private/EU и пусты.
-- Public auth, application email, Telegram, document upload и contract send/
-  renderer остаются fail-closed. Scheduled operations deployed.
-- Resend preview sender/domain/key были подготовлены без фактической delivery.
-  Два owner-controlled mailbox roles известны только локальному operator context
-  и не должны попадать в tracked docs/output.
+- Public auth и Resend включены только в Access-protected preview и ограничены
+  allowlist ровно из двух уникальных SHA-256. Plaintext mailbox в config/tracked
+  evidence нет; фактической delivery, account или session ещё не было. Telegram,
+  document upload, contract send/renderer, media и public contract functions
+  остаются fail-closed. Scheduled operations deployed.
 - Для Telegram известен private channel invite link, но это не Bot API target.
   До preflight нужны dedicated bot token, exact signed-decimal chat ID,
   `channel` type и bot-admin permission **Post Messages**. Values не выводятся.
@@ -114,7 +117,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
 | 1. Recovery/schema | `passed` | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204` | ledger, FK, local quick-check plus remote exact fallback, key counts |
 | 2. Worker deploy | `passed` | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable |
-| 3. Auth/roles | `blocked_on_owner_authorization_and_input` | Resend allowlist, два verified accounts, one-shot bootstrap | real test email, audit/replay denial, role split |
+| 3. Auth/roles | `auth_email_deployed_blocked_on_owner_authorization_and_input` | exact `ec11bbc…` auth+Resend preview deploy verified; allowlist is 2 hashes; accounts/bootstrap remain absent | controlled real test email, two verified accounts, audit/replay denial, role split |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
 | 4b. Documents | `blocked_on_phase_3` | real synthetic upload → AV → review → cleanup | R2 isolation/hash/owner access |
 | 4c. Contracts | `blocked_on_phase_3` | 4 marked PDF + 1 accept/formation/certificate | Browser/R2/email receipts and lifecycle |
@@ -156,18 +159,18 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: deploy-reviewed-candidate-to-preview-worker
-observed_utc: 2026-08-31T17:57:10Z
+atomic_action: enable-preview-auth-email-via-worker-deploy
+observed_utc: 2026-09-01T12:10:11Z
 phase: phase-3-auth-roles
-authorization_scope: owner-authorized-preview-only-phases-1-2
-target_fingerprint: worker-242c1796e930-active-version-1a0707dc5dec-preview-d1-ccdeb22bb2a1
-candidate_or_version: 1607d6de55491afe7a2bea059e5f36e8718e0b8c
-before: strict-dry-run-passed-schema-25-compatible-previous-version-captured-access-closed
-after: exact-candidate-one-active-100-percent-fail-closed-bindings-exact-access-302-valid-root-health-200-204-versioned-routes-404-d1-r2-jobs-stable
+authorization_scope: owner-authorized-one-preview-only-worker-deploy-no-send-account-bootstrap-or-data-write
+target_fingerprint: worker-242c1796e930-active-version-3f189dd10ce8-preview-d1-ccdeb22bb2a1
+candidate_or_version: ec11bbc43c3af69d9e60cce4064863db33c45ad2
+before: one-active-fail-closed-version-1a0707dc5dec-schema-25-rollback-captured-access-closed
+after: one-active-100-percent-auth-true-email-resend-two-hash-allowlist-other-providers-fail-closed-access-302-valid-root-health-200-204-both-versioned-routes-404-d1-r2-jobs-stable
 result: success
-evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-worker-deploy-evidence
-rollback_or_containment: rollback-not-needed-previous-compatible-worker-retained-d1-downgrade-forbidden
-next_atomic_action: owner-authorized-enable-preview-auth-email-for-controlled-recipients
+evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-worker-auth-email-deploy-evidence
+rollback_or_containment: rollback-not-needed-previous-compatible-fail-closed-worker-retained-d1-downgrade-forbidden
+next_atomic_action: owner-authorized-register-and-verify-first-controlled-account
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: controlled-preview-auth-and-role-mutations-have-known-target-boundaries-and-fail-closed-containment
