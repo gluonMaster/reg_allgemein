@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-01T12:10:11Z
+updated_utc: 2026-09-01T12:30:56Z
 reviewed_candidate: ec11bbc43c3af69d9e60cce4064863db33c45ad2
 last_completed_gate: phase-3-auth-email-worker-deploy-verified
-next_gate: phase-3-owner-authorized-controlled-account-registration
+next_gate: phase-3-registration-csrf-remediation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-3-auth-roles
-last_atomic_action: enable-preview-auth-email-via-worker-deploy
-last_atomic_result: success
-next_atomic_action: owner-authorized-register-and-verify-first-controlled-account
+last_atomic_action: owner-attempted-register-first-controlled-account
+last_atomic_result: failed
+next_atomic_action: diagnose-and-prepare-registration-csrf-remediation
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: controlled-preview-auth-and-role-mutations-have-known-target-boundaries-and-fail-closed-containment
+mode_reason_plain: registration-failed-before-write-and-the-targeted-preview-remediation-path-has-known-containment
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -51,9 +51,13 @@ NO-GO до собственных approvals и отдельного поруче
   exact reviewed Worker deployed и проверен с fail-closed auth/providers.
 - Отдельно разрешённый preview-only auth/email deploy exact `ec11bbc…` завершён:
   auth и Resend включены только для двух hashed allowlisted recipients; реальные
-  sends/accounts/bootstrap не выполнялись. Следующий gate — отдельно разрешённая
-  регистрация и verification controlled accounts, затем one-shot bootstrap/RBAC.
-  Production не разрешён.
+  sends/accounts/bootstrap не выполнялись. Первая owner-controlled registration
+  attempt затем воспроизводимо остановилась на SvelteKit CSRF/origin boundary с
+  `Cross-site POST form submissions are forbidden` до application action. Fresh
+  D1 postcondition подтвердил полный no-write: users/tokens/privacy acknowledgement/
+  email outbox/sessions/auth audit/bootstrap остаются `0`, FK `0`. Это `P1`
+  текущего milestone; повторять submit до targeted remediation нельзя. Production
+  не разрешён.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -117,7 +121,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
 | 1. Recovery/schema | `passed` | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204` | ledger, FK, local quick-check plus remote exact fallback, key counts |
 | 2. Worker deploy | `passed` | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable |
-| 3. Auth/roles | `auth_email_deployed_blocked_on_owner_authorization_and_input` | exact `ec11bbc…` auth+Resend preview deploy verified; allowlist is 2 hashes; accounts/bootstrap remain absent | controlled real test email, two verified accounts, audit/replay denial, role split |
+| 3. Auth/roles | `registration_failed_no_write_blocked_on_csrf_remediation` | exact `ec11bbc…` auth+Resend deploy remains healthy; first controlled registration returned SvelteKit cross-site POST rejection before action, and read-only D1 proved users/tokens/outbox/audit/sessions/bootstrap all remain 0 | targeted origin/CSRF remediation, reviewed preview deploy, then retry first controlled account |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
 | 4b. Documents | `blocked_on_phase_3` | real synthetic upload → AV → review → cleanup | R2 isolation/hash/owner access |
 | 4c. Contracts | `blocked_on_phase_3` | 4 marked PDF + 1 accept/formation/certificate | Browser/R2/email receipts and lifecycle |
@@ -156,24 +160,24 @@ no-write timeout, косметика и локализованная docs-оши
 
 ### Последний atomic record
 
-Последняя remote mutation текущего продолжения зафиксирована явно:
+Последняя попытка remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: enable-preview-auth-email-via-worker-deploy
-observed_utc: 2026-09-01T12:10:11Z
+atomic_action: owner-attempted-register-first-controlled-account
+observed_utc: 2026-09-01T12:30:56Z
 phase: phase-3-auth-roles
-authorization_scope: owner-authorized-one-preview-only-worker-deploy-no-send-account-bootstrap-or-data-write
+authorization_scope: owner-authorized-first-allowlisted-preview-account-registration-and-verification-no-second-account-or-bootstrap
 target_fingerprint: worker-242c1796e930-active-version-3f189dd10ce8-preview-d1-ccdeb22bb2a1
 candidate_or_version: ec11bbc43c3af69d9e60cce4064863db33c45ad2
-before: one-active-fail-closed-version-1a0707dc5dec-schema-25-rollback-captured-access-closed
-after: one-active-100-percent-auth-true-email-resend-two-hash-allowlist-other-providers-fail-closed-access-302-valid-root-health-200-204-both-versioned-routes-404-d1-r2-jobs-stable
-result: success
-evidence: protected-currentuser-stage13-recovery-candidate-1607d6d-worker-auth-email-deploy-evidence
-rollback_or_containment: rollback-not-needed-previous-compatible-fail-closed-worker-retained-d1-downgrade-forbidden
-next_atomic_action: owner-authorized-register-and-verify-first-controlled-account
+before: one-active-100-percent-version-3f189dd10ce8-auth-email-enabled-two-hash-allowlist-d1-users-tokens-outbox-sessions-bootstrap-zero
+after: registration-post-rejected-by-sveltekit-cross-site-boundary-before-application-action-d1-users-verified-tokens-privacy-outbox-sent-sessions-auth-audit-bootstrap-all-zero-fk-zero
+result: failed
+evidence: browser-visible-cross-site-post-rejection-and-sanitized-read-only-preview-d1-postcondition-20260901t123056z
+rollback_or_containment: no-write-confirmed-no-rollback-needed-do-not-repeat-submit-access-remains-enabled-prepare-targeted-remediation
+next_atomic_action: diagnose-and-prepare-registration-csrf-remediation
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: controlled-preview-auth-and-role-mutations-have-known-target-boundaries-and-fail-closed-containment
+mode_reason_plain: registration-failed-before-write-and-the-targeted-preview-remediation-path-has-known-containment
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
