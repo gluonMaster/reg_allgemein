@@ -18,9 +18,12 @@ adapter-URL form-origin comparison with a runtime guard bound to validated
 same-origin navigation Fetch Metadata. Full Vitest 75/75 files, 563 pass + 1
 Windows skip, Chromium E2E 18/18, check, build, audit, docs, release scan and
 exact diff passed.
-This closes the local review gate only. The remediation Worker deploy, account
-retry, provider delivery, bootstrap and production remain blocked until their
-own authorization and environment evidence.
+The separately authorized remediation Worker deploy also passed: version
+fingerprint `2de99c0c5815` is active at 100%, the previous version remains
+available, and Access/root/health/register GET/versioned routes, bindings,
+D1/R2 and scheduled-job postconditions are green. Account retry, provider
+delivery, bootstrap and production remain blocked until their own authorization
+and environment evidence.
 
 Historical `2bedc73c9b39a4cb43296046986a3f48e039b022` retains independent GO only
 for its narrower IMPORT-08 docs/test scope; it does not approve the later

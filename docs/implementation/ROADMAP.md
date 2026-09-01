@@ -393,9 +393,12 @@ recovery, применение только `0024`/`0025` к recovery/preview и
 Worker deploy с fail-closed providers/auth. Отдельный exact `ec11bbc…` deploy
 включил auth+Resend только в preview для двух hashed recipients; send/account/
 bootstrap не выполнялись. Первый controlled registration submit завершился
-no-write CSRF/origin rejection. Следующий gate — separately authorized preview
-deploy exact remediation `583165e…`, обязательный postcondition и retry только
-первого account; затем отдельные account/bootstrap/provider/document/contract
+no-write CSRF/origin rejection. Separately authorized preview deploy exact
+remediation `583165e…` затем прошёл: version fingerprint `2de99c0c5815` active
+100%, Access/root/health/register GET/versioned routes, bindings, D1/R2/jobs
+сохранены, rollback не понадобился. Следующий gate — отдельно разрешённый retry
+только первого account с verification delivery и обязательным postcondition;
+затем отдельные account/bootstrap/provider/document/contract
 flows и owner exploratory pass по
 [FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
 [owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production

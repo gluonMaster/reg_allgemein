@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-01T13:45:25Z
+updated_utc: 2026-09-01T14:41:45Z
 reviewed_candidate: 583165e316b739f4fb6a30001dae3a98ec62e1a1
-last_completed_gate: phase-3-registration-csrf-remediation-reviewed
-next_gate: phase-3-registration-csrf-remediation-preview-deploy
+last_completed_gate: phase-3-registration-csrf-remediation-preview-deployed
+next_gate: phase-3-first-controlled-account-registration-retry
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-3-auth-roles
-last_atomic_action: owner-attempted-register-first-controlled-account
-last_atomic_result: failed
-next_atomic_action: owner-authorize-and-deploy-reviewed-registration-csrf-remediation
+last_atomic_action: deploy-reviewed-registration-csrf-remediation-preview-worker
+last_atomic_result: success
+next_atomic_action: owner-authorize-retry-first-controlled-account-registration-and-verification
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-compatible-worker-rollback-are-known
+mode_reason_plain: remediation-is-verified-in-preview-and-next-controlled-account-write-email-postcondition-and-containment-are-known
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -58,10 +58,16 @@ NO-GO до собственных approvals и отдельного поруче
   attempt затем воспроизводимо остановилась на SvelteKit CSRF/origin boundary с
   `Cross-site POST form submissions are forbidden` до application action. Fresh
   D1 postcondition подтвердил полный no-write: users/tokens/privacy acknowledgement/
-  email outbox/sessions/auth audit/bootstrap остаются `0`, FK `0`. Это `P1`
-  текущего milestone. Исправление готово и независимо reviewed, но повторять
-  submit до отдельного разрешения и verified preview deploy нельзя. Production
-  не разрешён.
+  email outbox/sessions/auth audit/bootstrap остаются `0`, FK `0`. Это было
+  `P1` текущего milestone.
+- Отдельно разрешённый preview-only deploy exact `583165e…` завершён успешно:
+  active version fingerprint `2de99c0c5815` обслуживает 100% traffic, previous
+  `3f189dd10ce8` сохранена для rollback. Access `302/302/200/204`, register GET
+  `200` с form, новая и предыдущая versioned routes `404`; D1 остаётся
+  `25/pending 0/FK 0`, synthetic `2 + 1703`, все auth/account/outbox/session/
+  bootstrap counts `0`, оба R2 пусты и latest nine jobs healthy. Rollback не
+  потребовался. Повтор первого controlled submit остаётся отдельной mutation и
+  ещё не разрешён. Production не разрешён.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -99,11 +105,11 @@ Fresh reconciliation нужно выполнить непосредственн�
 последнее зафиксированное состояние, которое нельзя молча считать актуальным при
 обнаружении drift.
 
-- Exact reviewed candidate `ec11bbc…` обслуживает 100% preview traffic
-  (sanitized version fingerprint `3f189dd10ce8`); hostname закрыт Cloudflare
+- Exact reviewed candidate `583165e…` обслуживает 100% preview traffic
+  (sanitized version fingerprint `2de99c0c5815`); hostname закрыт Cloudflare
   Access, новая и предыдущая versioned preview routes возвращают `404`.
-  Previous compatible fail-closed Worker version `1a0707dc5dec` сохранена
-  inactive для rollback.
+  Previous compatible auth/email Worker version `3f189dd10ce8` сохранена
+  inactive для rollback; более ранняя fail-closed `1a0707dc5dec` также retained.
 - Preview и candidate-bound unbound recovery D1 имеют migrations `0001`–`0025`,
   pending `0`, FK violations `0`, schema objects `535` и lineage `8/4`. Preview
   сохраняет current synthetic pair `2 + 1703`, users/admins `0`; one-shot
@@ -125,7 +131,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock | `passed` | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204` |
 | 1. Recovery/schema | `passed` | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204` | ledger, FK, local quick-check plus remote exact fallback, key counts |
 | 2. Worker deploy | `passed` | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable |
-| 3. Auth/roles | `registration_failed_no_write_remediation_reviewed_awaiting_deploy_permission` | exact `ec11bbc…` auth+Resend deploy remains healthy; first controlled registration was no-write; exact remediation `583165e…` has independent GO with full local gates | separately authorized preview deploy, verified no-write postcondition, then retry first controlled account |
+| 3. Auth/roles | `registration_remediation_deployed_awaiting_first_account_retry_permission` | exact `583165e…` active 100%; Access/root/health/register GET/versioned routes, bindings, D1/R2/jobs passed; auth/account/outbox/session/bootstrap counts remain zero | separately authorize and perform only the first controlled account registration/verification, then reconcile before any second account |
 | 4a. Product flows | `blocked_on_phase_3` | parent/admin/catalog/trial/request/price/support/privacy | guided affected browser scenarios |
 | 4b. Documents | `blocked_on_phase_3` | real synthetic upload → AV → review → cleanup | R2 isolation/hash/owner access |
 | 4c. Contracts | `blocked_on_phase_3` | 4 marked PDF + 1 accept/formation/certificate | Browser/R2/email receipts and lifecycle |
@@ -167,21 +173,21 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя попытка remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: owner-attempted-register-first-controlled-account
-observed_utc: 2026-09-01T12:30:56Z
+atomic_action: deploy-reviewed-registration-csrf-remediation-preview-worker
+observed_utc: 2026-09-01T14:41:45Z
 phase: phase-3-auth-roles
-authorization_scope: owner-authorized-first-allowlisted-preview-account-registration-and-verification-no-second-account-or-bootstrap
-target_fingerprint: worker-242c1796e930-active-version-3f189dd10ce8-preview-d1-ccdeb22bb2a1
-candidate_or_version: ec11bbc43c3af69d9e60cce4064863db33c45ad2
-before: one-active-100-percent-version-3f189dd10ce8-auth-email-enabled-two-hash-allowlist-d1-users-tokens-outbox-sessions-bootstrap-zero
-after: registration-post-rejected-by-sveltekit-cross-site-boundary-before-application-action-d1-users-verified-tokens-privacy-outbox-sent-sessions-auth-audit-bootstrap-all-zero-fk-zero
-result: failed
-evidence: browser-visible-cross-site-post-rejection-and-sanitized-read-only-preview-d1-postcondition-20260901t123056z
-rollback_or_containment: no-write-confirmed-no-rollback-needed-do-not-repeat-submit-access-remains-enabled-prepare-targeted-remediation
-next_atomic_action: owner-authorize-and-deploy-reviewed-registration-csrf-remediation
+authorization_scope: owner-authorized-exact-583165e-preview-worker-deploy-only-no-d1-r2-writes-sends-accounts-bootstrap-config-secrets-production-cms
+target_fingerprint: worker-242c1796e930-active-version-2de99c0c5815-preview-d1-ccdeb22bb2a1
+candidate_or_version: 583165e316b739f4fb6a30001dae3a98ec62e1a1
+before: one-active-100-percent-version-3f189dd10ce8-auth-email-enabled-two-hash-allowlist-d1-auth-account-outbox-session-bootstrap-counts-zero
+after: one-active-100-percent-version-2de99c0c5815-previous-3f189dd10ce8-available-access-302-302-200-204-register-get-200-form-new-and-previous-versioned-routes-404-d1-25-pending-zero-fk-zero-synthetic-2-plus-1703-auth-counts-zero-r2-empty-nine-latest-jobs-healthy
+result: success
+evidence: protected-ignored-preview-worker-deploy-evidence-20260901-registration-origin-json-sha256-prefix-1e22812b898c
+rollback_or_containment: rollback-not-needed-previous-version-3f189dd10ce8-retained-and-available
+next_atomic_action: owner-authorize-retry-first-controlled-account-registration-and-verification
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-compatible-worker-rollback-are-known
+mode_reason_plain: remediation-is-verified-in-preview-and-next-controlled-account-write-email-postcondition-and-containment-are-known
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
@@ -191,6 +197,8 @@ mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-c
 
 - Не повторять independent review current candidate: exact `583165e…` получил
   GO, 0 `P0` / 0 `P1`.
+- Не повторять deploy exact `583165e…`: preview postcondition прошёл, active
+  fingerprint `2de99c0c5815`; повторный deploy без material drift запрещён.
 - Не повторять full local gates без material diff. Exact evidence: full Vitest
   75/75 files, 563 pass + 1 Windows-only skip; Chromium E2E 18/18; check,
   build, dependency audit 0, docs, release scan и diff check прошли.

@@ -11,9 +11,11 @@
 continuity/review gate. Owner-authorized preview-only phases 1–2 применили
 `0024`/`0025`, а
 2026-09-01 отдельно разрешённый deploy exact `ec11bbc…` включил preview auth и
-Resend только для двух hashed allowlisted recipients. Это не даёт authority на
-provider send, account/verification/bootstrap, новые D1/R2 writes, production
-или CMS; каждое следующее remote действие требует отдельного прямого разрешения.
+Resend только для двух hashed allowlisted recipients, а следующий отдельно
+разрешённый deploy exact `583165e…` установил form-origin remediation. Это не
+даёт authority на provider send, account/verification/bootstrap, новые D1/R2
+writes, production или CMS; каждое следующее remote действие требует отдельного
+прямого разрешения.
 Исторический exact `2bedc73c9b39a4cb43296046986a3f48e039b022` сохраняет GO только
 для своего более узкого IMPORT-08 docs/test scope и не одобряет новый contract
 runtime.
@@ -42,20 +44,27 @@ Production readiness: **`blocked` / NO-GO**
   backlog: canonical raw-Origin syntax hardening и отдельный negative
   hook-level browser case; доказанного bypass/отказа milestone нет, поэтому они
   не блокируют deploy по Stage 13 priority policy.
-- Remote deployment исправления не выполнялся и прежним разрешением на первый
-  account не покрывается. Следующий atomic step — отдельно разрешённый preview
-  Worker deploy exact `583165e…`, затем read-only Worker/Access/D1 postcondition
-  и обязательный docs-only checkpoint. Production/CMS, D1/R2/config/secrets,
-  provider sends, account retry, второй account и bootstrap в этот шаг не входят.
+- Отдельно разрешённый preview Worker deploy exact `583165e…` выполнен одной
+  `wrangler deploy --strict` mutation. New active version fingerprint
+  `2de99c0c5815` обслуживает 100%; previous `3f189dd10ce8` retained для rollback.
+  Access `302/302/200/204`, register GET `200` с form, new/previous versioned
+  routes `404`, bindings/vars/three secret names exact. D1 остаётся `25/pending
+  0/FK 0`, synthetic `2 + 1703`, auth/account/outbox/session/bootstrap counts
+  `0`; R2 empty, nine latest jobs healthy. Rollback не понадобился. Protected
+  evidence digest prefix `1e22812b898c`; docs-only checkpoint следует отдельно.
+- Следующий atomic step — отдельно разрешённый retry только первого controlled
+  account и verification delivery, затем read-only reconcile до любого второго
+  account. Production/CMS и остальные mutations не разрешены.
 
 ## Current continuation: быстрый путь к full manual preview — 2026-09-01
 
-- **Outcome:** owner-authorized preview phases 1–2 complete. Exact reviewed
-  `ec11bbc43c3af69d9e60cce4064863db33c45ad2` active at 100% with auth+Resend
-  enabled only in preview and limited to two SHA-256 allowlist entries. Next gate
-  is separately authorized controlled registration/verification of the two
-  accounts and one-shot bootstrap/RBAC. Новый review-loop не нужен без material
-  diff.
+- **Outcome:** owner-authorized preview phases 1–2 and registration-origin
+  remediation deploy complete. Exact reviewed `583165e316b739f4fb6a30001dae3a98ec62e1a1`
+  is active at 100% with auth+Resend enabled only in preview and limited to two
+  SHA-256 allowlist entries. Next gate is separately authorized retry of only
+  the first controlled account registration/verification; the second account
+  and one-shot bootstrap/RBAC follow only after its checkpoint. Новый review-loop
+  не нужен без material diff.
 - **Recovery/schema:** created one distinct unbound EEUR recovery D1 (fingerprint
   `4b2802119d09`). CurrentUser-DPAPI export round-trip, local `quick_check=ok`,
   exact 527 objects/142 tables/95,573 rows/count/schema/current-pair digests and
@@ -81,6 +90,12 @@ Production readiness: **`blocked` / NO-GO**
   both private EEUR R2 buckets remain empty and all nine latest jobs are healthy.
   No provider send or data/account/bootstrap mutation was performed; rollback
   was not needed.
+- **Registration-origin remediation deploy:** one separately authorized strict
+  deploy exact `583165e…` completed. Fingerprint `2de99c0c5815` is active 100%,
+  previous `3f189dd10ce8` remains available. Access/root/health/register GET,
+  both versioned routes, bindings/config, D1 `25/pending 0/FK 0`, synthetic
+  `2 + 1703`, zero auth/account/outbox/session/bootstrap counts, empty R2 and
+  nine latest jobs all passed; rollback was not needed.
 - **Phase 0 baseline:** pre-mutation lock proved reviewed runtime ancestry,
   exact preview target, compatible rollback, exactly pending `0024`/`0025`, FK
   `0`/synthetic `2 + 1703`, two empty private EEUR R2 buckets, fail-closed
