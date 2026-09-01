@@ -368,7 +368,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
@@ -380,7 +380,14 @@ synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
 quarantine/manual-AV/business-review paths на выделенных preview resources.
 `feature_disabled` не считается завершением обязательного MVP-контура.
 
-Latest reviewed full-manual-preview candidate
+Current registration invalid-input remediation anchor
+`146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, сохраняет
+safe form state, обновляет current privacy version и управляет Turnstile token
+lifecycle. Check `0/0`, Vitest `566` pass + 1 Windows skip, Chromium `20/20`,
+build/audit/docs/scan/diff прошли. Текущий кандидат ожидает отдельный
+independent read-only review; deploy/retry до verdict запрещены.
+
+Historical reviewed full-manual-preview candidate
 `583165e316b739f4fb6a30001dae3a98ec62e1a1`, parent `3ad9527…`, получил fresh
 independent **GO** с 0 `P0` / 0 `P1`. Exact candidate исправляет
 Access/adapter form-origin mismatch через runtime `PORTAL_PUBLIC_ORIGIN` guard;

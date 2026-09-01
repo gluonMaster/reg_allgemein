@@ -1,6 +1,6 @@
 # Ежедневная эксплуатация и реагирование
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-08-20.
 

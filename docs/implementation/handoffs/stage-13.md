@@ -1,10 +1,14 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-09-01.
 
-Статус этапа: `in_progress` — latest reviewed deployment target
+Статус этапа: `in_progress` — current registration remediation anchor
+`146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
+`fbb9520eb670cd22f5ac236f1203823942078c1a`, подготовлен и ожидает отдельный
+independent read-only review. Он не получил GO и не развёрнут. Historical
+reviewed deployment target
 `583165e316b739f4fb6a30001dae3a98ec62e1a1` с direct parent
 `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d` получил fresh independent **GO**:
 0 `P0` / 0 `P1` для reviewed CSRF-remediation scope. После deploy первый
@@ -24,6 +28,33 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Registration invalid-input remediation candidate — 2026-09-01
+
+- Exact runtime anchor `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent
+  `fbb9520eb670cd22f5ac236f1203823942078c1a`, ограничен registration form/action,
+  explicit Turnstile widget lifecycle, German feedback и затронутыми unit/E2E
+  tests. D1 migrations, dependencies и protected preview config не менялись.
+- Server failure сохраняет только bounded first/last name и email, privacy
+  choice/version; password никогда не возвращается. Stale privacy version
+  требует нового acceptance. Turnstile missing/rejected token получает
+  отдельное safe сообщение, а submit остаётся disabled до callback с token.
+- Первый full E2E run обнаружил controlled-input race: async widget render
+  сбрасывал заполненные safe values перед forced submit. Исправление использует
+  writable derived fields, после чего focused registration `2/2` и полный
+  Chromium `20/20` прошли.
+- Exact release evidence: `svelte-check` 0 errors/warnings; full Vitest с
+  `--maxWorkers=4` — 76/76 files, 566 passed + 1 Windows-only skip; build;
+  `npm audit --omit=dev` — 0; docs/continuity; release scan 569/569; focused
+  formatting и `git diff --check`. Предшествующий unrestricted Vitest run имел
+  три timeout-only D1 failures; exact cases прошли 3/3 последовательно и затем
+  внутри полного green run с четырьмя workers.
+- Классификация: local `P1` remediation готова, но current candidate pending
+  independent review. Никакой Worker/D1/R2/Access/secret/provider/account/
+  bootstrap/production/CMS mutation после failed registration retry не было.
+  Следующий gate — отдельный read-only exact-SHA verdict; автор не присваивает
+  GO. Только будущий GO позволит запросить отдельное разрешение на preview
+  Worker deploy и postcondition до нового registration retry.
 
 ### First controlled registration retry — failed/no-write — 2026-09-01
 
@@ -72,7 +103,7 @@ Production readiness: **`blocked` / NO-GO**
   `2de99c0c5815` обслуживает 100%; previous `3f189dd10ce8` retained для rollback.
   Access `302/302/200/204`, register GET `200` с form, new/previous versioned
   routes `404`, bindings/vars/three secret names exact. D1 остаётся `25/pending
-  0/FK 0`, synthetic `2 + 1703`, auth/account/outbox/session/bootstrap counts
+0/FK 0`, synthetic `2 + 1703`, auth/account/outbox/session/bootstrap counts
   `0`; R2 empty, nine latest jobs healthy. Rollback не понадобился. Protected
   evidence digest prefix `1e22812b898c`; docs-only checkpoint следует отдельно.
 - Следующий atomic step — отдельно разрешённый retry только первого controlled
@@ -160,7 +191,7 @@ Production readiness: **`blocked` / NO-GO**
   chat ID, type `channel` и bot-admin `Post Messages` permission.
 - **Focused verification:** `npm.cmd run docs:check` passed — 188 links / 57
   files, 109 executable command lines и Stage-13 continuity; `npm.cmd run
-  release:scan` passed — 563/563 text files, no prohibited artifact/high-confidence
+release:scan` passed — 563/563 text files, no prohibited artifact/high-confidence
   secret/PII; `git diff --check` passed.
 - **Осознанно не запускались:** `npm run check`, full Vitest, E2E, build и audit.
   Diff ограничен docs/prompt/agent instructions, не меняет runtime, migrations,
@@ -338,7 +369,7 @@ verification первого allowlisted preview account. Это вызовет p
   Его обязательные adversarial fixtures не являлись исполняемой частью
   `docs:check`.
 - **Regression first:** неизменённый helper воспроизвёл `[false, false, false,
-  false]` на четырёх representative phrases, а прежний `docs:check` ошибочно
+false]` на четырёх representative phrases, а прежний `docs:check` ошибочно
   прошёл 170 links / 56 files, 109 commands и continuity. После добавления
   regression unit test ожидаемо упал на первой ранее пропущенной English phrase.
 - **Один production validator:** `scripts/stage13-review-status.ts` теперь
@@ -378,13 +409,13 @@ verification первого allowlisted preview account. Это вызовет p
   recurrence `check` + continuity unit + `docs:check` + build; их result не может
   быть самоссылочно записан внутрь этого candidate commit.
 
-| Iteration | Rejected/reviewed candidate | Direct parent | Verdict | Findings | Next candidate state |
-| --------- | --------------------------- | ------------- | ------- | -------- | -------------------- |
-| 1 | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap | Next candidate `f338852…`, later reviewed NO-GO |
-| 2 | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Next candidate `df49837…`, later reviewed NO-GO |
-| 3 | `df49837be5889559b928b8b9a14136eb5ac8db65` | `f33885257019ea0aeec9f839595fc5596f004240` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM completion/negation polarity gap | Next candidate `6ebf476…`, later reviewed NO-GO |
-| 4 | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | `df49837be5889559b928b8b9a14136eb5ac8db65` | NO-GO | 0 BLOCKER / 0 HIGH / 1 MEDIUM mixed-clause negation bypass | Next candidate `1607d6d…`, later reviewed GO |
-| 5 | `1607d6de55491afe7a2bea059e5f36e8718e0b8c` | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | GO | 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW | Local continuity gate complete; remote actions separately authorized |
+| Iteration | Rejected/reviewed candidate                | Direct parent                              | Verdict | Findings                                                              | Next candidate state                                                 |
+| --------- | ------------------------------------------ | ------------------------------------------ | ------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 1         | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | `02d7cbc9d3f3772e2fb5f41da5eb375c9a722ac8` | NO-GO   | 0 BLOCKER / 0 HIGH / 1 MEDIUM continuity self-check gap               | Next candidate `f338852…`, later reviewed NO-GO                      |
+| 2         | `f33885257019ea0aeec9f839595fc5596f004240` | `1ba7d49b0212a5897e25f468f16184f73ae2a0d2` | NO-GO   | 0 BLOCKER / 0 HIGH / 2 MEDIUM adjacent-GO and stale-reviewed-SHA gaps | Next candidate `df49837…`, later reviewed NO-GO                      |
+| 3         | `df49837be5889559b928b8b9a14136eb5ac8db65` | `f33885257019ea0aeec9f839595fc5596f004240` | NO-GO   | 0 BLOCKER / 0 HIGH / 1 MEDIUM completion/negation polarity gap        | Next candidate `6ebf476…`, later reviewed NO-GO                      |
+| 4         | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | `df49837be5889559b928b8b9a14136eb5ac8db65` | NO-GO   | 0 BLOCKER / 0 HIGH / 1 MEDIUM mixed-clause negation bypass            | Next candidate `1607d6d…`, later reviewed GO                         |
+| 5         | `1607d6de55491afe7a2bea059e5f36e8718e0b8c` | `6ebf4761712c07de262fbac0bb3d532f98fd74c3` | GO      | 0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW                                 | Local continuity gate complete; remote actions separately authorized |
 
 ## Предыдущая runtime/E2E remediation — 2026-08-29
 
