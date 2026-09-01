@@ -1,6 +1,6 @@
 # Stage 13: traceability требований и release evidence
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-01.
 
@@ -10,9 +10,13 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Current registration remediation anchor is
-`146f9c54ff082ad695ef47c7da9c6a578e09a9a5`; it is pending independent review
-and has no GO/deploy authority. Historical reviewed target is
+Current reviewed registration remediation anchor is
+`146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
+`fbb9520eb670cd22f5ac236f1203823942078c1a`. Fresh independent review returned
+**GO** with 0 `P0`, 0 `P1`, 1 `P2` and 0 `P3`; deploy still requires separate
+authority. It preserves bounded safe form fields but never the password,
+refreshes the privacy notice version and uses an explicit Turnstile lifecycle
+with submit disabled until token callback. Historical deployed target is
 `583165e316b739f4fb6a30001dae3a98ec62e1a1`,
 direct child of `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d`. Fresh independent review returned
 **GO** with 0 `P0` / 0 `P1`. The exact candidate replaces SvelteKit's static

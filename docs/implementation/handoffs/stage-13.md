@@ -1,14 +1,13 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-01.
 
-Статус этапа: `in_progress` — current registration remediation anchor
+Статус этапа: `in_progress` — current reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
-`fbb9520eb670cd22f5ac236f1203823942078c1a`, подготовлен и ожидает отдельный
-independent read-only review. Он не получил GO и не развёрнут. Historical
-reviewed deployment target
+`fbb9520eb670cd22f5ac236f1203823942078c1a`, получил fresh independent **GO**:
+0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`. Он не развёрнут. Historical deployed target
 `583165e316b739f4fb6a30001dae3a98ec62e1a1` с direct parent
 `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d` получил fresh independent **GO**:
 0 `P0` / 0 `P1` для reviewed CSRF-remediation scope. После deploy первый
@@ -29,7 +28,7 @@ runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
-### Registration invalid-input remediation candidate — 2026-09-01
+### Registration invalid-input remediation review GO — 2026-09-01
 
 - Exact runtime anchor `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent
   `fbb9520eb670cd22f5ac236f1203823942078c1a`, ограничен registration form/action,
@@ -49,12 +48,21 @@ Production readiness: **`blocked` / NO-GO**
   formatting и `git diff --check`. Предшествующий unrestricted Vitest run имел
   три timeout-only D1 failures; exact cases прошли 3/3 последовательно и затем
   внутри полного green run с четырьмя workers.
-- Классификация: local `P1` remediation готова, но current candidate pending
-  independent review. Никакой Worker/D1/R2/Access/secret/provider/account/
+- Independent code/security review сверил exact parent/anchor/docs child,
+  bounded retained values, отсутствие password в action data/DOM, current
+  privacy-version renewal, server-side Siteverify boundary и explicit Turnstile
+  API с актуальной Cloudflare documentation. Fresh focused evidence: check 0/0,
+  registration/auth-security unit 15/15 и registration Chromium 2/2.
+- Verdict: **GO**, 0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`. Reviewer `P2`: после
+  expiry/client error компонент полагается на reload вместо explicit
+  `turnstile.reset`, а повторная загрузка после уже failed retained script
+  element может остаться pending. Это ограниченная recoverability/UX проблема:
+  быстрый controlled retry и server-side security boundary не сломаны, поэтому
+  по milestone policy она не блокирует deploy и записана в backlog.
+- Никакой Worker/D1/R2/Access/secret/provider/account/
   bootstrap/production/CMS mutation после failed registration retry не было.
-  Следующий gate — отдельный read-only exact-SHA verdict; автор не присваивает
-  GO. Только будущий GO позволит запросить отдельное разрешение на preview
-  Worker deploy и postcondition до нового registration retry.
+  Следующий gate — отдельно разрешённый preview Worker deploy exact `146f9c5…`,
+  read-only postcondition и docs-only checkpoint до нового registration retry.
 
 ### First controlled registration retry — failed/no-write — 2026-09-01
 

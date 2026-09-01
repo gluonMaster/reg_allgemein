@@ -1,6 +1,6 @@
 # Полный ручной preview
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Этот runbook определяет checkpoint `full-manual-preview`: рабочую тестовую
 систему на синтетических данных, а не production release. Канонический origin —
@@ -56,9 +56,9 @@ checkpoint commit. Владелец получает текущий/следую
 
 1. Current registration remediation anchor
    `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, прошёл local
-   release gates, но ожидает отдельный independent read-only review. Он не
-   развёрнут; registration retry запрещён до future GO, отдельно разрешённого
-   preview deploy и postcondition. Historical reviewed candidate
+   release gates и получил fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`,
+   0 `P3`. Он не развёрнут; registration retry запрещён до отдельно разрешённого
+   preview deploy и postcondition. Historical deployed candidate
    `ec11bbc43c3af69d9e60cce4064863db33c45ad2`,
    direct child `e8a67d088ef1ddd2b362596fee494c3e68b6c985`, сохраняет Worker runtime,
    migrations `0024`/`0025`, dependency/config/E2E boundaries reviewed full-suite
@@ -68,7 +68,7 @@ checkpoint commit. Владелец получает текущий/следую
    skip, Chromium 20/20, build, audit 0, docs/scan/diff. Historical focused
    auth/email 71/71 и ACL 25/25, check, build, strict dry-run, audit,
    executable docs contract, release scan и exact diff прошли. Текущий статус —
-   historical `independent_go`; current local review gate ещё не закрыт.
+   `independent_go`; следующий gate — отдельно разрешённый preview deploy.
    Recovery/schema и два Worker
    deploy уже выполнены по отдельным разрешениям; provider sends, accounts,
    bootstrap и production по-прежнему требуют отдельного прямого разрешения.

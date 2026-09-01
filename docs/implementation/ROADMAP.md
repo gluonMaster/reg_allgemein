@@ -368,7 +368,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
@@ -383,9 +383,11 @@ quarantine/manual-AV/business-review paths на выделенных preview res
 Current registration invalid-input remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, сохраняет
 safe form state, обновляет current privacy version и управляет Turnstile token
-lifecycle. Check `0/0`, Vitest `566` pass + 1 Windows skip, Chromium `20/20`,
-build/audit/docs/scan/diff прошли. Текущий кандидат ожидает отдельный
-independent read-only review; deploy/retry до verdict запрещены.
+lifecycle. Fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; check
+`0/0`, focused unit `15/15`, focused registration browser `2/2`. Exact release
+evidence также включает Vitest `566` pass + 1 Windows skip, Chromium `20/20`,
+build/audit/docs/scan/diff. Deploy/retry требуют отдельного разрешения и
+verified preview deploy.
 
 Historical reviewed full-manual-preview candidate
 `583165e316b739f4fb6a30001dae3a98ec62e1a1`, parent `3ad9527…`, получил fresh

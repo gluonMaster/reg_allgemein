@@ -1,24 +1,24 @@
 # Stage 13: активное состояние
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-01T17:30:24Z
-reviewed_candidate: 583165e316b739f4fb6a30001dae3a98ec62e1a1
-last_completed_gate: phase-3-registration-invalid-input-remediation-candidate-prepared
-next_gate: phase-3-registration-invalid-input-remediation-independent-review
+updated_utc: 2026-09-01T18:00:38Z
+reviewed_candidate: 146f9c54ff082ad695ef47c7da9c6a578e09a9a5
+last_completed_gate: phase-3-registration-invalid-input-remediation-reviewed
+next_gate: phase-3-registration-invalid-input-remediation-preview-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: pending_independent_review
+current_review_status: independent_go
 current_phase: phase-3-auth-roles
 last_atomic_action: submit-first-controlled-preview-account-registration
 last_atomic_result: failed
-next_atomic_action: independent-read-only-review-exact-registration-remediation-candidate
+next_atomic_action: owner-authorize-and-deploy-reviewed-registration-invalid-input-remediation
 rollover_required: yes
-recommended_next_session_mode: Medium
-mode_reason_plain: exact-local-runtime-candidate-and-release-evidence-are-ready-and-the-next-required-step-is-a-separate-read-only-independent-review-before-any-preview-deploy
+recommended_next_session_mode: High
+mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-compatible-worker-rollback-are-known
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -39,14 +39,15 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
-- Current runtime remediation anchor
+- Latest independently reviewed runtime remediation anchor
   `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`; direct parent
   `fbb9520eb670cd22f5ac236f1203823942078c1a`. Он сохраняет безопасные
   registration values, никогда не возвращает password, обновляет current privacy
   version, управляет Turnstile explicit-render lifecycle и не разрешает submit
-  до полученного token. Статус — **pending independent review**; автор не
-  присваивает этому кандидату GO, deploy/retry до отдельного verdict запрещены.
-- Last independently reviewed deployed candidate:
+  до полученного token. Fresh independent verdict — **GO**, 0 `P0`, 0 `P1`,
+  1 `P2`, 0 `P3`; deploy/retry остаются запрещены до отдельного разрешения и
+  verified preview deploy.
+- Last deployed candidate:
   `583165e316b739f4fb6a30001dae3a98ec62e1a1`; direct parent
   `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d`.
 - Fresh independent verdict: **GO**, 0 `P0` / 0 `P1`. Candidate заменяет
@@ -91,8 +92,12 @@ NO-GO до собственных approvals и отдельного поруче
   Windows-only skip, build, production dependency audit `0`, docs/continuity,
   release scan `569/569`, formatting и diff check прошли. Первый unrestricted
   Vitest run дал только три D1 timeout на 15 сек.; все три прошли последовательно
-  и затем в полном `4 workers` run. Следующий gate — отдельный read-only
-  exact-SHA review, а не Worker deploy.
+  и затем в полном `4 workers` run. Independent review дополнительно выполнил
+  check 0/0, focused unit 15/15 и registration browser 2/2. Reviewer `P2`:
+  expiry/client-error recovery требует reload вместо explicit reset, а повторная
+  загрузка после уже failed script element может остаться pending. Это не ломает
+  ближайший controlled retry и не блокирует milestone. Следующий gate — отдельно
+  разрешённый exact Worker deploy, postcondition и только затем новый retry.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -157,7 +162,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock     | `passed`                                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                                   | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`                                                           |
 | 1. Recovery/schema | `passed`                                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`                      | ledger, FK, local quick-check plus remote exact fallback, key counts                                                                      |
 | 2. Worker deploy   | `passed`                                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained          | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable                                                 |
-| 3. Auth/roles      | `blocked_on_registration_remediation_independent_review` | exact local runtime anchor `146f9c5…` remediates the failed form/Turnstile state and passed focused/full release gates; it has no independent verdict and is not deployed | separate read-only exact-SHA review; only a future GO may open a separately authorized preview deploy, then a new checkpoint before retry |
+| 3. Auth/roles      | `registration_failed_no_write_remediation_reviewed_awaiting_deploy_permission` | exact runtime anchor `146f9c5…` remediates the failed form/Turnstile state and has independent GO with 0 P0/P1; it is not deployed | separately authorized exact preview deploy, verified postcondition/docs checkpoint, then retry only the first controlled account |
 | 4a. Product flows  | `blocked_on_phase_3`                                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                                  | guided affected browser scenarios                                                                                                         |
 | 4b. Documents      | `blocked_on_phase_3`                                     | real synthetic upload → AV → review → cleanup                                                                                                                             | R2 isolation/hash/owner access                                                                                                            |
 | 4c. Contracts      | `blocked_on_phase_3`                                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                             | Browser/R2/email receipts and lifecycle                                                                                                   |
@@ -183,10 +188,10 @@ sanitized результат и минимальная проверка. Full ID
 назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
 режим следующей сессии, даже если `rollover_required: no`.
 
-Текущая рекомендация — **Medium**: exact remediation anchor и release evidence
-готовы, а следующий обязательный шаг — отдельный read-only independent review;
-remote write и unresolved ambiguity отсутствуют. После будущего GO обычная
-preview deploy-сессия снова потребует `High`. `Max`
+Текущая рекомендация — **High**: exact remediation anchor получил independent
+GO, а следующий обычный deploy имеет известные target, postcondition и
+совместимую rollback version. Remote write всё ещё требует отдельного прямого
+разрешения. `Max`
 нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
 потенциально необратимой записи, неработающем recovery/rollback, corruption,
 Access/authorization bypass, secret exposure или несовместимости code/schema.
@@ -210,10 +215,10 @@ after: generic-400-invalid-input-form-cleared-d1-users-tokens-privacy-outbox-ses
 result: failed
 evidence: protected-ignored-preview-registration-attempt-evidence-20260901-json-sha256-prefix-bf8e23909d88
 rollback_or_containment: no-write-no-send-confirmed-do-not-retry-current-form-until-local-p1-diagnosis-and-remediation
-next_atomic_action: diagnose-and-remediate-registration-invalid-input-before-any-retry
+next_atomic_action: owner-authorize-and-deploy-reviewed-registration-invalid-input-remediation
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: first-registration-retry-failed-before-auth-service-with-proven-no-write-and-local-p1-remediation-is-required-before-another-preview-submit
+mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-compatible-worker-rollback-are-known
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
@@ -221,19 +226,17 @@ mode_reason_plain: first-registration-retry-failed-before-auth-service-with-prov
 
 ## Что не повторять
 
-- Не повторять independent review current candidate: exact `583165e…` получил
-  GO, 0 `P0` / 0 `P1`.
+- Не повторять independent review current candidate: exact `146f9c5…` получил
+  GO, 0 `P0` / 0 `P1`; reviewer `P2` записан в handoff.
 - Не повторять deploy exact `583165e…`: preview postcondition прошёл, active
   fingerprint `2de99c0c5815`; повторный deploy без material drift запрещён.
 - Не повторять registration submit в текущей форме: failed response теряет
   обязательные hidden values, а D1 доказал rejection до auth service. Exact
-  local remediation `146f9c5…` уже подготовлена; не повторять diagnosis или
-  submit до отдельного review/GO/deploy checkpoint.
+  local remediation `146f9c5…` уже reviewed; не повторять diagnosis или submit
+  до отдельно разрешённого deploy/postcondition checkpoint.
 - Не повторять full local gates без material diff. Exact current evidence:
   full Vitest 76/76 files, 566 pass + 1 Windows-only skip; Chromium E2E 20/20;
   check, build, dependency audit 0, docs, release scan и diff check прошли.
-- Не считать `146f9c5…` independently approved: следующая роль должна выполнить
-  read-only exact-SHA review и вернуть отдельный verdict.
 - Не повторять phases 1–2, migrations `0001`–`0025`, synthetic import baseline/
   candidate lifecycle, Access perimeter setup или empty-R2 verification без
   drift/material diff/reproducible `P0/P1`.
