@@ -1,6 +1,6 @@
 # Стратегия тестирования
 
-Ревизия: 2026-08-31.
+Ревизия: 2026-09-02.
 
 ## Принципы
 
@@ -13,9 +13,11 @@
   Turnstile verifier использует default fetch, а synthetic provider response
   задаётся через outbound service. Это ловит receiver-binding ошибки, которые
   Node mock скрывает.
-- Health/operator D1 queries проверяются на накопленной synthetic job history:
-  измерять `meta.rows_read` реальной локальной D1, а не только число SQL calls
-  и корректность возвращённого статуса.
+- Health/operator/background D1 paths проверяются на пустом портале, накопленной
+  synthetic history и непустой очереди: измерять реальные local-D1
+  `meta.rows_read` и `meta.rows_written` (включая secondary-index amplification),
+  а не только число SQL calls и корректность результата. Meter не сохраняет
+  bound params или result rows.
 - Concurrency/idempotency проверяется повтором и параллельными запросами, а не
   только happy path.
 - Browser/e2e runner — Playwright согласно `ADR-011`; этап 01 создает harness,
@@ -767,9 +769,12 @@ blocked gates и local suite их не заменяет.
   elapsed `retain_until` never schedules automatic purge, while 14-day
   quarantine cleanup remains active and separate.
 
-### Stage 13 operations и storage recovery
+### Stage 13 operations, D1 cost и storage recovery
 
-- empty migration и populated `0013 → 0015`: existing admin capability sealed,
+- empty migration, populated `0013 → 0015` и exact populated `0025 → 0026`:
+  retained scheduled history/lease сохранены, создаются ровно две cadence rows,
+  cleanup/manual-history query plans используют новые seek/partial indexes;
+  existing admin capability sealed,
   privacy cleanup/support rows сохранены, новые triggers/columns работают;
   legacy lease-less `processing` privacy cleanup становится retryable `failed`
   и затем успешно claim-ится новым Worker;
@@ -780,8 +785,20 @@ blocked gates и local suite их не заменяет.
   UUID-bearing confirmation, wrong UUID/shared-ID/placeholder/selector/
   `preview_database_id` dev-overlay/target mismatch rejection и escaped batch
   rendering;
-- exact Cron allowlist, все fast/maintenance job IDs, scheduled disable,
-  duplicate bucket, busy lease, manual audit/idempotency и failure isolation;
+- exact Cron allowlist, все fast/maintenance job IDs, global scheduled stop с
+  нулём D1, provider/binding-disabled inert jobs без лишнего lease, duplicate
+  bucket, busy lease, manual audit/idempotency и failure isolation;
+- `operations-cost-d1`: empty production-shaped cadence (оба providers enabled
+  и private-storage bindings present), provider-disabled preview shape, 20,000
+  retained scheduled rows, три Telegram queue rows, retry, unknown delivery и
+  concurrent duplicate. Regression ceilings: fast `40 reads/10 writes`,
+  maintenance `80/20`, scheduled 24h `100,000/15,000`; 5-minute health (`≤10`
+  reads/call) плюс worst-case saturated application-error buckets дают общий
+  ceiling `100,000 reads/20,000 writes`, существенно ниже shared Free limits
+  `5M/100k`;
+- unchanged Telegram policy делает conditional no-op write, stale reconcile и
+  invalid-email cleanup выполняются один раз за bounded drain; terminal
+  unknown/dead checks возвращают boolean existence, а не сканирующий count;
 - `/admin/operations` anonymous/parent/CSRF/job/confirmation/key denial до D1/
   scheduler side effect;
 - R2 write-ahead intent: grace boundary, current/stale lease, wrong-owner

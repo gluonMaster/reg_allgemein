@@ -90,6 +90,8 @@ function retryAtWithProviderDelay(
 }
 
 export class EmailOutboxWorker {
+	private prepared = false;
+
 	constructor(
 		private readonly repository: EmailOutboxStore,
 		private readonly provider: EmailProvider,
@@ -101,9 +103,17 @@ export class EmailOutboxWorker {
 		private readonly attachmentResolver?: EmailAttachmentResolver
 	) {}
 
+	async prepareDrain(now = this.clock(), limit = 100): Promise<number> {
+		assertInstant(now);
+		if (this.prepared) return 0;
+		const cancelled = await this.repository.cancelInvalidEmailRows(now, limit);
+		this.prepared = true;
+		return cancelled;
+	}
+
 	async dispatchNext(now = this.clock()): Promise<DispatchOutcome> {
 		assertInstant(now);
-		await this.repository.cancelInvalidEmailRows(now);
+		await this.prepareDrain(now);
 		const row = await this.repository.claimEmail({
 			now,
 			leaseOwner: this.workerId,
@@ -150,6 +160,8 @@ export class EmailOutboxWorker {
 }
 
 export class TelegramOutboxWorker {
+	private prepared = false;
+
 	constructor(
 		private readonly repository: TelegramOutboxStore,
 		private readonly provider: TelegramProvider,
@@ -161,18 +173,30 @@ export class TelegramOutboxWorker {
 		private readonly clock: () => string = () => new Date().toISOString()
 	) {}
 
-	async dispatchNext(now = this.clock()): Promise<DispatchOutcome> {
+	async prepareDrain(now = this.clock(), limit = 100): Promise<number> {
 		assertInstant(now);
-		const row = await this.repository.claimTelegram({
+		if (this.prepared) return 0;
+		const reconciled = await this.repository.prepareTelegramDispatch({
 			now,
-			leaseOwner: this.workerId,
-			leaseUntil: secondsAfter(now, this.timing.leaseSeconds),
+			reconcileLimit: limit,
 			...(this.timing.maxAttempts === undefined
 				? {}
 				: { maxAttempts: this.timing.maxAttempts }),
 			...(this.timing.activationAt === undefined
 				? {}
 				: { activationAt: this.timing.activationAt }),
+		});
+		this.prepared = true;
+		return reconciled;
+	}
+
+	async dispatchNext(now = this.clock()): Promise<DispatchOutcome> {
+		assertInstant(now);
+		await this.prepareDrain(now);
+		const row = await this.repository.claimTelegram({
+			now,
+			leaseOwner: this.workerId,
+			leaseUntil: secondsAfter(now, this.timing.leaseSeconds),
 		});
 		if (!row) return 'empty';
 		const allowedAt = nextBusinessWindow(now, this.schedule);

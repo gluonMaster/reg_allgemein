@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T14:42:00Z
+updated_utc: 2026-09-02T16:56:00Z
 reviewed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
-last_completed_gate: phase-3-turnstile-async-onload-preview-deploy-and-real-widget-passed
-next_gate: phase-3-remediation-release-validation-and-independent-review
+last_completed_gate: phase-3-local-d1-cost-focused-regressions
+next_gate: phase-3-d1-cost-release-validation-and-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: phase-3-auth-roles
+current_phase: phase-3-local-d1-cost-remediation
 last_atomic_action: owner-authorized-first-controlled-registration
 last_atomic_result: failed
-next_atomic_action: local-release-validation-and-independent-review-before-preview-deploy
+next_atomic_action: local-release-validation-and-independent-review-before-preview-migration-deploy
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: two-reproduced-preview-p1-defects-known-target-no-account-or-provider-write-no-remote-ambiguity
+mode_reason_plain: local-cost-remediation-bounded-preview-target-known-no-remote-ambiguity
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -39,21 +39,20 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
-- **Local remediation подготовлена, ещё не deployed/reviewed.** Turnstile
-  default fetch связан с `globalThis`; regression импортирует настоящий verifier
-  и запускает его в workerd (старый код RED, исправленный GREEN). Health вместо
-  history-wide GROUP BY использует existing index и latest lookup по каждому
-  известному job в релевантном freshness window. Operator replacement SQL:
-  [latest-job-status.sql](../../scripts/sql/latest-job-status.sql).
-  Локальная D1 с 20,000 старыми runs: весь health batch читает **15 rows**,
-  operator job summary — **18 rows**. Auth/security/registration unit `15/15`,
-  workerd `1/1`, monitoring D1 `7/7`, registration Chromium `5/5`, check `0/0`
-  прошли. Full suites/build/audit
-  нового runtime ещё не являются release evidence; до deploy нужны полные
-  release gates по AGENTS.md и independent review. Historical `bef5789…` full
-  evidence нельзя переносить на изменённый runtime.
-  Четыре старых ignored operational scripts получили unconditional stop до
-  network/config reads. Их нельзя разблокировать без новой cost-bounded процедуры.
+- **Local D1-cost remediation реализована, ещё не deployed/reviewed.** Automatic
+  Cron использует две fixed-cardinality cadence rows и больше не append-ит
+  per-job scheduled ledger; manual audit/dedupe/fencing сохранены. Global stop
+  даёт 0 D1, inert provider/binding job не пишет lease, Telegram-disabled path
+  сохраняет bounded unknown-result reconcile. Health/summary/manual-history на
+  20,000 retained runs читают **3/2/1 rows**. Empty active contour measured
+  `54,432 reads/10,272 writes/day`; preview provider-disabled + R2 contour —
+  `27,072/7,392`, 5-minute health добавляет `864/0`. Worst regression с тремя
+  recorded 5xx каждую минуту — `58,176/16,032`, ниже shared Free `5M/100k`.
+  Outbox preparation/reconcile bounded и выполняется один раз за drain; cleanup
+  и price boundary используют seek indexes. Full release gates и exact-candidate
+  independent review pending; historical `bef5789…` evidence не переносится.
+  Четыре старых ignored operational scripts остаются остановлены до network/config
+  reads; разблокировать их нельзя.
 - **Новый incident 2026-09-02: два P1 текущего preview milestone.** Первая
   разрешённая controlled registration вернула Turnstile rejection. Read-only
   postcondition `2026-09-02T14:14:25Z`: version `745295d36248`/100%, exact config,
@@ -83,9 +82,9 @@ NO-GO до собственных approvals и отдельного поруче
   snapshots и health history scan. Сам `SCHEDULED_JOBS_ENABLED=false` не
   прекращает log/lease writes: gate стоит после startRun.
 - **Containment:** тяжёлые D1 snapshots, SQL/health probes остановлены в этой
-  сессии; больше remote SQL не выполнять до локального cost regression.
+  сессии; remote SQL не выполнять до восстановления quota и отдельной фазы.
   Cron/monitor/flags/deployed Worker не изменялись; новый deploy, retry и
-  платный тариф не разрешены. Next action — local remediation двух P1.
+  платный тариф не разрешены. Next action — full local release gate и review.
   Historical review GO для `bef5789…` не закрывает обнаруженные runtime отказы.
 - Owner `2026-09-02` явно разрешил первую controlled registration с verification
   delivery. Разрешение принято и повторно не запрашивается. Fresh read-only
@@ -264,17 +263,17 @@ Fresh reconciliation нужно выполнить непосредственн�
 
 ## Квазиатомарная цепочка
 
-| Фаза               | Статус                                                   | Результат                                                                                                                                                                 | Минимальная проверка                                                                                                                      |
-| ------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Target lock     | `passed`                                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                                   | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`                                                           |
-| 1. Recovery/schema | `passed`                                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`                      | ledger, FK, local quick-check plus remote exact fallback, key counts                                                                      |
-| 2. Worker deploy   | `passed`                                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained          | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable                                                 |
-| 3. Auth/roles      | `blocked_turnstile_workers_and_d1_reads` | deployed `bef5789…`/`745295d36248`; controlled registration failed; account/outbox zero, rate buckets 2; expensive diagnostic SQL identified | local workerd and D1 cost regression before new deploy/registration approval |
-| 4a. Product flows  | `blocked_on_phase_3`                                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                                  | guided affected browser scenarios                                                                                                         |
-| 4b. Documents      | `blocked_on_phase_3`                                     | real synthetic upload → AV → review → cleanup                                                                                                                             | R2 isolation/hash/owner access                                                                                                            |
-| 4c. Contracts      | `blocked_on_phase_3`                                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                             | Browser/R2/email receipts and lifecycle                                                                                                   |
-| 4d. Telegram       | `blocked_on_target_and_send_permission`                  | one PII-free normal-outbox delivery                                                                                                                                       | preflight, exactly-one send, verify/reconcile                                                                                             |
-| 5. Owner pass      | `blocked_on_phases_3_4`                                  | desktop/mobile/manual exploratory complete                                                                                                                                | no open P0/P1                                                                                                                             |
+| Фаза               | Статус                                   | Результат                                                                                                                                                        | Минимальная проверка                                                                      |
+| ------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 0. Target lock     | `passed`                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                          | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`           |
+| 1. Recovery/schema | `passed`                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`             | ledger, FK, local quick-check plus remote exact fallback, key counts                      |
+| 2. Worker deploy   | `passed`                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable |
+| 3. Auth/roles      | `blocked_turnstile_workers_and_d1_reads` | deployed `bef5789…`/`745295d36248`; controlled registration failed; account/outbox zero, rate buckets 2; expensive diagnostic SQL identified                     | local workerd and D1 cost regression before new deploy/registration approval              |
+| 4a. Product flows  | `blocked_on_phase_3`                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                         | guided affected browser scenarios                                                         |
+| 4b. Documents      | `blocked_on_phase_3`                     | real synthetic upload → AV → review → cleanup                                                                                                                    | R2 isolation/hash/owner access                                                            |
+| 4c. Contracts      | `blocked_on_phase_3`                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                    | Browser/R2/email receipts and lifecycle                                                   |
+| 4d. Telegram       | `blocked_on_target_and_send_permission`  | one PII-free normal-outbox delivery                                                                                                                              | preflight, exactly-one send, verify/reconcile                                             |
+| 5. Owner pass      | `blocked_on_phases_3_4`                  | desktop/mobile/manual exploratory complete                                                                                                                       | no open P0/P1                                                                             |
 
 После каждой фазы записываются только `result / evidence / next / rollback`.
 Зелёная фаза не повторяется без actual drift, material diff или воспроизводимого
@@ -345,9 +344,9 @@ Before/after/result описывают последнюю remote mutation — н
 - Не повторять registration submit до исправленного reviewed preview deploy
   и отдельного разрешения; retry — account/provider mutation с обязательным
   read-only reconcile до любого второго account или bootstrap.
-- Не повторять full local gates без material diff. Historical `146f9c5…` evidence:
-  full Vitest 76/76 files, 566 pass + 1 Windows-only skip; Chromium E2E 20/20;
-  check, build, dependency audit 0, docs, release scan и diff check прошли.
+- Текущий runtime/migration diff material: после завершения focused regressions
+  выполнить один полный release gate и не повторять его после docs-only
+  checkpoint. Historical `146f9c5…` evidence к этому candidate не переносить.
 - Не повторять phases 1–2, migrations `0001`–`0025`, synthetic import baseline/
   candidate lifecycle, Access perimeter setup или empty-R2 verification без
   drift/material diff/reproducible `P0/P1`.
@@ -358,8 +357,9 @@ Before/after/result описывают последнюю remote mutation — н
 
 ## Permission и stop conditions
 
-Без вопроса разрешены local/read-only preparation, focused checks и read-only
-remote reconciliation без PII/secrets. Owner permission нужна перед D1/R2 write,
+В текущей quota-containment сессии разрешены local preparation/checks и
+Cloudflare Analytics без SQL к remote D1. Даже read-only availability probes,
+health polling и старые snapshots не повторять. Owner permission нужна перед D1/R2 write,
 migration/import transition, Worker deploy/rollback, Access/config/secret
 mutation, provider send, bootstrap/role/session mutation и production/CMS.
 

@@ -4,11 +4,12 @@
 
 Ревизия: 2026-09-02.
 
-Статус этапа: `in_progress` — reviewed Turnstile async/onload candidate `bef5789…`
-развёрнут в preview как `745295d36248`/100%. Реальный Chrome widget показал
-«Успешно», submit enabled; render `P1` закрыт. Последующая controlled registration
-failed на server verification; D1 quota incident выявил дорогие operator/health
-history scans. Два новых P1 требуют local remediation; production **NO-GO**.
+Статус этапа: `in_progress` — preview по-прежнему использует reviewed Turnstile
+candidate `bef5789…` как `745295d36248`/100%. Controlled registration failed на
+server verification, а D1 incident выявил дорогие operator/health scans и
+per-job write amplification. Оба P1 исправлены в local candidate; полный release
+gate и independent exact-SHA review ещё pending, remote migration/deploy не
+разрешены. Production **NO-GO**.
 
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
@@ -35,37 +36,41 @@ runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
-### Local remediation после D1 incident — 2026-09-02
+### Local D1-cost remediation candidate — 2026-09-02
 
-- Native Turnstile fetch привязан к `globalThis`; отдельный test bundles/imports
-  настоящий verifier и выполняет его в workerd с synthetic outbound service.
-  Старый verifier воспроизводимо возвращал false до outbound call, новый проходит.
-- Health freshness заменён на indexed latest lookup для девяти известных jobs
-  внутри релевантного временного окна. Existing migration/index достаточны;
-  schema/data/retention и Cron cadence не изменяются. Operator summary вынесен в
-  `scripts/sql/latest-job-status.sql`. Локальная D1 с 20,000 старыми runs:
-  весь health batch **15 reads**, operator summary **18 reads**.
-- Четыре прежних ignored operational scripts (`stage13-preview-readonly-functions`,
-  `stage13-turnstile-onload-deploy`, `stage13-registration-remediation-deploy`,
-  `stage13-postdeploy`) теперь завершаются с явным stop до config/network access.
-  Новую target-locked процедуру строить с measured SQL; старые window scans
-  не разблокировать. Remote quota probes, deletes, тариф/deploy/flags/Cron
-  changes и registration retry не выполнялись.
-- Final focused verification: Turnstile workerd `1/1`, monitoring D1 `7/7`,
-  auth/security/registration-route unit `15/15`, registration Chromium `5/5`,
-  check `0/0`, docs/continuity, release scan `572/572`, formatting и diff passed.
-  При создании новых tests исправлены два harness defects (Vite output array
-  и spy на D1 proxy); приведённый итог относится к исправленному final run.
-  Полные Vitest/E2E, build и audit нового runtime не запускались в incident
-  diagnosis: их нельзя считать унаследованными от `bef5789…`; они остаются
-  обязательным pre-deploy gate по AGENTS.md. Independent review pending.
-- Preview всё ещё использует `745295d36248`/`bef5789…`. На Free quota excess
-  блокирует queries, не создаёт автоматического платного overage; dashboard
-  показывал $0.00. Reset из owner notification — `2026-09-03T00:00:00Z`
-  (02:00 Europe/Berlin). Upgrade не выполнялся.
-- Next atomic action: local release validation и independent review до нового
-  разрешения на preview deploy. `rollover_required: no`,
-  `recommended_next_session_mode: High`; remote ambiguity отсутствует.
+- Работа начата с clean `8f04554ad001d12eb447a0eccc8dc883e9a8c951`; preview
+  остаётся на `bef5789…` / fingerprint `745295d36248`. Remote SQL, migration,
+  deploy, registration retry, Cron/flag/tariff/provider mutation не выполнялись.
+- Forward migration `0026_background_d1_cost_controls.sql` добавляет ровно две
+  cadence rows. Automatic Cron больше не append-ит per-job ledger; manual run
+  сохраняет audit/dedupe/lease/fence и partial manual-history index. Global stop
+  теперь стоит до любого D1, inert provider/binding job не получает лишний
+  lease, а Telegram-disabled path сохраняет обязательный bounded unknown-result
+  reconcile/signal.
+- Health и operator summary читают только fixed cadence state; при 20,000
+  retained scheduled rows measured health `2 queries/3 reads/0 writes`, summary
+  `1/2/0`, routine history `1/1/0` при одной manual row. Старые тяжёлые scripts
+  остаются заблокированы.
+- Empty production-shaped cost: fast `14 queries/33 reads/6 writes`, maintenance
+  `35/72/17`; scheduled projection `54,432 reads/10,272 writes/day`. Preview shape
+  с disabled providers и active R2 — `27,072/7,392`; 5-minute health добавляет
+  `864/0`. Даже консервативные три recorded 5xx каждую минуту дают общий
+  `58,176 reads/16,032 writes/day` против shared Free `5M/100k`.
+- Outbox preparation выполняется один раз за bounded drain; unchanged Telegram
+  policy — no-write; invalid email/stale Telegram maintenance ограничены;
+  terminal checks используют `EXISTS`. Три Telegram rows: `37/131/36`; retry
+  `10/39/10`; unknown outcome `10/38/10`. Price boundary OR scan заменён indexed
+  candidate streams; security/email expiry queries получили partial seek indexes.
+- Local focused migration/health/cost/scheduler checks проходят; полный final
+  `release:verify` и independent exact-candidate review ещё pending и будут
+  записаны здесь после выполнения. До них и отдельного owner approval migration/
+  deploy запрещены. Cost table и phased postcondition/rollback procedure находятся
+  в [OPERATIONS_RUNBOOK](../../operations/OPERATIONS_RUNBOOK.md).
+- Next local action: завершить focused regressions, один полный release gate,
+  сохранить exact candidate и передать независимому reviewer. После GO следующая
+  remote фаза — только отдельно разрешённый apply `0026` к exact preview D1.
+  `rollover_required: no`, `recommended_next_session_mode: High`: target,
+  postcondition и containment известны; remote ambiguity отсутствует.
 
 ### Controlled registration failed; D1 quota incident — 2026-09-02
 

@@ -909,11 +909,16 @@ MVP готов, когда:
   result не разрешает eager delete. Reconciler сохраняет referenced object, а
   orphan cleanup после 15-минутного grace удаляет только всё ещё unreferenced
   object с действующим lease. (`REL-01`, `SEC-01`)
-- Scheduled/manual jobs имеют allowlist, exact Cron mapping, unique dedupe,
-  lease/fencing и PII-free run ledger. Ошибка setup/audit/execution одного job не
-  запускает side effect без audit, не оставляет его run `running` при доступной
-  D1 и не прерывает остальные jobs. Manual route требует admin, CSRF, typed job,
-  confirmation и idempotency. (`REL-01`, `ADMIN-02`, `OPS-01`)
+- Scheduled/manual jobs имеют allowlist, exact Cron mapping, unique dedupe и
+  lease/fencing. Automatic Cron обновляет ровно две fixed-cardinality cadence
+  rows и не добавляет per-job rows в retained ledger; job, способный выполнить
+  работу, сохраняет отдельный lease для изоляции с manual run. Заведомо inert
+  disabled job lease не создаёт. Ошибка setup/execution одного job сохраняется в
+  PII-free bounded cadence result, делает cadence failed и не прерывает остальные
+  jobs. Manual route сохраняет PII-free per-job ledger и требует admin, CSRF,
+  audit до side effect, typed job, confirmation и idempotency. Global scheduled
+  stop выполняется до первого D1 query: Cron имеет 0 reads/0 writes, health —
+  fail-closed `503`. (`REL-01`, `ADMIN-02`, `OPS-01`)
 - `GET|HEAD /_health/operations` возвращает только empty `204` либо fail-closed
   empty `503`, `no-store` и `noindex`; D1 failure, отсутствие любого job либо
   превышение порога не раскрывает job name/error code в ответе. Freshness
@@ -924,10 +929,16 @@ MVP готов, когда:
   PII-free minute buckets с bounded 7-day cleanup. Production gate требует
   отдельного внешнего poller, проверенной доставки alert и owner; сам Worker не
   может доказать отсутствие собственного Cron. (`OBS-02`, `OPS-01`, `SEC-02`)
-- Накопление завершённых scheduled runs не превращает каждую health/operator
-  freshness проверку в полный обход истории. Локальный regression с 20,000
-  старыми runs проверяет фактический `meta.rows_read` и indexed latest lookup,
-  сохраняя missing/stale/error fail-closed semantics. (`OBS-02`, `OPS-01`)
+- Накопление завершённых scheduled runs не влияет на стоимость health/Cron и не
+  превращает operator view в полный обход истории. Локальный regression с
+  20,000 старыми runs проверяет фактические `meta.rows_read`/`rows_written`: health
+  читает не более 10 rows, two-cadence operator snapshot — не более 5, routine
+  manual history — не более 5 при одной manual row. Empty production-shaped
+  background имеет budgets: fast ≤40 reads/≤10 writes, maintenance ≤80/≤20,
+  scheduled day ≤100,000/≤15,000; с 5-minute health и максимально насыщаемыми
+  minute error buckets общий daily budget ≤100,000 reads/≤20,000 writes. Queue,
+  retry, unknown-result и concurrent duplicate scenarios сохраняют fencing,
+  idempotency, delivery certainty и fail-closed semantics. (`OBS-02`, `OPS-01`)
 - First-admin capability не имеет HTTP route и потребляется ровно один раз:
   verified active parent без retained parent workflow/business state повышается
   только при нуле active admin, sessions отзываются, audit/assertion

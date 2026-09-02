@@ -187,19 +187,36 @@ archive/approved evidence default MVP status всегда `disabled_by_policy`;
 конкурентность превысит возможности D1, переход на Durable Object/managed rate
 limiting требует нового ADR, но не меняет доменные ключи.
 
-### `scheduled_job_runs`
+### `scheduled_cadence_state` и `scheduled_job_runs`
 
-- `id`, allowlisted `job_name`, `trigger_kind` (`scheduled|manual`),
-  `dedupe_key`; `UNIQUE(job_name, dedupe_key)`;
-- `status` (`running|succeeded|failed|feature_disabled|skipped_locked`),
-  `lease_owner`, `fencing_token`;
-- PII-free `safe_result_json`, typed `error_code`, start/finish timestamps.
+`scheduled_cadence_state` имеет ровно две строки, `fast` и `maintenance`:
 
-Каждый Cron/manual delivery сначала получает `operation_locks` lease, затем
-создаёт run. Setup/audit/execution failure конкретного job переводит созданный
-run в `failed` и не прекращает обработку остальных allowlisted jobs. Manual run
-до side effect требует active admin audit. Exact Cron expression выбирает только
-фиксированную группу jobs; неизвестный Cron отклоняется.
+- `status` (`idle|running|succeeded|failed`), последний UTC `dedupe_key`,
+  lease owner/until и монотонный `fencing_token`;
+- PII-free bounded `safe_result_json`, не более 64 timestamps недавних ошибок,
+  start/finish/update timestamps.
+
+Automatic Cron атомарно получает cadence lease и обновляет ту же строку в конце
+доставки. Каждый job, который реально может читать D1/R2 или выполнять side
+effect, дополнительно получает прежний `operation_locks` lease: он сохраняет
+изоляцию от manual run и monotonic fencing. Заведомо inert job с отсутствующим
+provider/binding не создаёт такой lease. Ошибка/занятый lease одного job
+фиксируется в aggregate cadence result, делает cadence `failed` и не прерывает
+остальные jobs. Exact Cron expression выбирает только фиксированную группу;
+неизвестный или частичный scheduled set отклоняется.
+
+`scheduled_job_runs` сохраняет прежнюю схему и всю историческую информацию, но
+новые строки создаются только для явных manual actions. Manual run требует
+active-admin audit до side effect и продолжает использовать per-job dedupe,
+lease/fence и PII-free result/error. Routine operator list читает только manual
+rows через partial index; retained automatic history не сканируется и не
+удаляется.
+
+Глобальный `SCHEDULED_JOBS_ENABLED=false` проверяется до первого D1 обращения:
+Cron делает 0 reads/0 writes, а health возвращает fail-closed `503`, не создавая
+ложный heartbeat. Forward migration `0026_background_d1_cost_controls.sql`
+добавляет fixed-cardinality state и seek indexes для bounded cleanup, удаляет
+только неиспользуемые secondary indexes; применённые migrations не меняются.
 
 ### `storage_object_intents`, `storage_intent_generations`, `storage_intent_link_assertions`
 

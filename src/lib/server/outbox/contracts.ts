@@ -68,7 +68,7 @@ export interface OutboxFailureInput {
 }
 
 export interface EmailOutboxStore {
-	cancelInvalidEmailRows(now: string): Promise<number>;
+	cancelInvalidEmailRows(now: string, limit?: number): Promise<number>;
 	claimEmail(input: OutboxClaimInput): Promise<EmailOutboxRow | null>;
 	markEmailSent(input: {
 		id: string;
@@ -80,8 +80,14 @@ export interface EmailOutboxStore {
 }
 
 export interface TelegramOutboxStore {
+	prepareTelegramDispatch(input: {
+		now: string;
+		maxAttempts?: number;
+		activationAt?: string;
+		reconcileLimit?: number;
+	}): Promise<number>;
 	claimTelegram(input: TelegramOutboxClaimInput): Promise<TelegramOutboxRow | null>;
-	reconcileStaleTelegramDispatches(now: string): Promise<number>;
+	reconcileStaleTelegramDispatches(now: string, limit?: number): Promise<number>;
 	countUnresolvedTelegramDeliveries(): Promise<number>;
 	countTerminalTelegramFailures(): Promise<number>;
 	deferTelegram(input: {

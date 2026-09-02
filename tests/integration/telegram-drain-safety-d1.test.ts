@@ -117,23 +117,23 @@ describe('Telegram scheduler drain safety in D1', () => {
 		}), {
 			triggerKind: 'scheduled',
 			dedupeKey: 'telegram-ambiguous-follow-up',
-			jobNames: ['telegram_outbox'],
+			jobNames: ['email_outbox', 'telegram_outbox'],
 			now: '2026-07-22T10:01:00.000Z',
 		});
-		expect(scheduled).toEqual([
+		expect(scheduled).toEqual(expect.arrayContaining([
 			expect.objectContaining({
 				jobName: 'telegram_outbox',
 				status: 'failed',
 				errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
 			}),
-		]);
+		]));
 		expect(await db.first<{ status: string; attempts: number }>({
 			sql: `SELECT status, attempts FROM telegram_outbox
 				WHERE id = 'telegram-ambiguous-b'`,
 		})).toEqual({ status: 'pending', attempts: 0 });
 		expect(await db.first<{ safe_result_json: string }>({
-			sql: `SELECT safe_result_json FROM scheduled_job_runs
-				WHERE dedupe_key = 'scheduled:telegram-ambiguous-follow-up'`,
+			sql: `SELECT safe_result_json FROM scheduled_cadence_state
+				WHERE cadence = 'fast'`,
 		})).toMatchObject({
 			safe_result_json: expect.stringContaining('delivery_unknown_open'),
 		});
@@ -319,24 +319,24 @@ describe('Telegram scheduler drain safety in D1', () => {
 		}), {
 			triggerKind: 'scheduled',
 			dedupeKey: 'telegram-terminal-dead-follow-up',
-			jobNames: ['telegram_outbox'],
+			jobNames: ['email_outbox', 'telegram_outbox'],
 			now: '2026-07-22T10:01:00.000Z',
 		});
 
-		expect(scheduled).toEqual([
+		expect(scheduled).toEqual(expect.arrayContaining([
 			expect.objectContaining({
 				jobName: 'telegram_outbox',
 				status: 'failed',
 				errorCode: 'TELEGRAM_OUTBOX_DEAD',
 			}),
-		]);
+		]));
 		expect(await db.first<{ status: string; attempts: number }>({
 			sql: `SELECT status, attempts FROM telegram_outbox
 				WHERE id = 'telegram-terminal-dead-b'`,
 		})).toEqual({ status: 'pending', attempts: 0 });
 		expect(await db.first<{ safe_result_json: string }>({
-			sql: `SELECT safe_result_json FROM scheduled_job_runs
-				WHERE dedupe_key = 'scheduled:telegram-terminal-dead-follow-up'`,
+			sql: `SELECT safe_result_json FROM scheduled_cadence_state
+				WHERE cadence = 'fast'`,
 		})).toMatchObject({
 			safe_result_json: expect.stringContaining('terminal_dead_open'),
 		});

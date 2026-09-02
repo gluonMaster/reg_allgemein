@@ -1421,6 +1421,17 @@ class CohortBoundTelegramStore implements TelegramOutboxStore {
 		private readonly reviewedBy: string
 	) {}
 
+	async prepareTelegramDispatch(
+		input: Parameters<TelegramOutboxStore['prepareTelegramDispatch']>[0]
+	) {
+		if (input.activationAt !== this.activationAt || input.maxAttempts !== 1) {
+			throw new Error('TELEGRAM_SMOKE_COHORT_MISMATCH');
+		}
+		// The dedicated smoke claim is already guarded by queueHazards and must not
+		// reconcile or configure unrelated ordinary-provider state.
+		return 0;
+	}
+
 	async claimTelegram(input: Parameters<TelegramOutboxStore['claimTelegram']>[0]) {
 		const authorizationId = deterministicUuid(
 			`telegram-preview-smoke-claim-auth-v1\0${this.outboxId}\0${input.leaseOwner}`
@@ -1544,8 +1555,8 @@ class CohortBoundTelegramStore implements TelegramOutboxStore {
 		});
 	}
 
-	reconcileStaleTelegramDispatches = (now: string) =>
-		this.repository.reconcileStaleTelegramDispatches(now);
+	reconcileStaleTelegramDispatches = (now: string, limit?: number) =>
+		this.repository.reconcileStaleTelegramDispatches(now, limit);
 	countUnresolvedTelegramDeliveries = () => this.repository.countUnresolvedTelegramDeliveries();
 	countTerminalTelegramFailures = () => this.repository.countTerminalTelegramFailures();
 	deferTelegram = (input: Parameters<TelegramOutboxStore['deferTelegram']>[0]) =>

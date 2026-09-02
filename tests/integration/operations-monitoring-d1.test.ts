@@ -8,15 +8,13 @@ import {
 } from '$lib/server/operations/monitoring';
 import {
 	OperationsRepository,
-	scheduledJobNames,
-	type ScheduledJobName,
+	type ScheduledCadence,
 } from '$lib/server/operations/operations-repository';
-import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
+import { createMeteredD1, createMigratedTestD1, type TestD1Context } from '../helpers/d1';
 
 const NOW = '2026-08-11T12:00:00.000Z';
 const FAST_AT = '2026-08-11T11:58:30.000Z';
 const MAINTENANCE_AT = '2026-08-11T11:45:00.000Z';
-const FAST_JOBS = new Set<ScheduledJobName>(['email_outbox', 'telegram_outbox']);
 
 describe('preview operations monitoring', () => {
 	let context: TestD1Context;
@@ -29,46 +27,43 @@ describe('preview operations monitoring', () => {
 
 	afterEach(async () => context.dispose());
 
-	async function insertRun(input: {
-		jobName: ScheduledJobName;
+	async function setCadence(input: {
+		cadence: ScheduledCadence;
 		startedAt: string;
-		status?: 'running' | 'succeeded' | 'failed' | 'feature_disabled' | 'skipped_locked';
-		suffix?: string;
+		status?: 'running' | 'succeeded' | 'failed';
+		failureTimestamps?: readonly string[];
 	}) {
 		const status = input.status ?? 'succeeded';
-		const suffix = input.suffix ?? 'current';
 		await db.run({
-			sql: `INSERT INTO scheduled_job_runs
-				(id, job_name, trigger_kind, dedupe_key, status, lease_owner,
-				 fencing_token, safe_result_json, error_code, started_at, finished_at,
-				 created_at, updated_at)
-			VALUES (?, ?, 'scheduled', ?, ?, NULL, NULL, '{}', ?, ?, ?, ?, ?)`,
+			sql: `UPDATE scheduled_cadence_state
+			SET status = ?, last_dedupe_key = ?, lease_owner = ?, lease_until = ?,
+				fencing_token = fencing_token + 1, safe_result_json = '{}',
+				recent_failure_timestamps_json = ?, started_at = ?, finished_at = ?,
+				updated_at = ?
+			WHERE cadence = ?`,
 			params: [
-				`${input.jobName}-${suffix}`,
-				input.jobName,
-				`scheduled:${input.jobName}:${suffix}`,
 				status,
-				status === 'failed' ? 'SCHEDULED_JOB_FAILED' : null,
+				`fixture:${input.cadence}:${input.startedAt}`,
+				status === 'running' ? 'fixture-owner' : null,
+				status === 'running'
+					? new Date(Date.parse(input.startedAt) + 300_000).toISOString()
+					: null,
+				JSON.stringify(input.failureTimestamps ?? []),
 				input.startedAt,
 				status === 'running' ? null : input.startedAt,
 				input.startedAt,
-				input.startedAt,
+				input.cadence,
 			],
 		});
 	}
 
-	async function seedFreshRuns() {
-		for (const jobName of scheduledJobNames) {
-			await insertRun({
-				jobName,
-				startedAt: FAST_JOBS.has(jobName) ? FAST_AT : MAINTENANCE_AT,
-				status: FAST_JOBS.has(jobName) ? 'feature_disabled' : 'succeeded',
-			});
-		}
+	async function seedFreshCadences() {
+		await setCadence({ cadence: 'fast', startedAt: FAST_AT });
+		await setCadence({ cadence: 'maintenance', startedAt: MAINTENANCE_AT });
 	}
 
-	it('accepts fresh terminal Cron runs including intentionally disabled providers', async () => {
-		await seedFreshRuns();
+	it('accepts fresh terminal Cron cadence state including intentionally disabled jobs', async () => {
+		await seedFreshCadences();
 		await expect(evaluateOperationsHealth(context.db, NOW)).resolves.toEqual({
 			healthy: true,
 			issues: [],
@@ -76,8 +71,8 @@ describe('preview operations monitoring', () => {
 		});
 	});
 
-	it('keeps health reads bounded when completed job history grows', async () => {
-		await seedFreshRuns();
+	it('keeps health and operator reads bounded with 20,000 retained historical runs', async () => {
+		await seedFreshCadences();
 		await db.run({
 			sql: `WITH RECURSIVE history(n) AS (
 				SELECT 1 UNION ALL SELECT n + 1 FROM history WHERE n < 20000
@@ -90,55 +85,73 @@ describe('preview operations monitoring', () => {
 				'2026-08-01T12:00:00.000Z', '2026-08-01T12:00:00.000Z'
 			FROM history`,
 		});
-		let rowsRead = 0;
-		let queries = 0;
-		const measured = {
-			prepare: context.db.prepare.bind(context.db),
-			async batch<T>(statements: D1PreparedStatement[]) {
-				const results = await context.db.batch<T>(statements);
-				queries += results.length;
-				rowsRead += results.reduce((sum, item) => sum + item.meta.rows_read, 0);
-				return results;
+		await db.run({
+			sql: `INSERT INTO scheduled_job_runs
+				(id, job_name, trigger_kind, dedupe_key, status, started_at,
+				 finished_at, created_at, updated_at)
+			VALUES ('manual-history', 'email_outbox', 'manual', 'manual-history',
+				'succeeded', ?, ?, ?, ?)`,
+			params: [FAST_AT, FAST_AT, FAST_AT, FAST_AT],
+		});
+
+		const meter = createMeteredD1(context.db);
+		expect((await evaluateOperationsHealth(meter.database, NOW)).healthy).toBe(true);
+		const health = meter.snapshot();
+		expect(health.queries).toBe(2);
+		expect(health.rowsRead).toBeLessThan(10);
+
+		meter.reset();
+		const recent = await new OperationsRepository(
+			new DatabaseBoundary(meter.database)
+		).listRecentRuns();
+		const history = meter.snapshot();
+		expect(recent).toHaveLength(1);
+		expect(recent[0]?.trigger_kind).toBe('manual');
+		expect(history.rowsRead).toBeLessThan(5);
+
+		meter.reset();
+		const snapshot = await new DatabaseBoundary(meter.database).all<{
+			cadence_count: number;
+			healthy_cadences: number;
+			running_cadences: number;
+			failed_cadences: number;
+		}>({ sql: await readFile('scripts/sql/latest-job-status.sql', 'utf8') });
+		const operator = meter.snapshot();
+		expect(snapshot.results).toEqual([
+			{
+				cadence_count: 2,
+				healthy_cadences: 2,
+				running_cadences: 0,
+				failed_cadences: 0,
 			},
-		} as D1Database;
-		expect((await evaluateOperationsHealth(measured, NOW)).healthy).toBe(true);
-		expect(queries).toBe(4);
-		expect(rowsRead).toBeLessThan(100);
-		const snapshot = await db.all({
-			sql: await readFile('scripts/sql/latest-job-status.sql', 'utf8'),
-		});
-		expect(snapshot.results).toEqual([{ latest_jobs: 9, latest_jobs_healthy: 9 }]);
-		expect(snapshot.meta.rows_read).toBeLessThan(100);
-		console.info('Local D1 read cost:', {
-			health: rowsRead,
-			snapshot: snapshot.meta.rows_read,
-		});
+		]);
+		expect(operator.rowsRead).toBeLessThan(10);
+		console.info('Local accumulated-history D1 read cost:', { health, history, operator });
 	});
 
 	it('fails closed when either Cron cadence is missing or stale', async () => {
-		await seedFreshRuns();
-		await insertRun({
-			jobName: 'email_outbox',
-			startedAt: '2026-08-11T11:50:00.000Z',
-			suffix: 'stale-latest-fixture',
-		});
+		await seedFreshCadences();
+		await setCadence({ cadence: 'fast', startedAt: '2026-08-11T11:50:00.000Z' });
+		expect((await evaluateOperationsHealth(context.db, NOW)).issues).toContain(
+			'missed_fast_cron'
+		);
+
 		await db.run({
-			sql: `DELETE FROM scheduled_job_runs
-				WHERE job_name = 'email_outbox' AND id <> 'email_outbox-stale-latest-fixture'`,
+			sql: `UPDATE scheduled_cadence_state
+			SET status = 'idle', last_dedupe_key = NULL, lease_owner = NULL,
+				lease_until = NULL, safe_result_json = '{}',
+				recent_failure_timestamps_json = '[]', started_at = NULL,
+				finished_at = NULL, updated_at = ?
+			WHERE cadence = 'maintenance'`,
+			params: [NOW],
 		});
-
-		const result = await evaluateOperationsHealth(context.db, NOW);
-		expect(result.healthy).toBe(false);
-		expect(result.issues).toContain('missed_fast_cron');
-
-		await db.run({ sql: `DELETE FROM scheduled_job_runs WHERE job_name = 'price_review'` });
 		expect((await evaluateOperationsHealth(context.db, NOW)).issues).toContain(
 			'missed_maintenance_cron'
 		);
 	});
 
-	it('opens the signal after three recent application or scheduled errors', async () => {
-		await seedFreshRuns();
+	it('opens the signal after three recent application errors', async () => {
+		await seedFreshCadences();
 		await recordWorkerError(context.db, '2026-08-11T11:58:01.000Z');
 		await recordWorkerError(context.db, '2026-08-11T11:58:20.000Z');
 		expect((await evaluateOperationsHealth(context.db, NOW)).healthy).toBe(true);
@@ -152,21 +165,45 @@ describe('preview operations monitoring', () => {
 		expect((await evaluateOperationsHealth(context.db, NOW)).recentErrorCount).toBe(3);
 	});
 
-	it('counts repeated scheduled failures and stale running leases without exposing detail', async () => {
-		await seedFreshRuns();
-		for (let index = 0; index < 3; index += 1) {
-			await insertRun({
-				jobName: 'email_outbox',
-				startedAt: `2026-08-11T11:5${7 + index}:00.000Z`,
-				status: 'failed',
-				suffix: `failed-${index}`,
-			});
-		}
-		await insertRun({
-			jobName: 'price_review',
+	it('saturates a minute error bucket without writes beyond the alert threshold', async () => {
+		const minute = '2026-08-11T11:59:01.000Z';
+		const meter = createMeteredD1(context.db);
+		await recordWorkerError(meter.database, minute);
+		await recordWorkerError(meter.database, minute);
+		await recordWorkerError(meter.database, minute);
+		const admitted = meter.snapshot();
+		expect(admitted.rowsWritten).toBeLessThanOrEqual(4);
+		meter.reset();
+		await recordWorkerError(meter.database, minute);
+		expect(meter.snapshot().rowsWritten).toBe(0);
+		console.info('Local saturated Worker-error D1 cost:', {
+			firstThreeErrors: admitted,
+			additionalSameMinuteError: meter.snapshot(),
+		});
+		expect(
+			await db.first<{ error_count: number }>({
+				sql: `SELECT error_count FROM worker_error_buckets
+				WHERE minute_bucket = '2026-08-11T11:59:00.000Z'`,
+			})
+		).toEqual({ error_count: 3 });
+	});
+
+	it('counts scheduled failures and stale cadence leases without exposing detail', async () => {
+		await seedFreshCadences();
+		await setCadence({
+			cadence: 'fast',
+			startedAt: '2026-08-11T11:59:00.000Z',
+			status: 'failed',
+			failureTimestamps: [
+				'2026-08-11T11:57:00.000Z',
+				'2026-08-11T11:58:00.000Z',
+				'2026-08-11T11:59:00.000Z',
+			],
+		});
+		await setCadence({
+			cadence: 'maintenance',
 			startedAt: '2026-08-11T11:40:00.000Z',
 			status: 'running',
-			suffix: 'stale-running',
 		});
 
 		const result = await evaluateOperationsHealth(context.db, NOW);
@@ -175,17 +212,28 @@ describe('preview operations monitoring', () => {
 		);
 	});
 
-	it('returns only 204/503 with no body and fails closed without D1', async () => {
-		await seedFreshRuns();
+	it('returns only 204/503 and performs no D1 read when the global stop is active', async () => {
+		await seedFreshCadences();
 		const healthy = await createOperationsHealthResponse({
 			database: context.db,
 			now: NOW,
 			production: false,
+			scheduledJobsEnabled: true,
 		});
 		expect(healthy.status).toBe(204);
 		expect(await healthy.text()).toBe('');
 		expect(healthy.headers.get('cache-control')).toBe('no-store');
 		expect(healthy.headers.get('x-robots-tag')).toBe('noindex, nofollow');
+
+		const meter = createMeteredD1(context.db);
+		const disabled = await createOperationsHealthResponse({
+			database: meter.database,
+			now: NOW,
+			production: false,
+			scheduledJobsEnabled: false,
+		});
+		expect(disabled.status).toBe(503);
+		expect(meter.snapshot()).toEqual({ queries: 0, rowsRead: 0, rowsWritten: 0 });
 
 		const unavailable = await createOperationsHealthResponse({
 			now: NOW,

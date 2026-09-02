@@ -10,8 +10,10 @@ import { createPrivacyRuntime } from '$lib/server/privacy/runtime';
 import {
 	OperationsRepository,
 	type JobTriggerKind,
+	type ScheduledCadence,
 	type ScheduledJobName,
 } from './operations-repository';
+import { operationsMonitoringThresholds } from './monitoring';
 import { StorageIntentRepository } from './storage-intents';
 
 export interface ScheduledJobResult {
@@ -44,6 +46,9 @@ const MAINTENANCE_JOBS: readonly ScheduledJobName[] = [
 	'security_metadata_cleanup',
 	'storage_orphan_cleanup',
 ];
+const SCHEDULED_FAILURE_WINDOW_SECONDS = operationsMonitoringThresholds.repeatedErrorWindowSeconds;
+// At the configured cadences at most 37 per-job failures fit in 15 minutes.
+const MAX_RETAINED_FAILURE_TIMESTAMPS = 64;
 
 function safeErrorCode(error: unknown): string {
 	const candidate =
@@ -61,6 +66,36 @@ function minuteBucket(value: string): string {
 }
 
 const systemClock = () => new Date().toISOString();
+
+type JobExecution = {
+	disabled: boolean;
+	result: Record<string, number | string | boolean | null>;
+	errorCode?: string;
+};
+
+function inertJobResult(config: RuntimeConfig, jobName: ScheduledJobName): JobExecution | null {
+	if (jobName === 'email_outbox' && config.messaging.emailProvider === 'disabled') {
+		return { disabled: true, result: { reason: 'provider_disabled' } };
+	}
+	if (
+		(jobName === 'document_quarantine' ||
+			jobName === 'privacy_r2_cleanup' ||
+			jobName === 'storage_orphan_cleanup') &&
+		(!config.r2QuarantineBucket || !config.r2ArchiveBucket)
+	) {
+		return { disabled: true, result: { reason: 'storage_binding_unavailable' } };
+	}
+	return null;
+}
+
+function scheduledCadenceForJobs(jobNames: readonly ScheduledJobName[]): ScheduledCadence {
+	const matches = (expected: readonly ScheduledJobName[]) =>
+		jobNames.length === expected.length &&
+		jobNames.every((jobName, index) => jobName === expected[index]);
+	if (matches(FAST_JOBS)) return 'fast';
+	if (matches(MAINTENANCE_JOBS)) return 'maintenance';
+	throw new Error('SCHEDULED_CADENCE_JOB_SET_INVALID');
+}
 
 export const TELEGRAM_DRAIN_STOP_OUTCOMES: readonly DispatchOutcome[] = [
 	'delivery_unknown',
@@ -102,18 +137,14 @@ async function executeJob(
 	jobName: ScheduledJobName,
 	now: string,
 	clock: () => string
-): Promise<{
-	disabled: boolean;
-	result: Record<string, number | string | boolean | null>;
-	errorCode?: string;
-}> {
+): Promise<JobExecution> {
+	const inert = inertJobResult(config, jobName);
+	if (inert) return inert;
 	const limit = config.operations.maintenanceBatchLimit;
 	switch (jobName) {
 		case 'email_outbox': {
-			if (config.messaging.emailProvider === 'disabled') {
-				return { disabled: true, result: { reason: 'provider_disabled' } };
-			}
 			const worker = createOutboxRuntime(config).emailWorker;
+			await worker.prepareDrain(now, config.operations.outboxBatchLimit);
 			const result = await drainOutbox(
 				(value) => worker.dispatchNext(value),
 				config.operations.outboxBatchLimit,
@@ -130,8 +161,14 @@ async function executeJob(
 			// Reconciliation is a D1-only safety action. It must keep running while
 			// provider dispatch is disabled, otherwise a crash after send can leave a
 			// stale `processing` row invisible to both operators and alerts forever.
+			const worker = runtime.telegramWorker;
 			const reconciledDeliveryUnknown =
-				await runtime.repository.reconcileStaleTelegramDispatches(now);
+				config.messaging.telegramProvider === 'disabled'
+					? await runtime.repository.reconcileStaleTelegramDispatches(
+							now,
+							config.operations.outboxBatchLimit
+						)
+					: await worker.prepareDrain(now, config.operations.outboxBatchLimit);
 			const unresolvedDeliveryUnknown =
 				await runtime.repository.countUnresolvedTelegramDeliveries();
 			const terminalDead = await runtime.repository.countTerminalTelegramFailures();
@@ -146,9 +183,10 @@ async function executeJob(
 								unresolvedDeliveryUnknown,
 								terminalDead,
 							},
-							errorCode: unresolvedDeliveryUnknown > 0
-								? 'TELEGRAM_DELIVERY_UNKNOWN'
-								: 'TELEGRAM_OUTBOX_DEAD',
+							errorCode:
+								unresolvedDeliveryUnknown > 0
+									? 'TELEGRAM_DELIVERY_UNKNOWN'
+									: 'TELEGRAM_OUTBOX_DEAD',
 						}
 					: { disabled: true, result: { reason: 'provider_disabled' } };
 			}
@@ -194,7 +232,6 @@ async function executeJob(
 					errorCode: 'TELEGRAM_OUTBOX_DEAD',
 				};
 			}
-			const worker = runtime.telegramWorker;
 			const result = await drainOutbox(
 				(value) => worker.dispatchNext(value),
 				config.operations.outboxBatchLimit,
@@ -204,8 +241,13 @@ async function executeJob(
 			result.deliveryUnknown += reconciledDeliveryUnknown;
 			result.reconciledDeliveryUnknown = reconciledDeliveryUnknown;
 			result.unresolvedDeliveryUnknown =
-				await runtime.repository.countUnresolvedTelegramDeliveries();
-			result.terminalDead = await runtime.repository.countTerminalTelegramFailures();
+				result.claimed > 0
+					? await runtime.repository.countUnresolvedTelegramDeliveries()
+					: unresolvedDeliveryUnknown;
+			result.terminalDead =
+				result.claimed > 0
+					? await runtime.repository.countTerminalTelegramFailures()
+					: terminalDead;
 			return {
 				disabled: false,
 				result,
@@ -225,9 +267,6 @@ async function executeJob(
 				),
 			};
 		case 'document_quarantine': {
-			if (!config.r2QuarantineBucket || !config.r2ArchiveBucket) {
-				return { disabled: true, result: { reason: 'storage_binding_unavailable' } };
-			}
 			return {
 				disabled: false,
 				result: await createRequestRuntime(config).documentService.cleanupExpired(
@@ -253,9 +292,6 @@ async function executeJob(
 				},
 			};
 		case 'privacy_r2_cleanup': {
-			if (!config.r2QuarantineBucket || !config.r2ArchiveBucket) {
-				return { disabled: true, result: { reason: 'storage_binding_unavailable' } };
-			}
 			return {
 				disabled: false,
 				result: await createPrivacyRuntime(config).service.cleanupExpiredExports(limit),
@@ -269,8 +305,10 @@ async function executeJob(
 				).cleanupSecurityMetadata(now, limit),
 			};
 		case 'storage_orphan_cleanup': {
-			if (!config.r2QuarantineBucket || !config.r2ArchiveBucket) {
-				return { disabled: true, result: { reason: 'storage_binding_unavailable' } };
+			const archiveBucket = config.r2ArchiveBucket;
+			const quarantineBucket = config.r2QuarantineBucket;
+			if (!archiveBucket || !quarantineBucket) {
+				throw new Error('STORAGE_BINDING_INVARIANT');
 			}
 			const repository = new StorageIntentRepository(new DatabaseBoundary(config.db));
 			const owner = `storage-cleanup:${crypto.randomUUID()}`;
@@ -289,9 +327,7 @@ async function executeJob(
 			for (const intent of claimed) {
 				try {
 					const bucket =
-						intent.storage_class === 'archive'
-							? config.r2ArchiveBucket
-							: config.r2QuarantineBucket;
+						intent.storage_class === 'archive' ? archiveBucket : quarantineBucket;
 					await bucket.delete(intent.object_key);
 					if (await repository.completeDelete(intent.id, intent.generation, owner, now)) {
 						deleted += 1;
@@ -321,6 +357,154 @@ export async function runScheduledJobs(
 	}
 	const fixedNow = input.now;
 	const clock = fixedNow === undefined ? (options.clock ?? systemClock) : () => fixedNow;
+	if (input.triggerKind === 'scheduled') {
+		return runScheduledCadenceJobs(config, input, clock);
+	}
+	return runManualJobs(config, input, clock);
+}
+
+async function runScheduledCadenceJobs(
+	config: RuntimeConfig,
+	input: RunJobsInput,
+	clock: () => string
+): Promise<ScheduledJobResult[]> {
+	const cadence = scheduledCadenceForJobs(input.jobNames);
+	// A global stop is intentionally before every D1 operation. Health reads the
+	// same flag and fails closed without manufacturing a false heartbeat.
+	if (!config.operations.scheduledJobsEnabled) {
+		return input.jobNames.map((jobName) => ({ jobName, status: 'feature_disabled' }));
+	}
+
+	const db = new DatabaseBoundary(config.db);
+	const foundation = new FoundationRepository(db);
+	const operations = new OperationsRepository(db);
+	const startedAt = clock();
+	const owner = `scheduled-cadence:${cadence}:${crypto.randomUUID()}`;
+	const dedupeKey = `scheduled:${input.dedupeKey}`;
+	const cadenceLease = await operations.tryStartScheduledCadence({
+		cadence,
+		dedupeKey,
+		leaseOwner: owner,
+		now: startedAt,
+		leaseUntil: new Date(
+			Date.parse(startedAt) + config.operations.leaseSeconds * 1_000
+		).toISOString(),
+	});
+	if (!cadenceLease.acquired) {
+		const current = await operations.getScheduledCadence(cadence);
+		const status = current.last_dedupe_key === dedupeKey ? 'deduplicated' : 'skipped_locked';
+		return input.jobNames.map((jobName) => ({ jobName, status }));
+	}
+
+	const results: ScheduledJobResult[] = [];
+	const safeJobs: Record<string, unknown> = {};
+
+	for (const jobName of input.jobNames) {
+		const inert = inertJobResult(config, jobName);
+		if (inert) {
+			results.push({ jobName, status: 'feature_disabled' });
+			safeJobs[jobName] = { status: 'feature_disabled', result: inert.result };
+			continue;
+		}
+		const jobNow = clock();
+		const jobOwner = `scheduled-job:${jobName}:${crypto.randomUUID()}`;
+		let lease: Awaited<ReturnType<FoundationRepository['tryAcquireLease']>>;
+		try {
+			lease = await foundation.tryAcquireLease({
+				scope: 'scheduled-job',
+				resourceKey: jobName,
+				owner: jobOwner,
+				now: jobNow,
+				leaseUntil: new Date(
+					Date.parse(jobNow) + config.operations.leaseSeconds * 1_000
+				).toISOString(),
+			});
+		} catch (error) {
+			const errorCode = safeErrorCode(error);
+			results.push({ jobName, status: 'failed', errorCode });
+			safeJobs[jobName] = { status: 'failed', errorCode };
+			continue;
+		}
+		if (!lease.acquired) {
+			results.push({ jobName, status: 'skipped_locked' });
+			safeJobs[jobName] = { status: 'skipped_locked' };
+			continue;
+		}
+
+		try {
+			const execution = await executeJob(config, jobName, jobNow, clock);
+			const status = execution.disabled
+				? 'feature_disabled'
+				: execution.errorCode
+					? 'failed'
+					: 'succeeded';
+			results.push({
+				jobName,
+				status,
+				...(execution.errorCode ? { errorCode: execution.errorCode } : {}),
+			});
+			safeJobs[jobName] = {
+				status,
+				result: execution.result,
+				...(execution.errorCode ? { errorCode: execution.errorCode } : {}),
+			};
+		} catch (error) {
+			const errorCode = safeErrorCode(error);
+			results.push({ jobName, status: 'failed', errorCode });
+			safeJobs[jobName] = { status: 'failed', errorCode };
+		} finally {
+			await foundation
+				.releaseLease({
+					scope: 'scheduled-job',
+					resourceKey: jobName,
+					owner: jobOwner,
+					fencingToken: lease.fencingToken,
+					now: clock(),
+				})
+				.catch(() => undefined);
+		}
+	}
+
+	const completedAt = clock();
+	const failureCount = results.filter(
+		(result) => result.status === 'failed' || result.status === 'skipped_locked'
+	).length;
+	const failureCutoff = Date.parse(completedAt) - SCHEDULED_FAILURE_WINDOW_SECONDS * 1_000;
+	const recentFailureTimestamps = cadenceLease.recentFailureTimestamps
+		.filter((value) => {
+			const timestamp = Date.parse(value);
+			return Number.isFinite(timestamp) && timestamp >= failureCutoff;
+		})
+		.concat(Array.from({ length: failureCount }, () => completedAt))
+		.slice(-MAX_RETAINED_FAILURE_TIMESTAMPS);
+	const status = failureCount > 0 ? 'failed' : 'succeeded';
+	const finished = await operations.finishScheduledCadence({
+		cadence,
+		dedupeKey,
+		leaseOwner: owner,
+		fencingToken: cadenceLease.fencingToken,
+		status,
+		safeResult: {
+			jobCount: results.length,
+			succeeded: results.filter((result) => result.status === 'succeeded').length,
+			featureDisabled: results.filter((result) => result.status === 'feature_disabled')
+				.length,
+			failed: results.filter((result) => result.status === 'failed').length,
+			skippedLocked: results.filter((result) => result.status === 'skipped_locked').length,
+			jobs: safeJobs,
+		},
+		recentFailureTimestamps,
+		now: completedAt,
+	});
+	if (!finished) throw new Error('SCHEDULED_CADENCE_FENCE_LOST');
+	return results;
+}
+
+async function runManualJobs(
+	config: RuntimeConfig,
+	input: RunJobsInput,
+	clock: () => string
+): Promise<ScheduledJobResult[]> {
 	const db = new DatabaseBoundary(config.db);
 	const foundation = new FoundationRepository(db);
 	const operations = new OperationsRepository(db);
@@ -384,16 +568,6 @@ export async function runScheduledJobs(
 					requestId: input.admin.requestId,
 					now: jobNow,
 				});
-			}
-			if (input.triggerKind === 'scheduled' && !config.operations.scheduledJobsEnabled) {
-				await operations.finishRun({
-					id: runId,
-					status: 'feature_disabled',
-					safeResult: { reason: 'scheduled_jobs_disabled' },
-					now: clock(),
-				});
-				results.push({ jobName, status: 'feature_disabled', runId });
-				continue;
 			}
 			const execution = await executeJob(config, jobName, jobNow, clock);
 			const status = execution.disabled

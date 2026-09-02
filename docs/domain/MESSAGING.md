@@ -78,6 +78,16 @@ delivery_unknown --confirm_sent--------> sent
   evidence без PII.
 
 По умолчанию `max_attempts` должен быть конечным и задаваться конфигурацией.
+
+Один Cron drain выполняет queue maintenance ровно один раз перед bounded claim
+loop. Email invalid-recipient cancellation и Telegram stale-dispatch reconcile
+ограничены тем же batch ceiling (не более 100); они не повторяются перед каждой
+строкой batch. Неизменившиеся Telegram activation floor и max-attempt policy
+проверяются conditional UPSERT без D1 write. Наличие `delivery_unknown` или
+`dead` проверяется как boolean `EXISTS`, поэтому retained terminal history не
+суммируется при каждом minute tick. При `TELEGRAM_PROVIDER=disabled` provider
+send не выполняется, но bounded stale-marker reconcile и persistent safe signal
+остаются обязательными: именно они не дают потерять неизвестный исход отправки.
 Точные интервалы являются эксплуатационной настройкой, но тест использует
 детерминированную функцию backoff.
 

@@ -589,6 +589,9 @@ describe('stage 11 messages and common outbox in D1', () => {
 			deliveryReference: 'TG-ABCDEF123456',
 			now,
 		})).not.toBeNull();
+		await outbox.prepareTelegramDispatch({
+			now: '2026-07-22T10:00:31.000Z',
+		});
 		expect(await outbox.claimTelegram({
 			now: '2026-07-22T10:00:31.000Z',
 			leaseOwner: 'telegram-reclaimer',

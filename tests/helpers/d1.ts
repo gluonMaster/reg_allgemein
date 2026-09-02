@@ -14,11 +14,95 @@ export interface TestD1MigrationRange {
 	through?: string;
 }
 
+export interface D1CostSnapshot {
+	queries: number;
+	rowsRead: number;
+	rowsWritten: number;
+}
+
+export interface MeteredD1 {
+	database: D1Database;
+	snapshot(): D1CostSnapshot;
+	reset(): void;
+}
+
 export interface CreateMigratedTestD1Options {
 	through?: string;
 }
 
 const migrationsDirectory = resolve(process.cwd(), 'migrations');
+
+/**
+ * Test-only D1 wrapper that retains query metadata even for `first()`, whose
+ * public return value normally hides `meta`. Bound values and result rows are
+ * deliberately never retained by the meter.
+ */
+export function createMeteredD1(database: D1Database): MeteredD1 {
+	let queries = 0;
+	let rowsRead = 0;
+	let rowsWritten = 0;
+	const originals = new WeakMap<object, D1PreparedStatement>();
+
+	function collect(result: D1Result<unknown>): void {
+		queries += 1;
+		rowsRead += result.meta.rows_read;
+		rowsWritten += result.meta.rows_written;
+	}
+
+	function wrap(statement: D1PreparedStatement): D1PreparedStatement {
+		const wrapped = {
+			bind(...values: unknown[]) {
+				return wrap(statement.bind(...values));
+			},
+			async first<T = Record<string, unknown>>(columnName?: string): Promise<T | null> {
+				const result = await statement.all<Record<string, unknown>>();
+				collect(result);
+				const row = result.results[0];
+				if (row === undefined) return null;
+				return (columnName === undefined ? row : row[columnName]) as T;
+			},
+			async run<T = Record<string, unknown>>(): Promise<D1Result<T>> {
+				const result = await statement.run<T>();
+				collect(result);
+				return result;
+			},
+			async all<T = Record<string, unknown>>(): Promise<D1Result<T>> {
+				const result = await statement.all<T>();
+				collect(result);
+				return result;
+			},
+			raw: statement.raw.bind(statement),
+		} as D1PreparedStatement;
+		originals.set(wrapped, statement);
+		return wrapped;
+	}
+
+	const metered = {
+		prepare(query: string) {
+			return wrap(database.prepare(query));
+		},
+		async batch<T = unknown>(statements: D1PreparedStatement[]) {
+			const results = await database.batch<T>(
+				statements.map((statement) => originals.get(statement) ?? statement)
+			);
+			for (const result of results) collect(result);
+			return results;
+		},
+		exec: database.exec.bind(database),
+		withSession: database.withSession.bind(database),
+		dump: database.dump.bind(database),
+	} as D1Database;
+
+	return {
+		database: metered,
+		snapshot: () => ({ queries, rowsRead, rowsWritten }),
+		reset() {
+			queries = 0;
+			rowsRead = 0;
+			rowsWritten = 0;
+		},
+	};
+}
 
 export async function listTestD1MigrationIds(): Promise<string[]> {
 	const migrationIds = (await readdir(migrationsDirectory))

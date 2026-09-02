@@ -1100,8 +1100,14 @@ describe('D1 production migration upgrade', () => {
 				})
 			).results;
 			expect(
-				after.map(({ intent_family_id, generation, installer_owner, installer_lease_until, ...row }) =>
-					row
+				after.map(
+					({
+						intent_family_id,
+						generation,
+						installer_owner,
+						installer_lease_until,
+						...row
+					}) => row
 				)
 			).toEqual(before);
 			expect(after).toEqual(
@@ -1210,6 +1216,135 @@ describe('D1 production migration upgrade', () => {
 					],
 				})
 			).rejects.toThrow('storage intent generations are append-only');
+			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
+		} finally {
+			await context.dispose();
+		}
+	}, 120_000);
+
+	it('preserves retained operations history across exact 0025 to 0026', async () => {
+		const context = await createMigratedTestD1({ through: '0025' });
+		try {
+			const db = new DatabaseBoundary(context.db);
+			await db.batch([
+				{
+					sql: `INSERT INTO scheduled_job_runs
+						(id, job_name, trigger_kind, dedupe_key, status, lease_owner,
+						 fencing_token, safe_result_json, error_code, started_at,
+						 finished_at, created_at, updated_at)
+					VALUES ('upgrade-run', 'email_outbox', 'scheduled', 'upgrade-bucket',
+						'succeeded', NULL, NULL, '{"sent":0}', NULL, ?, ?, ?, ?)`,
+					params: [SYNTHETIC_NOW, SYNTHETIC_NOW, SYNTHETIC_NOW, SYNTHETIC_NOW],
+				},
+				{
+					sql: `INSERT INTO operation_locks
+						(id, scope, resource_key, lease_owner, lease_until, fencing_token,
+						 created_at, updated_at)
+					VALUES ('upgrade-lock', 'scheduled-job', 'email_outbox', 'old-owner',
+						'2026-07-22T10:05:00.000Z', 7, ?, ?)`,
+					params: [SYNTHETIC_NOW, SYNTHETIC_NOW],
+				},
+			]);
+
+			const applied = await applyTestD1Migrations(context.db, {
+				after: '0025',
+				through: '0026',
+			});
+			expect(applied).toEqual(['0026_background_d1_cost_controls.sql']);
+			expect(
+				await db.first({
+					sql: `SELECT job_name, status, safe_result_json FROM scheduled_job_runs
+					WHERE id = 'upgrade-run'`,
+				})
+			).toEqual({
+				job_name: 'email_outbox',
+				status: 'succeeded',
+				safe_result_json: '{"sent":0}',
+			});
+			expect(
+				await db.first({
+					sql: `SELECT lease_owner, lease_until, fencing_token FROM operation_locks
+					WHERE id = 'upgrade-lock'`,
+				})
+			).toEqual({
+				lease_owner: 'old-owner',
+				lease_until: '2026-07-22T10:05:00.000Z',
+				fencing_token: 7,
+			});
+			expect(
+				(
+					await db.all({
+						sql: `SELECT cadence, status FROM scheduled_cadence_state ORDER BY cadence`,
+					})
+				).results
+			).toEqual([
+				{ cadence: 'fast', status: 'idle' },
+				{ cadence: 'maintenance', status: 'idle' },
+			]);
+
+			const indexes = (
+				await db.all<{ name: string }>({
+					sql: `SELECT name FROM sqlite_master WHERE type = 'index' ORDER BY name`,
+				})
+			).results.map((row) => row.name);
+			expect(indexes).not.toContain('operation_locks_expiry');
+			expect(indexes).not.toContain('worker_error_buckets_retention');
+			expect(indexes).toEqual(
+				expect.arrayContaining([
+					'scheduled_job_runs_manual_recent',
+					'users_pending_email_expiry',
+					'contract_parent_actions_ip_expiry',
+					'contract_acceptances_ip_expiry',
+					'price_review_parent_actions_ip_expiry',
+					'price_change_acceptances_ip_expiry',
+					'enrollments_reconciler_updated',
+					'enrollments_reconciler_active_from',
+					'enrollments_reconciler_active_until',
+				])
+			);
+
+			const queryPlan = async (sql: string) =>
+				(await db.all<{ detail: string }>({ sql: `EXPLAIN QUERY PLAN ${sql}` })).results
+					.map((row) => row.detail)
+					.join('\n');
+			expect(
+				await queryPlan(`SELECT id FROM scheduled_job_runs
+				WHERE trigger_kind = 'manual'
+				ORDER BY started_at DESC, id DESC LIMIT 50`)
+			).toContain('scheduled_job_runs_manual_recent');
+			expect(
+				await queryPlan(`SELECT id FROM users
+				WHERE pending_email_expires_at IS NOT NULL AND pending_email_expires_at <= '2030-01-01'
+				ORDER BY pending_email_expires_at, id LIMIT 50`)
+			).toContain('users_pending_email_expiry');
+			for (const [table, index] of [
+				['contract_parent_actions', 'contract_parent_actions_ip_expiry'],
+				['contract_acceptances', 'contract_acceptances_ip_expiry'],
+				['price_review_parent_actions', 'price_review_parent_actions_ip_expiry'],
+				['price_change_acceptances', 'price_change_acceptances_ip_expiry'],
+			] as const) {
+				expect(
+					await queryPlan(`SELECT id FROM ${table}
+					WHERE ip_retention_value IS NOT NULL AND ip_expires_at <= '2030-01-01'
+					ORDER BY ip_expires_at, id LIMIT 50`)
+				).toContain(index);
+			}
+			expect(
+				await queryPlan(`SELECT id FROM enrollments
+				WHERE status = 'active' AND updated_at >= '2030-01-01'
+				ORDER BY updated_at, id LIMIT 50`)
+			).toContain('enrollments_reconciler_updated');
+			expect(
+				await queryPlan(`SELECT id FROM enrollments
+				WHERE status = 'active' AND active_from >= '2030-01-01'
+				ORDER BY active_from, id LIMIT 50`)
+			).toContain('enrollments_reconciler_active_from');
+			expect(
+				await queryPlan(`SELECT id FROM enrollments
+				WHERE status = 'active' AND active_until IS NOT NULL
+					AND active_until >= '2030-01-01'
+				ORDER BY active_until, id LIMIT 50`)
+			).toContain('enrollments_reconciler_active_until');
 			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
 		} finally {
 			await context.dispose();

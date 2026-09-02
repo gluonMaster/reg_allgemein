@@ -15,7 +15,8 @@
 	<form class="admin-action-form" method="POST" action="?/run">
 		<input type="hidden" name="_csrf" value={data.csrfToken} />
 		<input type="hidden" name="idempotencyKey" value={data.commandKey} />
-		<label>{translate('de', 'admin.operations.job')}
+		<label
+			>{translate('de', 'admin.operations.job')}
 			<select name="jobName" required>
 				{#each data.jobs as job}<option value={job}>{job}</option>{/each}
 			</select>
@@ -29,6 +30,20 @@
 </section>
 
 <section class="admin-section">
+	<h2>{translate('de', 'admin.operations.cadences')}</h2>
+	<div class="admin-list">
+		{#each data.cadences as cadence}
+			<article class="admin-card">
+				<p class="item-kicker">{cadence.cadence} · {cadence.status}</p>
+				{#if cadence.started_at}<p>{cadence.started_at}</p>{/if}
+				{#if cadence.finished_at}<p>{cadence.finished_at}</p>{/if}
+				<pre class="safe-json">{JSON.stringify(cadence.safeResult, null, 2)}</pre>
+			</article>
+		{/each}
+	</div>
+</section>
+
+<section class="admin-section">
 	<h2>{translate('de', 'admin.operations.history')}</h2>
 	{#if data.runs.length === 0}<p>{translate('de', 'admin.operations.empty')}</p>{/if}
 	<div class="admin-list">
@@ -37,7 +52,9 @@
 				<p class="item-kicker">{run.job_name} · {run.status}</p>
 				<p>{run.trigger_kind} · {run.started_at}</p>
 				{#if run.finished_at}<p>{run.finished_at}</p>{/if}
-				{#if run.error_code}<p>{translate('de', 'admin.operations.error')}: {run.error_code}</p>{/if}
+				{#if run.error_code}<p>
+						{translate('de', 'admin.operations.error')}: {run.error_code}
+					</p>{/if}
 				<pre class="safe-json">{JSON.stringify(run.safeResult, null, 2)}</pre>
 			</article>
 		{/each}

@@ -31,6 +31,7 @@ export default {
 				database: env.DB,
 				now: new Date().toISOString(),
 				production,
+				scheduledJobsEnabled: env.SCHEDULED_JOBS_ENABLED === 'true',
 			});
 		}
 

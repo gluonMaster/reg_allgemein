@@ -52,24 +52,31 @@ function assertInstant(value: string): void {
 	}
 }
 
+function assertBatchLimit(limit: number): void {
+	if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+		throw new TypeError('Outbox maintenance limit must be between 1 and 100.');
+	}
+}
+
 export class OutboxRepository implements OutboxStore {
 	constructor(private readonly db: SqlDatabaseBoundary) {}
 
-	async cancelInvalidEmailRows(now: string): Promise<number> {
+	async cancelInvalidEmailRows(now: string, limit = 100): Promise<number> {
 		assertInstant(now);
+		assertBatchLimit(limit);
 		const result = await this.db.run({
-			sql: `UPDATE email_outbox AS o SET status = 'cancelled', locked_at = NULL,
+			sql: `UPDATE email_outbox AS target SET status = 'cancelled', locked_at = NULL,
 				lease_owner = NULL, lease_until = NULL, updated_at = ?
-			WHERE o.status IN ('pending', 'retry') AND EXISTS (
-				SELECT 1 FROM users u
-				LEFT JOIN legacy_family_emails legacy_email
-					ON legacy_email.id = o.recipient_legacy_email_id
-				LEFT JOIN auth_tokens t
-					ON o.source_kind = 'auth_token' AND t.id = o.source_id
-				WHERE u.id = o.recipient_user_id
-					AND COALESCE((${validEmailRecipient}), 0) = 0
-			)`,
-			params: [now, now],
+			WHERE target.id IN (SELECT o.id FROM email_outbox o
+			JOIN users u ON u.id = o.recipient_user_id
+			LEFT JOIN legacy_family_emails legacy_email
+				ON legacy_email.id = o.recipient_legacy_email_id
+			LEFT JOIN auth_tokens t
+				ON o.source_kind = 'auth_token' AND t.id = o.source_id
+			WHERE o.status IN ('pending', 'retry')
+				AND COALESCE((${validEmailRecipient}), 0) = 0
+			ORDER BY o.created_at, o.id LIMIT ?)`,
+			params: [now, now, limit],
 		});
 		return result.meta.changes ?? 0;
 	}
@@ -156,37 +163,9 @@ export class OutboxRepository implements OutboxStore {
 	async claimTelegram(input: TelegramOutboxClaimInput): Promise<TelegramOutboxRow | null> {
 		assertInstant(input.now);
 		assertInstant(input.leaseUntil);
-		if (input.activationAt !== undefined) assertInstant(input.activationAt);
-		if (input.maxAttempts !== undefined &&
-			(!Number.isSafeInteger(input.maxAttempts) || input.maxAttempts < 1)) {
-			throw new TypeError('Telegram max attempts must be a positive integer.');
+		if (input.activationAt !== undefined || input.maxAttempts !== undefined) {
+			await this.prepareTelegramDispatch(input);
 		}
-		if (input.activationAt !== undefined) {
-			await this.db.run({
-				sql: `INSERT INTO telegram_destination_activation_floors
-					(destination_ref, activation_at, created_at, updated_at)
-				VALUES ('bureau', ?, ?, ?)
-				ON CONFLICT(destination_ref) DO UPDATE SET
-					activation_at = excluded.activation_at,
-					updated_at = CASE
-						WHEN excluded.activation_at > telegram_destination_activation_floors.activation_at
-						THEN excluded.updated_at
-						ELSE telegram_destination_activation_floors.updated_at END`,
-				params: [input.activationAt, input.now, input.now],
-			});
-		}
-		if (input.maxAttempts !== undefined) {
-			await this.db.run({
-				sql: `INSERT INTO telegram_destination_policies
-					(destination_ref, configured_max_attempts, created_at, updated_at)
-				VALUES ('bureau', ?, ?, ?)
-				ON CONFLICT(destination_ref) DO UPDATE SET
-					configured_max_attempts = excluded.configured_max_attempts,
-					updated_at = excluded.updated_at`,
-				params: [input.maxAttempts, input.now, input.now],
-			});
-		}
-		await this.reconcileStaleTelegramDispatches(input.now);
 		const candidate = await this.db.first<{ id: string }>({
 			sql: `SELECT id FROM telegram_outbox
 			WHERE NOT (
@@ -282,32 +261,76 @@ export class OutboxRepository implements OutboxStore {
 		});
 	}
 
-	async reconcileStaleTelegramDispatches(now: string): Promise<number> {
+	async prepareTelegramDispatch(input: {
+		now: string;
+		maxAttempts?: number;
+		activationAt?: string;
+		reconcileLimit?: number;
+	}): Promise<number> {
+		assertInstant(input.now);
+		if (input.activationAt !== undefined) assertInstant(input.activationAt);
+		if (input.maxAttempts !== undefined &&
+			(!Number.isSafeInteger(input.maxAttempts) || input.maxAttempts < 1)) {
+			throw new TypeError('Telegram max attempts must be a positive integer.');
+		}
+		const reconcileLimit = input.reconcileLimit ?? 100;
+		assertBatchLimit(reconcileLimit);
+		if (input.activationAt !== undefined) {
+			await this.db.run({
+				sql: `INSERT INTO telegram_destination_activation_floors
+					(destination_ref, activation_at, created_at, updated_at)
+				VALUES ('bureau', ?, ?, ?)
+				ON CONFLICT(destination_ref) DO UPDATE SET
+					activation_at = excluded.activation_at,
+					updated_at = excluded.updated_at
+				WHERE excluded.activation_at <>
+					telegram_destination_activation_floors.activation_at`,
+				params: [input.activationAt, input.now, input.now],
+			});
+		}
+		if (input.maxAttempts !== undefined) {
+			await this.db.run({
+				sql: `INSERT INTO telegram_destination_policies
+					(destination_ref, configured_max_attempts, created_at, updated_at)
+				VALUES ('bureau', ?, ?, ?)
+				ON CONFLICT(destination_ref) DO UPDATE SET
+					configured_max_attempts = excluded.configured_max_attempts,
+					updated_at = excluded.updated_at
+				WHERE excluded.configured_max_attempts <>
+					telegram_destination_policies.configured_max_attempts`,
+				params: [input.maxAttempts, input.now, input.now],
+			});
+		}
+		return this.reconcileStaleTelegramDispatches(input.now, reconcileLimit);
+	}
+
+	async reconcileStaleTelegramDispatches(now: string, limit = 100): Promise<number> {
 		assertInstant(now);
+		assertBatchLimit(limit);
 		const results = await this.db.batch([
 			{
 				sql: `UPDATE telegram_delivery_attempts AS attempt
 					SET state = 'delivery_unknown', safe_error_code = 'TELEGRAM_DELIVERY_UNKNOWN',
 						finished_at = ?, updated_at = ?
-					WHERE attempt.state = 'dispatch_started' AND EXISTS (
-						SELECT 1 FROM telegram_outbox outbox
-						WHERE outbox.id = attempt.outbox_id AND outbox.status = 'processing'
-							AND outbox.lease_until <= ?
-					)`,
-				params: [now, now, now],
+					WHERE attempt.id IN (SELECT candidate.id
+						FROM telegram_delivery_attempts candidate
+						JOIN telegram_outbox outbox ON outbox.id = candidate.outbox_id
+						WHERE candidate.state = 'dispatch_started'
+							AND outbox.status = 'processing' AND outbox.lease_until <= ?
+						ORDER BY outbox.lease_until, candidate.id LIMIT ?)`,
+				params: [now, now, now, limit],
 			},
 			{
-					sql: `UPDATE telegram_outbox AS outbox
+				sql: `UPDATE telegram_outbox AS outbox
 					SET status = 'delivery_unknown', attempts = attempts + 1,
 						last_error_code = 'TELEGRAM_DELIVERY_UNKNOWN', next_attempt_at = NULL,
 						locked_at = NULL, lease_owner = NULL, lease_until = NULL, updated_at = ?
-					WHERE outbox.status = 'processing' AND outbox.lease_until <= ? AND EXISTS (
-						SELECT 1 FROM telegram_delivery_attempts attempt
-						WHERE attempt.outbox_id = outbox.id
-							AND attempt.state = 'delivery_unknown'
-							AND attempt.finished_at = ?
-					)`,
-				params: [now, now, now],
+					WHERE outbox.id IN (SELECT candidate.id FROM telegram_outbox candidate
+						JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = candidate.id
+						WHERE candidate.status = 'processing' AND candidate.lease_until <= ?
+							AND attempt.state = 'delivery_unknown' AND attempt.finished_at = ?
+						ORDER BY candidate.lease_until, candidate.id LIMIT ?)`,
+				params: [now, now, now, limit],
 			},
 		]);
 		return results[1]?.meta.changes ?? 0;
@@ -315,18 +338,17 @@ export class OutboxRepository implements OutboxStore {
 
 	async countUnresolvedTelegramDeliveries(): Promise<number> {
 		const row = await this.db.first<{ count: number }>({
-			sql: `SELECT COUNT(DISTINCT outbox.id) AS count
-				FROM telegram_outbox outbox
+			sql: `SELECT EXISTS(SELECT 1 FROM telegram_outbox outbox
 				JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = outbox.id
 				WHERE outbox.status = 'delivery_unknown'
-					AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL`,
+					AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL) AS count`,
 		});
 		return row?.count ?? 0;
 	}
 
 	async countTerminalTelegramFailures(): Promise<number> {
 		const row = await this.db.first<{ count: number }>({
-			sql: `SELECT COUNT(*) AS count FROM telegram_outbox WHERE status = 'dead'`,
+			sql: `SELECT EXISTS(SELECT 1 FROM telegram_outbox WHERE status = 'dead') AS count`,
 		});
 		return row?.count ?? 0;
 	}

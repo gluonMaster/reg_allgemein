@@ -770,12 +770,17 @@ release gates сохраняются.
 - **OBS-01.** Ошибки получают correlation/request ID; админ видит состояние
   import/outbox, но технические детали и PII не раскрываются родителю.
 - **OBS-02.** Независимый monitoring проверяет fail-closed Worker endpoint без
-  тела ответа и PII. Signal становится unhealthy, если любой every-minute job
-  старше 180 секунд, любой 15-minute job старше 1200 секунд, run остаётся
-  `running` дольше 360 секунд либо за 900 секунд накоплено не менее трёх
-  scheduled/application Worker errors. Application 5xx агрегируются только в
-  минутные счётчики и удаляются через 7 суток; прикладные email/Telegram
-  providers не используются для monitoring alerts.
+  тела ответа и PII. Automatic delivery хранит fixed-cardinality state для двух
+  cadence (`fast`/`maintenance`), а не append-only row каждого job. Cadence
+  становится unhealthy, если fast delivery старше 180 секунд, maintenance
+  delivery старше 1200 секунд, cadence остаётся `running` дольше 360 секунд
+  либо за 900 секунд накоплено не менее трёх scheduled/application Worker
+  errors. Cadence завершается успешно только после terminal результата всех
+  jobs; явные manual runs остаются в отдельном аудируемом ledger. Global
+  scheduled stop проверяется до D1, даёт monitoring `503` и не создаёт ложный
+  heartbeat. Application 5xx агрегируются в минутные счётчики, saturate на
+  alert threshold и удаляются через 7 суток; прикладные email/Telegram providers
+  не используются для monitoring alerts.
 - **OPS-01.** До production создаётся и проверяется tracked-комплект актуальных
   пошаговых инструкций на русском языке для неопытного оператора: первоначальное
   развёртывание, конфигурация и secrets, migrations и bootstrap admin, cron и

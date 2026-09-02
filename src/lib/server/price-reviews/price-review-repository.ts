@@ -1904,7 +1904,7 @@ export class PriceReviewRepository {
 		await this.db.run({
 			sql: `UPDATE price_review_reconciler_state
 			SET last_scanned_at = ?, updated_at = ?
-			WHERE scope = 'enrollment_boundaries' AND last_scanned_at <= ?`,
+			WHERE scope = 'enrollment_boundaries' AND last_scanned_at < ?`,
 			params: [scannedAt, scannedAt, scannedAt],
 		});
 	}
@@ -1927,24 +1927,38 @@ export class PriceReviewRepository {
 			boundary_kind: 'activation' | 'expiry';
 			effective_on: string;
 		}>({
-			sql: `SELECT * FROM (SELECT enrollment.id AS enrollment_id,
+			sql: `WITH boundary_candidates AS (
+			SELECT enrollment.id AS enrollment_id,
 				enrollment.course_group_id, 'activation' AS boundary_kind,
 				enrollment.active_from AS effective_on
 			FROM enrollments enrollment
-			WHERE enrollment.status = 'active'
-				AND (enrollment.updated_at >= ? OR enrollment.active_from >= ?)
-				AND NOT EXISTS (SELECT 1 FROM price_review_triggers trigger
-					WHERE trigger.dedupe_key = 'enrollment:' || enrollment.id
-						|| ':active_from:' || enrollment.active_from || ':v1')
+			WHERE enrollment.status = 'active' AND enrollment.updated_at >= ?
+			UNION
+			SELECT enrollment.id, enrollment.course_group_id, 'activation',
+				enrollment.active_from
+			FROM enrollments enrollment
+			WHERE enrollment.status = 'active' AND enrollment.active_from >= ?
 			UNION ALL
-			SELECT enrollment.id, enrollment.course_group_id, 'expiry', enrollment.active_until
+			SELECT enrollment.id, enrollment.course_group_id, 'expiry',
+				enrollment.active_until
 			FROM enrollments enrollment
 			WHERE enrollment.status = 'active' AND enrollment.active_until IS NOT NULL
-				AND (enrollment.updated_at >= ? OR enrollment.active_until >= ?)
-				AND NOT EXISTS (SELECT 1 FROM price_review_triggers trigger
-					WHERE trigger.dedupe_key = 'enrollment:' || enrollment.id
-						|| ':active_until:' || enrollment.active_until || ':v1'))
-			ORDER BY effective_on, enrollment_id LIMIT ?`,
+				AND enrollment.updated_at >= ?
+			UNION
+			SELECT enrollment.id, enrollment.course_group_id, 'expiry',
+				enrollment.active_until
+			FROM enrollments enrollment
+			WHERE enrollment.status = 'active' AND enrollment.active_until IS NOT NULL
+				AND enrollment.active_until >= ?
+			)
+			SELECT candidate.enrollment_id, candidate.course_group_id,
+				candidate.boundary_kind, candidate.effective_on
+			FROM boundary_candidates candidate
+			WHERE NOT EXISTS (SELECT 1 FROM price_review_triggers trigger
+				WHERE trigger.dedupe_key = 'enrollment:' || candidate.enrollment_id || ':'
+					|| CASE candidate.boundary_kind WHEN 'activation' THEN 'active_from'
+						ELSE 'active_until' END || ':' || candidate.effective_on || ':v1')
+			ORDER BY candidate.effective_on, candidate.enrollment_id LIMIT ?`,
 			params: [lastScannedAt, today, lastScannedAt, today, limit],
 		});
 		return rows.results.map((row) => ({

@@ -48,6 +48,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0023_legacy_projection_lookup_indexes.sql',
 			'0024_contract_preview_review.sql',
 			'0025_contract_storage_intent_generations.sql',
+			'0026_background_d1_cost_controls.sql',
 		]);
 
 		const result = await context.db
@@ -81,6 +82,7 @@ describe('foundation D1 migration and repositories', () => {
 				'telegram_outbox',
 				'outbox_admin_actions',
 				'scheduled_job_runs',
+				'scheduled_cadence_state',
 				'storage_object_intents',
 				'storage_intent_generations',
 				'admin_bootstrap_control',

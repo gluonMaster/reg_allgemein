@@ -2,7 +2,7 @@
 
 <!-- stage-13-current-review-status: pending_independent_review -->
 
-Ревизия: 2026-08-20.
+Ревизия: 2026-09-02.
 
 Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
 handler и manual operations реализованы и локально протестированы; независимый
@@ -75,15 +75,18 @@ failure alert. Такие alerts и remote manual/dedupe/failure rehearsals от
 | Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch                                                                        | aggregate freshness/error passed; job-specific failure alert missing                         | `blocked`                              |
 | Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe                                                                         | aggregate freshness/error passed; R2 retry/orphan alert missing                              | `blocked`                              |
 
-Migrations `0014_production_operations.sql` и `0015_worker_monitoring.sql`,
-clean/upgrade coverage, job/storage repositories, Worker scheduled handler,
-triggers, `/admin/operations`, empty 204/503 health signal и раздельные R2
-bindings реализованы и проходят targeted local tests. Preview Cron delivery и
-freshness, monitoring migration/smoke и independent aggregate HEAD alert
-delivery/recovery подтверждены. R2 restore, authenticated manual run и
-job-specific failure rehearsal остаются `blocked`.
+Migrations `0014_production_operations.sql`, `0015_worker_monitoring.sql` и local
+forward-only `0026_background_d1_cost_controls.sql`, clean/upgrade coverage,
+job/storage repositories, Worker scheduled handler, `/admin/operations`, empty
+204/503 health signal и раздельные R2 bindings реализованы и проходят targeted
+local tests. Preview Cron delivery/freshness и independent aggregate HEAD alert
+подтверждены только для старого runtime; `0026` и cost-bounded Worker ещё не
+применены remote. R2 failure, authenticated manual run и job-specific failure
+rehearsal остаются `blocked`.
 
-Current preview D1 inventory — migrations `0001`–`0025`, pending 0, FK 0,
+Current preview D1 inventory — migrations `0001`–`0025`, pending 0, FK 0;
+local candidate добавляет `0026`, но remote apply не разрешён и не выполнялся.
+Последний подтверждённый preview inventory имеет
 schema 535 and lineage 8 objects/4 columns. Initial
 preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датированным
 историческим evidence; append-only `0015_worker_monitoring.sql` была применена
@@ -106,6 +109,98 @@ Subsequent authorized append-only `0023` (2026-08-25) and recovery-first
 independent review с итогом GO; оставшийся MEDIUM не открывает runtime bypass.
 Worker deploy и Telegram/import lifecycle не выполнялись.
 
+## Карта потребителей D1 и regression budgets
+
+Ниже — recurring cost нового local candidate после migration `0026`. Значения
+получены из фактических local-D1 `meta.rows_read`/`meta.rows_written`; D1 включает
+работу secondary indexes в эти counters. Test meter не сохраняет SQL params или
+result rows. Числа являются budgets, а не разрешением расходовать общий Free
+limit аккаунта (`5M reads`/`100k writes` за UTC-сутки).
+
+| Потребитель                                         |                               Частота | Запросы и measured cost                                                                                             | Почему операция нужна                                                                                                                                                             |
+| --------------------------------------------------- | ------------------------------------: | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fast Cron, providers enabled, empty queues          |                             1,440/day | 14 queries, 33 reads, 6 writes/tick                                                                                 | atomic cadence dedupe/start/finish; email/Telegram bounded prepare/claim; per-job lease/fence защищает от concurrent manual run                                                   |
+| Fast Cron, providers disabled                       |                             1,440/day | 8 queries, 14 reads, 4 writes/tick                                                                                  | email — inert, поэтому нет job lease; Telegram сохраняет только bounded stale-marker reconcile, boolean unknown/dead signal и свой lease, но не вызывает provider                 |
+| Maintenance Cron, R2 bindings present, empty portal |                                96/day | 35 queries, 72 reads, 17 writes/tick                                                                                | одна cadence row start/finish, семь job lease acquire/release и один advancing price watermark; due/outbox/expiry/R2-intent probes bounded `LIMIT ≤100` и используют seek indexes |
+| Operations health                                   | внешний `HEAD` раз в 5 минут, 288/day | 2 queries, 3 reads, 0 writes/probe; при global stop — 0/0/0 и `503`                                                 | читает только две cadence rows и 15-minute error-window; independent monitor не создаёт quota-polling writes                                                                      |
+| Application 5xx bucket                              |     только при реальном 5xx, не timer | первые три ошибки одной минуты: 3 queries, 2 reads, 4 writes; четвёртая: 1/1/0                                      | существующий PII-free alert signal; counter saturates на 3, поэтому error storm не создаёт поток D1 writes                                                                        |
+| Admin operations page                               |                только ручное открытие | cadence 1 query/2 reads; manual history 1 query/1 read при одной row                                                | текущий Cron берётся из fixed state; обычная history использует partial manual-only index и не читает retained scheduled history                                                  |
+| `latest-job-status.sql`                             |    только один явно нужный checkpoint | 1 query, 2 reads, 0 writes                                                                                          | компактный postcondition двух cadence; не применять для частого quota polling                                                                                                     |
+| Non-empty Telegram queue                            |            только когда есть due work | три сообщения в одном fast cadence: 37 queries, 131 reads, 36 writes; один retry 10/39/10; unknown outcome 10/38/10 | claim/fence, durable dispatch marker, append-only attempt, terminal certainty и no-blind-retry являются обязательными writes                                                      |
+
+Fast outbox подготовка выполняется один раз на drain, а не перед каждой строкой.
+Unchanged Telegram activation/policy UPSERT даёт 0 writes. Email invalid-row и
+Telegram stale-marker maintenance имеют bounded batch; unknown/dead проверяются
+через `EXISTS`, а не полным `COUNT`. Maintenance empty-queue reads остаются
+необходимыми due probes; mutation происходит только для lease/cadence и price
+watermark либо при фактической работе.
+
+Старая scheduled execution создавала и завершала per-job ledger row, затрагивая
+table, primary/unique и два secondary indexes; вместе с lease это локально давало
+13 `rows_written` на один пустой job. Новый cadence update не имеет secondary
+index, а `operation_locks_expiry` удалён: ни один запрос не ищет lock только по
+expiry. Unique `(scope, resource_key)` и монотонный fence сохранены. Partial
+manual-history index исключает старые/rollback scheduled rows. Новые partial
+expiry/enrollment indexes добавляют write только при фактическом изменении
+соответствующей domain row; они не переписываются на empty tick и нужны, чтобы
+bounded cleanup/reconciler не сканировали растущие таблицы. Existing transition/
+append-only triggers сохранены; оптимизация не ослабляет audit или state guards.
+
+Import, migration/index build, isolated restore и recovery — разовые операции,
+не часть daily projection. Их cost измеряется отдельно перед каждой разрешённой
+фазой; dormant heavy import projection остаётся backlog и не запускается ради
+preview registration. Retained history не удаляется, старые operational scripts
+с window snapshots остаются заблокированы.
+
+### Before/after за 24 часа
+
+| Контур                                                                   |                                                     Reads/day | Writes/day | Примечание                                                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------: | ---------: | ---------------------------------------------------------------------------- |
+| Deployed `bef5789…` health, наблюдённый incident                         | 783,068 за 10 calls; около 22.55M/day при 5-minute projection |          0 | history-wide query; projection показывает риск, а не billing total           |
+| Старые operator snapshots                                                |                                         5,187,297 за 11 calls |          0 | разовые, но unbounded; остановлены                                           |
+| Local `8f04554…`, empty providers/storage-disabled shape                 |                                                        31,872 |     46,176 | Cron 27,552/46,176 + fixed health 4,320/0; ещё append-ил per-job runs        |
+| Новый candidate, тот же inert shape                                      |                                                        25,728 |      6,816 | Cron 24,864/6,816 + fixed-cadence health 864/0; writes −85.2% like-for-like  |
+| Новый candidate, preview shape (providers disabled, R2 bindings present) |                                                        27,936 |      7,392 | Cron 27,072/7,392 + health 864/0                                             |
+| Новый candidate, все services active, empty queues                       |                                                        55,296 |     10,272 | Cron 54,432/10,272 + health 864/0                                            |
+| Active shape + три recorded 5xx каждую минуту                            |                                                        58,176 |     16,032 | консервативный regression ceiling; последующие ошибки той же минуты не пишут |
+
+Regression gates: fast `≤40 reads/≤10 writes`, maintenance `≤80/≤20`, scheduled
+day `≤100k/≤15k`; вместе с 5-minute health и error buckets `≤100k reads/≤20k
+writes`. Это оставляет значительный запас до shared Free quota, но не резервирует
+её для портала: фактический account-wide расход контролируется Cloudflare D1
+Analytics/Query Insights без SQL к самой базе.
+
+## Cost-bounded preview migration/deploy procedure
+
+Эта процедура только подготовлена; она не даёт authority на remote mutation.
+После восстановления quota владелец отдельно разрешает каждую фазу.
+
+1. **Migration phase:** target — только exact preview D1 из protected config;
+   применить только append-only `0026_background_d1_cost_controls.sql`. До write
+   сверить candidate/target/rollback fingerprint через deployment metadata и D1
+   Analytics, не health/SQL polling. Ожидается две idle cadence rows, сохранённая
+   history и partial/manual + cleanup indexes. После попытки выполнить один
+   bounded read-only ledger/schema/FK postcondition, обновить active state и
+   сделать обязательный docs-only checkpoint. При failed/ambiguous — stop, без
+   повторного apply.
+2. **Worker phase:** только после successful migration deploy-нуть exact reviewed
+   runtime candidate; previous `745295d36248` оставить как короткий compatible
+   rollback. Проверить deployment version/100% traffic и Access boundary без D1,
+   затем дождаться одного fast и одного maintenance tick. Выполнить ровно один
+   `HEAD /_health/operations` (ожидается empty `204`, 3 reads); при необходимости
+   и доступной quota — один `latest-job-status.sql` (2 reads), но не оба циклически.
+   Сверить D1 Analytics, что old scheduled-run insert/update signatures исчезли.
+   Снова записать read-only postcondition/active-state/docs-only checkpoint.
+3. **Success:** exact reviewed version активна; Access не ослаблен; два cadence
+   fresh/succeeded; automatic `scheduled_job_runs` больше не растёт; rows/day
+   extrapolation находится в budgets; queue/retry/unknown indicators fail closed.
+   Только после этого отдельно решать registration retry.
+4. **Rollback/containment:** при code regression вернуть previous Worker version;
+   migration additive и не удаляет history, старый Worker остаётся schema-
+   compatible. Rollback временно возобновит дорогие per-job ledger writes, поэтому
+   это краткое containment: прекратить health/SQL polling, оставить registration
+   закрытой и подготовить forward fix. Migration не откатывать direct SQL.
+
 ## 1. Начало смены: health и freshness
 
 **Prerequisites:** target environment и Worker version известны; для деталей
@@ -119,12 +214,14 @@ $portalOriginForMonitoring = '<PORTAL_ORIGIN>'
 curl.exe --silent --show-error --output NUL --write-out "%{http_code}" "$portalOriginForMonitoring/_health/operations"
 ```
 
-`204` означает: оба every-minute jobs не старше 180 секунд, все семь 15-minute
-jobs не старше 1200 секунд, нет run старше 360 секунд в `running` и за последние
-900 секунд меньше трёх `failed|skipped_locked` scheduled runs плюс application
-5xx. `feature_disabled` считается доставленным terminal run, но не включает
-соответствующую функцию. Любая D1/query/clock проблема даёт empty `503`; response
-не содержит reason, job name, error code, PII или secret.
+`204` означает: fast cadence не старше 180 секунд, maintenance cadence не старше
+1200 секунд, ни одна cadence не остаётся `running` дольше 360 секунд и за
+последние 900 секунд меньше трёх scheduled job failures/skipped locks плюс
+application 5xx. Cadence завершается только после terminal результата всей exact
+job group; `feature_disabled` job допустим в свежем successful delivery, но не
+означает готовность функции. Global scheduled stop даёт `503` до D1. Любая
+D1/query/clock проблема также даёт empty `503`; response не содержит reason, job
+name, error code, PII или secret.
 
 **D1 incident 2026-09-02:** deployed `bef5789…` выполняет unbounded history scan
 при freshness query. До исправления не поллить health и не повторять прежние
@@ -136,16 +233,17 @@ Cloudflare Metrics/Query Insights, не SQL console. Сначала локаль
 сам по себе не прекращает lease/run writes. Подробности и protected evidence
 находятся в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
 
-Local remediation использует индекс `scheduled_job_runs_freshness` для одного
-latest lookup на каждый известный job в его freshness window. Для operator
-summary использовать [latest-job-status.sql](../../scripts/sql/latest-job-status.sql),
-а не две window functions по всей таблице. Regression с 20,000 завершёнными
-историческими runs измеряет весь health batch и operator summary через
-`meta.rows_read` (15 и 18 соответственно). Это local evidence; старый Worker
-в preview сохраняет дорогой запрос до отдельно разрешённого нового deploy.
+Local candidate использует ровно две `scheduled_cadence_state` rows; automatic
+Cron больше не дописывает `scheduled_job_runs`. Для operator summary использовать
+[latest-job-status.sql](../../scripts/sql/latest-job-status.sql), а не window
+functions по всей таблице. Regression с 20,000 завершёнными историческими runs
+измеряет `meta.rows_read`: health — 3, cadence summary — 2, routine manual history
+— 1 при одной manual row. Это local evidence; старый Worker в preview сохраняет
+дорогой запрос и per-job writes до отдельно разрешённых migration/deploy phases.
 
-Для деталей открыть `<PORTAL_ORIGIN>/admin/operations`: страница показывает
-recent `job_name`, `status`, trigger/start/finish, safe result и safe error code.
+Для деталей открыть `<PORTAL_ORIGIN>/admin/operations`: страница показывает две
+current cadence cards и recent manual `job_name`, `status`, start/finish, safe
+result и safe error code. Retained automatic history обычная страница не читает.
 В Cloudflare Workers Logs фильтровать `$metadata.error EXISTS` либо
 `$workers.outcome = "exception"`, не копируя raw payload. Дополнительный
 read-only tail, только если он разрешён policy:

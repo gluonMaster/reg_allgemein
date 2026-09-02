@@ -17,10 +17,20 @@ const jobSet = new Set<string>(scheduledJobNames);
 export const load: PageServerLoad = async (event) => {
 	requireAdmin(event.locals.user);
 	const config = loadRuntimeConfig(event.platform?.env);
-	const runs = await new OperationsRepository(new DatabaseBoundary(config.db)).listRecentRuns();
+	const repository = new OperationsRepository(new DatabaseBoundary(config.db));
+	const [cadences, runs] = await Promise.all([
+		repository.listScheduledCadences(),
+		repository.listRecentRuns(),
+	]);
 	return {
 		jobs: scheduledJobNames,
 		commandKey: crypto.randomUUID(),
+		cadences: cadences.map((cadence) => ({
+			...cadence,
+			safeResult: JSON.parse(cadence.safe_result_json) as Record<string, unknown>,
+			safe_result_json: undefined,
+			recent_failure_timestamps_json: undefined,
+		})),
 		runs: runs.map((run) => ({
 			...run,
 			safeResult: JSON.parse(run.safe_result_json) as Record<string, unknown>,
@@ -35,8 +45,12 @@ export const actions = {
 			const { form, actor } = await verifiedAdminForm(event);
 			const jobName = form.get('jobName')?.toString() ?? '';
 			const commandKey = form.get('idempotencyKey')?.toString().trim() ?? '';
-			if (!jobSet.has(jobName) || !commandKey || commandKey.length > 200
-				|| form.get('confirmation') !== 'confirmed') {
+			if (
+				!jobSet.has(jobName) ||
+				!commandKey ||
+				commandKey.length > 200 ||
+				form.get('confirmation') !== 'confirmed'
+			) {
 				throw new Error('INVALID_MANUAL_JOB');
 			}
 			const [result] = await runScheduledJobs(loadRuntimeConfig(event.platform?.env), {
