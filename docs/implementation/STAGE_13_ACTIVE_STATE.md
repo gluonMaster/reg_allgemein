@@ -1,24 +1,24 @@
 # Stage 13: активное состояние
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T16:56:00Z
-reviewed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
-last_completed_gate: phase-3-local-d1-cost-focused-regressions
-next_gate: phase-3-d1-cost-release-validation-and-independent-review
+updated_utc: 2026-09-02T19:22:26Z
+reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+last_completed_gate: phase-3-d1-cost-release-validation-and-independent-review-go
+next_gate: phase-4-owner-authorized-preview-d1-0026-apply
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: pending_independent_review
-current_phase: phase-3-local-d1-cost-remediation
+current_review_status: independent_go
+current_phase: phase-3-local-d1-cost-candidate-ready
 last_atomic_action: owner-authorized-first-controlled-registration
 last_atomic_result: failed
-next_atomic_action: local-release-validation-and-independent-review-before-preview-migration-deploy
+next_atomic_action: owner-authorized-preview-d1-0026-apply-with-one-bounded-postcondition
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: local-cost-remediation-bounded-preview-target-known-no-remote-ambiguity
+mode_reason_plain: reviewed-cost-bounded-preview-migration-target-postcondition-and-containment-known
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -39,18 +39,29 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
-- **Local D1-cost remediation реализована, ещё не deployed/reviewed.** Automatic
+- **Local D1-cost remediation independently reviewed GO, ещё не deployed.** Exact
+  runtime candidate `0db38842524ebc146eaa56a9d089e3c3484bf0f3` (parent
+  `8f04554ad001d12eb447a0eccc8dc883e9a8c951`) прошёл check, полный Vitest
+  `78/78` files (`580 passed`, `1 skipped`), Chromium E2E `23/23`, build,
+  production dependency audit `0`, docs/continuity, release scan и diff check.
+  Независимый read-only review exact SHA: **GO**, `P0: 0`, `P1: 0`, `P2: 4`,
+  `P3: 0`; GO не разрешает remote mutation. Automatic
   Cron использует две fixed-cardinality cadence rows и больше не append-ит
   per-job scheduled ledger; manual audit/dedupe/fencing сохранены. Global stop
   даёт 0 D1, inert provider/binding job не пишет lease, Telegram-disabled path
   сохраняет bounded unknown-result reconcile. Health/summary/manual-history на
   20,000 retained runs читают **3/2/1 rows**. Empty active contour measured
   `54,432 reads/10,272 writes/day`; preview provider-disabled + R2 contour —
-  `27,072/7,392`, 5-minute health добавляет `864/0`. Worst regression с тремя
-  recorded 5xx каждую минуту — `58,176/16,032`, ниже shared Free `5M/100k`.
+  `27,072/7,392`, 5-minute health добавляет `864/0`. Фактически измеренный
+  health при 16 насыщенных minute buckets читает 18 rows; worst regression с
+  тремя recorded 5xx каждую минуту — `62,496/16,032`, ниже shared Free
+  `5M/100k`.
   Outbox preparation/reconcile bounded и выполняется один раз за drain; cleanup
-  и price boundary используют seek indexes. Full release gates и exact-candidate
-  independent review pending; historical `bef5789…` evidence не переносится.
+  и price boundary используют seek indexes. Два оставшихся runtime-cost `P2`
+  записаны в backlog: accumulated future-enrollment regression/pagination до
+  массового import и scan стоимости старого Worker при кратком rollback после
+  удаления неиспользуемого новым Worker retention index. Они не ломают текущий
+  synthetic preview flow и не открывают новый runtime review-loop.
   Четыре старых ignored operational scripts остаются остановлены до network/config
   reads; разблокировать их нельзя.
 - **Новый incident 2026-09-02: два P1 текущего preview milestone.** Первая
@@ -84,10 +95,11 @@ NO-GO до собственных approvals и отдельного поруче
 - **Containment:** тяжёлые D1 snapshots, SQL/health probes остановлены в этой
   сессии; remote SQL не выполнять до восстановления quota и отдельной фазы.
   Cron/monitor/flags/deployed Worker не изменялись; новый deploy, retry и
-  платный тариф не разрешены. Next action — full local release gate и review.
+  платный тариф не разрешены. Следующий action — только отдельно разрешённый
+  apply `0026` к exact preview D1 после восстановления quota.
   Historical review GO для `bef5789…` не закрывает обнаруженные runtime отказы.
 - Owner `2026-09-02` явно разрешил первую controlled registration с verification
-  delivery. Разрешение принято и повторно не запрашивается. Fresh read-only
+  delivery. Разрешение использовано и повторно не запрашивается. Fresh read-only
   preflight `2026-09-02T14:08:03Z`: exact `745295d36248`/100%, Access
   `302/302/200/204`, config exact, D1 `25/pending 0/FK 0`, synthetic `2 + 1703`,
   users/admins/tokens/privacy/outbox/session/auth-audit/register-rate/bootstrap
@@ -95,14 +107,13 @@ NO-GO до собственных approvals и отдельного поруче
   Protected ignored before evidence
   `imports/preview-first-registration-before-20260902T140803Z.json`, digest
   `985e4b4f1084`. Remote mutation в этом preflight не выполнялась.
-  Chrome form подготовлена с synthetic names; corporate mailbox/password и
-  privacy acknowledgement вводит владелец по owner guide. Разрешена одна
-  отправка; до retry/verification-link consumption/second account/bootstrap
-  обязателен read-only reconcile и отдельный docs-only atomic checkpoint.
+  Controlled submit завершился failed, postcondition записан выше; до retry,
+  verification-link consumption, second account или bootstrap требуется новое
+  прямое разрешение и новый read-only reconcile.
   Read-only helper `tmp/stage13-first-registration-checkpoint.ps1 -Mode after`
   сохраняет агрегаты без PII; canonical checks — account/token/privacy/audit,
   outbox status/attempts/provider receipt, sessions/roles/FK и exact target.
-- Local runtime candidate: `bef578917575f233ce4853a1432f1d0d29b22289`,
+- Deployed historical Turnstile candidate: `bef578917575f233ce4853a1432f1d0d29b22289`,
   direct parent `27218225de661126ffde0a8cb597a3add949f619`. Изменены только
   `TurnstileWidget.svelte` и два E2E files. Independent review завершён: **GO**,
   candidate `P0: 0`, `P1: 0`, `P2: 1`, `P3: 0` (прежний backlog).
@@ -126,7 +137,7 @@ NO-GO до собственных approvals и отдельного поруче
   `a4fab5d09f63` available; rollback не требовался. Protected ignored evidence
   digest `31115e396ae0`; postcondition `2026-09-02T13:56:02Z`, browser checkpoint
   `2026-09-02T13:57:13Z`.
-- Fresh local evidence `bef5789…`: regression RED на старом коде → GREEN после
+- Historical local evidence `bef5789…`: regression RED на старом коде → GREEN после
   API-onload fix; Chromium `23/23`, включая registration `5/5`; check `0/0`,
   build, production dependency audit `0`, focused formatting, docs/continuity,
   release scan `569/569` и diff check прошли. Full Vitest `--maxWorkers=4`:
@@ -321,10 +332,10 @@ after: same-version-config-schema-synthetic-r2-users-tokens-privacy-outbox-sessi
 result: failed
 evidence: protected-before-985e4b4f1084-after-112d74be920a-local-workerd-illegal-invocation-analytics-4b09060ddd46
 rollback_or_containment: no-account-or-send-to-reverse-no-retry-heavy-d1-and-health-probes-stopped-previous-version-retained
-next_atomic_action: local-release-validation-and-independent-review-before-preview-deploy
+next_atomic_action: owner-authorized-preview-d1-0026-apply-with-one-bounded-postcondition-after-quota-restoration
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: two-reproduced-preview-p1-defects-known-target-no-account-or-provider-write-no-remote-ambiguity
+mode_reason_plain: reviewed-cost-bounded-preview-migration-target-postcondition-and-containment-known
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
@@ -344,9 +355,9 @@ Before/after/result описывают последнюю remote mutation — н
 - Не повторять registration submit до исправленного reviewed preview deploy
   и отдельного разрешения; retry — account/provider mutation с обязательным
   read-only reconcile до любого второго account или bootstrap.
-- Текущий runtime/migration diff material: после завершения focused regressions
-  выполнить один полный release gate и не повторять его после docs-only
-  checkpoint. Historical `146f9c5…` evidence к этому candidate не переносить.
+- Текущий runtime/migration candidate уже прошёл один полный release gate и
+  independent exact-SHA review; не повторять runtime suite после этого docs-only
+  checkpoint. Historical `146f9c5…` evidence к candidate не переносить.
 - Не повторять phases 1–2, migrations `0001`–`0025`, synthetic import baseline/
   candidate lifecycle, Access perimeter setup или empty-R2 verification без
   drift/material diff/reproducible `P0/P1`.

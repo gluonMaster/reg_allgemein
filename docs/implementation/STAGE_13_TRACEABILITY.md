@@ -1,6 +1,6 @@
 # Stage 13: traceability требований и release evidence
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
@@ -18,9 +18,13 @@ previous compatible `a4fab5d09f63` retained; Access/config/D1/R2 checks passed.
 Fresh Chrome GET rendered the real widget with visible success and enabled submit,
 closing the `AUTH-02` P1 `3857` before render. Subsequent controlled registration
 failed; workerd reproduced an unbound native fetch receiver error. D1 analytics
-also confirmed excessive operator/health history reads. Local remediation binds
-fetch and uses indexed job lookups; independent review and deployment are pending.
-Local health cost regression reads 15 rows with 20,000 historical runs; see
+also confirmed excessive operator/health history reads. Exact local remediation
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3` binds fetch, replaces automatic
+per-job history with two cadence rows and uses bounded/indexed probes. Full local
+release gates passed; independent exact-SHA review returned **GO** with 0 P0,
+0 P1, 4 P2 and 0 P3. With 20,000 historical runs, measured health/cadence/manual
+reads are 3/2/1; a saturated 16-minute-bucket health window reads 18 rows.
+Deployment remains pending separate authorization; see
 [active state](STAGE_13_ACTIVE_STATE.md) for exact current evidence and gate.
 
 Historical reviewed registration remediation anchor is

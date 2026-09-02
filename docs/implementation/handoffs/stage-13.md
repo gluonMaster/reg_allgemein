@@ -1,15 +1,16 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
 Статус этапа: `in_progress` — preview по-прежнему использует reviewed Turnstile
 candidate `bef5789…` как `745295d36248`/100%. Controlled registration failed на
 server verification, а D1 incident выявил дорогие operator/health scans и
-per-job write amplification. Оба P1 исправлены в local candidate; полный release
-gate и independent exact-SHA review ещё pending, remote migration/deploy не
-разрешены. Production **NO-GO**.
+per-job write amplification. Оба P1 исправлены в exact local candidate
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3`; полный release gate прошёл,
+independent exact-SHA review вернул **GO** (`P0: 0`, `P1: 0`, `P2: 4`, `P3: 0`).
+Remote migration/deploy не разрешены. Production **NO-GO**.
 
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
@@ -54,21 +55,34 @@ Production readiness: **`blocked` / NO-GO**
 - Empty production-shaped cost: fast `14 queries/33 reads/6 writes`, maintenance
   `35/72/17`; scheduled projection `54,432 reads/10,272 writes/day`. Preview shape
   с disabled providers и active R2 — `27,072/7,392`; 5-minute health добавляет
-  `864/0`. Даже консервативные три recorded 5xx каждую минуту дают общий
-  `58,176 reads/16,032 writes/day` против shared Free `5M/100k`.
+  `864/0`. Saturated-window regression с 16 minute buckets фактически измерил
+  health `2 queries/18 reads/0 writes`; три recorded 5xx каждую минуту дают
+  общий `62,496 reads/16,032 writes/day` против shared Free `5M/100k`.
 - Outbox preparation выполняется один раз за bounded drain; unchanged Telegram
   policy — no-write; invalid email/stale Telegram maintenance ограничены;
   terminal checks используют `EXISTS`. Три Telegram rows: `37/131/36`; retry
   `10/39/10`; unknown outcome `10/38/10`. Price boundary OR scan заменён indexed
   candidate streams; security/email expiry queries получили partial seek indexes.
-- Local focused migration/health/cost/scheduler checks проходят; полный final
-  `release:verify` и independent exact-candidate review ещё pending и будут
-  записаны здесь после выполнения. До них и отдельного owner approval migration/
-  deploy запрещены. Cost table и phased postcondition/rollback procedure находятся
-  в [OPERATIONS_RUNBOOK](../../operations/OPERATIONS_RUNBOOK.md).
-- Next local action: завершить focused regressions, один полный release gate,
-  сохранить exact candidate и передать независимому reviewer. После GO следующая
-  remote фаза — только отдельно разрешённый apply `0026` к exact preview D1.
+- Exact candidate `0db38842524ebc146eaa56a9d089e3c3484bf0f3`, direct parent
+  `8f04554ad001d12eb447a0eccc8dc883e9a8c951`, прошёл focused regressions,
+  `npm run check`, полный Vitest `78/78` files (`580 passed`, `1 skipped`),
+  Chromium E2E `23/23`, build, production audit `0`, docs/continuity,
+  release scan `574/574` и diff check. Monolithic `release:verify` после
+  interruption не перезапускался: завершены ровно ещё не выполненные обязательные
+  контуры, без повторения тяжёлых suites. Independent read-only exact-SHA review
+  вернул **GO**: `P0: 0`, `P1: 0`, `P2: 4`, `P3: 0`.
+- Review P2 не блокируют текущий preview milestone: corrected worst-case health
+  calculation и stale per-job documentation исправлены этим docs-only seal;
+  accumulated future-enrollment cost regression/pagination требуется до массового
+  import; rollback на старый Worker функционально schema-compatible, но после
+  `0026` его `updated_at` retention query может сканировать накопленные error
+  buckets, поэтому rollback должен быть кратким, без health/SQL polling, с
+  предпочтением forward fix. Runtime candidate из-за P2 не менялся.
+- Следующая remote фаза — только отдельно разрешённый apply `0026` к exact
+  preview D1 после восстановления quota, с одним bounded ledger/schema/FK
+  postcondition и обязательным active-state checkpoint. Cost table и phased
+  postcondition/rollback procedure находятся в
+  [OPERATIONS_RUNBOOK](../../operations/OPERATIONS_RUNBOOK.md).
   `rollover_required: no`, `recommended_next_session_mode: High`: target,
   postcondition и containment известны; remote ambiguity отсутствует.
 

@@ -1,6 +1,6 @@
 # Полный ручной preview
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Этот runbook определяет checkpoint `full-manual-preview`: рабочую тестовую
 систему на синтетических данных, а не production release. Канонический origin —
@@ -56,8 +56,11 @@ checkpoint commit. Владелец получает текущий/следую
 
 1. Historical reviewed Turnstile async/onload candidate `bef5789…` развёрнут как
    `745295d36248`/100%; real widget показал «Успешно», submit enabled, render P1
-   закрыт. Последующая разрешённая registration failed. Локально исправляются
-   native fetch receiver и D1 history-scan cost; новый review/deploy/retry pending.
+   закрыт. Последующая разрешённая registration failed. Native fetch receiver и
+   D1 history-scan/write cost исправлены в exact local runtime candidate
+   `0db38842524ebc146eaa56a9d089e3c3484bf0f3`; полный local release gate прошёл,
+   independent exact-SHA review вернул **GO**. Migration/deploy/retry по-прежнему
+   требуют отдельных разрешений.
    Exact current evidence
    находится в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
    Historical registration remediation anchor

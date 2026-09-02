@@ -368,7 +368,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
@@ -380,12 +380,15 @@ synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
 quarantine/manual-AV/business-review paths на выделенных preview resources.
 `feature_disabled` не считается завершением обязательного MVP-контура.
 
-Текущий gate: reviewed Turnstile async/onload candidate `bef5789…` развёрнут
-в preview как `745295d36248`/100%. Реальный widget показал «Успешно», submit
-enabled; `P1` error `3857` до render закрыт. Первый controlled registration и
-verification delivery разрешены; preflight прошёл, ожидается ввод владельца.
-Siteverify pending; после submit обязателен read-only reconcile.
-Current evidence и единственный следующий шаг — в
+Текущий gate: preview по-прежнему использует reviewed Turnstile candidate
+`bef5789…` как `745295d36248`/100%. Первый controlled registration failed на
+server-side native fetch receiver; D1 incident также выявил history-wide
+health/operator reads и per-job write amplification. Оба P1 исправлены в exact
+local runtime candidate `0db38842524ebc146eaa56a9d089e3c3484bf0f3`; полный
+release gate прошёл, independent exact-SHA review вернул **GO** с 0 P0/P1.
+Следующая фаза — только отдельно разрешённый preview apply `0026` после
+восстановления quota; Worker deploy и registration retry остаются отдельными
+разрешениями. Current evidence и единственный следующий шаг — в
 [active state](STAGE_13_ACTIVE_STATE.md).
 
 Historical registration invalid-input remediation anchor

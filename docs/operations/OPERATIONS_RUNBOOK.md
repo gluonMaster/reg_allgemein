@@ -1,6 +1,6 @@
 # Ежедневная эксплуатация и реагирование
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
@@ -111,7 +111,8 @@ Worker deploy и Telegram/import lifecycle не выполнялись.
 
 ## Карта потребителей D1 и regression budgets
 
-Ниже — recurring cost нового local candidate после migration `0026`. Значения
+Ниже — recurring cost independently reviewed exact runtime candidate
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3` после migration `0026`. Значения
 получены из фактических local-D1 `meta.rows_read`/`meta.rows_written`; D1 включает
 работу secondary indexes в эти counters. Test meter не сохраняет SQL params или
 result rows. Числа являются budgets, а не разрешением расходовать общий Free
@@ -122,7 +123,7 @@ limit аккаунта (`5M reads`/`100k writes` за UTC-сутки).
 | Fast Cron, providers enabled, empty queues          |                             1,440/day | 14 queries, 33 reads, 6 writes/tick                                                                                 | atomic cadence dedupe/start/finish; email/Telegram bounded prepare/claim; per-job lease/fence защищает от concurrent manual run                                                   |
 | Fast Cron, providers disabled                       |                             1,440/day | 8 queries, 14 reads, 4 writes/tick                                                                                  | email — inert, поэтому нет job lease; Telegram сохраняет только bounded stale-marker reconcile, boolean unknown/dead signal и свой lease, но не вызывает provider                 |
 | Maintenance Cron, R2 bindings present, empty portal |                                96/day | 35 queries, 72 reads, 17 writes/tick                                                                                | одна cadence row start/finish, семь job lease acquire/release и один advancing price watermark; due/outbox/expiry/R2-intent probes bounded `LIMIT ≤100` и используют seek indexes |
-| Operations health                                   | внешний `HEAD` раз в 5 минут, 288/day | 2 queries, 3 reads, 0 writes/probe; при global stop — 0/0/0 и `503`                                                 | читает только две cadence rows и 15-minute error-window; independent monitor не создаёт quota-polling writes                                                                      |
+| Operations health                                   | внешний `HEAD` раз в 5 минут, 288/day | empty window: 2 queries, 3 reads, 0 writes/probe; saturated 16-bucket window: 2/18/0; при global stop — 0/0/0 и `503` | читает только две cadence rows и indexed 15-minute error-window; independent monitor не создаёт quota-polling writes                                                             |
 | Application 5xx bucket                              |     только при реальном 5xx, не timer | первые три ошибки одной минуты: 3 queries, 2 reads, 4 writes; четвёртая: 1/1/0                                      | существующий PII-free alert signal; counter saturates на 3, поэтому error storm не создаёт поток D1 writes                                                                        |
 | Admin operations page                               |                только ручное открытие | cadence 1 query/2 reads; manual history 1 query/1 read при одной row                                                | текущий Cron берётся из fixed state; обычная history использует partial manual-only index и не читает retained scheduled history                                                  |
 | `latest-job-status.sql`                             |    только один явно нужный checkpoint | 1 query, 2 reads, 0 writes                                                                                          | компактный postcondition двух cadence; не применять для частого quota polling                                                                                                     |
@@ -162,7 +163,7 @@ preview registration. Retained history не удаляется, старые ope
 | Новый candidate, тот же inert shape                                      |                                                        25,728 |      6,816 | Cron 24,864/6,816 + fixed-cadence health 864/0; writes −85.2% like-for-like  |
 | Новый candidate, preview shape (providers disabled, R2 bindings present) |                                                        27,936 |      7,392 | Cron 27,072/7,392 + health 864/0                                             |
 | Новый candidate, все services active, empty queues                       |                                                        55,296 |     10,272 | Cron 54,432/10,272 + health 864/0                                            |
-| Active shape + три recorded 5xx каждую минуту                            |                                                        58,176 |     16,032 | консервативный regression ceiling; последующие ошибки той же минуты не пишут |
+| Active shape + три recorded 5xx каждую минуту                            |                                                        62,496 |     16,032 | measured saturated-window ceiling; последующие ошибки той же минуты не пишут |
 
 Regression gates: fast `≤40 reads/≤10 writes`, maintenance `≤80/≤20`, scheduled
 day `≤100k/≤15k`; вместе с 5-minute health и error buckets `≤100k reads/≤20k
@@ -197,9 +198,13 @@ Analytics/Query Insights без SQL к самой базе.
    Только после этого отдельно решать registration retry.
 4. **Rollback/containment:** при code regression вернуть previous Worker version;
    migration additive и не удаляет history, старый Worker остаётся schema-
-   compatible. Rollback временно возобновит дорогие per-job ledger writes, поэтому
-   это краткое containment: прекратить health/SQL polling, оставить registration
-   закрытой и подготовить forward fix. Migration не откатывать direct SQL.
+   compatible, но не полностью cost-compatible. Rollback временно возобновит
+   дорогие per-job ledger writes, а старый cleanup по `worker_error_buckets.updated_at`
+   после удаления неиспользуемого новым Worker retention index может читать
+   накопленную error history. Поэтому это только краткое containment: прекратить
+   health/SQL polling, оставить registration закрытой и подготовить forward fix.
+   Migration не откатывать direct SQL; новый index добавлять только отдельной
+   forward migration, если rollback должен стать длительным.
 
 ## 1. Начало смены: health и freshness
 
@@ -270,8 +275,10 @@ provider/Browser failure rehearsal.
 
 **Ожидаемый безопасный результат:** endpoint возвращает 204; independent poller
 видит ту же проверку с интервалом не более 5 минут и доставляет test alert
-утверждённому recipient; каждый job имеет свежий terminal run, repeated safe
-error, stale lease и growing backlog отсутствуют.
+утверждённому recipient; обе cadence rows имеют свежий terminal result и exact
+job-group summary, repeated safe error, stale lease и growing backlog отсутствуют.
+Automatic per-job terminal rows после `0026` намеренно не создаются; manual runs
+по-прежнему попадают в отдельный audited ledger.
 
 **Проверка:** сравнить UTC timestamp с `* * * * *` или `*/15 * * * *`;
 отдельно для Telegram проверить `Europe/Berlin` business-window result. Убедиться,
