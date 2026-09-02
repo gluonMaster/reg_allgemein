@@ -54,15 +54,16 @@ checkpoint commit. Владелец получает текущий/следую
 
 ## Порядок достижения checkpoint
 
-1. Current Turnstile async/onload candidate `bef5789…` получил independent GO.
-   На preview подтверждён `P1` `3857` до render. Новый deploy и registration
-   retry требуют отдельных разрешений; exact current evidence
+1. Current reviewed Turnstile async/onload candidate `bef5789…` развёрнут как
+   `745295d36248`/100%; real widget показал «Успешно», submit enabled, render P1
+   закрыт. Первый controlled registration/verification delivery требует
+   отдельного разрешения; exact current evidence
    находится в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
    Historical registration remediation anchor
    `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, прошёл local
    release gates и получил fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`,
-   0 `P3`. Он развёрнут как `a4fab5d09f63`/100%, previous compatible
-   `2de99c0c5815` retained; новый runtime blocker отменяет готовность retry.
+   0 `P3`. Он ранее был развёрнут как `a4fab5d09f63`/100% и теперь retained
+   для rollback нового candidate.
    Historical deployed candidate
    `ec11bbc43c3af69d9e60cce4064863db33c45ad2`,
    direct child `e8a67d088ef1ddd2b362596fee494c3e68b6c985`, сохраняет Worker runtime,
@@ -73,8 +74,9 @@ checkpoint commit. Владелец получает текущий/следую
    skip, Chromium 20/20, build, audit 0, docs/scan/diff. Historical focused
    auth/email 71/71 и ACL 25/25, check, build, strict dry-run, audit,
    executable docs contract, release scan и exact diff прошли. Текущий статус —
-   `independent_go`; следующий gate — отдельное разрешение на preview deploy
-   exact `bef5789…`, затем проверка real Turnstile до разрешённого retry.
+   `independent_go`; deploy exact `bef5789…` и real widget check пройдены.
+   Следующий gate — разрешение на controlled registration/verification delivery
+   и server Siteverify с обязательным read-only reconcile.
    Recovery/schema и два Worker
    deploy уже выполнены по отдельным разрешениям; provider sends, accounts,
    bootstrap и production по-прежнему требуют отдельного прямого разрешения.

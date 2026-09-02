@@ -380,10 +380,10 @@ synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
 quarantine/manual-AV/business-review paths на выделенных preview resources.
 `feature_disabled` не считается завершением обязательного MVP-контура.
 
-Текущий gate: Turnstile async/onload candidate `bef5789…` получил independent
-GO (0 P0/P1); требуется отдельное разрешение на exact preview Worker deploy.
-На deployed preview сохраняется `P1` error `3857` до widget render;
-registration retry запрещён до нового deploy/проверки и своего разрешения.
+Текущий gate: reviewed Turnstile async/onload candidate `bef5789…` развёрнут
+в preview как `745295d36248`/100%. Реальный widget показал «Успешно», submit
+enabled; `P1` error `3857` до render закрыт. Следующий gate — отдельное разрешение
+на первый controlled registration и verification delivery; Siteverify pending.
 Current evidence и единственный следующий шаг — в
 [active state](STAGE_13_ACTIVE_STATE.md).
 
@@ -416,8 +416,8 @@ remediation `583165e…` затем прошёл: version fingerprint `2de99c0c5
 100%, Access/root/health/register GET/versioned routes, bindings, D1/R2/jobs
 сохранены, rollback не понадобился. На том checkpoint следующим gate был retry
 только первого account с verification delivery и обязательным postcondition;
-новый Turnstile P1 теперь требует local fix/review перед продолжением.
-затем отдельные account/bootstrap/provider/document/contract
+Turnstile P1 позднее прошёл fix/review/deploy и real-widget проверку.
+Далее — отдельные account/bootstrap/provider/document/contract
 flows и owner exploratory pass по
 [FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
 [owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production

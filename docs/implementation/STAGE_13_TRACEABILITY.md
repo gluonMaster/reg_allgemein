@@ -13,17 +13,18 @@
 Current Turnstile async/onload candidate `bef5789…` received independent GO:
 0 P0/P1, existing P2 retained. Fresh registration Chromium 5/5, unit 15/15,
 check 0/0; exact full-suite evidence reused without runtime drift.
-Deployed registration has a confirmed `AUTH-02` P1: async/defer script plus
-`ready()` throws `3857` before widget render. Local regression reproduces this
-failure and checks API-onload initialization, fail-closed submit and remount.
-Remote real-token/Siteverify validation remains pending; see
+Separately authorized preview deploy is complete: `745295d36248` at 100%,
+previous compatible `a4fab5d09f63` retained; Access/config/D1/R2 checks passed.
+Fresh Chrome GET rendered the real widget with visible success and enabled submit,
+closing the `AUTH-02` P1 `3857` before render. No registration was submitted.
+Server Siteverify/replay and verification delivery remain pending; see
 [active state](STAGE_13_ACTIVE_STATE.md) for exact current evidence and gate.
 
 Historical reviewed registration remediation anchor is
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
 `fbb9520eb670cd22f5ac236f1203823942078c1a`. Fresh independent review returned
-**GO** with 0 `P0`, 0 `P1`, 1 `P2` and 0 `P3`; it is deployed as
-`a4fab5d09f63`/100%, previous `2de99c0c5815` retained. It preserves bounded safe form fields but never the password,
+**GO** with 0 `P0`, 0 `P1`, 1 `P2` and 0 `P3`; it was deployed as
+`a4fab5d09f63`/100% and is now retained for rollback. It preserves bounded safe form fields but never the password,
 refreshes the privacy notice version and uses an explicit Turnstile lifecycle
 with submit disabled until token callback. Historical deployed target is
 `583165e316b739f4fb6a30001dae3a98ec62e1a1`,

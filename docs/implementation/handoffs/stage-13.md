@@ -4,16 +4,16 @@
 
 Ревизия: 2026-09-02.
 
-Статус этапа: `in_progress` — Turnstile async/onload candidate `bef5789…` получил
-independent **GO**. Preview registration заблокирована подтверждённым `P1`
-`TurnstileError 3857`; новые deploy/account/provider writes не разрешены.
+Статус этапа: `in_progress` — reviewed Turnstile async/onload candidate `bef5789…`
+развёрнут в preview как `745295d36248`/100%. Реальный Chrome widget показал
+«Успешно», submit enabled; render `P1` закрыт. Первый controlled registration
+и verification delivery ждут отдельного разрешения; production **NO-GO**.
 
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
 `fbb9520eb670cd22f5ac236f1203823942078c1a`, получил fresh independent **GO**:
-0 `P0`, 0 `P1`, 1 `P2`, 0 `P3` и теперь развёрнут в preview как active version
-fingerprint `a4fab5d09f63` на 100%. Previous compatible `2de99c0c5815` сохранена
-для rollback. Historical target
+0 `P0`, 0 `P1`, 1 `P2`, 0 `P3` и ранее был развёрнут как `a4fab5d09f63`/100%.
+Теперь он сохранён inactive для rollback нового `bef5789…`. Historical target
 `583165e316b739f4fb6a30001dae3a98ec62e1a1` с direct parent
 `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d` получил fresh independent **GO**:
 0 `P0` / 0 `P1` для reviewed CSRF-remediation scope. После deploy первый
@@ -34,7 +34,40 @@ runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
-### Turnstile async/onload independent review GO — 2026-09-02
+### Turnstile async/onload preview deploy и real widget — 2026-09-02
+
+- Owner отдельно разрешил deploy exact reviewed
+  `bef578917575f233ce4853a1432f1d0d29b22289`; clean start HEAD `36ae558`.
+  После reviewed anchor diff только docs; runtime/migrations/dependencies/config
+  unchanged. Protected config digest `3aaebf49223f` совпал с previous success.
+- Fresh build и Wrangler 4.120.1 strict dry-run прошли. Full Vitest `566` pass +
+  1 Windows skip, Chromium `23/23`, check и audit `0` переиспользованы из exact
+  `bef5789…`; без material diff повтор полных suites не требовался.
+- Read-only preflight подтвердил `a4fab5d09f63`/100% и exact preview target.
+  Один strict deploy завершился exit 0. Postcondition `2026-09-02T13:56:02Z`:
+  новая version `745295d36248` одна обслуживает 100%, exact candidate annotation
+  совпала; previous compatible `a4fab5d09f63` доступна для rollback.
+- Access `302/302/200/204`, register GET `200`, active versioned route `404`,
+  exact vars/bindings/three secret names; D1 `25/pending 0/FK 0`, synthetic
+  `2 + 1703`, users/tokens/privacy/outbox/session/auth-audit/register-rate/
+  bootstrap `0`, обе EEUR R2 пусты, latest jobs `9/9` healthy. Drift отсутствует,
+  rollback не требовался. D1/R2/Access/config/secret/provider writes не выполнялись.
+- Fresh Chrome GET `/auth/register` показал реальный Turnstile widget с
+  результатом «Успешно» и enabled submit. Поля пусты, submit не отправлялся.
+  `P1` error `3857` до render закрыт, прежний `P2` recovery остаётся backlog.
+  Server Siteverify/replay и registration/verification delivery pending.
+- Protected current-user-only ignored evidence:
+  `imports/preview-worker-deploy-evidence-20260902-turnstile-onload.json`,
+  SHA-256 prefix `31115e396ae0`. Full IDs остаются только там; browser evidence
+  содержит лишь sanitized booleans/result. Checkpoint checks: docs:check,
+  release:scan и git diff --check; runtime suites повторно не запускались.
+- Следующее ровно одно действие — получить отдельное разрешение на первый
+  controlled registration и verification delivery с read-only reconcile до
+  повтора, второго account или bootstrap. `rollover_required: no`,
+  `recommended_next_session_mode: High`: известный preview target и механизм
+  reconciliation, remote ambiguity нет. Production и CMS не разрешены.
+
+### Turnstile async/onload independent review GO — 2026-09-02 (история)
 
 - Reviewed exact candidate `bef578917575f233ce4853a1432f1d0d29b22289`, parent
   `27218225de661126ffde0a8cb597a3add949f619`; review начат на clean docs-only
