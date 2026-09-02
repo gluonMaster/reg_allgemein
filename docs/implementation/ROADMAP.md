@@ -382,8 +382,9 @@ quarantine/manual-AV/business-review paths на выделенных preview res
 
 Текущий gate: reviewed Turnstile async/onload candidate `bef5789…` развёрнут
 в preview как `745295d36248`/100%. Реальный widget показал «Успешно», submit
-enabled; `P1` error `3857` до render закрыт. Следующий gate — отдельное разрешение
-на первый controlled registration и verification delivery; Siteverify pending.
+enabled; `P1` error `3857` до render закрыт. Первый controlled registration и
+verification delivery разрешены; preflight прошёл, ожидается ввод владельца.
+Siteverify pending; после submit обязателен read-only reconcile.
 Current evidence и единственный следующий шаг — в
 [active state](STAGE_13_ACTIVE_STATE.md).
 

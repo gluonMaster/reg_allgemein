@@ -7,7 +7,7 @@
 Статус этапа: `in_progress` — reviewed Turnstile async/onload candidate `bef5789…`
 развёрнут в preview как `745295d36248`/100%. Реальный Chrome widget показал
 «Успешно», submit enabled; render `P1` закрыт. Первый controlled registration
-и verification delivery ждут отдельного разрешения; production **NO-GO**.
+и verification delivery разрешены владельцем, ожидается его ввод; production **NO-GO**.
 
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
@@ -33,6 +33,26 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Первая controlled registration разрешена, preflight пройден — 2026-09-02
+
+- Owner разрешил одну первую controlled registration с verification delivery.
+  Fresh preflight `2026-09-02T14:08:03Z` подтвердил `745295d36248`/100%, exact
+  config, Access `302/302/200/204`, D1 `25/pending 0/FK 0`, synthetic `2 + 1703`,
+  все account/token/privacy/outbox/session/auth-audit/register-rate/bootstrap/
+  provider-receipt counts `0`, R2 empty и jobs `9/9` healthy.
+- Protected current-user-only ignored before evidence:
+  `imports/preview-first-registration-before-20260902T140803Z.json`, digest
+  `985e4b4f1084`. Подготовлен read-only post-submit helper без remote write.
+  Browser form содержит только synthetic names; owner лично вводит corporate
+  mailbox/password/privacy acknowledgement и отправляет один раз. До повтора,
+  перехода по verification link или следующего account/bootstrap — read-only
+  reconcile и обязательный atomic docs-only checkpoint. Секреты/PII не сообщать.
+- Remote mutation не выполнялась, прежний atomic deploy record остаётся success.
+  Runtime unchanged; только docs:check/release:scan/diff для этого docs checkpoint,
+  full suites/check/build/audit не повторяются. Разрешение сохраняется без нового
+  вопроса. `rollover_required: no`, `recommended_next_session_mode: High`:
+  известный authorized preview flow, ожидание owner input, ambiguity нет.
 
 ### Turnstile async/onload preview deploy и real widget — 2026-09-02
 

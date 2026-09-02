@@ -4,10 +4,10 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T13:57:13Z
+updated_utc: 2026-09-02T14:08:03Z
 reviewed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
 last_completed_gate: phase-3-turnstile-async-onload-preview-deploy-and-real-widget-passed
-next_gate: phase-3-first-controlled-registration-owner-permission
+next_gate: phase-3-authorized-first-controlled-registration-owner-input
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -15,10 +15,10 @@ current_review_status: independent_go
 current_phase: phase-3-auth-roles
 last_atomic_action: deploy-reviewed-turnstile-async-onload-remediation-to-preview
 last_atomic_result: success
-next_atomic_action: obtain-owner-permission-for-first-controlled-registration-and-verification-delivery
+next_atomic_action: owner-submit-first-controlled-registration-once-then-readonly-reconcile
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-controlled-preview-registration-after-owner-permission-known-target-and-reconciliation-no-remote-ambiguity
+mode_reason_plain: authorized-controlled-preview-registration-awaiting-owner-input-known-target-and-reconciliation-no-remote-ambiguity
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -39,6 +39,22 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
+- Owner `2026-09-02` явно разрешил первую controlled registration с verification
+  delivery. Разрешение принято и повторно не запрашивается. Fresh read-only
+  preflight `2026-09-02T14:08:03Z`: exact `745295d36248`/100%, Access
+  `302/302/200/204`, config exact, D1 `25/pending 0/FK 0`, synthetic `2 + 1703`,
+  users/admins/tokens/privacy/outbox/session/auth-audit/register-rate/bootstrap
+  и provider receipts `0`, R2 empty, latest jobs `9/9` healthy.
+  Protected ignored before evidence
+  `imports/preview-first-registration-before-20260902T140803Z.json`, digest
+  `985e4b4f1084`. Remote mutation в этом preflight не выполнялась.
+  Chrome form подготовлена с synthetic names; corporate mailbox/password и
+  privacy acknowledgement вводит владелец по owner guide. Разрешена одна
+  отправка; до retry/verification-link consumption/second account/bootstrap
+  обязателен read-only reconcile и отдельный docs-only atomic checkpoint.
+  Read-only helper `tmp/stage13-first-registration-checkpoint.ps1 -Mode after`
+  сохраняет агрегаты без PII; canonical checks — account/token/privacy/audit,
+  outbox status/attempts/provider receipt, sessions/roles/FK и exact target.
 - Local runtime candidate: `bef578917575f233ce4853a1432f1d0d29b22289`,
   direct parent `27218225de661126ffde0a8cb597a3add949f619`. Изменены только
   `TurnstileWidget.svelte` и два E2E files. Independent review завершён: **GO**,
@@ -51,8 +67,8 @@ NO-GO до собственных approvals и отдельного поруче
   widget, показал «Успешно» и enabled submit. Отказ `3857` до render больше не
   воспроизводится. Поля оставлены пустыми, submit не выполнялся. Real client
   widget evidence получено; server Siteverify/replay и registration/email
-  end-to-end всё ещё pending. Следующий gate — отдельное разрешение только на
-  первый controlled registration и verification delivery с read-only reconcile
+  end-to-end всё ещё pending. Разрешение на первый controlled registration и
+  verification delivery получено; ожидается ввод владельца с read-only reconcile
   до любого повтора, второго account или bootstrap.
 - Fresh deploy evidence: build и strict dry-run прошли; exact candidate
   annotation/100% traffic, Access `302/302/200/204`, register GET `200`, versioned
@@ -78,7 +94,7 @@ NO-GO до собственных approvals и отдельного поруче
   до полученного token. Исторический verdict для `146f9c5…` — **GO**,
   0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; новое browser evidence выше открыло `P1`.
   Исторический preview deploy завершён; последующий Turnstile fix/review/deploy
-  и реальный widget check теперь пройдены. Registration ждёт своего разрешения.
+  и реальный widget check теперь пройдены. Registration разрешена и ждёт ввода владельца.
 - Last deployed candidate:
   `bef578917575f233ce4853a1432f1d0d29b22289`; direct parent
   `27218225de661126ffde0a8cb597a3add949f619`.
@@ -203,7 +219,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock     | `passed`                                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                                   | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`                                                           |
 | 1. Recovery/schema | `passed`                                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`                      | ledger, FK, local quick-check plus remote exact fallback, key counts                                                                      |
 | 2. Worker deploy   | `passed`                                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained          | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable                                                 |
-| 3. Auth/roles      | `turnstile_deploy_widget_passed_pending_registration_permission` | deployed `bef5789…`/`745295d36248` at 100%; real widget success and enabled submit; previous `a4fab5d09f63` retained | separate permission for first controlled registration and verification delivery, then read-only reconcile before any next write |
+| 3. Auth/roles      | `first_registration_authorized_awaiting_owner_input` | deployed `bef5789…`/`745295d36248` at 100%; widget success; fresh preflight zero accounts/tokens/outbox; owner authorized one registration and verification delivery | owner submits once, then read-only reconcile and atomic checkpoint before any next write |
 | 4a. Product flows  | `blocked_on_phase_3`                                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                                  | guided affected browser scenarios                                                                                                         |
 | 4b. Documents      | `blocked_on_phase_3`                                     | real synthetic upload → AV → review → cleanup                                                                                                                             | R2 isolation/hash/owner access                                                                                                            |
 | 4c. Contracts      | `blocked_on_phase_3`                                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                             | Browser/R2/email receipts and lifecycle                                                                                                   |
@@ -229,8 +245,8 @@ sanitized результат и минимальная проверка. Full ID
 назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
 режим следующей сессии, даже если `rollover_required: no`.
 
-Текущая рекомендация — **High**: следующий controlled registration после отдельного
-разрешения имеет известные target и read-only reconciliation; remote ambiguity отсутствует.
+Текущая рекомендация — **High**: разрешённый controlled registration ожидает ввода
+владельца; target и read-only reconciliation известны, remote ambiguity отсутствует.
 Rollover не обязателен: точный context сохранён. Account write и verification
 delivery требуют отдельных разрешений. `Max`
 нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
@@ -256,10 +272,10 @@ after: one-active-100-percent-version-745295d36248-previous-a4fab5d09f63-availab
 result: success
 evidence: protected-ignored-preview-worker-deploy-evidence-20260902-turnstile-onload-json-sha256-prefix-31115e396ae0-includes-read-only-browser-widget-success
 rollback_or_containment: rollback-not-required-previous-compatible-version-a4fab5d09f63-retained
-next_atomic_action: obtain-owner-permission-for-first-controlled-registration-and-verification-delivery
+next_atomic_action: owner-submit-first-controlled-registration-once-then-readonly-reconcile
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: planned-controlled-preview-registration-after-owner-permission-known-target-and-reconciliation-no-remote-ambiguity
+mode_reason_plain: authorized-controlled-preview-registration-awaiting-owner-input-known-target-and-reconciliation-no-remote-ambiguity
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
