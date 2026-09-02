@@ -126,6 +126,16 @@ jobs не старше 1200 секунд, нет run старше 360 секун
 соответствующую функцию. Любая D1/query/clock проблема даёт empty `503`; response
 не содержит reason, job name, error code, PII или secret.
 
+**D1 incident 2026-09-02:** deployed `bef5789…` выполняет unbounded history scan
+при freshness query. До исправления не поллить health и не повторять прежние
+operator snapshots с `row_number()` по всей `scheduled_job_runs` для диагностики.
+Read-only запрос тоже расходует daily rows_read; при quota warning читать
+Cloudflare Metrics/Query Insights, не SQL console. Сначала локально измерить
+`meta.rows_read` на накопленной истории и проверить indexed latest-job lookup.
+Не удалять историю и не отключать Cron вслепую; `SCHEDULED_JOBS_ENABLED=false`
+сам по себе не прекращает lease/run writes. Подробности и protected evidence
+находятся в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
+
 Для деталей открыть `<PORTAL_ORIGIN>/admin/operations`: страница показывает
 recent `job_name`, `status`, trigger/start/finish, safe result и safe error code.
 В Cloudflare Workers Logs фильтровать `$metadata.error EXISTS` либо

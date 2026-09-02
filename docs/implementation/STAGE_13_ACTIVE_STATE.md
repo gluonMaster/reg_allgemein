@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T14:08:03Z
+updated_utc: 2026-09-02T14:29:34Z
 reviewed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
 last_completed_gate: phase-3-turnstile-async-onload-preview-deploy-and-real-widget-passed
-next_gate: phase-3-authorized-first-controlled-registration-owner-input
+next_gate: phase-3-turnstile-workers-and-d1-read-cost-remediation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-3-auth-roles
-last_atomic_action: deploy-reviewed-turnstile-async-onload-remediation-to-preview
-last_atomic_result: success
-next_atomic_action: owner-submit-first-controlled-registration-once-then-readonly-reconcile
+last_atomic_action: owner-authorized-first-controlled-registration
+last_atomic_result: failed
+next_atomic_action: local-remediation-and-regression-of-turnstile-fetch-and-history-scan-cost
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: authorized-controlled-preview-registration-awaiting-owner-input-known-target-and-reconciliation-no-remote-ambiguity
+mode_reason_plain: two-reproduced-preview-p1-defects-known-target-no-account-or-provider-write-no-remote-ambiguity
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -39,6 +39,39 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
+- **Новый incident 2026-09-02: два P1 текущего preview milestone.** Первая
+  разрешённая controlled registration вернула Turnstile rejection. Read-only
+  postcondition `2026-09-02T14:14:25Z`: version `745295d36248`/100%, exact config,
+  users/tokens/privacy/email-outbox/sessions/auth-audit/bootstrap/provider
+  attempts/receipts `0`; register-rate buckets стали `2`. Это failed registration
+  с rate-limit write, а не полный no-write. Schema/FK/synthetic/R2 без изменений.
+  Protected after evidence: `imports/preview-first-registration-after-20260902T141425Z.json`,
+  digest `112d74be920a`. Авторизация одной отправки использована; retry запрещён.
+- Локальный workerd воспроизводит server-side причину: `this.fetcher = fetch`
+  затем `this.fetcher(...)` даёт `Illegal invocation` до сети; с
+  `globalThis.fetch.bind(globalThis)` outbound call проходит. Реальная Turnstile
+  analytics показывала solved challenges, но ноль Siteverify requests.
+  Инъецированный Node mock в прежних tests не покрывал этот Workers path.
+- **D1 incident:** владелец получил warning 96% от 5M rows_read за UTC-сутки.
+  Read-only Query Insights (`1d`, snapshot около `14:27Z`) атрибутирует
+  **5,187,297 rows read всего 11 operator snapshot queries** (три SQL variants).
+  Они дважды вычисляют `row_number()` по всей `scheduled_job_runs`. Ещё
+  10 health freshness queries прочитали 783,068 строк. Более ранний dashboard
+  rolling-24h snapshot показывал 14 health calls/1.08M reads и 6.6M total reads;
+  это другой временной срез, не точный daily billing counter.
+  Protected analytics: `imports/d1-query-insights-20260902.json`, digest
+  `4b09060ddd46`. Аналитика не исполняет SQL в D1.
+- Два every-minute и семь 15-minute jobs создают 3,552 плановых run/day и
+  несколько SQL на каждый run даже без пользователей. В сохранённой analytics
+  job-start/finish/lease дают 38,917 из 39,022 rows written. Это объясняет
+  постоянные запросы/записи, но главный наблюдённый расход reads — operator
+  snapshots и health history scan. Сам `SCHEDULED_JOBS_ENABLED=false` не
+  прекращает log/lease writes: gate стоит после startRun.
+- **Containment:** тяжёлые D1 snapshots, SQL/health probes остановлены в этой
+  сессии; больше remote SQL не выполнять до локального cost regression.
+  Cron/monitor/flags/deployed Worker не изменялись; новый deploy, retry и
+  платный тариф не разрешены. Next action — local remediation двух P1.
+  Historical review GO для `bef5789…` не закрывает обнаруженные runtime отказы.
 - Owner `2026-09-02` явно разрешил первую controlled registration с verification
   delivery. Разрешение принято и повторно не запрашивается. Fresh read-only
   preflight `2026-09-02T14:08:03Z`: exact `745295d36248`/100%, Access
@@ -62,7 +95,8 @@ NO-GO до собственных approvals и отдельного поруче
   Fresh review: registration Chromium `5/5`, auth/registration unit `15/15`,
   check `0/0`; runtime после exact candidate не менялся. Отдельно разрешённый
   preview deploy завершён: version fingerprint `745295d36248`, 100% traffic.
-  Текущих подтверждённых `P0/P1` нет; прежний `P2` остаётся backlog.
+  Это исторический review verdict; два новых `P1` описаны выше. Прежний `P2`
+  остаётся backlog.
 - **Turnstile render `P1` закрыт:** fresh Chrome GET после deploy создал реальный
   widget, показал «Успешно» и enabled submit. Отказ `3857` до render больше не
   воспроизводится. Поля оставлены пустыми, submit не выполнялся. Real client
@@ -94,7 +128,8 @@ NO-GO до собственных approvals и отдельного поруче
   до полученного token. Исторический verdict для `146f9c5…` — **GO**,
   0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; новое browser evidence выше открыло `P1`.
   Исторический preview deploy завершён; последующий Turnstile fix/review/deploy
-  и реальный widget check теперь пройдены. Registration разрешена и ждёт ввода владельца.
+  и реальный widget check теперь пройдены. Последующая registration failed,
+  её разрешение использовано; актуальный incident выше.
 - Last deployed candidate:
   `bef578917575f233ce4853a1432f1d0d29b22289`; direct parent
   `27218225de661126ffde0a8cb597a3add949f619`.
@@ -219,7 +254,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock     | `passed`                                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                                   | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`                                                           |
 | 1. Recovery/schema | `passed`                                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`                      | ledger, FK, local quick-check plus remote exact fallback, key counts                                                                      |
 | 2. Worker deploy   | `passed`                                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained          | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable                                                 |
-| 3. Auth/roles      | `first_registration_authorized_awaiting_owner_input` | deployed `bef5789…`/`745295d36248` at 100%; widget success; fresh preflight zero accounts/tokens/outbox; owner authorized one registration and verification delivery | owner submits once, then read-only reconcile and atomic checkpoint before any next write |
+| 3. Auth/roles      | `blocked_turnstile_workers_and_d1_reads` | deployed `bef5789…`/`745295d36248`; controlled registration failed; account/outbox zero, rate buckets 2; expensive diagnostic SQL identified | local workerd and D1 cost regression before new deploy/registration approval |
 | 4a. Product flows  | `blocked_on_phase_3`                                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                                  | guided affected browser scenarios                                                                                                         |
 | 4b. Documents      | `blocked_on_phase_3`                                     | real synthetic upload → AV → review → cleanup                                                                                                                             | R2 isolation/hash/owner access                                                                                                            |
 | 4c. Contracts      | `blocked_on_phase_3`                                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                             | Browser/R2/email receipts and lifecycle                                                                                                   |
@@ -245,8 +280,8 @@ sanitized результат и минимальная проверка. Full ID
 назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
 режим следующей сессии, даже если `rollover_required: no`.
 
-Текущая рекомендация — **High**: разрешённый controlled registration ожидает ввода
-владельца; target и read-only reconciliation известны, remote ambiguity отсутствует.
+Текущая рекомендация — **High**: два локализованных P1, известный preview target,
+account/provider postcondition нулевой, remote ambiguity отсутствует.
 Rollover не обязателен: точный context сохранён. Account write и verification
 delivery требуют отдельных разрешений. `Max`
 нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
@@ -261,34 +296,37 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя попытка remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: deploy-reviewed-turnstile-async-onload-remediation-to-preview
-observed_utc: 2026-09-02T13:56:02Z
+atomic_action: owner-authorized-first-controlled-registration
+observed_utc: 2026-09-02T14:14:25Z
 phase: phase-3-auth-roles
-authorization_scope: owner-authorized-exact-reviewed-turnstile-onload-preview-worker-deploy-only-no-registration-retry-provider-send-account-bootstrap-production-or-cms
+authorization_scope: one-owner-controlled-preview-registration-and-verification-delivery-no-retry-bootstrap-production-or-cms
 target_fingerprint: preview-worker-active-version-745295d36248-preview-d1-unchanged
 candidate_or_version: bef578917575f233ce4853a1432f1d0d29b22289
-before: one-active-100-percent-version-a4fab5d09f63-access-302-302-200-204-d1-25-pending-zero-fk-zero-auth-counts-zero-r2-empty-jobs-nine-of-nine
-after: one-active-100-percent-version-745295d36248-previous-a4fab5d09f63-available-exact-candidate-annotation-access-302-302-200-204-register-get-200-versioned-route-404-config-exact-d1-r2-auth-counts-and-jobs-unchanged
-result: success
-evidence: protected-ignored-preview-worker-deploy-evidence-20260902-turnstile-onload-json-sha256-prefix-31115e396ae0-includes-read-only-browser-widget-success
-rollback_or_containment: rollback-not-required-previous-compatible-version-a4fab5d09f63-retained
-next_atomic_action: owner-submit-first-controlled-registration-once-then-readonly-reconcile
+before: version-745295d36248-auth-account-provider-and-register-rate-counts-zero
+after: same-version-config-schema-synthetic-r2-users-tokens-privacy-outbox-sessions-audit-bootstrap-provider-counts-zero-register-rate-buckets-two
+result: failed
+evidence: protected-before-985e4b4f1084-after-112d74be920a-local-workerd-illegal-invocation-analytics-4b09060ddd46
+rollback_or_containment: no-account-or-send-to-reverse-no-retry-heavy-d1-and-health-probes-stopped-previous-version-retained
+next_atomic_action: local-remediation-and-regression-of-turnstile-fetch-and-history-scan-cost
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: authorized-controlled-preview-registration-awaiting-owner-input-known-target-and-reconciliation-no-remote-ambiguity
+mode_reason_plain: two-reproduced-preview-p1-defects-known-target-no-account-or-provider-write-no-remote-ambiguity
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
 результаты попыток принимают ровно `success|failed|ambiguous`.
-Before/after/result описывают последнюю remote mutation, успешный deploy `bef5789…`.
-Последующий browser GET подтвердил реальный widget без submit или provider send.
+Before/after/result описывают последнюю remote mutation — неуспешную registration
+с подтверждённым rate-limit write. Последующие local/analytics reads не меняли remote state.
 
 ## Что не повторять
 
 - Не повторять deploy exact `bef5789…`: preview postcondition и real widget
   прошли, active fingerprint `745295d36248`; повтор без material drift запрещён.
 - Не считать client widget success доказательством server Siteverify/replay,
-  account creation или verification delivery: эти paths ещё не выполнялись.
+  account creation или verification delivery: server verification failed.
+- Не запускать прежние operational scripts с двумя `row_number()` history scans
+  и не поллить deployed health для диагностики D1 quota. Query Insights/metrics
+  не исполняют пользовательский SQL; ежедневный лимит reset в 00:00 UTC.
 - Не повторять registration submit до исправленного reviewed preview deploy
   и отдельного разрешения; retry — account/provider mutation с обязательным
   read-only reconcile до любого второго account или bootstrap.

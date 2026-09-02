@@ -6,8 +6,9 @@
 
 Статус этапа: `in_progress` — reviewed Turnstile async/onload candidate `bef5789…`
 развёрнут в preview как `745295d36248`/100%. Реальный Chrome widget показал
-«Успешно», submit enabled; render `P1` закрыт. Первый controlled registration
-и verification delivery разрешены владельцем, ожидается его ввод; production **NO-GO**.
+«Успешно», submit enabled; render `P1` закрыт. Последующая controlled registration
+failed на server verification; D1 quota incident выявил дорогие operator/health
+history scans. Два новых P1 требуют local remediation; production **NO-GO**.
 
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
@@ -33,6 +34,49 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Controlled registration failed; D1 quota incident — 2026-09-02
+
+- Разрешённая одна registration выполнена владельцем. Postcondition
+  `14:14:25Z`: version `745295d36248`/100%, config exact, accounts/tokens/privacy/
+  outbox/sessions/auth-audit/bootstrap/provider attempts/receipts `0`, register
+  rate buckets `2`, schema/FK/synthetic/R2 unchanged. Failed registration создала
+  rate-limit metadata; полного no-write не было. Protected after evidence
+  `imports/preview-first-registration-after-20260902T141425Z.json`, digest
+  `112d74be920a`; before digest `985e4b4f1084`. Retry не разрешён.
+- Workerd reproduction: сохранённый unbound global `fetch`, вызываемый как
+  `this.fetcher(...)`, даёт `Illegal invocation` до outbound network. Bound
+  `globalThis.fetch.bind(globalThis)` проходит. Реальный widget solve не
+  доказывает Siteverify; Cloudflare analytics показывала ноль verify requests.
+  Старые Node mocks не покрывали receiver binding. Это P1 AUTH-02.
+- После owner D1 warning remote SQL и health probes остановлены. Query Insights
+  через analytics API (`1d`) показывает 11 operator snapshots / **5,187,297
+  rows_read**, 10 health queries / 783,068 reads. UI rolling-24h snapshot ранее
+  показывал 14 health queries / 1.08M и 6.6M total reads; срезы не идентичны.
+  Snapshot содержит два unbounded `row_number()` по истории jobs; health —
+  unbounded `MAX(started_at) GROUP BY job_name`. Это P1 OBS-02/OPS-01: служебная
+  диагностика способна исчерпать free daily quota и остановить preview.
+- 30-day analytics отдельно показывает health 4,784 calls / 70,505,423 reads;
+  legacy family projection UPDATE 4 calls / 26,175,110 reads, 6,812 writes.
+  Это исторический расход, не daily counter. Query Insights adaptive sampling,
+  rolling windows и top-N не обязаны суммироваться в overview/billing total.
+  Dormant import cost записан как P2 до следующего import gate; новый import
+  для текущей регистрации не нужен и не запускается.
+- Cron inventory: 2 jobs/minute + 7 jobs/15 minutes = 3,552 planned runs/day.
+  В 1d insights start/finish/lease дали 38,917 из 39,022 writes; фоновые jobs
+  объясняют постоянный поток SQL при нуле accounts. Feature flag alone не
+  прекращает job logging/lease writes. Cron/monitor/flags/deployment не менялись.
+- Protected current-user-only analytics:
+  `imports/d1-query-insights-20260902.json` digest `4b09060ddd46`;
+  `imports/d1-query-insights-20260902-30d.json` digest `4c1967a15637`.
+  Никаких SQL-запросов к D1 при получении analytics не выполнялось.
+- Containment: прекратить expensive snapshots/health diagnostic polling;
+  подготовить локально indexed latest-job queries и Workers fetch regression.
+  Не удалять историю, не менять тариф, не повторять регистрацию или deploy.
+  Следующее атомарное действие — local remediation с measured D1 rows_read.
+  Этот checkpoint только docs; выполняются docs:check/release:scan/diff.
+  `rollover_required: no`, `recommended_next_session_mode: High`: причины
+  локализованы, account/provider state нулевой, remote ambiguity нет.
 
 ### Первая controlled registration разрешена, preflight пройден — 2026-09-02
 
