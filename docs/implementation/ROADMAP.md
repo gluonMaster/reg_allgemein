@@ -386,8 +386,10 @@ safe form state, обновляет current privacy version и управляе�
 lifecycle. Fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; check
 `0/0`, focused unit `15/15`, focused registration browser `2/2`. Exact release
 evidence также включает Vitest `566` pass + 1 Windows skip, Chromium `20/20`,
-build/audit/docs/scan/diff. Deploy/retry требуют отдельного разрешения и
-verified preview deploy.
+build/audit/docs/scan/diff. Separately authorized preview deploy завершён:
+`a4fab5d09f63` active 100%, previous compatible `2de99c0c5815` retained,
+Access/config/D1/R2/jobs postcondition passed. Registration retry остаётся
+отдельно разрешаемым gate.
 
 Historical reviewed full-manual-preview candidate
 `583165e316b739f4fb6a30001dae3a98ec62e1a1`, parent `3ad9527…`, получил fresh

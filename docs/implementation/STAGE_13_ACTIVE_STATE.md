@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-01T18:00:38Z
+updated_utc: 2026-09-02T12:46:12Z
 reviewed_candidate: 146f9c54ff082ad695ef47c7da9c6a578e09a9a5
-last_completed_gate: phase-3-registration-invalid-input-remediation-reviewed
-next_gate: phase-3-registration-invalid-input-remediation-preview-deploy
+last_completed_gate: phase-3-registration-invalid-input-remediation-preview-deployed
+next_gate: phase-3-retry-first-controlled-preview-account-registration
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-3-auth-roles
-last_atomic_action: submit-first-controlled-preview-account-registration
-last_atomic_result: failed
-next_atomic_action: owner-authorize-and-deploy-reviewed-registration-invalid-input-remediation
+last_atomic_action: deploy-reviewed-registration-invalid-input-remediation-to-preview
+last_atomic_result: success
+next_atomic_action: owner-authorize-and-retry-first-controlled-preview-account-registration
 rollover_required: yes
 recommended_next_session_mode: High
-mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-compatible-worker-rollback-are-known
+mode_reason_plain: exact-remediation-is-deployed-and-first-controlled-account-write-send-postcondition-and-containment-are-known
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -45,11 +45,11 @@ NO-GO до собственных approvals и отдельного поруче
   registration values, никогда не возвращает password, обновляет current privacy
   version, управляет Turnstile explicit-render lifecycle и не разрешает submit
   до полученного token. Fresh independent verdict — **GO**, 0 `P0`, 0 `P1`,
-  1 `P2`, 0 `P3`; deploy/retry остаются запрещены до отдельного разрешения и
-  verified preview deploy.
+  1 `P2`, 0 `P3`. Отдельно разрешённый preview deploy завершён и проверен;
+  новый registration retry остаётся отдельной mutation и пока не разрешён.
 - Last deployed candidate:
-  `583165e316b739f4fb6a30001dae3a98ec62e1a1`; direct parent
-  `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d`.
+  `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`; direct parent
+  `fbb9520eb670cd22f5ac236f1203823942078c1a`.
 - Fresh independent verdict: **GO**, 0 `P0` / 0 `P1`. Candidate заменяет
   SvelteKit static URL-origin comparison на runtime guard, привязанный к
   validated `PORTAL_PUBLIC_ORIGIN`; literal `Origin: null` принимается только
@@ -96,8 +96,16 @@ NO-GO до собственных approvals и отдельного поруче
   check 0/0, focused unit 15/15 и registration browser 2/2. Reviewer `P2`:
   expiry/client-error recovery требует reload вместо explicit reset, а повторная
   загрузка после уже failed script element может остаться pending. Это не ломает
-  ближайший controlled retry и не блокирует milestone. Следующий gate — отдельно
-  разрешённый exact Worker deploy, postcondition и только затем новый retry.
+  ближайший controlled retry и не блокирует milestone.
+- Отдельно разрешённый exact preview Worker deploy `146f9c5…` завершён exit 0.
+  Новая version fingerprint `a4fab5d09f63` одна обслуживает 100% traffic;
+  предыдущая compatible `2de99c0c5815` сохранена для rollback. Fresh read-only
+  postcondition подтвердил Access `302/302/200/204`, registration GET `200`,
+  versioned route `404`, exact config/bindings/three secret names, D1
+  `25/pending 0/FK 0`, synthetic `2 + 1703`, нулевые users/tokens/privacy/
+  outbox/sessions/auth-audit/register-rate/bootstrap counts, обе private EEUR R2
+  пусты и latest jobs `9/9` healthy. Rollback не требовался. Следующий gate —
+  отдельное разрешение на retry только первого controlled account.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -135,11 +143,11 @@ Fresh reconciliation нужно выполнить непосредственн�
 последнее зафиксированное состояние, которое нельзя молча считать актуальным при
 обнаружении drift.
 
-- Exact reviewed candidate `583165e…` обслуживает 100% preview traffic
-  (sanitized version fingerprint `2de99c0c5815`); hostname закрыт Cloudflare
-  Access, новая и предыдущая versioned preview routes возвращают `404`.
-  Previous compatible auth/email Worker version `3f189dd10ce8` сохранена
-  inactive для rollback; более ранняя fail-closed `1a0707dc5dec` также retained.
+- Exact reviewed candidate `146f9c5…` обслуживает 100% preview traffic
+  (sanitized version fingerprint `a4fab5d09f63`); hostname закрыт Cloudflare
+  Access, active versioned preview route возвращает `404`. Previous compatible
+  registration-origin Worker `2de99c0c5815` сохранена inactive для rollback;
+  более ранние auth-email/fail-closed versions также retained.
 - Preview и candidate-bound unbound recovery D1 имеют migrations `0001`–`0025`,
   pending `0`, FK violations `0`, schema objects `535` и lineage `8/4`. Preview
   сохраняет current synthetic pair `2 + 1703`, users/admins `0`; one-shot
@@ -162,7 +170,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock     | `passed`                                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                                   | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`                                                           |
 | 1. Recovery/schema | `passed`                                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`                      | ledger, FK, local quick-check plus remote exact fallback, key counts                                                                      |
 | 2. Worker deploy   | `passed`                                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained          | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable                                                 |
-| 3. Auth/roles      | `registration_failed_no_write_remediation_reviewed_awaiting_deploy_permission` | exact runtime anchor `146f9c5…` remediates the failed form/Turnstile state and has independent GO with 0 P0/P1; it is not deployed | separately authorized exact preview deploy, verified postcondition/docs checkpoint, then retry only the first controlled account |
+| 3. Auth/roles      | `registration_remediation_deployed_awaiting_first_retry_permission` | exact runtime anchor `146f9c5…` is active as `a4fab5d09f63` at 100%; previous `2de99c0c5815` retained | separately authorize retry only the first controlled account, then reconcile account/send/D1 state before any second account |
 | 4a. Product flows  | `blocked_on_phase_3`                                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                                  | guided affected browser scenarios                                                                                                         |
 | 4b. Documents      | `blocked_on_phase_3`                                     | real synthetic upload → AV → review → cleanup                                                                                                                             | R2 isolation/hash/owner access                                                                                                            |
 | 4c. Contracts      | `blocked_on_phase_3`                                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                             | Browser/R2/email receipts and lifecycle                                                                                                   |
@@ -188,10 +196,10 @@ sanitized результат и минимальная проверка. Full ID
 назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
 режим следующей сессии, даже если `rollover_required: no`.
 
-Текущая рекомендация — **High**: exact remediation anchor получил independent
-GO, а следующий обычный deploy имеет известные target, postcondition и
-совместимую rollback version. Remote write всё ещё требует отдельного прямого
-разрешения. `Max`
+Текущая рекомендация — **High**: exact remediation anchor развёрнут и проверен,
+а следующий controlled registration retry имеет известные target,
+postcondition и containment. Account write и verification delivery всё ещё
+требуют отдельного прямого разрешения. `Max`
 нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
 потенциально необратимой записи, неработающем recovery/rollback, corruption,
 Access/authorization bypass, secret exposure или несовместимости code/schema.
@@ -204,21 +212,21 @@ no-write timeout, косметика и локализованная docs-оши
 Последняя попытка remote mutation текущего продолжения зафиксирована явно:
 
 ```text
-atomic_action: submit-first-controlled-preview-account-registration
-observed_utc: 2026-09-01T15:13:59Z
+atomic_action: deploy-reviewed-registration-invalid-input-remediation-to-preview
+observed_utc: 2026-09-02T12:46:12Z
 phase: phase-3-auth-roles
-authorization_scope: owner-authorized-first-controlled-preview-account-registration-and-verification-only-no-second-account-bootstrap-production-cms
-target_fingerprint: worker-242c1796e930-active-version-2de99c0c5815-preview-d1-ccdeb22bb2a1
-candidate_or_version: 583165e316b739f4fb6a30001dae3a98ec62e1a1
-before: one-active-100-percent-version-2de99c0c5815-auth-email-enabled-two-hash-allowlist-d1-users-tokens-privacy-outbox-sessions-auth-audit-bootstrap-and-register-rate-buckets-zero
-after: generic-400-invalid-input-form-cleared-d1-users-tokens-privacy-outbox-sessions-auth-audit-bootstrap-and-register-rate-buckets-zero-fk-zero-no-provider-dispatch-failed-response-hidden-privacy-and-turnstile-values-empty-fresh-get-privacy-value-length-25
-result: failed
-evidence: protected-ignored-preview-registration-attempt-evidence-20260901-json-sha256-prefix-bf8e23909d88
-rollback_or_containment: no-write-no-send-confirmed-do-not-retry-current-form-until-local-p1-diagnosis-and-remediation
-next_atomic_action: owner-authorize-and-deploy-reviewed-registration-invalid-input-remediation
-rollover_required: no
+authorization_scope: owner-authorized-exact-reviewed-registration-remediation-preview-worker-deploy-only-no-registration-retry-provider-send-account-bootstrap-production-or-cms
+target_fingerprint: preview-worker-active-version-a4fab5d09f63-preview-d1-unchanged
+candidate_or_version: 146f9c54ff082ad695ef47c7da9c6a578e09a9a5
+before: one-active-100-percent-version-2de99c0c5815-access-302-302-200-204-d1-25-pending-zero-fk-zero-auth-counts-zero-r2-empty-jobs-nine-of-nine
+after: one-active-100-percent-version-a4fab5d09f63-previous-2de99c0c5815-available-access-302-302-200-204-register-get-200-versioned-route-404-config-exact-d1-r2-auth-counts-and-jobs-unchanged
+result: success
+evidence: protected-ignored-preview-worker-deploy-evidence-20260902-registration-remediation-json-sha256-prefix-615418836c4a
+rollback_or_containment: rollback-not-required-previous-compatible-version-2de99c0c5815-retained
+next_atomic_action: owner-authorize-and-retry-first-controlled-preview-account-registration
+rollover_required: yes
 recommended_next_session_mode: High
-mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-compatible-worker-rollback-are-known
+mode_reason_plain: exact-remediation-is-deployed-and-first-controlled-account-write-send-postcondition-and-containment-are-known
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
@@ -228,12 +236,11 @@ mode_reason_plain: exact-reviewed-preview-remediation-target-postcondition-and-c
 
 - Не повторять independent review current candidate: exact `146f9c5…` получил
   GO, 0 `P0` / 0 `P1`; reviewer `P2` записан в handoff.
-- Не повторять deploy exact `583165e…`: preview postcondition прошёл, active
-  fingerprint `2de99c0c5815`; повторный deploy без material drift запрещён.
-- Не повторять registration submit в текущей форме: failed response теряет
-  обязательные hidden values, а D1 доказал rejection до auth service. Exact
-  local remediation `146f9c5…` уже reviewed; не повторять diagnosis или submit
-  до отдельно разрешённого deploy/postcondition checkpoint.
+- Не повторять deploy exact `146f9c5…`: preview postcondition прошёл, active
+  fingerprint `a4fab5d09f63`; повторный deploy без material drift запрещён.
+- Не повторять registration submit без отдельного разрешения. Exact remediation
+  уже deployed; следующий retry — account/provider mutation с обязательным
+  read-only reconcile до любого второго account или bootstrap.
 - Не повторять full local gates без material diff. Exact current evidence:
   full Vitest 76/76 files, 566 pass + 1 Windows-only skip; Chromium E2E 20/20;
   check, build, dependency audit 0, docs, release scan и diff check прошли.

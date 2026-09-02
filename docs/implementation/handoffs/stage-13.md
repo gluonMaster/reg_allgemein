@@ -2,12 +2,14 @@
 
 <!-- stage-13-current-review-status: independent_go -->
 
-Ревизия: 2026-09-01.
+Ревизия: 2026-09-02.
 
 Статус этапа: `in_progress` — current reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
 `fbb9520eb670cd22f5ac236f1203823942078c1a`, получил fresh independent **GO**:
-0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`. Он не развёрнут. Historical deployed target
+0 `P0`, 0 `P1`, 1 `P2`, 0 `P3` и теперь развёрнут в preview как active version
+fingerprint `a4fab5d09f63` на 100%. Previous compatible `2de99c0c5815` сохранена
+для rollback. Historical target
 `583165e316b739f4fb6a30001dae3a98ec62e1a1` с direct parent
 `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d` получил fresh independent **GO**:
 0 `P0` / 0 `P1` для reviewed CSRF-remediation scope. После deploy первый
@@ -27,6 +29,32 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Registration invalid-input remediation preview deploy — 2026-09-02
+
+- Owner отдельно разрешил только exact preview Worker deploy reviewed runtime
+  anchor `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`. Registration retry, provider
+  send, account/bootstrap, D1/R2/Access/secret/flag, production и CMS не входили
+  в scope.
+- Fresh provenance подтвердил clean worktree, reviewed anchor как ancestor и
+  отсутствие runtime/migration/dependency/config diff. Переиспользовано exact
+  release evidence; дополнительно прошли fresh build и Wrangler 4.120.1 strict
+  dry-run. Protected preview config digest остался `3aaebf…`.
+- Read-only preflight подтвердил active `2de99c0c5815`/100%, exact vars/bindings/
+  three secret names, Access `302/302/200/204`, registration GET `200`,
+  versioned route `404`, D1 `25/pending 0/FK 0`, current synthetic `2 + 1703`,
+  нулевые auth/account/outbox/session/bootstrap/register-rate counts, две пустые
+  private EEUR R2 и latest jobs `9/9` healthy.
+- Ровно один `wrangler deploy --strict` завершился exit 0. New version
+  fingerprint `a4fab5d09f63` одна обслуживает 100%; previous compatible
+  `2de99c0c5815` retained и available. Fresh postcondition повторил Access,
+  registration GET, closed versioned route, exact config, D1/R2/auth counts и
+  jobs без drift. Rollback не требовался.
+- Full IDs и command evidence сохранены только в protected ignored
+  `imports/preview-worker-deploy-evidence-20260902-registration-remediation.json`;
+  digest prefix `615418836c4a`, ACL current-user-only. Следующий gate — отдельное
+  разрешение на retry только первого controlled account и verification delivery
+  с обязательным reconcile до любого второго account/bootstrap.
 
 ### Registration invalid-input remediation review GO — 2026-09-01
 
@@ -61,8 +89,8 @@ Production readiness: **`blocked` / NO-GO**
   по milestone policy она не блокирует deploy и записана в backlog.
 - Никакой Worker/D1/R2/Access/secret/provider/account/
   bootstrap/production/CMS mutation после failed registration retry не было.
-  Следующий gate — отдельно разрешённый preview Worker deploy exact `146f9c5…`,
-  read-only postcondition и docs-only checkpoint до нового registration retry.
+  Preview Worker deploy exact `146f9c5…` и read-only postcondition завершены
+  2026-09-02. Новый registration retry остаётся отдельным gate.
 
 ### First controlled registration retry — failed/no-write — 2026-09-01
 
