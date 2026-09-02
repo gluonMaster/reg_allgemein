@@ -4,17 +4,25 @@ export async function installSyntheticTurnstile(
 	page: Page,
 	outcome: 'success' | 'pending' = 'success'
 ): Promise<void> {
-	await page.route(
-		'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
-		async (route) => {
-			await route.fulfill({
-				contentType: 'application/javascript',
-				body: `(() => {
+	await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js?*', async (route) => {
+		await route.fulfill({
+			contentType: 'application/javascript',
+			body: `(() => {
+					const script = document.currentScript;
+					const loadedAsync = script.async || script.defer;
+					const onloadName = new URL(script.src).searchParams.get('onload');
+					let apiReady = false;
 					const widgets = new Map();
 					let sequence = 0;
 					window.turnstile = {
-						ready(callback) { callback(); },
+						ready(callback) {
+							if (loadedAsync) {
+								throw new Error('[Cloudflare Turnstile] Remove async/defer before using turnstile.ready(). (3857)');
+							}
+							callback();
+						},
 						render(container, options) {
+							if (!apiReady) throw new Error('Turnstile render called before API onload.');
 							const widgetId = 'synthetic-widget-' + (++sequence);
 							const input = document.createElement('input');
 							input.type = 'hidden';
@@ -33,8 +41,11 @@ export async function installSyntheticTurnstile(
 							widgets.delete(widgetId);
 						}
 					};
+					setTimeout(() => {
+						apiReady = true;
+						if (onloadName) window[onloadName]();
+					}, 50);
 				})();`,
-			});
-		}
-	);
+		});
+	});
 }

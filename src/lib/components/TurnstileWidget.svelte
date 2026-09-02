@@ -2,7 +2,6 @@
 	type TurnstileWidgetId = string;
 
 	interface TurnstileApi {
-		ready(callback: () => void): void;
 		render(
 			container: HTMLElement,
 			options: {
@@ -17,27 +16,36 @@
 		remove(widgetId: TurnstileWidgetId): void;
 	}
 
-	type TurnstileWindow = Window & { turnstile?: TurnstileApi };
+	type TurnstileWindow = Window & {
+		turnstile?: TurnstileApi;
+		kolibriTurnstileOnload?: () => void;
+	};
 	const scriptId = 'kolibri-turnstile-api';
-	const scriptSource = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+	const scriptSource =
+		'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=kolibriTurnstileOnload';
 	let apiPromise: Promise<TurnstileApi> | undefined;
 
 	function loadTurnstileApi(): Promise<TurnstileApi> {
 		const turnstileWindow = window as TurnstileWindow;
-		if (turnstileWindow.turnstile) return Promise.resolve(turnstileWindow.turnstile);
 		if (apiPromise) return apiPromise;
+		if (turnstileWindow.turnstile) return Promise.resolve(turnstileWindow.turnstile);
 
 		apiPromise = new Promise<TurnstileApi>((resolve, reject) => {
 			const existing = document.getElementById(scriptId);
 			const scriptElement =
 				existing instanceof HTMLScriptElement ? existing : document.createElement('script');
 			const loaded = () => {
+				delete turnstileWindow.kolibriTurnstileOnload;
 				if (turnstileWindow.turnstile) resolve(turnstileWindow.turnstile);
-				else reject(new Error('Turnstile API unavailable after script load.'));
+				else reject(new Error('Turnstile API unavailable after onload callback.'));
 			};
-			const failed = () => reject(new Error('Turnstile API script failed to load.'));
+			const failed = () => {
+				delete turnstileWindow.kolibriTurnstileOnload;
+				reject(new Error('Turnstile API script failed to load.'));
+			};
 
-			scriptElement.addEventListener('load', loaded, { once: true });
+			// Async loading requires the API's onload callback, not turnstile.ready().
+			turnstileWindow.kolibriTurnstileOnload = loaded;
 			scriptElement.addEventListener('error', failed, { once: true });
 			if (!existing) {
 				scriptElement.id = scriptId;
@@ -81,29 +89,27 @@
 		void loadTurnstileApi()
 			.then((loadedApi) => {
 				api = loadedApi;
-				loadedApi.ready(() => {
-					if (disposed) return;
-					widgetId = loadedApi.render(container, {
-						sitekey: siteKey,
-						action,
-						callback: () => {
-							ready = true;
-							failed = false;
-						},
-						'error-callback': () => {
-							ready = false;
-							failed = true;
-							return true;
-						},
-						'expired-callback': () => {
-							ready = false;
-							failed = true;
-						},
-						'timeout-callback': () => {
-							ready = false;
-							failed = true;
-						},
-					});
+				if (disposed) return;
+				widgetId = loadedApi.render(container, {
+					sitekey: siteKey,
+					action,
+					callback: () => {
+						ready = true;
+						failed = false;
+					},
+					'error-callback': () => {
+						ready = false;
+						failed = true;
+						return true;
+					},
+					'expired-callback': () => {
+						ready = false;
+						failed = true;
+					},
+					'timeout-callback': () => {
+						ready = false;
+						failed = true;
+					},
 				});
 			})
 			.catch(() => {

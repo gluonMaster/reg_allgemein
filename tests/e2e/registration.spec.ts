@@ -19,6 +19,59 @@ async function fillRegistrationForm(page: Parameters<typeof installSyntheticTurn
 	await page.getByLabel(germanCatalog['auth.privacyAcceptance']).check();
 }
 
+test('initializes async Turnstile through the API onload callback without ready()', async ({
+	page,
+}) => {
+	await installSyntheticTurnstile(page);
+	await page.goto('/auth/register');
+
+	await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+	await expect(
+		page.getByRole('button', { name: germanCatalog['auth.register.submit'] })
+	).toBeEnabled();
+	await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveCount(1);
+	await expect(page.getByRole('alert')).toHaveCount(0);
+	const script = page.locator('#kolibri-turnstile-api');
+	await expect(script).toHaveAttribute('src', /[?&]onload=[A-Za-z0-9_]+/);
+});
+
+test('reuses the loaded API after navigating away and back to registration', async ({ page }) => {
+	await installSyntheticTurnstile(page);
+	await page.goto('/auth/register');
+	await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+	const apiScript = await page.locator('#kolibri-turnstile-api').elementHandle();
+
+	await page.getByRole('link', { name: germanCatalog['auth.link.login'], exact: true }).click();
+	await expect(page).toHaveURL(/\/auth\/login$/);
+	await expect(page.locator('[data-turnstile-state]')).toHaveCount(0);
+	await page
+		.getByRole('link', { name: germanCatalog['auth.link.register'], exact: true })
+		.click();
+
+	await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+	await expect(page.locator('#kolibri-turnstile-api')).toHaveCount(1);
+	await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveCount(1);
+	expect(
+		await apiScript!.evaluate((script) => script === document.getElementById(script.id))
+	).toBe(true);
+});
+
+test('keeps registration disabled when the Turnstile API script fails to load', async ({
+	page,
+}) => {
+	await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js?*', (route) =>
+		route.abort('failed')
+	);
+	await page.goto('/auth/register');
+
+	await expect(page.locator('[data-turnstile-state="failed"]')).toHaveCount(1);
+	await expect(page.getByRole('alert')).toHaveText(germanCatalog['auth.turnstileUnavailable']);
+	await expect(
+		page.getByRole('button', { name: germanCatalog['auth.register.submit'] })
+	).toBeDisabled();
+	await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveCount(0);
+});
+
 test('retains safe registration fields when Turnstile has no submission token', async ({
 	page,
 }) => {
