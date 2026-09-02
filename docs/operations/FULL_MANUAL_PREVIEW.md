@@ -1,6 +1,6 @@
 # Полный ручной preview
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Этот runbook определяет checkpoint `full-manual-preview`: рабочую тестовую
 систему на синтетических данных, а не production release. Канонический origin —
@@ -54,9 +54,9 @@ checkpoint commit. Владелец получает текущий/следую
 
 ## Порядок достижения checkpoint
 
-1. Current Turnstile async/onload remediation ожидает independent review.
+1. Current Turnstile async/onload candidate `bef5789…` получил independent GO.
    На preview подтверждён `P1` `3857` до render. Новый deploy и registration
-   retry запрещены до review и отдельных разрешений; exact current evidence
+   retry требуют отдельных разрешений; exact current evidence
    находится в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
    Historical registration remediation anchor
    `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, прошёл local
@@ -73,7 +73,8 @@ checkpoint commit. Владелец получает текущий/следую
    skip, Chromium 20/20, build, audit 0, docs/scan/diff. Historical focused
    auth/email 71/71 и ACL 25/25, check, build, strict dry-run, audit,
    executable docs contract, release scan и exact diff прошли. Текущий статус —
-   `pending_independent_review`; следующий gate — read-only review нового fix.
+   `independent_go`; следующий gate — отдельное разрешение на preview deploy
+   exact `bef5789…`, затем проверка real Turnstile до разрешённого retry.
    Recovery/schema и два Worker
    deploy уже выполнены по отдельным разрешениям; provider sends, accounts,
    bootstrap и production по-прежнему требуют отдельного прямого разрешения.

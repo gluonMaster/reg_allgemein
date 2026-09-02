@@ -1,6 +1,6 @@
 # Stage 13: traceability требований и release evidence
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
@@ -10,7 +10,9 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Current Turnstile async/onload remediation is pending independent review.
+Current Turnstile async/onload candidate `bef5789…` received independent GO:
+0 P0/P1, existing P2 retained. Fresh registration Chromium 5/5, unit 15/15,
+check 0/0; exact full-suite evidence reused without runtime drift.
 Deployed registration has a confirmed `AUTH-02` P1: async/defer script plus
 `ready()` throws `3857` before widget render. Local regression reproduces this
 failure and checks API-onload initialization, fail-closed submit and remount.

@@ -368,7 +368,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
@@ -380,9 +380,10 @@ synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
 quarantine/manual-AV/business-review paths на выделенных preview resources.
 `feature_disabled` не считается завершением обязательного MVP-контура.
 
-Текущий gate: local Turnstile async/onload remediation ожидает independent
-review. На deployed preview подтверждён `P1` error `3857` до widget render;
-registration retry запрещён до reviewed fix и отдельно разрешённого deploy.
+Текущий gate: Turnstile async/onload candidate `bef5789…` получил independent
+GO (0 P0/P1); требуется отдельное разрешение на exact preview Worker deploy.
+На deployed preview сохраняется `P1` error `3857` до widget render;
+registration retry запрещён до нового deploy/проверки и своего разрешения.
 Current evidence и единственный следующий шаг — в
 [active state](STAGE_13_ACTIVE_STATE.md).
 

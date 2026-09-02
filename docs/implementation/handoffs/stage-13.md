@@ -1,11 +1,11 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
-Статус этапа: `in_progress` — Turnstile async/onload local remediation ожидает
-independent review. Preview registration заблокирована подтверждённым `P1`
+Статус этапа: `in_progress` — Turnstile async/onload candidate `bef5789…` получил
+independent **GO**. Preview registration заблокирована подтверждённым `P1`
 `TurnstileError 3857`; новые deploy/account/provider writes не разрешены.
 
 Исторический reviewed registration remediation anchor
@@ -34,7 +34,36 @@ runtime.
 
 Production readiness: **`blocked` / NO-GO**
 
-### Turnstile async/onload P1 и локальная remediation — 2026-09-02
+### Turnstile async/onload independent review GO — 2026-09-02
+
+- Reviewed exact candidate `bef578917575f233ce4853a1432f1d0d29b22289`, parent
+  `27218225de661126ffde0a8cb597a3add949f619`; review начат на clean docs-only
+  descendant `c23e50211ebf0c8a98f0f7c06e40ea53d34a9bd2`.
+- Независимо проверены три changed files, registration consumer и server-side
+  Siteverify boundary. API onload callback установлен до script append; shared
+  promise не позволяет раннему mount обойти readiness, disposed instance не
+  вызывает render, teardown удаляет widget. Action `registration`, hidden token
+  и fail-closed submit сохранены. Паттерн соответствует
+  [Cloudflare onload example](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#complete-explicit-rendering-examples-by-use-case).
+- Mock запрещает `ready()` для async/defer и render до отложенного API callback;
+  он отличает script load от API readiness. Fresh review checks: Chromium
+  registration `5/5` (59.6s), registration-route/auth-security unit `15/15`,
+  `npm run check` — 0 errors/warnings. Нового runtime diff нет.
+- Verdict по candidate: **GO**, `P0: 0`, `P1: 0`, `P2: 1`, `P3: 0`.
+  Новых findings нет. Прежний P2 recoverability (client/script error и reload)
+  остаётся backlog и не открывает новый remediation loop.
+- Переиспользованы full Vitest `566` passed + 1 Windows skip, full Chromium
+  `23/23`, build и audit `0` exact `bef5789…`: runtime, migrations, dependencies
+  и config после него не менялись. Полные suites/build/audit не повторялись.
+  Для review checkpoint выполняются только docs:check, release:scan и diff check.
+- Review не выполнял remote reads/writes, deploy, registration retry или sends.
+  Deployed `146f9c5…` сохраняет подтверждённый P1; real-token/Siteverify/replay
+  validation pending. Следующее одно действие — получить отдельное разрешение
+  на exact preview Worker deploy `bef5789…`. Retry и production не разрешены.
+  `rollover_required: no`, `recommended_next_session_mode: High`: context точен,
+  следующий разрешённый deploy имеет известные target/postcondition/rollback.
+
+### Turnstile async/onload P1 и локальная remediation — 2026-09-02 (история)
 
 - Exact local runtime candidate `bef578917575f233ce4853a1432f1d0d29b22289`,
   parent `27218225de661126ffde0a8cb597a3add949f619`; не развёрнут, independent
