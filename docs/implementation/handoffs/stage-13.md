@@ -1,10 +1,14 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-09-02.
 
-Статус этапа: `in_progress` — current reviewed registration remediation anchor
+Статус этапа: `in_progress` — Turnstile async/onload local remediation ожидает
+independent review. Preview registration заблокирована подтверждённым `P1`
+`TurnstileError 3857`; новые deploy/account/provider writes не разрешены.
+
+Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
 `fbb9520eb670cd22f5ac236f1203823942078c1a`, получил fresh independent **GO**:
 0 `P0`, 0 `P1`, 1 `P2`, 0 `P3` и теперь развёрнут в preview как active version
@@ -29,6 +33,51 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Turnstile async/onload P1 и локальная remediation — 2026-09-02
+
+- Exact local runtime candidate `bef578917575f233ce4853a1432f1d0d29b22289`,
+  parent `27218225de661126ffde0a8cb597a3add949f619`; не развёрнут, independent
+  review pending. Historical reviewed anchor остаётся `146f9c5…`.
+- После успешного deploy `146f9c5…` владелец открыл registration и увидел
+  `auth.turnstileUnavailable` с disabled submit. POST не был отправлен.
+  Read-only browser diagnosis: actual `api.js` загружен, API существует,
+  script `async/defer=true`, widget iframe count `0`, state `failed`.
+  Вызов `ready()` с no-op callback выбросил `TurnstileError`, code `3857`,
+  до выполнения callback. Это воспроизводимый `P1` для `AUTH-02`, а не key,
+  hostname, CSP или provider rejection.
+- Последний fresh read-only remote preflight `2026-09-02T12:58:14Z` подтвердил
+  `a4fab5d09f63`/100%, Access `302/302/200/204`, exact config/bindings/secrets,
+  D1 `25/pending 0/FK 0`, synthetic `2 + 1703`, нулевые users/tokens/privacy/
+  email-outbox/sessions/auth-audit/register-rate/bootstrap и jobs `9/9` healthy.
+  Диагностика и local remediation не выполняли remote mutation.
+- Owner разрешил только минимальный frontend fix и проверки. `TurnstileWidget`
+  устанавливает global onload callback до script append, ждёт именно API onload
+  и вызывает explicit `render` без `ready()`. Shared promise проверяется раньше
+  наличия API object, чтобы ранний повтор mount не обходил ожидание readiness.
+  Teardown, token callbacks и fail-closed submit сохраняются. Siteverify,
+  backend, keys, Cloudflare settings, dependencies и migrations не изменены.
+- Regression сначала упал на старом коде: ready-state count `0` вместо `1`.
+  Mock теперь воспроизводит запрет `ready()` при async/defer и откладывает API
+  onload после DOM script load. После fix focused registration `3/3` прошли;
+  дополнительные сценарии проверяют failed script и SPA unmount/remount.
+  Full Chromium `23/23` (registration `5/5`), check `0/0`, build,
+  production dependency audit `0`, docs/continuity, release scan `569/569`,
+  focused formatting и diff check прошли. Full Vitest `--maxWorkers=4`:
+  `76/76` files, `566` passed + 1 предусмотренный Windows-only lifecycle skip,
+  `703.14s`, без failed tests. Focused auth/registration unit `15/15` включены
+  в этот полный run. Runtime tree после начала проверок не менялся;
+  последующий checkpoint docs-only, full suite для него не повторяется.
+- Использованы `turnstile-spin` SvelteKit pattern и
+  [актуальная Cloudflare documentation](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/).
+  Browser mock не заменяет real-token/Siteverify/replay preview evidence:
+  destination validation остаётся pending до review, отдельно разрешённого
+  deploy и controlled owner flow. Никаких provider sends в этой сессии нет.
+- Существующий `P2` expiry/client-error reload и failed retained-script retry
+  не расширяет scope. Следующее ровно одно действие — independent read-only
+  review локального exact candidate; после него deploy требует отдельного
+  разрешения. `rollover_required: yes`, `recommended_next_session_mode: Medium`:
+  следующий шаг без remote write и без unresolved remote ambiguity.
 
 ### Registration invalid-input remediation preview deploy — 2026-09-02
 

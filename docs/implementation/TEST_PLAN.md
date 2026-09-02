@@ -278,6 +278,11 @@ blocked gates и local suite их не заменяет.
   browser `Origin: null` с exact same-origin navigation Fetch Metadata проходят
   до action validation, а cross-site/malformed/incomplete variants получают
   `403` до route action;
+- Turnstile async script использует API onload перед explicit render, а не
+  `ready()` (provider error `3857`); mock запрещает render до callback. Browser
+  checks покрывают SPA remount без дублирования script/widget, failed script,
+  disabled submit без token и сохранение safe form fields без password.
+  Эти tests не заменяют separately authorized real-token/Siteverify preview gate;
 - parent A → parent B IDOR для child; request save/submit/cancel; document
   download/delete и route-request carrier; trial create/cancel; contract
   detail/artifact/end/attendance/media и route-offer carrier; price-review;

@@ -1,24 +1,24 @@
 # Stage 13: активное состояние
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T12:46:12Z
+updated_utc: 2026-09-02T13:40:19Z
 reviewed_candidate: 146f9c54ff082ad695ef47c7da9c6a578e09a9a5
-last_completed_gate: phase-3-registration-invalid-input-remediation-preview-deployed
-next_gate: phase-3-retry-first-controlled-preview-account-registration
+last_completed_gate: phase-3-turnstile-async-onload-local-remediation-verified
+next_gate: phase-3-turnstile-async-onload-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: independent_go
+current_review_status: pending_independent_review
 current_phase: phase-3-auth-roles
 last_atomic_action: deploy-reviewed-registration-invalid-input-remediation-to-preview
 last_atomic_result: success
-next_atomic_action: owner-authorize-and-retry-first-controlled-preview-account-registration
+next_atomic_action: independent-review-local-turnstile-async-onload-remediation
 rollover_required: yes
-recommended_next_session_mode: High
-mode_reason_plain: exact-remediation-is-deployed-and-first-controlled-account-write-send-postcondition-and-containment-are-known
+recommended_next_session_mode: Medium
+mode_reason_plain: next-step-is-read-only-independent-review-of-local-fix-no-remote-write-or-ambiguous-remote-result
 -->
 
 Этот файл содержит только current operational truth. История reviews и прежних
@@ -39,18 +39,39 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
-- Latest independently reviewed runtime remediation anchor
+- Local runtime candidate: `bef578917575f233ce4853a1432f1d0d29b22289`,
+  direct parent `27218225de661126ffde0a8cb597a3add949f619`. Изменены только
+  `TurnstileWidget.svelte` и два E2E files. Он не развёрнут и ожидает
+  independent review. Классификация preview: `P0: 0`, `P1: 1`, `P2: 1`,
+  `P3: 0`; `P1` локально исправлен, но remote flow ещё не подтверждён.
+- **Текущий blocker `P1`:** deployed registration не создаёт Turnstile widget.
+  Реальный `api.js` загружен, но `ready()` выбрасывает `TurnstileError 3857`
+  при `async/defer`; render не вызывается, iframe отсутствует, submit disabled.
+  Это подтверждённый отказ `AUTH-02` текущего milestone, а не прежний `P2`.
+  Owner разрешил только минимальную локальную frontend remediation и проверки.
+  Новый candidate ожидает independent review; deploy/registration/provider
+  writes не разрешены. Last remote deploy record ниже остаётся `success`.
+- Fresh local evidence `bef5789…`: regression RED на старом коде → GREEN после
+  API-onload fix; Chromium `23/23`, включая registration `5/5`; check `0/0`,
+  build, production dependency audit `0`, focused formatting, docs/continuity,
+  release scan `569/569` и diff check прошли. Full Vitest `--maxWorkers=4`:
+  `76/76` files, `566` passed + 1 предусмотренный Windows skip, `703.14s`.
+  Все проверки относятся к неизменённому runtime tree `bef5789…`; последующий
+  checkpoint только docs. Повтор полного suite без material diff не требуется.
+  Mock не заменяет real-token/Siteverify/replay validation, которая pending.
+- Latest independently reviewed historical runtime remediation anchor
   `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`; direct parent
   `fbb9520eb670cd22f5ac236f1203823942078c1a`. Он сохраняет безопасные
   registration values, никогда не возвращает password, обновляет current privacy
   version, управляет Turnstile explicit-render lifecycle и не разрешает submit
-  до полученного token. Fresh independent verdict — **GO**, 0 `P0`, 0 `P1`,
-  1 `P2`, 0 `P3`. Отдельно разрешённый preview deploy завершён и проверен;
-  новый registration retry остаётся отдельной mutation и пока не разрешён.
+  до полученного token. Исторический verdict для `146f9c5…` — **GO**,
+  0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; новое browser evidence выше открыло `P1`.
+  Preview deploy завершён, но повтор registration запрещён до исправления,
+  отдельного review и отдельно разрешённого нового deploy.
 - Last deployed candidate:
   `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`; direct parent
   `fbb9520eb670cd22f5ac236f1203823942078c1a`.
-- Fresh independent verdict: **GO**, 0 `P0` / 0 `P1`. Candidate заменяет
+- Исторический verdict `583165e…`: **GO**, 0 `P0` / 0 `P1`. Candidate заменяет
   SvelteKit static URL-origin comparison на runtime guard, привязанный к
   validated `PORTAL_PUBLIC_ORIGIN`; literal `Origin: null` принимается только
   с exact same-origin navigation Fetch Metadata. Full Vitest `75/75`, `563`
@@ -104,8 +125,8 @@ NO-GO до собственных approvals и отдельного поруче
   versioned route `404`, exact config/bindings/three secret names, D1
   `25/pending 0/FK 0`, synthetic `2 + 1703`, нулевые users/tokens/privacy/
   outbox/sessions/auth-audit/register-rate/bootstrap counts, обе private EEUR R2
-  пусты и latest jobs `9/9` healthy. Rollback не требовался. Следующий gate —
-  отдельное разрешение на retry только первого controlled account.
+  пусты и latest jobs `9/9` healthy. Rollback не требовался. Более поздний
+  Turnstile `3857` блокирует регистрацию, но не отменяет deployment postcondition.
 
 ### Phase 0 target lock — 2026-08-31 (pre-mutation evidence)
 
@@ -170,7 +191,7 @@ Fresh reconciliation нужно выполнить непосредственн�
 | 0. Target lock     | `passed`                                                 | exact candidate/preview targets/rollback/recovery source сверены read-only; old recovery is expired/not candidate-bound                                                   | no drift, production/CMS absent; Access deny `302`, valid root/health `200/204`                                                           |
 | 1. Recovery/schema | `passed`                                                 | DPAPI restore exact/plaintext removed; recovery and preview both `25/535`, lineage `8/4`, current `2 + 1703`, FK 0; old Worker root/health `200/204`                      | ledger, FK, local quick-check plus remote exact fallback, key counts                                                                      |
 | 2. Worker deploy   | `passed`                                                 | strict dry-run и deploy exact `1607d6d…`; one active version 100%, bindings/vars/secrets exact, auth/providers fail-closed, previous compatible version retained          | Access deny `302`, valid root/health `200/204`, versioned routes `404`, D1/R2/jobs stable                                                 |
-| 3. Auth/roles      | `registration_remediation_deployed_awaiting_first_retry_permission` | exact runtime anchor `146f9c5…` is active as `a4fab5d09f63` at 100%; previous `2de99c0c5815` retained | separately authorize retry only the first controlled account, then reconcile account/send/D1 state before any second account |
+| 3. Auth/roles      | `turnstile_async_onload_pending_independent_review` | deployed `146f9c5…`/`a4fab5d09f63` has confirmed pre-render P1 error 3857; local frontend fix prepared; previous `2de99c0c5815` retained | independent read-only review of local fix; no deploy or registration retry yet |
 | 4a. Product flows  | `blocked_on_phase_3`                                     | parent/admin/catalog/trial/request/price/support/privacy                                                                                                                  | guided affected browser scenarios                                                                                                         |
 | 4b. Documents      | `blocked_on_phase_3`                                     | real synthetic upload → AV → review → cleanup                                                                                                                             | R2 isolation/hash/owner access                                                                                                            |
 | 4c. Contracts      | `blocked_on_phase_3`                                     | 4 marked PDF + 1 accept/formation/certificate                                                                                                                             | Browser/R2/email receipts and lifecycle                                                                                                   |
@@ -196,10 +217,9 @@ sanitized результат и минимальная проверка. Full ID
 назвать, что сделано, что read-only подтверждено, текущий/следующий atomic step и
 режим следующей сессии, даже если `rollover_required: no`.
 
-Текущая рекомендация — **High**: exact remediation anchor развёрнут и проверен,
-а следующий controlled registration retry имеет известные target,
-postcondition и containment. Account write и verification delivery всё ещё
-требуют отдельного прямого разрешения. `Max`
+Текущая рекомендация — **Medium**: следующий шаг — read-only independent review
+локального frontend fix; нет неоднозначного remote результата. Новый deploy,
+account write и verification delivery требуют отдельных разрешений. `Max`
 нужен лишь при подтверждённом риске неверной среды/production, неоднозначной
 потенциально необратимой записи, неработающем recovery/rollback, corruption,
 Access/authorization bypass, secret exposure или несовместимости code/schema.
@@ -223,25 +243,27 @@ after: one-active-100-percent-version-a4fab5d09f63-previous-2de99c0c5815-availab
 result: success
 evidence: protected-ignored-preview-worker-deploy-evidence-20260902-registration-remediation-json-sha256-prefix-615418836c4a
 rollback_or_containment: rollback-not-required-previous-compatible-version-2de99c0c5815-retained
-next_atomic_action: owner-authorize-and-retry-first-controlled-preview-account-registration
+next_atomic_action: independent-review-local-turnstile-async-onload-remediation
 rollover_required: yes
-recommended_next_session_mode: High
-mode_reason_plain: exact-remediation-is-deployed-and-first-controlled-account-write-send-postcondition-and-containment-are-known
+recommended_next_session_mode: Medium
+mode_reason_plain: next-step-is-read-only-independent-review-of-local-fix-no-remote-write-or-ambiguous-remote-result
 ```
 
 После каждой следующей mutation этот block заменяется её фактическим record;
 результаты попыток принимают ровно `success|failed|ambiguous`.
+Поля next/mode обновлены после локальной диагностики `3857`; before/after/result
+по-прежнему описывают последнюю remote mutation, успешный deploy.
 
 ## Что не повторять
 
-- Не повторять independent review current candidate: exact `146f9c5…` получил
-  GO, 0 `P0` / 0 `P1`; reviewer `P2` записан в handoff.
+- Не переносить historical GO `146f9c5…` на новую local remediation: реальный
+  browser отказ `3857` — `P1`, поэтому новый exact candidate требует review.
 - Не повторять deploy exact `146f9c5…`: preview postcondition прошёл, active
   fingerprint `a4fab5d09f63`; повторный deploy без material drift запрещён.
-- Не повторять registration submit без отдельного разрешения. Exact remediation
-  уже deployed; следующий retry — account/provider mutation с обязательным
+- Не повторять registration submit до исправленного reviewed preview deploy
+  и отдельного разрешения; retry — account/provider mutation с обязательным
   read-only reconcile до любого второго account или bootstrap.
-- Не повторять full local gates без material diff. Exact current evidence:
+- Не повторять full local gates без material diff. Historical `146f9c5…` evidence:
   full Vitest 76/76 files, 566 pass + 1 Windows-only skip; Chromium E2E 20/20;
   check, build, dependency audit 0, docs, release scan и diff check прошли.
 - Не повторять phases 1–2, migrations `0001`–`0025`, synthetic import baseline/

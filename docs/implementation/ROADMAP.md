@@ -368,7 +368,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Канонический operational contract этапа —
 [PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
@@ -380,7 +380,13 @@ synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
 quarantine/manual-AV/business-review paths на выделенных preview resources.
 `feature_disabled` не считается завершением обязательного MVP-контура.
 
-Current registration invalid-input remediation anchor
+Текущий gate: local Turnstile async/onload remediation ожидает independent
+review. На deployed preview подтверждён `P1` error `3857` до widget render;
+registration retry запрещён до reviewed fix и отдельно разрешённого deploy.
+Current evidence и единственный следующий шаг — в
+[active state](STAGE_13_ACTIVE_STATE.md).
+
+Historical registration invalid-input remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, сохраняет
 safe form state, обновляет current privacy version и управляет Turnstile token
 lifecycle. Fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; check
@@ -407,8 +413,9 @@ bootstrap не выполнялись. Первый controlled registration subm
 no-write CSRF/origin rejection. Separately authorized preview deploy exact
 remediation `583165e…` затем прошёл: version fingerprint `2de99c0c5815` active
 100%, Access/root/health/register GET/versioned routes, bindings, D1/R2/jobs
-сохранены, rollback не понадобился. Следующий gate — отдельно разрешённый retry
+сохранены, rollback не понадобился. На том checkpoint следующим gate был retry
 только первого account с verification delivery и обязательным postcondition;
+новый Turnstile P1 теперь требует local fix/review перед продолжением.
 затем отдельные account/bootstrap/provider/document/contract
 flows и owner exploratory pass по
 [FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
