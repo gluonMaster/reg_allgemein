@@ -2,10 +2,7 @@ import { DatabaseBoundary } from '$lib/server/db/database';
 import { scheduledJobNames, type ScheduledJobName } from './operations-repository';
 import { withSecurityHeaders } from '$lib/server/security/response-headers';
 
-const FAST_JOBS: ReadonlySet<ScheduledJobName> = new Set([
-	'email_outbox',
-	'telegram_outbox',
-]);
+const FAST_JOBS: ReadonlySet<ScheduledJobName> = new Set(['email_outbox', 'telegram_outbox']);
 
 export const operationsMonitoringThresholds = {
 	fastJobMaxAgeSeconds: 180,
@@ -16,10 +13,7 @@ export const operationsMonitoringThresholds = {
 } as const;
 
 export type OperationsHealthIssue =
-	| 'missed_fast_cron'
-	| 'missed_maintenance_cron'
-	| 'repeated_worker_errors'
-	| 'stale_job_run';
+	'missed_fast_cron' | 'missed_maintenance_cron' | 'repeated_worker_errors' | 'stale_job_run';
 
 export interface OperationsHealthResult {
 	healthy: boolean;
@@ -72,10 +66,18 @@ export async function evaluateOperationsHealth(
 	const [freshness, scheduledErrors, workerErrors, staleRuns] =
 		await db.batch<MonitoringQueryRow>([
 			{
-				sql: `SELECT job_name, MAX(started_at) AS latest_started_at
-					FROM scheduled_job_runs
-					WHERE trigger_kind = 'scheduled'
-					GROUP BY job_name`,
+				// Seek once per known job using scheduled_job_runs_freshness. A
+				// GROUP BY over all history makes every probe more costly each day.
+				sql: `WITH expected_jobs(job_name) AS (
+					VALUES ${scheduledJobNames.map(() => '(?)').join(', ')}
+				)
+				SELECT expected_jobs.job_name, (
+					SELECT started_at FROM scheduled_job_runs AS run
+					WHERE run.job_name = expected_jobs.job_name
+						AND run.trigger_kind = 'scheduled' AND run.started_at >= ?
+					ORDER BY run.started_at DESC, run.id DESC LIMIT 1
+				) AS latest_started_at FROM expected_jobs`,
+				params: [...scheduledJobNames, before(now, thresholds.maintenanceJobMaxAgeSeconds)],
 			},
 			{
 				sql: `SELECT COUNT(*) AS count FROM scheduled_job_runs

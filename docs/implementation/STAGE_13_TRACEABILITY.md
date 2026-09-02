@@ -1,6 +1,6 @@
 # Stage 13: traceability требований и release evidence
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-09-02.
 
@@ -10,14 +10,17 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Current Turnstile async/onload candidate `bef5789…` received independent GO:
+Historical Turnstile async/onload candidate `bef5789…` received independent GO:
 0 P0/P1, existing P2 retained. Fresh registration Chromium 5/5, unit 15/15,
 check 0/0; exact full-suite evidence reused without runtime drift.
 Separately authorized preview deploy is complete: `745295d36248` at 100%,
 previous compatible `a4fab5d09f63` retained; Access/config/D1/R2 checks passed.
 Fresh Chrome GET rendered the real widget with visible success and enabled submit,
-closing the `AUTH-02` P1 `3857` before render. No registration was submitted.
-Server Siteverify/replay and verification delivery remain pending; see
+closing the `AUTH-02` P1 `3857` before render. Subsequent controlled registration
+failed; workerd reproduced an unbound native fetch receiver error. D1 analytics
+also confirmed excessive operator/health history reads. Local remediation binds
+fetch and uses indexed job lookups; independent review and deployment are pending.
+Local health cost regression reads 15 rows with 20,000 historical runs; see
 [active state](STAGE_13_ACTIVE_STATE.md) for exact current evidence and gate.
 
 Historical reviewed registration remediation anchor is

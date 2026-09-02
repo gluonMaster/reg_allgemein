@@ -1,6 +1,6 @@
 # Полный ручной preview
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Этот runbook определяет checkpoint `full-manual-preview`: рабочую тестовую
 систему на синтетических данных, а не production release. Канонический origin —
@@ -54,16 +54,17 @@ checkpoint commit. Владелец получает текущий/следую
 
 ## Порядок достижения checkpoint
 
-1. Current reviewed Turnstile async/onload candidate `bef5789…` развёрнут как
+1. Historical reviewed Turnstile async/onload candidate `bef5789…` развёрнут как
    `745295d36248`/100%; real widget показал «Успешно», submit enabled, render P1
-   закрыт. Первый controlled registration/verification delivery требует
-   отдельного разрешения; exact current evidence
+   закрыт. Последующая разрешённая registration failed. Локально исправляются
+   native fetch receiver и D1 history-scan cost; новый review/deploy/retry pending.
+   Exact current evidence
    находится в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
    Historical registration remediation anchor
    `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, прошёл local
    release gates и получил fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`,
    0 `P3`. Он ранее был развёрнут как `a4fab5d09f63`/100% и теперь retained
-   для rollback нового candidate.
+   для rollback этого исторического deploy.
    Historical deployed candidate
    `ec11bbc43c3af69d9e60cce4064863db33c45ad2`,
    direct child `e8a67d088ef1ddd2b362596fee494c3e68b6c985`, сохраняет Worker runtime,
@@ -74,9 +75,10 @@ checkpoint commit. Владелец получает текущий/следую
    skip, Chromium 20/20, build, audit 0, docs/scan/diff. Historical focused
    auth/email 71/71 и ACL 25/25, check, build, strict dry-run, audit,
    executable docs contract, release scan и exact diff прошли. Текущий статус —
-   `independent_go`; deploy exact `bef5789…` и real widget check пройдены.
-   Следующий gate — разрешение на controlled registration/verification delivery
-   и server Siteverify с обязательным read-only reconcile.
+   `pending_independent_review` для нового local remediation. Deploy exact
+   `bef5789…` и real widget check остаются историческим evidence. Дорогие D1
+   snapshots и health diagnostic polling остановлены; следующие remote gates
+   требуют cost-bounded procedure и нового разрешения после review.
    Recovery/schema и два Worker
    deploy уже выполнены по отдельным разрешениям; provider sends, accounts,
    bootstrap и production по-прежнему требуют отдельного прямого разрешения.

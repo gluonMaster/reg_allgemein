@@ -1,6 +1,6 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-09-02.
 
@@ -34,6 +34,38 @@ provider send, account/verification/bootstrap, новые D1/R2 writes, producti
 runtime.
 
 Production readiness: **`blocked` / NO-GO**
+
+### Local remediation после D1 incident — 2026-09-02
+
+- Native Turnstile fetch привязан к `globalThis`; отдельный test bundles/imports
+  настоящий verifier и выполняет его в workerd с synthetic outbound service.
+  Старый verifier воспроизводимо возвращал false до outbound call, новый проходит.
+- Health freshness заменён на indexed latest lookup для девяти известных jobs
+  внутри релевантного временного окна. Existing migration/index достаточны;
+  schema/data/retention и Cron cadence не изменяются. Operator summary вынесен в
+  `scripts/sql/latest-job-status.sql`. Локальная D1 с 20,000 старыми runs:
+  весь health batch **15 reads**, operator summary **18 reads**.
+- Четыре прежних ignored operational scripts (`stage13-preview-readonly-functions`,
+  `stage13-turnstile-onload-deploy`, `stage13-registration-remediation-deploy`,
+  `stage13-postdeploy`) теперь завершаются с явным stop до config/network access.
+  Новую target-locked процедуру строить с measured SQL; старые window scans
+  не разблокировать. Remote quota probes, deletes, тариф/deploy/flags/Cron
+  changes и registration retry не выполнялись.
+- Final focused verification: Turnstile workerd `1/1`, monitoring D1 `7/7`,
+  auth/security/registration-route unit `15/15`, registration Chromium `5/5`,
+  check `0/0`, docs/continuity, release scan `572/572`, formatting и diff passed.
+  При создании новых tests исправлены два harness defects (Vite output array
+  и spy на D1 proxy); приведённый итог относится к исправленному final run.
+  Полные Vitest/E2E, build и audit нового runtime не запускались в incident
+  diagnosis: их нельзя считать унаследованными от `bef5789…`; они остаются
+  обязательным pre-deploy gate по AGENTS.md. Independent review pending.
+- Preview всё ещё использует `745295d36248`/`bef5789…`. На Free quota excess
+  блокирует queries, не создаёт автоматического платного overage; dashboard
+  показывал $0.00. Reset из owner notification — `2026-09-03T00:00:00Z`
+  (02:00 Europe/Berlin). Upgrade не выполнялся.
+- Next atomic action: local release validation и independent review до нового
+  разрешения на preview deploy. `rollover_required: no`,
+  `recommended_next_session_mode: High`; remote ambiguity отсутствует.
 
 ### Controlled registration failed; D1 quota incident — 2026-09-02
 

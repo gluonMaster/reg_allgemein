@@ -9,6 +9,13 @@
 - Бизнес-правило получает unit/golden test; граница D1/R2/API — integration test;
   критический пользовательский путь — browser/e2e smoke.
 - Ошибка внешнего провайдера эмулируется deterministic fake adapter.
+- Native Workers API boundary проверяется и в workerd без подмены самого API:
+  Turnstile verifier использует default fetch, а synthetic provider response
+  задаётся через outbound service. Это ловит receiver-binding ошибки, которые
+  Node mock скрывает.
+- Health/operator D1 queries проверяются на накопленной synthetic job history:
+  измерять `meta.rows_read` реальной локальной D1, а не только число SQL calls
+  и корректность возвращённого статуса.
 - Concurrency/idempotency проверяется повтором и параллельными запросами, а не
   только happy path.
 - Browser/e2e runner — Playwright согласно `ADR-011`; этап 01 создает harness,

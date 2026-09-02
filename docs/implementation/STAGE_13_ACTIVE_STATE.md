@@ -1,21 +1,21 @@
 # Stage 13: активное состояние
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T14:29:34Z
+updated_utc: 2026-09-02T14:42:00Z
 reviewed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
 last_completed_gate: phase-3-turnstile-async-onload-preview-deploy-and-real-widget-passed
-next_gate: phase-3-turnstile-workers-and-d1-read-cost-remediation
+next_gate: phase-3-remediation-release-validation-and-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: independent_go
+current_review_status: pending_independent_review
 current_phase: phase-3-auth-roles
 last_atomic_action: owner-authorized-first-controlled-registration
 last_atomic_result: failed
-next_atomic_action: local-remediation-and-regression-of-turnstile-fetch-and-history-scan-cost
+next_atomic_action: local-release-validation-and-independent-review-before-preview-deploy
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: two-reproduced-preview-p1-defects-known-target-no-account-or-provider-write-no-remote-ambiguity
@@ -39,6 +39,21 @@ NO-GO до собственных approvals и отдельного поруче
 
 ## Current verdict и следующий gate
 
+- **Local remediation подготовлена, ещё не deployed/reviewed.** Turnstile
+  default fetch связан с `globalThis`; regression импортирует настоящий verifier
+  и запускает его в workerd (старый код RED, исправленный GREEN). Health вместо
+  history-wide GROUP BY использует existing index и latest lookup по каждому
+  известному job в релевантном freshness window. Operator replacement SQL:
+  [latest-job-status.sql](../../scripts/sql/latest-job-status.sql).
+  Локальная D1 с 20,000 старыми runs: весь health batch читает **15 rows**,
+  operator job summary — **18 rows**. Auth/security/registration unit `15/15`,
+  workerd `1/1`, monitoring D1 `7/7`, registration Chromium `5/5`, check `0/0`
+  прошли. Full suites/build/audit
+  нового runtime ещё не являются release evidence; до deploy нужны полные
+  release gates по AGENTS.md и independent review. Historical `bef5789…` full
+  evidence нельзя переносить на изменённый runtime.
+  Четыре старых ignored operational scripts получили unconditional stop до
+  network/config reads. Их нельзя разблокировать без новой cost-bounded процедуры.
 - **Новый incident 2026-09-02: два P1 текущего preview milestone.** Первая
   разрешённая controlled registration вернула Turnstile rejection. Read-only
   postcondition `2026-09-02T14:14:25Z`: version `745295d36248`/100%, exact config,
@@ -307,7 +322,7 @@ after: same-version-config-schema-synthetic-r2-users-tokens-privacy-outbox-sessi
 result: failed
 evidence: protected-before-985e4b4f1084-after-112d74be920a-local-workerd-illegal-invocation-analytics-4b09060ddd46
 rollback_or_containment: no-account-or-send-to-reverse-no-retry-heavy-d1-and-health-probes-stopped-previous-version-retained
-next_atomic_action: local-remediation-and-regression-of-turnstile-fetch-and-history-scan-cost
+next_atomic_action: local-release-validation-and-independent-review-before-preview-deploy
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: two-reproduced-preview-p1-defects-known-target-no-account-or-provider-write-no-remote-ambiguity

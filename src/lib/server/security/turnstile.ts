@@ -19,7 +19,7 @@ export class CloudflareTurnstileVerifier implements TurnstileVerifier {
 		private readonly secret: string,
 		private readonly expectedAction: string,
 		expectedHostnames: readonly string[],
-		private readonly fetcher: typeof fetch = fetch
+		private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis)
 	) {
 		this.expectedHostnames = new Set(
 			expectedHostnames.map((hostname) => hostname.toLowerCase())

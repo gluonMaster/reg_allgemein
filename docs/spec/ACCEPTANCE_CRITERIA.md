@@ -59,6 +59,9 @@ MVP готов, когда:
 - Регистрация отклоняет Turnstile token при `success=false`, несовпадении action
   `registration`, отсутствии hostname или несовпадении hostname с exact allowlist
   текущего deployment; production config не принимает local hostnames. (`AUTH-02`)
+- Server Siteverify path проверяется также с default native `fetch` в Workers
+  runtime: solved token действительно отправляется провайдеру, receiver error
+  не маскируется injected Node fetch mock. (`AUTH-02`)
 - Два аккаунта с одинаковым паролем получают разные salted hashes. Пароль
   отклоняется по ограничению длины до hash operation; исходный пароль и hash не
   появляются в логах, telemetry или тексте ошибки. (`AUTH-03`)
@@ -921,6 +924,10 @@ MVP готов, когда:
   PII-free minute buckets с bounded 7-day cleanup. Production gate требует
   отдельного внешнего poller, проверенной доставки alert и owner; сам Worker не
   может доказать отсутствие собственного Cron. (`OBS-02`, `OPS-01`, `SEC-02`)
+- Накопление завершённых scheduled runs не превращает каждую health/operator
+  freshness проверку в полный обход истории. Локальный regression с 20,000
+  старыми runs проверяет фактический `meta.rows_read` и indexed latest lookup,
+  сохраняя missing/stale/error fail-closed semantics. (`OBS-02`, `OPS-01`)
 - First-admin capability не имеет HTTP route и потребляется ровно один раз:
   verified active parent без retained parent workflow/business state повышается
   только при нуле active admin, sessions отзываются, audit/assertion

@@ -1,6 +1,6 @@
 # Ежедневная эксплуатация и реагирование
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-08-20.
 
@@ -135,6 +135,14 @@ Cloudflare Metrics/Query Insights, не SQL console. Сначала локаль
 Не удалять историю и не отключать Cron вслепую; `SCHEDULED_JOBS_ENABLED=false`
 сам по себе не прекращает lease/run writes. Подробности и protected evidence
 находятся в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
+
+Local remediation использует индекс `scheduled_job_runs_freshness` для одного
+latest lookup на каждый известный job в его freshness window. Для operator
+summary использовать [latest-job-status.sql](../../scripts/sql/latest-job-status.sql),
+а не две window functions по всей таблице. Regression с 20,000 завершёнными
+историческими runs измеряет весь health batch и operator summary через
+`meta.rows_read` (15 и 18 соответственно). Это local evidence; старый Worker
+в preview сохраняет дорогой запрос до отдельно разрешённого нового deploy.
 
 Для деталей открыть `<PORTAL_ORIGIN>/admin/operations`: страница показывает
 recent `job_name`, `status`, trigger/start/finish, safe result и safe error code.

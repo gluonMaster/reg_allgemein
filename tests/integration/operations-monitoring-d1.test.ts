@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readFile } from 'node:fs/promises';
 import { DatabaseBoundary } from '$lib/server/db/database';
 import {
 	createOperationsHealthResponse,
@@ -72,6 +73,45 @@ describe('preview operations monitoring', () => {
 			healthy: true,
 			issues: [],
 			recentErrorCount: 0,
+		});
+	});
+
+	it('keeps health reads bounded when completed job history grows', async () => {
+		await seedFreshRuns();
+		await db.run({
+			sql: `WITH RECURSIVE history(n) AS (
+				SELECT 1 UNION ALL SELECT n + 1 FROM history WHERE n < 20000
+			)
+			INSERT INTO scheduled_job_runs
+				(id, job_name, trigger_kind, dedupe_key, status, started_at,
+				 finished_at, created_at, updated_at)
+			SELECT 'history-' || n, 'email_outbox', 'scheduled', 'history-' || n,
+				'succeeded', '2026-08-01T12:00:00.000Z', '2026-08-01T12:00:00.000Z',
+				'2026-08-01T12:00:00.000Z', '2026-08-01T12:00:00.000Z'
+			FROM history`,
+		});
+		let rowsRead = 0;
+		let queries = 0;
+		const measured = {
+			prepare: context.db.prepare.bind(context.db),
+			async batch<T>(statements: D1PreparedStatement[]) {
+				const results = await context.db.batch<T>(statements);
+				queries += results.length;
+				rowsRead += results.reduce((sum, item) => sum + item.meta.rows_read, 0);
+				return results;
+			},
+		} as D1Database;
+		expect((await evaluateOperationsHealth(measured, NOW)).healthy).toBe(true);
+		expect(queries).toBe(4);
+		expect(rowsRead).toBeLessThan(100);
+		const snapshot = await db.all({
+			sql: await readFile('scripts/sql/latest-job-status.sql', 'utf8'),
+		});
+		expect(snapshot.results).toEqual([{ latest_jobs: 9, latest_jobs_healthy: 9 }]);
+		expect(snapshot.meta.rows_read).toBeLessThan(100);
+		console.info('Local D1 read cost:', {
+			health: rowsRead,
+			snapshot: snapshot.meta.rows_read,
 		});
 	});
 
@@ -161,7 +201,9 @@ describe('preview operations monitoring', () => {
 		const result = await new OperationsRepository(db).cleanupSecurityMetadata(NOW, 10);
 		expect(result.workerErrorBuckets).toBe(1);
 		expect(
-			await db.first<{ count: number }>({ sql: 'SELECT COUNT(*) AS count FROM worker_error_buckets' })
+			await db.first<{ count: number }>({
+				sql: 'SELECT COUNT(*) AS count FROM worker_error_buckets',
+			})
 		).toEqual({ count: 1 });
 	});
 });

@@ -1,6 +1,6 @@
 # Production readiness checklist
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Актуально на 2026-09-02. Это текущий release ledger, а не обещание будущей
 готовности.
