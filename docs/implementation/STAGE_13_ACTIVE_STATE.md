@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T16:50:10Z
+updated_utc: 2026-09-03T16:59:16Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-4-first-registration-and-verification-delivery-success
 next_gate: phase-4-first-email-verification-with-automatic-welcome-delivery
@@ -12,7 +12,7 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-first-parent-unverified-awaiting-welcome-send-permission
+current_phase: phase-4-welcome-authorized-awaiting-owner-email-verification
 last_atomic_action: preview-first-registration-and-verification-delivery
 last_atomic_result: success
 next_atomic_action: authorize-then-owner-open-verification-link-with-one-automatic-welcome-delivery
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: registration_permission_consumed_verification_authorized_welcome_delivery_not_authorized
+permission_state: one_email_verification_and_one_automatic_welcome_delivery_authorized_not_attempted
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -100,7 +100,7 @@ flow_verification:
   login_logout: authorized_after_verified_account_and_per_action_checkpoints
 next_atomic_action:
   id: preview-first-email-verification-with-welcome-delivery
-  permission: verification_authorized_by_prompt_04_automatic_welcome_delivery_requires_explicit_additional_authorization
+  permission: verification_authorized_by_prompt_04_and_one_automatic_welcome_delivery_explicitly_authorized_2026_09_03T16_59_16Z
   target: exact_access_protected_preview_and_existing_controlled_recipient_record
   mutation: owner_opens_existing_verification_link_once_then_exactly_one_automatic_auth_welcome_delivery
   preconditions:
@@ -130,6 +130,27 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Welcome-delivery permission checkpoint — 2026-09-03
+
+The owner explicitly authorized exactly one automatic `auth.welcome` delivery
+to the same allowlisted recipient after personally opening the existing
+verification link once. The authorization does not permit a resend, second link
+open/retry, second account, registration retry, login, bootstrap, unrelated
+provider send, deploy or configuration mutation. No remote mutation or provider
+send was attempted while recording this permission.
+
+The next atomic action is the owner's single personal opening of the existing
+verification link. The link/token must not be shared in chat or evidence. After
+the visible result and expected welcome delivery, run the prepared single
+bounded `after-verification` reconciliation and create its docs-only checkpoint
+before login. Failed or ambiguous verification is not retried blindly.
+
+This is a permission-only docs update. Existing target/candidate/registration
+postconditions remain the current bounded evidence; no additional D1, analytics
+or health read is justified before the immediate supervised action.
+`rollover_required: no`; `recommended_next_session_mode: High` because the next
+linked verification/provider mutation and its containment are known.
 
 ## First controlled registration and verification delivery — 2026-09-03
 
