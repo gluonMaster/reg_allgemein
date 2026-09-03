@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T17:06:06Z
+updated_utc: 2026-09-03T17:32:29Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-first-verified-parent-login-success
-next_gate: phase-4-first-verified-parent-logout
+last_completed_gate: phase-4-first-registration-verification-login-logout-success
+next_gate: phase-4-separate-owner-decision-before-second-account-bootstrap
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-first-parent-logged-in-awaiting-owner-logout
-last_atomic_action: preview-first-verified-parent-login
+current_phase: phase-4-prompt-04-complete-one-owner-created-session-remains-active
+last_atomic_action: preview-owner-second-session-logout
 last_atomic_result: success
-next_atomic_action: owner-logout-once-then-readonly-reconcile-and-checkpoint
+next_atomic_action: request-separate-owner-authorization-before-second-account-bootstrap
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: controlled-preview-registration-target-procedure-and-containment-are-known
+mode_reason_plain: next-remote-preview-scenario-needs-separate-owner-authorization-but-target-and-containment-are-known
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: verification_welcome_login_permissions_consumed_logout_authorized_by_prompt_04
+permission_state: prompt_04_permissions_consumed_no_further_mutation_authorized
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -68,8 +68,8 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-03T16:31:39Z
-    postcondition_rows_read: 47
+    latest_bounded_postcondition_utc: 2026-09-03T17:29:09Z
+    postcondition_rows_read: 57
     postcondition_rows_written: 0
   scheduled:
     fast: succeeded_fresh
@@ -90,8 +90,9 @@ preview:
     users_with_family_id: 1
     verification_deliveries_sent_with_receipt: 1
     welcome_deliveries_sent_with_receipt: 1
-    auth_sessions: 1
+    auth_sessions: 2
     nonrevoked_auth_sessions: 1
+    logged_out_auth_sessions: 1
     import_pair: 2_plus_1703
   providers:
     auth_and_resend: enabled_only_behind_access_and_two_recipient_hashes
@@ -102,26 +103,24 @@ flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
-  login_logout: login_success_one_active_session_logout_authorized_not_attempted
+  login_logout: success_current_session_revoked_one_owner_created_parallel_session_remains_active
 next_atomic_action:
-  id: preview-first-verified-parent-logout
-  permission: owner_invoked_prompt_04_logout_authorization_active
-  target: exact_access_protected_preview_and_existing_controlled_recipient_record
-  mutation: owner_logs_out_once_from_the_single_active_session
+  id: request-separate-second-account-bootstrap-authorization
+  permission: none_waiting_for_separate_explicit_owner_authorization
+  target: no_remote_target_permission_request_only
+  mutation: none
   preconditions:
-    - exact_reviewed_worker_and_migration_0026_deploy_checkpoint_successful
-    - protected_preview_target_access_and_recipient_allowlist_unchanged
-    - login_postcondition_exactly_one_nonrevoked_session_and_unchanged_verified_parent_state
-    - owner_uses_only_the_visible_portal_logout_control
+    - prompt_04_success_checkpoint_committed
+    - known_remaining_owner_created_session_recorded_and_contained
+    - no_new_login_or_session_cleanup_is_implied
   postcondition:
-    - one_bounded_reconciliation_of_exactly_one_revoked_logout_session_and_zero_nonrevoked_sessions
-    - no_duplicate_user_token_outbox_send_or_bootstrap
-    - checkpoint_before_any_following_mutation
-  success_transition: checkpoint_prompt_04_complete_then_request_separate_second_account_permission
-  failed_or_ambiguous_transition: stop_reconcile_no_blind_logout_retry_or_automatic_worker_rollback
+    - explicit_owner_decision_defines_exactly_one_next_bounded_remote_scenario
+    - no_remote_mutation_or_provider_send_during_the_permission_checkpoint
+  success_transition: prepare_exact_preconditions_for_the_separately_authorized_scenario
+  failed_or_ambiguous_transition: remain_stopped_with_prompt_04_state_unchanged
   forbidden_in_this_action:
     - registration_retry_resend_or_verification_link_replay
-    - login_retry_second_account_or_bootstrap
+    - login_session_cleanup_second_account_or_bootstrap_without_new_permission
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
     - bootstrap_role_change_or_unrelated_session_mutation
@@ -129,11 +128,58 @@ next_atomic_action:
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
-  - automatic_auth_welcome_delivery_to_the_same_allowlisted_recipient_during_verification
+  - optional_early_revocation_of_the_known_remaining_owner_created_session
   - second_verified_synthetic_account_then_one_shot_admin_bootstrap
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## First verified-parent logout and Prompt 04 completion — 2026-09-03
+
+Result: `success`. The owner used the normal `Abmelden` control and was returned
+to the login route. The bounded reconciliation at `17:29:09Z` confirmed two auth
+session rows in total, one revoked by logout and one still nonrevoked. The owner
+then explained the complete sequence: after the first successful login, the
+hard-to-find logout control led them back through Startseite and a second login;
+the tested logout therefore correctly revoked that current second session. The
+remaining row is the known first owner-created session, not an unexplained
+duplicate. The tentative `P1` classification is withdrawn.
+
+Prompt 04 is complete: the single synthetic parent is verified, delivery is
+terminal, login and current-session logout both worked, and admin/bootstrap
+state is unchanged. Account, privacy, used verification token, verification
+commit, FamilyID, both terminal email rows/receipts and audit counts remain
+exactly unchanged. There are no extra user, token, outbox or provider-send rows,
+no admins/bootstrap and no unrelated Telegram/storage state. Eleven SELECT
+statements read 57 rows, wrote 0 and reported `changes=0`,
+`changed_db=false`; the exact Worker fingerprint `ad3134edb662`, migration
+ledger `0001`–`0026`, bindings, gates, schedules and recipient hashes remain
+exact.
+
+Owner feedback is recorded as mandatory follow-up `P2-LOGOUT-UX-002`: logout
+exists under `Kontosicherheit`, but it is not visible in the cabinet's primary
+or persistent navigation. The owner had to search for it and created another
+session while returning through Startseite. A prominent `Abmelden` control must
+be added in a later UI change with an affected browser scenario. The current
+milestone flow remained available and worked, so the finding does not reopen
+candidate review and no code change is made under Prompt 04.
+
+Protected current-user-only ignored evidence:
+`tmp/first-registration-20260903-owner/after-logout-safe.json`, SHA-256
+`92e3c2568ed53fc4b722cb3c968b33b1c85b9db3e5da26acab74a93bce8e9176`.
+
+Containment: no new login, session cleanup, registration/resend, verification
+replay, second account or bootstrap is authorized. The known remaining session
+may be revoked early only under a separate explicit owner authorization and a
+bounded procedure; it does not make Prompt 04 ambiguous. The one next action is
+to request separate owner authorization before the second-account/bootstrap
+scenario.
+
+Validation remains `npm run docs:check`, `npm run release:scan` and
+`git diff --check`; runtime/config are unchanged and the exact-candidate release
+gate/review are reused. `rollover_required: no`;
+`recommended_next_session_mode: High` because the next remote preview scenario
+has known target and containment but still requires separate authorization.
 
 ## First verified-parent login — 2026-09-03
 

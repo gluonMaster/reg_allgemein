@@ -19,6 +19,30 @@
 
 ## Append-only evidence history
 
+### First logout, explained parallel session and Prompt 04 completion — 2026-09-03
+
+- The owner used `Abmelden` and returned to the login route. The bounded
+  postcondition found two session rows: one logged out and one nonrevoked. The
+  owner explained that they had made a second login after returning through
+  Startseite while looking for logout. The current logout correctly revoked
+  that second session; the first owner-created session remains known and
+  contained. There is no unexplained duplicate and no `P1`.
+- Prompt 04 is complete. One verified synthetic parent, privacy acceptance,
+  FamilyID, used token, verification commit, verification/welcome deliveries
+  and audit state remain exact; admins/bootstrap, extra user/token/outbox/send
+  and unrelated provider/storage state remain absent. Eleven SELECTs read 57
+  rows and wrote 0; the exact target and deployed candidate remain unchanged.
+- Mandatory follow-up `P2-LOGOUT-UX-002`: make `Abmelden` prominent in the
+  cabinet's primary or persistent navigation and cover the affected browser
+  flow. Its current placement under `Kontosicherheit` made the owner search for
+  it and contributed to an extra login. Prompt 04 forbids the UI code change,
+  and the working logout flow does not reopen candidate review.
+- Protected evidence:
+  `tmp/first-registration-20260903-owner/after-logout-safe.json`, SHA-256
+  `92e3c2568ed53fc4b722cb3c968b33b1c85b9db3e5da26acab74a93bce8e9176`.
+  Current containment, permissions and next action remain exclusively in
+  [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### First verified-parent login — 2026-09-03
 
 - One owner login successfully opened the parent cabinet. The bounded
