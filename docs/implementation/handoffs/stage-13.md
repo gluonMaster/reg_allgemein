@@ -19,6 +19,19 @@
 
 ## Append-only evidence history
 
+### First verified-parent login — 2026-09-03
+
+- One owner login successfully opened the parent cabinet. The bounded
+  postcondition confirmed exactly one nonrevoked session and one login rate
+  consumption, with unchanged account/verification/email state and no bootstrap
+  or unrelated provider/storage state.
+- Eleven SELECTs read 56 rows and wrote 0; target, reviewed Worker, bindings,
+  gates, schedules and recipient hashes remained exact. Protected evidence:
+  `tmp/first-registration-20260903-owner/after-login-safe.json`, SHA-256
+  `ad1a9e9489c4358845fea72498a3363a7d4b62e7cdb7277d7830d065a84ad528`.
+  Current logout authorization and containment remain in
+  [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### First verification and welcome delivery — 2026-09-03
 
 - The owner opened the existing verification link once and received the single

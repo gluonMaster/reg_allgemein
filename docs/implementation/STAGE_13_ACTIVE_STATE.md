@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T17:02:36Z
+updated_utc: 2026-09-03T17:06:06Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-first-email-verification-and-welcome-delivery-success
-next_gate: phase-4-first-verified-parent-login
+last_completed_gate: phase-4-first-verified-parent-login-success
+next_gate: phase-4-first-verified-parent-logout
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-first-parent-verified-awaiting-owner-login
-last_atomic_action: preview-first-email-verification-and-automatic-welcome-delivery
+current_phase: phase-4-first-parent-logged-in-awaiting-owner-logout
+last_atomic_action: preview-first-verified-parent-login
 last_atomic_result: success
-next_atomic_action: owner-login-once-then-readonly-reconcile-and-checkpoint
+next_atomic_action: owner-logout-once-then-readonly-reconcile-and-checkpoint
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: controlled-preview-registration-target-procedure-and-containment-are-known
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: verification_and_welcome_permission_consumed_login_logout_authorized_by_prompt_04
+permission_state: verification_welcome_login_permissions_consumed_logout_authorized_by_prompt_04
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -90,7 +90,8 @@ preview:
     users_with_family_id: 1
     verification_deliveries_sent_with_receipt: 1
     welcome_deliveries_sent_with_receipt: 1
-    auth_sessions: 0
+    auth_sessions: 1
+    nonrevoked_auth_sessions: 1
     import_pair: 2_plus_1703
   providers:
     auth_and_resend: enabled_only_behind_access_and_two_recipient_hashes
@@ -101,26 +102,26 @@ flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
-  login_logout: authorized_not_attempted_checkpoint_required_between_login_and_logout
+  login_logout: login_success_one_active_session_logout_authorized_not_attempted
 next_atomic_action:
-  id: preview-first-verified-parent-login
-  permission: owner_invoked_prompt_04_login_authorization_active
+  id: preview-first-verified-parent-logout
+  permission: owner_invoked_prompt_04_logout_authorization_active
   target: exact_access_protected_preview_and_existing_controlled_recipient_record
-  mutation: owner_logs_in_once_with_existing_verified_synthetic_account
+  mutation: owner_logs_out_once_from_the_single_active_session
   preconditions:
     - exact_reviewed_worker_and_migration_0026_deploy_checkpoint_successful
     - protected_preview_target_access_and_recipient_allowlist_unchanged
-    - verification_postcondition_exactly_one_verified_parent_one_family_id_and_two_terminal_email_deliveries
-    - owner_enters_email_and_password_personally_without_sharing_or_recording_them
+    - login_postcondition_exactly_one_nonrevoked_session_and_unchanged_verified_parent_state
+    - owner_uses_only_the_visible_portal_logout_control
   postcondition:
-    - one_bounded_reconciliation_of_exactly_one_nonrevoked_session_and_auth_state
+    - one_bounded_reconciliation_of_exactly_one_revoked_logout_session_and_zero_nonrevoked_sessions
     - no_duplicate_user_token_outbox_send_or_bootstrap
     - checkpoint_before_any_following_mutation
-  success_transition: checkpoint_then_owner_logout_under_prompt_04_authorization
-  failed_or_ambiguous_transition: stop_reconcile_no_blind_login_retry_or_automatic_worker_rollback
+  success_transition: checkpoint_prompt_04_complete_then_request_separate_second_account_permission
+  failed_or_ambiguous_transition: stop_reconcile_no_blind_logout_retry_or_automatic_worker_rollback
   forbidden_in_this_action:
     - registration_retry_resend_or_verification_link_replay
-    - logout_before_post_login_checkpoint
+    - login_retry_second_account_or_bootstrap
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
     - bootstrap_role_change_or_unrelated_session_mutation
@@ -133,6 +134,40 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## First verified-parent login — 2026-09-03
+
+Result: `success`. The owner logged in once with the verified synthetic account
+and reported that the parent cabinet opened. The bounded reconciliation at
+`17:05:49Z` confirmed exactly one auth session, nonrevoked 1, logged-out 0, and
+one consumed `auth:login` rate-limit bucket. Login authorization is consumed;
+logout remains authorized by prompt 04 but was not attempted before this
+checkpoint.
+
+The exact Worker fingerprint `ad3134edb662` remains active at 100% with unchanged
+bindings, feature gates, Cron schedules and recipient hashes. Eleven SELECT
+statements read 56 rows, wrote 0 and reported `changes=0`, `changed_db=false`;
+the exact migration ledger remains `0001`–`0026`, pending 0. Account, verified
+status, FamilyID, privacy acknowledgement, used verification token, verification
+commit, both terminal email rows/receipts and registration/verification audit
+remain unchanged. There are no admins/bootstrap, extra outbox rows, Telegram
+attempts or storage intents.
+
+Protected current-user-only ignored evidence:
+`tmp/first-registration-20260903-owner/after-login-safe.json`, SHA-256
+`ad1a9e9489c4358845fea72498a3363a7d4b62e7cdb7277d7830d065a84ad528`.
+
+Containment: the owner remains in the single active session and must perform
+only one normal portal logout after this docs checkpoint. Do not login again,
+register/resend/replay verification, create business state or bootstrap. After
+logout, run the prepared one-time `after-logout` reconciliation and docs-only
+checkpoint before any following mutation.
+
+Validation remains `npm run docs:check`, `npm run release:scan` and
+`git diff --check`; runtime/config are unchanged and the exact-candidate release
+gate/review are reused. `rollover_required: no`;
+`recommended_next_session_mode: High`: one authorized session-revocation action,
+postcondition and containment remain.
 
 ## First email verification and welcome delivery — 2026-09-03
 
