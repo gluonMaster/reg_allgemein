@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T14:15:17Z
+updated_utc: 2026-09-03T14:33:27Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-3-d1-cost-release-validation-and-independent-review-go
-next_gate: phase-4-owner-authorized-preview-d1-0026-apply
+last_completed_gate: phase-4-preview-d1-0026-apply-success
+next_gate: phase-4-separately-authorized-reviewed-worker-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-preview-d1-0026-preflight-ready-after-integrity-reconciliation
-last_atomic_action: preview-d1-0026-read-only-integrity-and-file-path-reconciliation
+current_phase: phase-4-preview-d1-0026-applied-awaiting-worker-deploy-permission
+last_atomic_action: preview-d1-apply-0026
 last_atomic_result: success
-next_atomic_action: owner-authorized-preview-d1-0026-apply-with-command-path-postcondition
+next_atomic_action: request-separate-owner-authorization-for-reviewed-worker-deploy
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: exact-preview-target-migration-command-postcondition-and-containment-are-known
+mode_reason_plain: exact-worker-target-candidate-postcondition-and-containment-are-known
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_authorized_one_conditional_0026_apply_not_attempted_preflight_ready
+permission_state: no_remote_mutation_authorized_0026_permission_consumed
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -57,13 +57,13 @@ preview:
     origin_host: 88ed782ba25a
     d1: ccdeb22bb2a1
   d1:
-    applied_through: 0025_contract_storage_intent_generations.sql
-    pending_exactly:
-      - 0026_background_d1_cost_controls.sql
+    applied_through: 0026_background_d1_cost_controls.sql
+    pending_exactly: []
     last_recorded_foreign_key_violations: 0
-    quota_precondition: confirmed_by_account_analytics_2026_09_03T14_07_48Z_revalidate_immediately_before_future_write
-    integrity_precondition: affected_table_scoped_quick_check_supported_largest_table_remote_ok_full_postcondition_local_ok
-    migration_attempted: false
+    quota_precondition: confirmed_by_account_analytics_2026_09_03T14_20_50Z_consumed_by_successful_apply
+    integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
+    migration_attempted: true
+    migration_result: success
   synthetic_state:
     users: 0
     admins: 0
@@ -79,41 +79,84 @@ known_deployed_preview_p1:
     remediation: included_in_reviewed_candidate
   - id: P1-DEPLOYED-D1-001
     impact: old_health_and_cron_paths_can_exhaust_shared_d1_quota
-    remediation: migration_0026_plus_reviewed_candidate
+    remediation: migration_0026_applied_reviewed_candidate_deploy_pending
 next_atomic_action:
-  id: preview-d1-apply-0026
-  permission: owner_authorized_exactly_once_subject_to_all_preconditions_not_consumed
-  target: exact_dedicated_preview_d1_from_protected_config
-  mutation: apply_only_0026_background_d1_cost_controls.sql
+  id: preview-worker-deploy-reviewed-candidate
+  permission: separate_explicit_owner_authorization_required
+  target: exact_dedicated_access_protected_preview_worker_from_protected_config
+  mutation: deploy_only_reviewed_candidate_0db38842524ebc146eaa56a9d089e3c3484bf0f3
   preconditions:
-    - daily_d1_quota_confirmed_restored_without_heavy_sql_or_health_polling
+    - worktree_is_clean_docs_only_descendant_of_reviewed_candidate
     - protected_target_record_matches_preview_and_excludes_production
     - reviewed_candidate_and_compatible_previous_worker_match_protected_record
-    - migration_ledger_is_0001_through_0025_with_only_0026_pending
-    - recovery_or_time_travel_containment_is_still_available
-    - required_integrity_postcondition_is_executable_without_weakening_the_owner_gate
+    - access_redirect_and_exact_preview_bindings_are_unchanged
+    - preview_d1_ledger_is_0001_through_0026_with_pending_zero
+    - current_version_and_rollback_or_containment_are_known
   postcondition:
-    - one_bounded_read_only_command_path_ledger_schema_fk_affected_table_integrity_check
-    - ledger_applied_through_0026
-    - exactly_fast_and_maintenance_cadence_rows_exist
-    - expected_indexes_present_and_foreign_key_check_zero
-  success_transition: request_separate_permission_for_exact_reviewed_worker_deploy
-  failed_or_ambiguous_transition: stop_no_blind_retry_read_only_reconcile_and_contain
+    - exact_reviewed_worker_version_receives_100_percent_preview_traffic
+    - access_and_exact_d1_r2_kv_queue_and_secret_bindings_remain_unchanged
+    - one_bounded_cadence_and_health_postcondition_after_the_required_wait
+    - automatic_historical_ledger_growth_is_stopped
+  success_transition: request_separate_permission_for_controlled_registration_retry
+  failed_or_ambiguous_transition: stop_reconcile_and_rollback_only_with_explicit_permission
   forbidden_in_this_action:
-    - reapply_0024_or_0025
-    - worker_deploy_or_rollback
+    - deploy_without_separate_owner_authorization
+    - migration_reapply_or_unrelated_d1_r2_write
     - registration_or_verification
     - bootstrap_role_or_session_mutation
     - provider_send_or_secret_flag_access_change
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
-  - deploy_exact_reviewed_candidate_then_one_bounded_cadence_health_postcondition
   - one_controlled_registration_retry_and_verification_delivery
   - second_verified_synthetic_account_then_one_shot_admin_bootstrap
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Migration 0026 checkpoint — 2026-09-03
+
+Result: `success`. The one owner-authorized remote mutation was attempted once on
+the exact dedicated Access-protected preview D1 and applied only
+`0026_background_d1_cost_controls.sql`. Wrangler executed its 15 statements in
+132.34 ms and returned success. The conditional permission is consumed; no
+Worker deploy, rollback, registration, bootstrap, provider send, Access/flag/var/
+secret change, production/CMS action or real-PII action was performed.
+
+The immediate single bounded `--command` postcondition was read-only throughout:
+all statement metadata reported `changes=0`, `changed_db=false` and 0 rows
+written. The migration ledger changed from exact `0001`–`0025` with only `0026`
+pending to exact `0001`–`0026` with pending 0. Cadence state contains exactly the
+`fast` and `maintenance` rows, both idle with fencing token 0. All 10 expected
+table/index objects are present, both superseded indexes are absent, and foreign
+key violations remain 0.
+
+Retained-data counters remained valid: scheduled history increased naturally
+from 80,667 to 80,692 rows while the old Cron Worker was still live; users,
+contract actions/acceptances, price-review actions/acceptances and enrollments
+remain 0; audit rows remain 5; legacy snapshot source rows remain 3,406; the two
+bounded comparison groups remain 2 rows each. Table-scoped `quick_check` returned
+`ok` for all 10 tables whose table/index structures the migration changes,
+including the largest `scheduled_job_runs` table. The largest check read 242,076
+rows and wrote 0; database size after the operation was 80,281,600 bytes.
+
+The final preflight at `14:20:50Z` had reconfirmed clean candidate ancestry, no
+runtime/migration/dependency/config drift, all protected target fingerprints,
+the expected old Worker fingerprint at 100% traffic, Access redirect `302`, Time
+Travel availability, restored daily D1 quota, and a pending set containing only
+`0026`. Sanitized protected evidence is retained under
+`tmp/d1-0026-20260903/`; `success-safe.json` has SHA-256
+`bbf400e257850f394b3c35d829af6b6d887f08ae5362246cba47e76d4d2dce12`. Full
+resource IDs, bookmarks and sensitive configuration remain outside tracked state.
+
+The deployed old Worker still has `P1-DEPLOYED-D1-001`: the migration supplies
+the compatible schema but does not itself stop cost-unbounded old health/Cron
+paths. Containment therefore remains no health polling, registration, provider
+send, bootstrap or other remote mutation. The only next action is to request
+separate owner authorization for the exact reviewed Worker deploy and its one
+bounded postcondition. `rollover_required: no`;
+`recommended_next_session_mode: High`, because the exact target, reviewed
+candidate, deploy procedure, postcondition and rollback/containment are known.
 
 ## Read-only integrity reconciliation checkpoint — 2026-09-03
 
