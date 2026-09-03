@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-02T20:27:28Z
+updated_utc: 2026-09-03T13:19:56Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-3-d1-cost-release-validation-and-independent-review-go
-next_gate: phase-4-owner-authorized-preview-d1-0026-apply
+next_gate: phase-4-read-only-preview-d1-integrity-reconciliation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-3-local-d1-cost-candidate-ready
-last_atomic_action: owner-authorized-first-controlled-registration
+current_phase: phase-4-preview-d1-0026-preflight-blocked-before-write
+last_atomic_action: preview-d1-0026-read-only-preflight
 last_atomic_result: failed
-next_atomic_action: owner-authorized-preview-d1-0026-apply-with-one-bounded-postcondition
+next_atomic_action: read-only-reconcile-required-preview-d1-integrity-postcondition
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: exact-preview-target-candidate-postcondition-and-containment-are-known
+recommended_next_session_mode: Medium
+mode_reason_plain: read-only-integrity-reconciliation-no-remote-write-attempt-or-ambiguous-mutation
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: no_remote_mutation_authorized_by_this_record
+permission_state: owner_authorized_one_conditional_0026_apply_not_attempted_preflight_blocked
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -51,12 +51,19 @@ preview:
   deployed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
   deployed_fingerprint: 745295d36248
   traffic_percent: 100
+  target_fingerprints:
+    account: 5dbd04a4763a
+    worker: 242c1796e930
+    origin_host: 88ed782ba25a
+    d1: ccdeb22bb2a1
   d1:
     applied_through: 0025_contract_storage_intent_generations.sql
     pending_exactly:
       - 0026_background_d1_cost_controls.sql
     last_recorded_foreign_key_violations: 0
-    quota_precondition: owner_must_confirm_daily_quota_restored_before_write
+    quota_precondition: confirmed_by_account_analytics_2026_09_03T13_12_27Z_revalidate_before_future_write
+    integrity_precondition: blocked_quick_check_sqlite_nomem_7500_no_integrity_result
+    migration_attempted: false
   synthetic_state:
     users: 0
     admins: 0
@@ -73,9 +80,9 @@ known_deployed_preview_p1:
   - id: P1-DEPLOYED-D1-001
     impact: old_health_and_cron_paths_can_exhaust_shared_d1_quota
     remediation: migration_0026_plus_reviewed_candidate
-next_atomic_action:
+blocked_migration_action:
   id: preview-d1-apply-0026
-  permission: separate_explicit_owner_authorization_required
+  permission: owner_authorized_exactly_once_subject_to_all_preconditions_not_consumed
   target: exact_dedicated_preview_d1_from_protected_config
   mutation: apply_only_0026_background_d1_cost_controls.sql
   preconditions:
@@ -84,6 +91,7 @@ next_atomic_action:
     - reviewed_candidate_and_compatible_previous_worker_match_protected_record
     - migration_ledger_is_0001_through_0025_with_only_0026_pending
     - recovery_or_time_travel_containment_is_still_available
+    - required_integrity_postcondition_is_executable_without_weakening_the_owner_gate
   postcondition:
     - one_bounded_read_only_ledger_schema_fk_check
     - ledger_applied_through_0026
@@ -99,6 +107,15 @@ next_atomic_action:
     - provider_send_or_secret_flag_access_change
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
+next_atomic_action:
+  id: read-only-reconcile-preview-d1-integrity-postcondition
+  permission: read_only_only_under_existing_scope
+  target: exact_dedicated_preview_d1_from_protected_config
+  action: establish_supported_bounded_integrity_verification_for_the_required_migration_checkpoint
+  blocker: D1_INTEGRITY_POSTCONDITION_UNAVAILABLE_SQLITE_NOMEM_7500
+  containment: no_apply_no_deploy_no_retry_or_polling_preserve_access_and_existing_provider_gates
+  success_transition: return_to_conditional_0026_apply_only_after_all_preconditions_are_revalidated
+  failed_transition: retain_blocker_no_remote_mutation
 following_route_requires_separate_permissions:
   - deploy_exact_reviewed_candidate_then_one_bounded_cadence_health_postcondition
   - one_controlled_registration_retry_and_verification_delivery
@@ -106,6 +123,57 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Read-only preflight checkpoint — 2026-09-03
+
+Result: `failed` preflight, **migration not attempted**. The owner invoked the
+one-action prompt for `0026`; its conditional permission does not authorize a
+write with an unavailable required integrity result. There was no remote
+mutation attempt, provider send, Worker deploy or rollback in this session.
+
+Before/after: live Worker fingerprint remains `745295d36248` at 100% traffic;
+its D1 binding matches the protected preview target. Anonymous root returned an
+Access login redirect (`302`). Protected record/config SHA-256 match; clean
+HEAD `0f920d3762d9abfdcaddd5d54c93065a292776ba` is a docs-only descendant of the
+reviewed candidate, with no runtime/migration/dependency/config diff. Migration
+`0026` matches candidate blob `f105b6a2e36e0d3b6d1946864b182c38bd48be92` and
+SHA-256 `167a319813f36e5f07e07ce3d75b33f588298cef951ba17ec1034fc122544e32`.
+
+One account-wide Cloudflare analytics query at `13:12:27Z` confirmed daily usage
+of 24,188 reads and 21,540 writes. Time Travel returned a pre-write bookmark at
+`13:15:21Z`; it stays in protected evidence and was not restored. These are
+timestamped observations, not a standing guarantee for a later write window.
+
+Read-only D1 evidence confirms exact ledger `0001`–`0025`, only `0026` pending,
+FK violations `0`, and 854 schema objects. Bounded baseline counters include
+80,534 retained scheduled-job rows, 5 audit rows, 3,406 retained source rows,
+2 target rows, 2 old-group rows and 0 users. The successful baseline read used
+85,691 reads and 0 writes; no document bodies or client rows were retrieved.
+Two earlier compound-SELECT forms received SQL compilation errors (`7500`);
+the corrected separate SELECTs succeeded. Their evidence is retained, and the
+completed data reads were reused without another data snapshot.
+
+**Single blocker:** the one `PRAGMA quick_check(1)` attempt at `13:19:56Z`
+returned `SQLITE_NOMEM`, API code `7500`, without an integrity result. This
+reproduces the previously recorded verification limitation and does **not**
+establish corruption. Applying the migration now could leave its mandatory
+integrity postcondition unprovable; stop before write and reconcile that
+verification capability read-only. Do not substitute FK-only evidence for the
+owner's integrity requirement or retry the same failing check blindly.
+
+Protected, Git-ignored evidence directory: `tmp/d1-0026-20260903/` (restricted
+to the current Windows user). Relevant files: `control-preflight-safe.json`,
+`quota-analytics.json`, `time-travel-before.json`,
+`schema-before-no-compound.json`, `schema-full-before.json`,
+`integrity-before.json` and `integrity-preflight-safe.json`. Full target IDs,
+version IDs and the recovery bookmark are excluded from tracked state.
+
+Containment: preserve Access and existing provider restrictions; no migration
+retry, deploy, recovery write, registration or health/SQL/analytics polling.
+The only next action is read-only reconciliation of the required bounded
+integrity verification. `rollover_required: no`;
+`recommended_next_session_mode: Medium`, because no write was attempted and
+there is no ambiguous mutation or evidence of corruption requiring recovery.
 
 ## Sequencing constraint
 
