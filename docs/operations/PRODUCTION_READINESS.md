@@ -12,6 +12,16 @@ Production deploy, remote production migration, реальный PII import, в�
 внешних отправок и изменение официального сайта выполняются только по отдельному
 прямому поручению.
 
+## Граница с full manual preview
+
+Этот документ относится к production и не является current operational route.
+Ближайший `full-manual-preview` по `SYS-04`/`OQ-036` выполняется на synthetic data
+и выделенных preview resources. Production-only legal/privacy/training/data,
+custom-origin, restore-policy и resource approvals не блокируют его; они остаются
+`blocked` здесь и проверяются позже. Current candidate/deployed version/next
+action читать только в
+[STAGE_13_ACTIVE_STATE.md](../implementation/STAGE_13_ACTIVE_STATE.md).
+
 ## Системная граница
 
 Портал регистрации — самостоятельное приложение со своим deployment lifecycle,

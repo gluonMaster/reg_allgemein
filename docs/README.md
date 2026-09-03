@@ -1,23 +1,26 @@
 # Документация проекта
 
-Актуально на 2026-08-31. Документация разделена по назначению, чтобы требования,
+Актуально на 2026-09-02. Документация разделена по назначению, чтобы требования,
 архитектура и рабочие материалы не конкурировали как источники истины.
 
 ## С чего начинать
 
-1. [Спецификация MVP](spec/MVP_SPEC.md) — состав продукта и обязательные
-   требования.
-2. [Критерии приемки](spec/ACCEPTANCE_CRITERIA.md) — проверяемое определение
-   готовности и краевые случаи.
-3. Тематический документ из разделов `domain`, `architecture` или `operations`.
-4. [Roadmap](implementation/ROADMAP.md) и persistent handoff предыдущего этапа —
-   только когда начинается реализация.
+1. Для продолжения Stage 13 сначала открыть
+   [единственный current operational state](implementation/STAGE_13_ACTIVE_STATE.md)
+   и [короткий entry-point](prompts/stage-13-continue-deployment.md).
+2. [Спецификация MVP](spec/MVP_SPEC.md) и
+   [критерии приемки](spec/ACCEPTANCE_CRITERIA.md) задают продукт/готовность.
+3. Тематический документ из `domain`, `architecture` или `operations` открывается
+   только для текущей surface.
+4. Roadmap — стабильная карта scope; большой handoff — append-only history и
+   читается только по конкретной evidence-ссылке.
 
 Owner/product decisions и ещё не закрытые вопросы отслеживаются в
-[OPEN_QUESTIONS.md](spec/OPEN_QUESTIONS.md). На 2026-08-17 открытых owner/data-
-вопросов по Access normalization нет; stage 13 и production readiness остаются
-`blocked` до закрытия independent legal, security, provider и operational gates.
-Statutory release checks конкретной template version описываются в
+[OPEN_QUESTIONS.md](spec/OPEN_QUESTIONS.md). `full-manual-preview` по
+`SYS-04`/`OQ-036` является отдельным ближайшим milestone: production-only legal,
+privacy, training, data, custom-origin и resource approvals не задерживают
+synthetic preview. Production readiness остаётся самостоятельным последующим
+NO-GO/GO gate. Statutory checks конкретной template version описываются в
 тематическом legal gate и не подменяются повторным вопросом владельцу.
 
 ## Ключевая системная граница
@@ -57,13 +60,13 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 | Полный ручной preview checkpoint            | [operations/FULL_MANUAL_PREVIEW.md](operations/FULL_MANUAL_PREVIEW.md)                               |
 | Краткие действия владельца для preview      | [operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md](operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md)       |
 | Backup, rollback и disaster recovery        | [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)                                   |
-| Текущий production readiness ledger         | [operations/PRODUCTION_READINESS_CHECKLIST.md](operations/PRODUCTION_READINESS_CHECKLIST.md)         |
+| Production readiness evidence ledger        | [operations/PRODUCTION_READINESS_CHECKLIST.md](operations/PRODUCTION_READINESS_CHECKLIST.md)         |
 | Этапы реализации                            | [implementation/ROADMAP.md](implementation/ROADMAP.md)                                               |
 | Стратегия тестирования                      | [implementation/TEST_PLAN.md](implementation/TEST_PLAN.md)                                           |
 | Stage-13 traceability                       | [implementation/STAGE_13_TRACEABILITY.md](implementation/STAGE_13_TRACEABILITY.md)                   |
 | Активный Stage-13 operational checkpoint    | [implementation/STAGE_13_ACTIVE_STATE.md](implementation/STAGE_13_ACTIVE_STATE.md)                   |
 | Persistent handoff этапов                   | [implementation/handoffs/README.md](implementation/handoffs/README.md)                               |
-| Текущий stage-13 handoff                    | [implementation/handoffs/stage-13.md](implementation/handoffs/stage-13.md)                           |
+| Append-only Stage-13 history/handoff        | [implementation/handoffs/stage-13.md](implementation/handoffs/stage-13.md)                           |
 | Постоянная команда продолжения Stage 13     | [prompts/stage-13-continue-deployment.md](prompts/stage-13-continue-deployment.md)                   |
 
 При конфликте общего документа с тематическим действует тематический документ.

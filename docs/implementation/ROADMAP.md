@@ -370,207 +370,94 @@ Exit gate:
 
 <!-- stage-13-current-review-status: independent_go -->
 
-Канонический operational contract этапа —
-[PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). Этап не
-выполняет production deploy, remote production migration, реальный PII import
-или внешнюю отправку без отдельного прямого поручения.
+Roadmap хранит только stable scope и exit criteria. Current reviewed candidate,
+deployed preview version, pending migration и next atomic action находятся
+исключительно в [active state](STAGE_13_ACTIVE_STATE.md). Historical SHA, remote
+postconditions и incident evidence находятся в append-only handoff и читаются
+только по точной evidence-ссылке.
 
-Ближайший checkpoint — `full-manual-preview` по `SYS-04`/`OQ-036`: реальные
-synthetic Browser-contract/R2/email, Telegram normal-outbox и document upload/
-quarantine/manual-AV/business-review paths на выделенных preview resources.
-`feature_disabled` не считается завершением обязательного MVP-контура.
+### 13.1 Ближайший milestone: `full-manual-preview`
 
-Текущий gate: preview по-прежнему использует reviewed Turnstile candidate
-`bef5789…` как `745295d36248`/100%. Первый controlled registration failed на
-server-side native fetch receiver; D1 incident также выявил history-wide
-health/operator reads и per-job write amplification. Оба P1 исправлены в exact
-local runtime candidate `0db38842524ebc146eaa56a9d089e3c3484bf0f3`; полный
-release gate прошёл, independent exact-SHA review вернул **GO** с 0 P0/P1.
-Следующая фаза — только отдельно разрешённый preview apply `0026` после
-восстановления quota; Worker deploy и registration retry остаются отдельными
-разрешениями. Current evidence и единственный следующий шаг — в
-[active state](STAGE_13_ACTIVE_STATE.md).
+`full-manual-preview` по `SYS-04`/`OQ-036` — отдельный delivery gate, а не
+production release. На выделенных Access-protected preview resources и только с
+synthetic data должны реально пройти:
 
-Historical registration invalid-input remediation anchor
-`146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, parent `fbb9520…`, сохраняет
-safe form state, обновляет current privacy version и управляет Turnstile token
-lifecycle. Fresh independent **GO**: 0 `P0`, 0 `P1`, 1 `P2`, 0 `P3`; check
-`0/0`, focused unit `15/15`, focused registration browser `2/2`. Exact release
-evidence также включает Vitest `566` pass + 1 Windows skip, Chromium `20/20`,
-build/audit/docs/scan/diff. Separately authorized preview deploy завершён:
-`a4fab5d09f63` active 100%, previous compatible `2de99c0c5815` retained,
-Access/config/D1/R2/jobs postcondition passed. Registration retry остаётся
-отдельно разрешаемым gate.
+- compatible forward migration и exact reviewed Worker deploy с exact-target,
+  recovery/rollback и bounded postcondition;
+- две verified synthetic parent account, one-shot bootstrap и раздельные
+  parent/admin роли;
+- ownership/RBAC/CSRF, cross-owner denial, idempotency и session-revocation
+  checks в обязательных parent/admin flows;
+- document upload в private quarantine R2, forced admin download, current local
+  AV, hash-bound attestation, отдельный business decision, approved archive R2,
+  owner/negative download и cleanup evidence;
+- четыре marked `preview_review` contract bundle через реальный Browser Run,
+  private R2 и email; один accept → different-admin formation/activation →
+  certificate lifecycle;
+- target-pinned PII-free Telegram normal-outbox send с durable certainty и без
+  blind retry при `delivery_unknown`;
+- owner desktop/mobile exploratory pass, cadence/health и provider/storage
+  postconditions.
 
-Historical reviewed full-manual-preview candidate
-`583165e316b739f4fb6a30001dae3a98ec62e1a1`, parent `3ad9527…`, получил fresh
-independent **GO** с 0 `P0` / 0 `P1`. Exact candidate исправляет
-Access/adapter form-origin mismatch через runtime `PORTAL_PUBLIC_ORIGIN` guard;
-full Vitest 75/75 files, 563 pass + 1 Windows skip, Chromium E2E 18/18,
-check/build/audit/docs/scan/diff прошли. Новый review-loop не нужен без material
-diff.
+Stub, fake provider и `feature_disabled` не закрывают эти preview flows. До
+продвижения блокируют только доказанные milestone `P0/P1`; `P2/P3` идут в backlog
+и не запускают новый review-loop. Production-only legal/privacy/provider/
+training/data/custom-origin/resource approvals не задерживают synthetic preview.
 
-Owner-authorized preview phases 1–2 завершили candidate-bound protected
-recovery, применение только `0024`/`0025` к recovery/preview и exact reviewed
-Worker deploy с fail-closed providers/auth. Отдельный exact `ec11bbc…` deploy
-включил auth+Resend только в preview для двух hashed recipients; send/account/
-bootstrap не выполнялись. Первый controlled registration submit завершился
-no-write CSRF/origin rejection. Separately authorized preview deploy exact
-remediation `583165e…` затем прошёл: version fingerprint `2de99c0c5815` active
-100%, Access/root/health/register GET/versioned routes, bindings, D1/R2/jobs
-сохранены, rollback не понадобился. На том checkpoint следующим gate был retry
-только первого account с verification delivery и обязательным postcondition;
-Turnstile P1 позднее прошёл fix/review/deploy и real-widget проверку.
-Далее — отдельные account/bootstrap/provider/document/contract
-flows и owner exploratory pass по
-[FULL_MANUAL_PREVIEW.md](../operations/FULL_MANUAL_PREVIEW.md) и краткой
-[owner guide](../operations/OWNER_FULL_MANUAL_PREVIEW_GUIDE.md). Production
-readiness остаётся `blocked`; GO не разрешает production, CMS или real PII.
-После каждой remote mutation current truth сохраняется в active state до
-следующей mutation; normal next-session mode для этого известного маршрута —
-`High`, пока факты не показывают серьёзный incident.
+Stable phase order:
 
-Production legacy release из `IMPORT-01`–`IMPORT-08` теперь является отдельным
-обязательным Stage-13 gate. Локально реализованы v1 parser regression,
-exact-target remote boundary, schema-v3 protected no-write plan с
-`sourceClass`/`syntheticFixtureId`, встроенные 1703-row
-`legacy-preview-synthetic-baseline-v1|legacy-preview-synthetic-candidate-v1`
-без Office paths,
-deterministic resumable PlusBText+Access stage, попарно разные planner/stager/
-reviewer, transition actor, отличный от reviewer, и recovery verifier,
-отличный от planner/stager/reviewer/promoter, immutable digest/count review,
-target-bound recovery artifact,
-failed-stage cleanup evidence, recovery-bound atomic promote/
-rollback/roll-forward и aggregate verify. Это реализуют candidate migrations
-`0016` и `0018`; populated-upgrade tests сохраняют прежние unhardened plans как
-immutable evidence, но запрещают их lifecycle и требуют новый hardened plan.
-Deployed preview D1 содержит `0001`–`0025`, pending 0; schema/object/lineage/FK
-verification после отдельно разрешённых apply 2026-08-20/25/31 прошла.
-Production transitions намеренно fail closed ещё до API-token lookup/network,
-пока remote transaction evidence отсутствует.
-Это не делает environment gate `passed`: remote preview plan/stage/promotion не
-выполнялись, реальная remote D1 batch atomicity/timeout reconciliation не
-доказана, post-apply restore/forward-fix rehearsal не выполнена, а production
-import не разрешён. Pre/post apply Time Travel points и protected backup с
-isolated restore прежнего `0001`–`0015` состояния сохранены.
-Access normalization `IMPORT-07` локально переведена на exact `O/R/S/T`
-crosswalk, parent-name normalizer v2, hourly duration semantics, invalid email/
-DOB fail-closed и traceable family issues. Owner decision ограничивает package
-groups первыми четырьмя cells каждого блока и всегда исключает `AO/AT`; sanitized
-current-source projection снизила warning occurrences с 1429 до 160 и enrollment
-review queue с 751 до 53 без вывода PII. Единственный active unresolved-group
-case признан upstream error и не получает fuzzy mapping. Шесть structural
-duplicate buckets и остальные anomaly classes требуют штатного cross-import
-admin contour. Он нормативно зафиксирован как `IMPORT-08`/
-`AC-IMPORT-27`–`AC-IMPORT-31` в
-[отдельном ТЗ](IMPORT_ADMIN_RECONCILIATION_TZ.md). Exact `f7e75f9` реализовал
-migrations `0019`–`0020`; его review findings были исправлены в `b354e582`/
-`0021`, а documentation descendant `017c0d32` прошёл fresh full chain. Новый
-authorized review exact evidence seal
-`8c6e2aacc39e731ad59e8f1ca8d6fe3b5f312956` вернул NO-GO с 2 BLOCKER и 2 HIGH:
-crash-window между `validated` и reconciliation, неоднозначный current SHA,
-same-name sibling evidence и in-flight duplicate price review. Текущий local
-worktree добавляет append-only migration `0022`, exact completion marker,
-strict source-child identity и atomic downstream price-review fence. Targeted
-local evidence прошло: reconciliation 10/10, family/cabinet 9/9, legacy import
-13/13, price review 6/6 и check 0/0. После исправления трёх найденных full-suite
-regressions exact runtime remediation anchor
-`abb93f25a7d9ce80bdef6f204e75cabf635f9453` прошёл fresh full chain: 66/66 files,
-511/511 Vitest, Chromium 18/18, build, audit 0, docs/scan/diff. Direct
-documentation-only runtime-empty review seal
-`b2e8548f63ae62e33d519d61e0ac729085801052` прошёл clean exact short gates;
-separately authorized independent re-review вернул NO-GO с 1 BLOCKER и
-1 MEDIUM: contradictory current-candidate provenance и неполное покрытие
-mutable/stale duplicate price-review paths. Current local docs/test remediation
-зафиксировано exact anchor `4ac6a491f2dc9a40608a4fdd77101fb4eb8853b9`,
-закрывает оба findings и прошло focused reconciliation D1 10/10, check 0/0,
-docs/scan/diff и final provenance gates. `src`/`migrations` не менялись.
-Финальный review target
-`2bedc73c9b39a4cb43296046986a3f48e039b022` — прямой docs-only потомок
-`4ac6a491`; его exact short gates и separately authorized independent review
-прошли с итогом GO. Оставшийся MEDIUM не открывает runtime bypass.
-PR-B17 остаётся blocked; independent admin cold-read и owner review текущих
-buckets также отсутствуют. В remote preview D1 schema доведена до `0016`–`0023`;
-synthetic lifecycle `plan→stage→review→recovery→promote→rollback→roll-forward`
-прошёл, а Worker и R2 этим import gate не менялись.
+1. exact-target/recovery lock;
+2. compatible forward migrations;
+3. fail-closed reviewed Worker deploy;
+4. two verified synthetic accounts and one-shot bootstrap;
+5. real preview document/contract/email/Telegram flows;
+6. owner exploratory pass and phase-boundary handoff;
+7. separate future production-readiness program.
 
-Telegram `MSG-05`–`MSG-06` также остаётся обязательным Stage-13 gate. Локальный
-candidate добавляет real one-way `bot_api` adapter, strict minimized payload,
-activation/max-attempt destination policy, append-only delivery attempts,
-terminal `delivery_unknown`, exact-attempt operator resolution и target-bound
-single-message preview-smoke boundary через candidate migration `0017`, включая
-append-only D1-only abort только для unsent zero-attempt cohort и запрет Cron
-reclaim его smoke signature, а также exact-target expired-lease reconcile
-post-`dispatch_started` crash в `delivery_unknown` без provider send/retry.
-Синтаксически валидный Bot API `ok=false` `408|425|5xx` является conclusive
-retryable; `429` сохраняет destination cooldown даже без usable `retry_after`;
-transport/timeout/unreadable/oversized/malformed, ambiguous envelope,
-invalid/mismatched success и post-send-D1 uncertainty — ambiguous. Migration
-`0017` применена в preview D1, но secret/config, external preflight/send,
-failure/alert и operator-resolution rehearsal не выполнялись; PR-F12–PR-F15
-остаются `blocked`.
+`full-manual-preview` пройден, когда Access остаётся включён, production/CMS/real
+PII не затронуты, все перечисленные реальные preview paths подтверждены и
+открытых milestone `P0/P1` нет.
 
-Tracked packet этапа:
+### 13.2 Отдельный последующий production gate
 
-- [traceability matrix](STAGE_13_TRACEABILITY.md);
-- [import admin reconciliation TZ](IMPORT_ADMIN_RECONCILIATION_TZ.md);
-- [deployment runbook](../operations/PRODUCTION_DEPLOYMENT.md);
-- [operations runbook](../operations/OPERATIONS_RUNBOOK.md);
-- [disaster-recovery runbook](../operations/DISASTER_RECOVERY.md);
-- [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md);
-- [persistent handoff](handoffs/stage-13.md).
+Канонический production contract —
+[PRODUCTION_READINESS.md](../operations/PRODUCTION_READINESS.md). После manual
+preview отдельно остаются, в частности:
 
-Stage-13 contracts `R2_ARCHIVE`, `R2_QUARANTINE`, deployed preview migrations
-`0014`–`0023` (полный ledger `0001`–`0023`, pending 0),
-scheduled Worker/Cron, empty monitoring endpoint и manual operations page,
-`admin:bootstrap`, `docs:check`, `release:scan`, `release:verify` реализованы и
-покрыты тестами. PR-A12/13/14 и environment-specific release gates остаются
-`blocked` до полного browser/accessibility/security evidence,
-job/provider-specific alerts, оставшегося preview rehearsal, restore, approvals
-и остальных обязательных external inputs.
+- real-source `IMPORT-01`–`IMPORT-08` с owner-approved contracts, exact-target
+  plan/stage/review/recovery/promote/verify/rollback/roll-forward, immutable
+  counts/digests, independent roles и без Office/PII leakage;
+- production D1/R2/Browser/provider/DNS/origin resources, least-privilege
+  secrets, monitoring/job-specific alerts и failure rehearsals;
+- legal/privacy/template/training/data approvals, retention decisions and
+  approved RPO/RTO/backup cadence;
+- non-empty backup/restore, migration/code/import rollback or forward-fix
+  rehearsal and incident ownership;
+- отдельный post-health-check go-live утверждённых ссылок официального сайта.
 
-Exit gate:
+Preview evidence не авторизует ни один из этих production actions. Production
+остаётся `blocked`/NO-GO, пока его собственный ledger не закрыт.
 
-- независимо построена traceability requirements/acceptance → implementation →
-  automated tests; permission matrix, cross-user checks, German accessibility,
-  responsive paths, PII redaction и dependency audit закрыты;
-- clean install, все migrations на empty и representative upgraded D1,
-  `npm run check`, `npm test` и `npm run build` проходят;
-- production-shaped preview использует отдельные D1/R2 resources, Browser,
-  provider и Cron bindings; до `full-manual-preview` все MVP-контуры из
-  `SYS-04` фактически проходят preview migration/smoke, remote Browser
-  conformance и разрешённый provider lifecycle. Явный
-  `feature_disabled|blocked` остаётся честным production verdict, но не
-  заменяет preview evidence и не получает ложный `passed`;
-- создан и проверен полный inventory environment variables, secrets, bindings,
-  feature flags и scheduled jobs с owner, schedule/timezone, dedupe/lock,
-  monitoring, manual-run и failure procedure;
-- out-of-band admin bootstrap, immediate bootstrap disable/revocation, audit и
-  recovery описаны и испытаны без записи credentials/PII в документацию;
-- current promoted legacy snapshot проверен до enable registration; 0/1/multiple
-  lookup smoke проходит, а unavailable/stale snapshot не выделяет namespace `2`;
-- synthetic isolated preview проходит exact-target legacy
-  plan→stage→review→recovery-evidence→promote→verify→rollback→roll-forward с
-  CLI-built expected 1703 Access rows/21-field contract без source paths,
-  immutable planned/actual count contract, timeout reconciliation, one current
-  dependency-compatible pair, FK integrity и PII-free evidence; local D1 tests
-  не заменяют этот gate;
-- D1/R2 backup, restore и migration/code/import rollback/roll-forward
-  отрепетированы в non-production; RPO/RTO и backup cadence рассматриваются как
-  явные release inputs и не выдумываются агентом;
-- в tracked `docs/operations/` созданы актуальные русскоязычные пошаговые
-  `PRODUCTION_DEPLOYMENT.md`, `OPERATIONS_RUNBOOK.md`, `DISASTER_RECOVERY.md` и
-  `PRODUCTION_READINESS_CHECKLIST.md`, понятные неопытному оператору и
-  проверенные clean-room rehearsal;
-- runbooks содержат prerequisites, точные команды из фактической реализации,
-  ожидаемые безопасные результаты, stop conditions и rollback для provisioning,
-  config/secrets, migrations, bootstrap, import, deploy, smoke, Cron/providers,
-  monitoring, incident response, backup/restore и feature enablement;
-- runbooks явно фиксируют, что портал разворачивается как самостоятельная
-  система в отдельной инфраструктуре. Изменение ссылок на утверждённых surfaces
-  официального сайта, включая согласованные страницы расписания, — отдельный
-  post-health-check go-live с собственным разрешением и rollback, а не deploy
-  портала в инфраструктуру сайта; точный URL-list является release input;
-- каждый release gate имеет `passed|feature_disabled|blocked`, owner, evidence,
-  affected path и next action; полный MVP называется production-ready только
-  при выполнении правил из `PRODUCTION_READINESS.md`.
+### 13.3 Process contract
+
+После каждой попытки remote mutation и до следующей mutation обновляется только
+active state. Handoff обновляется на реальной границе фазы/сессии; production
+checklist — только при изменении production gate; traceability — только при
+изменении requirement mapping.
+
+Full suite выполняется один раз для exact material runtime/migration/dependency/
+deploy-config candidate. Для docs-only child, unchanged gated candidate и
+`P2/P3` наследуются записанный release gate и independent verdict; повтор
+запрещён без названного cross-cutting risk, который нельзя покрыть focused
+checks.
+
+Tracked Stage-13 packet:
+
+- [active operational state](STAGE_13_ACTIVE_STATE.md);
+- [evergreen continuation entry-point](../prompts/stage-13-continue-deployment.md);
+- [full manual preview runbook](../operations/FULL_MANUAL_PREVIEW.md);
+- [test decision table](TEST_PLAN.md);
+- [traceability mapping](STAGE_13_TRACEABILITY.md);
+- [production readiness contract](../operations/PRODUCTION_READINESS.md);
+- [production evidence ledger](../operations/PRODUCTION_READINESS_CHECKLIST.md);
+- [append-only evidence history](handoffs/stage-13.md).

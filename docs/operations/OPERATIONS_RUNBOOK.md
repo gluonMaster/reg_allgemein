@@ -4,18 +4,17 @@
 
 Ревизия: 2026-09-02.
 
-Статус документа: `blocked`; текущий production verdict — **NO-GO**. Scheduled
-handler и manual operations реализованы и локально протестированы; независимый
-content cold-read 2026-07-22 прошёл. Preview Worker/D1/R2, automatic Cron
-delivery/freshness и независимый UptimeRobot 5-minute `HEAD` alert с DOWN→UP
-delivery подтверждены 2026-08-11; remote authenticated/manual/provider/Browser
-Run/failure, target-pinned legacy import/first-import restore и Telegram Bot API
-ambiguous-delivery operator procedures остаются непроверенными.
+Это стабильный operations/incident runbook, а не current Stage-13 state.
+Candidate, deployed version, pending migration, feature state и next action
+читать только в
+[STAGE_13_ACTIVE_STATE.md](../implementation/STAGE_13_ACTIVE_STATE.md).
+Production verdict — **NO-GO** до отдельного production ledger.
 
 Runbook относится только к самостоятельному порталу регистрации. Он не даёт
 доступа к CMS или runtime официального сайта. Production-команды выполняются
 только пользователем с нужной ролью и только в рамках отдельного change/incident
-approval.
+approval. Historical measurements/status below are evidence snapshots, not
+commands to repeat.
 
 ## Правила безопасной диагностики
 
@@ -34,7 +33,7 @@ approval.
 `worker_version`, `operation`, `sanitized_result`, `correlation_id`, `operator_role`,
 `next_action`. Значения PII/secrets запрещены.
 
-## Текущий operational inventory
+## Operational surface inventory (stable, not current state)
 
 | Область               | Реализованный интерфейс                                                                                                                                                              | Недостающее                                                                                                                            | Gate                         |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
@@ -47,8 +46,8 @@ approval.
 | Scheduled operations  | `src/worker.ts`, two triggers, nine allowlisted jobs; preview automatic delivery/freshness passed                                                                                    | remote manual/dedupe/failure и job-specific alerts                                                                                     | `blocked`                    |
 | Admin bootstrap       | `npm run admin:bootstrap`; target guard, one-shot D1 flow, session revoke/audit и upgrade auto-seal tested locally                                                                   | remote exercise; отдельной post-consume recovery CLI нет                                                                               | `blocked`                    |
 | Email provider        | Resend HTTPS adapter, verified EU domain, scoped sending key и preview Worker secret подготовлены                                                                                    | provider disabled; delivery/reply smoke и approvals отсутствуют                                                                        | `feature_disabled`/`blocked` |
-| Telegram provider     | deployed preview/baseline `c5712d0` is disabled; local candidate implements `bot_api`, durable certainty/cooldown/activation policy and audited exact-attempt actions                | exact candidate verification, token/chat ownership, target-pinned preflight, operator drill and authorized synthetic send smoke absent | `feature_disabled`/`blocked` |
-| Legacy import         | current Access profile reports 1703 rows, 21/21 required fields, v1 compatible; PlusBText v1 sanitizer regression fixed; exact-target reviewed atomic bundle boundary passes locally | authorized synthetic remote lifecycle, first-import restore, immutable candidate evidence and current production import absent         | `blocked`                    |
+| Telegram provider     | real `bot_api` adapter, durable certainty/cooldown/activation policy and audited exact-attempt actions are implemented                                                    | target ownership, target-pinned preflight, operator drill and authorized synthetic send smoke                                           | `feature_disabled`/`blocked` |
+| Legacy import         | exact-target atomic bundle boundary, versioned parsers and synthetic fixtures are implemented                                                                           | production source-owner approval, restricted real-source lifecycle and production recovery evidence                                      | `blocked`                    |
 | Browser Run           | binding/config и fail-closed contract renderer path реализованы                                                                                                                      | remote conformance, quota/budget, templates/legal approval                                                                             | `feature_disabled`/`blocked` |
 
 ## Scheduled jobs inventory
@@ -75,44 +74,23 @@ failure alert. Такие alerts и remote manual/dedupe/failure rehearsals от
 | Expired security metadata        | `OperationsRepository.cleanupSecurityMetadata()`               | `*/15 * * * *`; UTC expiry timestamps     | job lock/dedupe + bounded batch                                                                        | aggregate freshness/error passed; job-specific failure alert missing                         | `blocked`                              |
 | Orphan storage intents           | `StorageIntentRepository`                                      | `*/15 * * * *`; UTC lease/age             | job lock + intent lease/dedupe                                                                         | aggregate freshness/error passed; R2 retry/orphan alert missing                              | `blocked`                              |
 
-Migrations `0014_production_operations.sql`, `0015_worker_monitoring.sql` и local
-forward-only `0026_background_d1_cost_controls.sql`, clean/upgrade coverage,
-job/storage repositories, Worker scheduled handler, `/admin/operations`, empty
-204/503 health signal и раздельные R2 bindings реализованы и проходят targeted
-local tests. Preview Cron delivery/freshness и independent aggregate HEAD alert
-подтверждены только для старого runtime; `0026` и cost-bounded Worker ещё не
-применены remote. R2 failure, authenticated manual run и job-specific failure
-rehearsal остаются `blocked`.
+Migrations and runtime implement two cadence classes, bounded/indexed health and
+operator reads, job/storage repositories, Worker scheduled handlers,
+`/admin/operations`, an empty 204/503 health signal and separate R2 bindings.
+Exact applied/pending migrations and live Worker shape are never inferred from
+this runbook; read them only from active state. A forward migration may be
+applied before its compatible Worker only when active state explicitly records
+that compatibility, the old Worker cannot corrupt the new schema, and the
+separate deploy request follows without resuming polling.
 
-Current preview D1 inventory — migrations `0001`–`0025`, pending 0, FK 0;
-local candidate добавляет `0026`, но remote apply не разрешён и не выполнялся.
-Последний подтверждённый preview inventory имеет
-schema 535 and lineage 8 objects/4 columns. Initial
-preview apply 2026-08-10 (`0001`–`0014`, 14/14) остаётся датированным
-историческим evidence; append-only `0015_worker_monitoring.sql` была применена
-2026-08-11. Initial 14/14 не является текущим migration inventory и не доказывает
-backup/restore.
-
-Resulting candidate добавил append-only `0016`–`0022`; после protected backup и
-успешного isolated restore прежнего состояния `0001`–`0015` они применены к
-preview D1 2026-08-20. Remote ledger/schema/FK verification прошла, pre/post
-Time Travel points сохранены; exact `8c6e2a` review был NO-GO. Immutable runtime anchor
-`abb93f25` содержит `0022` и прошёл fresh full chain; его docs-only seal
-`b2e8548f` прошёл short gates, затем independent review вернул NO-GO с
-1 BLOCKER/1 MEDIUM. Exact docs/test remediation anchor `4ac6a491` закрывает
-findings, не меняет `src`/`migrations` и прошёл proportional exact-SHA gates.
-Subsequent authorized append-only `0023` (2026-08-25) and recovery-first
-`0024`/`0025` (2026-08-31) applies passed exact ledger/schema/lineage/FK checks.
-Финальный review target `2bedc73c9b39a4cb43296046986a3f48e039b022`
-является прямым docs-only потомком `4ac6a491`, не меняет
-`src`/`migrations`/`tests`, прошёл exact short gates и separately authorized
-independent review с итогом GO; оставшийся MEDIUM не открывает runtime bypass.
-Worker deploy и Telegram/import lifecycle не выполнялись.
+Remote manual/dedupe/failure, R2 failure, authenticated operations and
+job-specific alert rehearsals remain environment gates; their absence does not
+justify repeating an already gated runtime suite.
 
 ## Карта потребителей D1 и regression budgets
 
-Ниже — recurring cost independently reviewed exact runtime candidate
-`0db38842524ebc146eaa56a9d089e3c3484bf0f3` после migration `0026`. Значения
+Ниже — recurring cost budget для fixed-cadence runtime shape после migration
+`0026`. Exact release anchor находится только в active state. Значения
 получены из фактических local-D1 `meta.rows_read`/`meta.rows_written`; D1 включает
 работу secondary indexes в эти counters. Test meter не сохраняет SQL params или
 result rows. Числа являются budgets, а не разрешением расходовать общий Free
@@ -157,9 +135,9 @@ preview registration. Retained history не удаляется, старые ope
 
 | Контур                                                                   |                                                     Reads/day | Writes/day | Примечание                                                                   |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------: | ---------: | ---------------------------------------------------------------------------- |
-| Deployed `bef5789…` health, наблюдённый incident                         | 783,068 за 10 calls; около 22.55M/day при 5-minute projection |          0 | history-wide query; projection показывает риск, а не billing total           |
+| Historical unbounded-health incident shape                                  | 783,068 за 10 calls; около 22.55M/day при 5-minute projection |          0 | history-wide query; projection показывает риск, а не billing total           |
 | Старые operator snapshots                                                |                                         5,187,297 за 11 calls |          0 | разовые, но unbounded; остановлены                                           |
-| Local `8f04554…`, empty providers/storage-disabled shape                 |                                                        31,872 |     46,176 | Cron 27,552/46,176 + fixed health 4,320/0; ещё append-ил per-job runs        |
+| Intermediate pre-fixed-cadence shape, providers/storage disabled            |                                                        31,872 |     46,176 | Cron 27,552/46,176 + fixed health 4,320/0; ещё append-ил per-job runs        |
 | Новый candidate, тот же inert shape                                      |                                                        25,728 |      6,816 | Cron 24,864/6,816 + fixed-cadence health 864/0; writes −85.2% like-for-like  |
 | Новый candidate, preview shape (providers disabled, R2 bindings present) |                                                        27,936 |      7,392 | Cron 27,072/7,392 + health 864/0                                             |
 | Новый candidate, все services active, empty queues                       |                                                        55,296 |     10,272 | Cron 54,432/10,272 + health 864/0                                            |
@@ -173,38 +151,31 @@ Analytics/Query Insights без SQL к самой базе.
 
 ## Cost-bounded preview migration/deploy procedure
 
-Эта процедура только подготовлена; она не даёт authority на remote mutation.
-После восстановления quota владелец отдельно разрешает каждую фазу.
+Exact migration, candidate, deployed rollback version and permission are read
+only from active state. This procedure never authorizes a remote mutation.
 
-1. **Migration phase:** target — только exact preview D1 из protected config;
-   применить только append-only `0026_background_d1_cost_controls.sql`. До write
-   сверить candidate/target/rollback fingerprint через deployment metadata и D1
-   Analytics, не health/SQL polling. Ожидается две idle cadence rows, сохранённая
-   history и partial/manual + cleanup indexes. После попытки выполнить один
-   bounded read-only ledger/schema/FK postcondition, обновить active state и
-   сделать обязательный docs-only checkpoint. При failed/ambiguous — stop, без
-   повторного apply.
-2. **Worker phase:** только после successful migration deploy-нуть exact reviewed
-   runtime candidate; previous `745295d36248` оставить как короткий compatible
-   rollback. Проверить deployment version/100% traffic и Access boundary без D1,
-   затем дождаться одного fast и одного maintenance tick. Выполнить ровно один
-   `HEAD /_health/operations` (ожидается empty `204`, 3 reads); при необходимости
-   и доступной quota — один `latest-job-status.sql` (2 reads), но не оба циклически.
-   Сверить D1 Analytics, что old scheduled-run insert/update signatures исчезли.
-   Снова записать read-only postcondition/active-state/docs-only checkpoint.
-3. **Success:** exact reviewed version активна; Access не ослаблен; два cadence
-   fresh/succeeded; automatic `scheduled_job_runs` больше не растёт; rows/day
-   extrapolation находится в budgets; queue/retry/unknown indicators fail closed.
-   Только после этого отдельно решать registration retry.
-4. **Rollback/containment:** при code regression вернуть previous Worker version;
-   migration additive и не удаляет history, старый Worker остаётся schema-
-   compatible, но не полностью cost-compatible. Rollback временно возобновит
-   дорогие per-job ledger writes, а старый cleanup по `worker_error_buckets.updated_at`
-   после удаления неиспользуемого новым Worker retention index может читать
-   накопленную error history. Поэтому это только краткое containment: прекратить
-   health/SQL polling, оставить registration закрытой и подготовить forward fix.
-   Migration не откатывать direct SQL; новый index добавлять только отдельной
-   forward migration, если rollback должен стать длительным.
+1. **Preflight:** confirm protected preview target, recovery/Time Travel
+   containment, exact pending migration set and quota availability without heavy
+   SQL/health polling. Any production/CMS target or drift is a stop.
+2. **Migration action:** under its own permission apply only the current forward
+   migration. Perform one bounded ledger/schema/FK postcondition, update active
+   state and make a docs-only checkpoint. `failed|ambiguous` means stop and
+   read-only reconciliation; no blind retry.
+3. **Worker action:** under a separate permission deploy only the reviewed
+   candidate named in active state. Verify version/traffic and Access without D1,
+   then wait for one fast and one maintenance cadence and execute one bounded
+   health/cadence postcondition. Do not poll.
+4. **Success:** reviewed version active, Access unchanged, fixed cadence fresh,
+   automatic historical ledger no longer grows, and measured projection remains
+   inside recorded budgets. Only then request separate registration permission.
+5. **Rollback/containment:** use only the pre-recorded compatible Worker version.
+   Forward migration is not removed/re-written. Because an old Worker may be
+   schema-compatible but not cost-compatible, rollback is brief: keep auth and
+   affected providers closed, stop health/SQL polling and prefer a forward fix.
+
+Migration alone does not bound the old Worker. Plan migration checkpoint and the
+separately authorized deploy in one supervised window; if the next permission is
+not available, preserve containment instead of resuming diagnostic polling.
 
 ## 1. Начало смены: health и freshness
 
@@ -228,23 +199,25 @@ job group; `feature_disabled` job допустим в свежем successful de
 D1/query/clock проблема также даёт empty `503`; response не содержит reason, job
 name, error code, PII или secret.
 
-**D1 incident 2026-09-02:** deployed `bef5789…` выполняет unbounded history scan
-при freshness query. До исправления не поллить health и не повторять прежние
+**D1 incident snapshot 2026-09-02:** прежний deployed runtime выполнял
+unbounded history scan при freshness query. До исправления не поллить health и не повторять прежние
 operator snapshots с `row_number()` по всей `scheduled_job_runs` для диагностики.
 Read-only запрос тоже расходует daily rows_read; при quota warning читать
 Cloudflare Metrics/Query Insights, не SQL console. Сначала локально измерить
 `meta.rows_read` на накопленной истории и проверить indexed latest-job lookup.
 Не удалять историю и не отключать Cron вслепую; `SCHEDULED_JOBS_ENABLED=false`
-сам по себе не прекращает lease/run writes. Подробности и protected evidence
-находятся в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
+сам по себе не прекращает lease/run writes. Подробности и protected evidence находятся в
+[append-only handoff](../implementation/handoffs/stage-13.md); active state
+содержит только текущий containment/route.
 
-Local candidate использует ровно две `scheduled_cadence_state` rows; automatic
-Cron больше не дописывает `scheduled_job_runs`. Для operator summary использовать
+Fixed-cadence runtime использует ровно две `scheduled_cadence_state` rows;
+automatic Cron больше не дописывает `scheduled_job_runs`. Для operator summary использовать
 [latest-job-status.sql](../../scripts/sql/latest-job-status.sql), а не window
 functions по всей таблице. Regression с 20,000 завершёнными историческими runs
 измеряет `meta.rows_read`: health — 3, cadence summary — 2, routine manual history
-— 1 при одной manual row. Это local evidence; старый Worker в preview сохраняет
-дорогой запрос и per-job writes до отдельно разрешённых migration/deploy phases.
+— 1 при одной manual row. Это local evidence. Любой live Worker со старой shape сохраняет дорогой запрос
+и per-job writes до отдельно разрешённых migration/deploy phases; фактическую
+live shape проверять только по active state.
 
 Для деталей открыть `<PORTAL_ORIGIN>/admin/operations`: страница показывает две
 current cadence cards и recent manual `job_name`, `status`, start/finish, safe
@@ -423,11 +396,10 @@ target-pinned rehearsal не пройден, оставить provider disabled.
 
 ### 3.1 Telegram Bot API smoke и provider incident
 
-**Current status:** `blocked`. Deployed preview и baseline `c5712d0` используют
-`TELEGRAM_PROVIDER=disabled`; local candidate реализует `bot_api`, token/config
-wiring, durable `delivery_unknown` и operator actions, но не имеет immutable
-clean-clone/target-pinned preview evidence. No application Telegram send is
-authorized by this runbook.
+**Gate:** Telegram остаётся `feature_disabled|blocked`, пока active state не
+зафиксирует exact deployed runtime, target ownership, target-pinned preflight,
+operator drill и отдельно разрешённый synthetic one-message smoke. Никакая
+application Telegram send не авторизуется этим runbook.
 
 **Prerequisites for a future preview smoke:** PR-F12 local conformance passed;
 approved bot owner and exact bureau test/approved chat; separately authorized
@@ -694,15 +666,12 @@ Production contract send остаётся `feature_disabled`. Ниже опис�
 admin; Browser/private archive bindings; Resend key; SHA-256 адреса только
 контролируемых test recipients в `PREVIEW_EMAIL_RECIPIENT_HASHES`;
 `CONTRACT_SEND_ENABLED=true`, `CONTRACT_PREVIEW_REVIEW_ENABLED=true`,
-`CONTRACT_RENDERER=browser_run`. Exact continuity-only candidate
-`1607d6d…`, parent `6ebf476…`, получил fresh independent GO с 0 findings.
-Этот verdict закрывает local review gate, но не авторизует remote mutation:
-migration `0024`, `0025` и все последующие required append-only migrations
-могут быть applied только после отдельного прямого разрешения и fresh
-candidate-bound recovery evidence. До apply подтверждены
-complete exact-version render bundle, D1 storage intent, atomic R2
-create-if-absent, exact D1 install assertion и populated-upgrade regression.
-Реальные клиенты и Office/PII запрещены.
+`CONTRACT_RENDERER=browser_run`; active state подтверждает deployed reviewed
+runtime, exact required migration ledger and separate permission for this
+provider/storage phase. Complete exact-version render bundle, D1 storage intent,
+atomic R2 create-if-absent, exact D1 install assertion and populated-upgrade
+regression должны быть частью inherited candidate evidence. Реальные клиенты и
+Office/PII запрещены.
 
 **Точное UI:** `/admin/contracts`. Сначала один active admin нажимает «Vier
 Preview-Prüfvorlagen bereitstellen»; создаются четыре immutable

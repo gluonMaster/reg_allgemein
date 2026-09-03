@@ -2,6 +2,12 @@
 
 <!-- stage-13-current-review-status: independent_go -->
 
+> Этот файл — stable requirement→code→test→evidence mapping, не current
+> operational state. SHA, deployed version и next action брать только из
+> [STAGE_13_ACTIVE_STATE.md](STAGE_13_ACTIVE_STATE.md). Status/evidence cells ниже
+> являются dated snapshots; обновлять файл только при изменении mapping/gate, а
+> не после каждой remote operation.
+
 Ревизия: 2026-09-02.
 
 Матрица связывает все нормативные MVP requirement ID из
@@ -10,49 +16,12 @@
 заменяет [production readiness checklist](../operations/PRODUCTION_READINESS_CHECKLIST.md)
 и не превращает локально прошедший тест в production `passed`.
 
-Historical Turnstile async/onload candidate `bef5789…` received independent GO:
-0 P0/P1, existing P2 retained. Fresh registration Chromium 5/5, unit 15/15,
-check 0/0; exact full-suite evidence reused without runtime drift.
-Separately authorized preview deploy is complete: `745295d36248` at 100%,
-previous compatible `a4fab5d09f63` retained; Access/config/D1/R2 checks passed.
-Fresh Chrome GET rendered the real widget with visible success and enabled submit,
-closing the `AUTH-02` P1 `3857` before render. Subsequent controlled registration
-failed; workerd reproduced an unbound native fetch receiver error. D1 analytics
-also confirmed excessive operator/health history reads. Exact local remediation
-`0db38842524ebc146eaa56a9d089e3c3484bf0f3` binds fetch, replaces automatic
-per-job history with two cadence rows and uses bounded/indexed probes. Full local
-release gates passed; independent exact-SHA review returned **GO** with 0 P0,
-0 P1, 4 P2 and 0 P3. With 20,000 historical runs, measured health/cadence/manual
-reads are 3/2/1; a saturated 16-minute-bucket health window reads 18 rows.
-Deployment remains pending separate authorization; see
-[active state](STAGE_13_ACTIVE_STATE.md) for exact current evidence and gate.
-
-Historical reviewed registration remediation anchor is
-`146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
-`fbb9520eb670cd22f5ac236f1203823942078c1a`. Fresh independent review returned
-**GO** with 0 `P0`, 0 `P1`, 1 `P2` and 0 `P3`; it was deployed as
-`a4fab5d09f63`/100% and is now retained for rollback. It preserves bounded safe form fields but never the password,
-refreshes the privacy notice version and uses an explicit Turnstile lifecycle
-with submit disabled until token callback. Historical deployed target is
-`583165e316b739f4fb6a30001dae3a98ec62e1a1`,
-direct child of `3ad9527fb1d334d1a854ce69ff584ddb6d89d28d`. Fresh independent review returned
-**GO** with 0 `P0` / 0 `P1`. The exact candidate replaces SvelteKit's static
-adapter-URL form-origin comparison with a runtime guard bound to validated
-`PORTAL_PUBLIC_ORIGIN`; literal/null Origin is accepted only for exact
-same-origin navigation Fetch Metadata. Full Vitest 75/75 files, 563 pass + 1
-Windows skip, Chromium E2E 18/18, check, build, audit, docs, release scan and
-exact diff passed.
-The separately authorized remediation Worker deploy also passed: version
-fingerprint `2de99c0c5815` was then active at 100%, the previous version remained
-available, and Access/root/health/register GET/versioned routes, bindings,
-D1/R2 and scheduled-job postconditions are green. Account retry, provider
-delivery, bootstrap and production remain blocked until their own authorization
-and environment evidence.
-
-Historical `2bedc73c9b39a4cb43296046986a3f48e039b022` retains independent GO only
-for its narrower IMPORT-08 docs/test scope; it does not approve the later
-contract runtime. Historical runtime/evidence anchors remain documented in the
-handoff and readiness checklist. Stable keys remain requirement ID, section
+Release-specific candidate/deploy/next-action facts намеренно не повторяются в
+этой матрице. Current release anchor и gate находятся в
+[active state](STAGE_13_ACTIVE_STATE.md); immutable dated review/deploy evidence —
+в [append-only handoff](handoffs/stage-13.md). Слова `current`, `deployed` или
+`next` внутри старых evidence cells относятся только к дате конкретного snapshot
+и не являются командой продолжения. Stable keys remain requirement ID, section
 name and acceptance-bullet text.
 
 ## Статусы и границы claims
@@ -311,9 +280,9 @@ criterion text survive line movement.
 | CONTRACT-18 | `MVP:L416`; `AC:L551` (append-only parent/admin history)                                                                             | contract projections/history in `src/lib/server/contracts/contract-repository.ts::ContractRepository` and routes                                                                                | T-CONTRACT-FLOW, T-CONTRACT-END, T-CONTRACT-SUPERSEDE                                                                       | supported locally                                                                                                                                                                                       | E-BROWSER-AUTH                   |
 | CONTRACT-19 | `MVP:L420`; `AC:L554,L566,L576` (statutory/ordinary/extraordinary/media functions separated)                                         | termination/media records in `src/lib/server/contracts/contracts.ts`; `src/lib/server/config/runtime.ts::ContractRuntimeConfig` fail-closed gates                                               | T-CONTRACT-MEDIA; `tests/unit/config.test.ts` — `keeps contract send, public functions, and online media grant fail-closed` | **partial / feature_disabled:** no unauthenticated public statutory route; tracked product gap, not release-passed                                                                                      | E-CONTRACT, E-APPROVALS          |
 | CONTRACT-20 | `MVP:L449`; `AC:L582` (unique production contract number only at formation)                                                          | permanent numbering/formation transaction in `src/lib/server/contracts/contract-repository.ts::ContractRepository`                                                                              | T-CONTRACT-FLOW, T-CONTRACT-SUPERSEDE                                                                                       | supported locally                                                                                                                                                                                       | E-CONTRACT, E-APPROVALS          |
-| CONTRACT-21 | `MVP:CONTRACT-21`; preview-review acceptance bullets                                                                                 | `src/lib/server/contracts/templates.ts`; `contract-service.ts`; migration `0024`; contract/email routes                                                                                         | T-CONTRACT-RENDER, T-CONTRACT-FLOW, T-CONTRACT-SOURCE-BUNDLE, T-CONTRACT-PRE-DRAFT-GATE                                     | supported locally; full-manual-preview deployment remains blocked pending exact-SHA independent review                                                                                                  | E-CONTRACT, E-R2, E-BROWSER-AUTH |
+| CONTRACT-21 | `MVP:CONTRACT-21`; preview-review acceptance bullets                                                                                 | `src/lib/server/contracts/templates.ts`; `contract-service.ts`; migration `0024`; contract/email routes                                                                                         | T-CONTRACT-RENDER, T-CONTRACT-FLOW, T-CONTRACT-SOURCE-BUNDLE, T-CONTRACT-PRE-DRAFT-GATE                                     | supported locally and independently reviewed; migration `0024` is deployed fail-closed, while four real Browser/R2/email artifacts and one formation lifecycle remain blocked in full manual preview                                                                     | E-CONTRACT, E-R2, E-BROWSER-AUTH |
 | CONTRACT-22 | `MVP:CONTRACT-22`; AC-CONTRACT-02 (complete immutable render source, renderer-engine isolation and exact version resolution)         | `src/lib/server/contracts/templates.ts::buildContractTemplateBundle,parseContractTemplateBundle,renderContractSource`; exact bundle load in `contract-service.ts`                               | T-CONTRACT-SOURCE-BUNDLE                                                                                                    | supported locally; independent review passed, remote rehearsal remains separately blocked                                                                                                               | E-CONTRACT, E-R2                 |
-| CONTRACT-23 | `MVP:CONTRACT-23`; AC-CONTRACT-03–07 (recoverable generation-fenced install, bounded reads, pre-draft isolation, populated upgrades) | `contract-service.ts::putImmutableTemplateBundle,assertDraftTemplateGate`; `contract-repository.ts::stageTemplateBundleIntent,installTemplateSetAtomic`; `storage.ts`; migrations `0024`/`0025` | T-CONTRACT-INSTALL, T-CONTRACT-PRE-DRAFT-GATE, T-CONTRACT-MIGRATION-0024, T-CONTRACT-MIGRATION-0025                         | supported locally; remote apply/deploy and independent review remain blocked                                                                                                                            | E-CONTRACT, E-R2, E-BACKUP       |
+| CONTRACT-23 | `MVP:CONTRACT-23`; AC-CONTRACT-03–07 (recoverable generation-fenced install, bounded reads, pre-draft isolation, populated upgrades) | `contract-service.ts::putImmutableTemplateBundle,assertDraftTemplateGate`; `contract-repository.ts::stageTemplateBundleIntent,installTemplateSetAtomic`; `storage.ts`; migrations `0024`/`0025` | T-CONTRACT-INSTALL, T-CONTRACT-PRE-DRAFT-GATE, T-CONTRACT-MIGRATION-0024, T-CONTRACT-MIGRATION-0025                         | supported locally and independently reviewed; `0024`/`0025` are applied to preview/recovery with lineage/FK checks, while non-empty R2 install/recovery and Browser/provider lifecycle remain blocked                                                                     | E-CONTRACT, E-R2, E-BACKUP       |
 
 ## Per-ID traceability: production legacy import
 

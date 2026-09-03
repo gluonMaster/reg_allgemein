@@ -4,13 +4,20 @@
 
 Ревизия: 2026-09-02.
 
-Статус этапа: `in_progress` — preview по-прежнему использует reviewed Turnstile
-candidate `bef5789…` как `745295d36248`/100%. Controlled registration failed на
-server verification, а D1 incident выявил дорогие operator/health scans и
-per-job write amplification. Оба P1 исправлены в exact local candidate
-`0db38842524ebc146eaa56a9d089e3c3484bf0f3`; полный release gate прошёл,
-independent exact-SHA review вернул **GO** (`P0: 0`, `P1: 0`, `P2: 4`, `P3: 0`).
-Remote migration/deploy не разрешены. Production **NO-GO**.
+> **Append-only history, не current truth.** Для продолжения Stage 13 читать
+> только [STAGE_13_ACTIVE_STATE.md](../STAGE_13_ACTIVE_STATE.md) и evergreen
+> deploy entry-point. Этот файл открывать адресно по evidence-ссылке; старые
+> status/SHA/next-action ниже являются историческими снимками и никогда не
+> переопределяют active state. Обновлять его только на границе фазы/сессии.
+
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 0db38842524ebc146eaa56a9d089e3c3484bf0f3 -->
+
+Последний сохранённый phase-boundary record: exact D1-cost remediation candidate
+получил independent GO с `P0/P1 = 0`; production остаётся **NO-GO**. Текущее
+разрешение, deployed fingerprint и next atomic action намеренно здесь не
+повторяются.
+
+## Append-only evidence history
 
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent

@@ -43,6 +43,27 @@
   обезличенным отчетом и после отдельного прямого поручения; обычный stage run
   использует только synthetic fixtures.
 
+
+## Decision gate выбора проверок
+
+Перед запуском tests в active state фиксируется ровно одна строка этой таблицы.
+При отсутствии material risk нельзя выбирать более тяжёлую строку «для
+уверенности».
+
+| Change/action class | Focused evidence | Full release gate | Independent exact-candidate review |
+| --- | --- | --- | --- |
+| Docs-only current-state/handoff/checklist patch | docs links/commands/continuity, release secret/PII scan, diff check | **нет** | **нет** |
+| Remote migration/deploy/config action для неизменённого fully gated candidate | exact-target preflight, migration compatibility при необходимости, один bounded postcondition/smoke | наследуется | наследуется |
+| Локализованный runtime fix одной surface | минимальный RED→GREEN affected test и direct consumers; check/build только если затронуты | только если impact нельзя ограничить либо candidate ещё не имеет gate | только для нового material candidate после требуемого gate |
+| Material runtime/migration/dependency/deploy-config/cross-cutting diff | focused RED→GREEN, upgrade/rollback compatibility и direct consumers | **один раз** для exact candidate | **один раз** для того же exact candidate |
+| P2/P3 без отказа текущего milestone | backlog only | **нет** | **нет** |
+
+Docs-only child reviewed SHA, повторный read-only checkpoint и исправление текста
+не создают новый runtime candidate. Независимый review не повторяется для них.
+После interruption уже завершённые тяжёлые suites не перезапускаются: выполняются
+только незавершённые обязательные gates exact candidate, если их evidence можно
+однозначно связать с тем же tree.
+
 ## Проекция требований на suites
 
 Каждый диапазон ниже обязан иметь позитивные, негативные и, где применимо,
