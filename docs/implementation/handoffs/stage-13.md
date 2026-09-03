@@ -19,6 +19,26 @@
 
 ## Append-only evidence history
 
+### Prompt 04 registration preflight and owner-input boundary — 2026-09-03
+
+- The fourth owner-invoked prompt authorized one controlled synthetic-parent
+  registration and verification delivery. Registration was not attempted before
+  the owner-input handoff; no remote mutation or provider send occurred.
+- The read-only preflight at `16:31:39Z` confirmed the recorded deployed
+  candidate, Access, two recipient hashes, migration ledger through `0026`,
+  fresh successful cadences and empty account/auth/outbox/bootstrap state.
+  Eleven SELECT statements read 47 rows and wrote 0. One account analytics
+  observation confirmed quota headroom; historical integrity evidence was reused.
+- Verification automatically enqueues a welcome email. The prompt's explicit
+  one-verification-email limit therefore needs a separate allowance for that
+  additional delivery before verification. This is a permission boundary, not a
+  new runtime defect. Runtime/config were unchanged and full suites/review were
+  not repeated; docs, release scan and diff checks passed.
+- Protected evidence: `tmp/first-registration-20260903-owner/before-safe.json`,
+  SHA-256 `20ca94df4c72f2d5a61e0ddad974662b6ba05813ef007fbd2f8ef638366b13e0`.
+  Current authorization, owner-input boundary, containment and the next atomic
+  action are maintained only in [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### Exact preview Worker deployment checkpoint — 2026-09-03
 
 - The owner-invoked third prompt authorized one Worker deploy. It was executed

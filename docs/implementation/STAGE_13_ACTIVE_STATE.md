@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T16:01:48Z
+updated_utc: 2026-09-03T16:31:39Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-exact-reviewed-worker-deploy-success
-next_gate: phase-4-separately-authorized-controlled-registration
+last_completed_gate: phase-4-first-registration-readonly-preflight-success
+next_gate: phase-4-owner-controlled-first-registration
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-exact-worker-deployed-awaiting-registration-permission
+current_phase: phase-4-registration-authorized-awaiting-owner-browser-input
 last_atomic_action: preview-worker-deploy-reviewed-candidate
 last_atomic_result: success
-next_atomic_action: request-separate-owner-authorization-for-one-controlled-registration-retry
+next_atomic_action: owner-submit-one-controlled-registration-then-readonly-reconcile-and-checkpoint
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: controlled-preview-registration-target-procedure-and-containment-are-known
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: no_remote_mutation_authorized_worker_deploy_permission_consumed
+permission_state: one_controlled_registration_and_verification_delivery_authorized_not_attempted
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -64,12 +64,12 @@ preview:
     applied_through: 0026_background_d1_cost_controls.sql
     pending_exactly: []
     last_recorded_foreign_key_violations: 0
-    quota_precondition: confirmed_by_one_account_analytics_observation_2026_09_03T15_45_22Z_for_worker_deploy
+    quota_precondition: confirmed_by_one_account_analytics_observation_2026_09_03T16_31_37Z_for_registration
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-03T16:01:48Z
-    postcondition_rows_read: 37
+    latest_bounded_postcondition_utc: 2026-09-03T16:31:39Z
+    postcondition_rows_read: 47
     postcondition_rows_written: 0
   scheduled:
     fast: succeeded_fresh
@@ -89,37 +89,116 @@ preview:
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
-  controlled_registration: reviewed_remediation_deployed_retry_requires_separate_permission
+  controlled_registration: authorized_preflight_passed_owner_browser_input_pending_not_attempted
+  email_verification: permission_conflict_automatic_auth_welcome_requires_one_additional_delivery_authorization
+  login_logout: authorized_after_verified_account_and_per_action_checkpoints
 next_atomic_action:
   id: preview-controlled-registration-retry
-  permission: separate_explicit_owner_authorization_required
+  permission: owner_invoked_prompt_04_one_attempt_and_one_verification_delivery_already_authorized
   target: exact_access_protected_preview_and_existing_controlled_recipient_record
   mutation: one_controlled_registration_retry_with_verification_delivery
   preconditions:
     - exact_reviewed_worker_and_migration_0026_deploy_checkpoint_successful
     - protected_preview_target_access_and_recipient_allowlist_unchanged
     - synthetic_identity_and_provider_destination_from_protected_record_only
-    - no_new_remote_mutation_without_separate_owner_authorization
+    - owner_enters_access_email_otp_registration_email_password_and_privacy_acceptance_personally
+    - timestamped_preflight_is_current_for_the_supervised_attempt_no_known_drift
   postcondition:
     - one_bounded_reconciliation_of_account_token_and_verification_delivery_outcome
     - no_duplicate_account_or_provider_send_on_failed_or_ambiguous_response
     - checkpoint_before_any_following_mutation
-  success_transition: checkpoint_then_next_separately_authorized_phase
+  success_transition: checkpoint_then_resolve_automatic_welcome_delivery_permission_before_verification
   failed_or_ambiguous_transition: stop_reconcile_no_blind_retry_or_automatic_worker_rollback
   forbidden_in_this_action:
-    - registration_or_provider_send_without_separate_owner_authorization
+    - second_registration_attempt_second_account_or_resend
+    - verification_before_separate_authorization_for_its_automatic_welcome_delivery
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
-    - bootstrap_role_or_session_mutation
+    - bootstrap_role_change_or_unrelated_session_mutation
     - unrelated_provider_send_or_secret_flag_access_change
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
-  - one_controlled_registration_retry_and_verification_delivery
+  - automatic_auth_welcome_delivery_to_the_same_allowlisted_recipient_during_verification
   - second_verified_synthetic_account_then_one_shot_admin_bootstrap
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## First registration preflight and owner handoff — 2026-09-03
+
+Result: read-only preflight `success`; registration **not attempted**. The owner
+invoked prompt 04, authorizing one first synthetic-parent registration, one
+allowlisted verification delivery, then verification/login/logout. This
+authorization is retained; it does not authorize a retry, second account,
+bootstrap, unrelated provider send, configuration change or deploy. No remote
+mutation or provider send was attempted by this session. The last atomic
+mutation remains the successful Worker deploy recorded below.
+
+At `16:31:39Z`, the bounded preflight confirmed candidate
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3`, deployed fingerprint `ad3134edb662`,
+one active version at 100%, exact candidate annotation, unchanged protected
+config/bindings/feature gates and both Cron schedules. The account/Worker/origin/
+D1 fingerprints match the machine-readable record. Anonymous/invalid Access
+probes returned login redirects `302`, valid root and registration GET returned
+`200`, and the versioned route remained `404`. Both approved recipient hashes
+are unchanged; their sanitized prefixes are `f229bcd52c21` and `04c5a3377cd9`.
+
+One account-wide analytics observation at `16:31:37Z` reported 941,785 reads and
+25,718 writes. The subsequent 11 SELECT statements read 47 rows, wrote 0 and
+all reported `changes=0`, `changed_db=false`. Ledger names exactly match local
+`0001`–`0026`, pending 0. Users/parents/admins/verified users, privacy
+acknowledgements, auth tokens/verification commits, outbox/provider receipts,
+sessions, auth rate buckets/audit, bootstrap, Telegram and storage intents were
+all zero. Both fixed cadence rows were fresh and successful with no recent
+failures. Prior scoped integrity/FK evidence is reused; neither historical-job
+scans nor full integrity checks were repeated.
+
+**Scope boundary discovered before submission:** successful initial email
+verification unconditionally enqueues `auth.welcome` in
+`src/lib/server/auth/auth-repository.ts`, and the enabled Resend outbox sends it
+to the same current recipient. Thus completion produces two logical emails:
+verification plus welcome. Prompt 04 permits only the verification delivery and
+explicitly forbids other sends. Registration itself remains authorized, but
+verification must wait for explicit authorization for that one additional
+welcome delivery. This is a concrete permission-scope conflict, not a newly
+demonstrated runtime P0/P1 or a reason to reopen the reviewed candidate. No code,
+flag, secret, outbox row or provider configuration was changed to bypass it.
+
+The owner-facing browser is at Cloudflare Access before the registration form.
+The owner must complete Access and enter the first previously approved mailbox,
+password and synthetic identity personally; credentials, OTP, cookies and
+verification links must never enter chat or evidence. Submit the registration
+once only. After the response and first delivery result, perform one bounded
+read-only reconciliation and docs-only checkpoint **before** verification,
+login or any further mutation. No resend or form retry on failure/ambiguity.
+
+Protected current-user-only ignored evidence:
+`tmp/first-registration-20260903-owner/before-safe.json` and
+`before-counts-safe.json`; the former has SHA-256
+`20ca94df4c72f2d5a61e0ddad974662b6ba05813ef007fbd2f8ef638366b13e0`.
+The ignored helper
+`tmp/first-registration-readonly.cjs` supports one observation per named stage
+and only read-only control APIs/SELECT statements; it stores aggregate results,
+never identity fields, token values or raw configuration. Two preliminary
+helper invocations stopped on local evidence-directory ACL errors before their
+control snapshot completed; no D1 or analytics observation was reached. The
+successful preflight used a new directory created under the intended owner.
+Do not run the retired historical registration snapshot helper.
+
+Containment: keep Access and the two-recipient restriction unchanged; no
+verification/welcome send until its scope is authorized; no direct D1 repair,
+account deletion, automatic rollback or repeated diagnostics. If the owner
+resumes outside this supervised window, revalidate stale preconditions once
+before submitting. Permission for the one registration remains unused.
+
+Validation: runtime, migrations, dependencies and config are unchanged from the
+reviewed candidate; the full release evidence and independent GO above are
+reused. This checkpoint uses only `npm run docs:check`, `npm run release:scan`
+and `git diff --check`. Full check/Vitest/E2E/build/audit/review are not repeated.
+`rollover_required: no`; `recommended_next_session_mode: High`: the authorized
+registration write has a known target, procedure, postcondition and containment;
+owner browser input and welcome scope must be respected.
 
 ## Exact Worker deploy checkpoint — 2026-09-03
 
