@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T13:19:56Z
+updated_utc: 2026-09-03T14:15:17Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-3-d1-cost-release-validation-and-independent-review-go
-next_gate: phase-4-read-only-preview-d1-integrity-reconciliation
+next_gate: phase-4-owner-authorized-preview-d1-0026-apply
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-preview-d1-0026-preflight-blocked-before-write
-last_atomic_action: preview-d1-0026-read-only-preflight
-last_atomic_result: failed
-next_atomic_action: read-only-reconcile-required-preview-d1-integrity-postcondition
+current_phase: phase-4-preview-d1-0026-preflight-ready-after-integrity-reconciliation
+last_atomic_action: preview-d1-0026-read-only-integrity-and-file-path-reconciliation
+last_atomic_result: success
+next_atomic_action: owner-authorized-preview-d1-0026-apply-with-command-path-postcondition
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: read-only-integrity-reconciliation-no-remote-write-attempt-or-ambiguous-mutation
+recommended_next_session_mode: High
+mode_reason_plain: exact-preview-target-migration-command-postcondition-and-containment-are-known
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_authorized_one_conditional_0026_apply_not_attempted_preflight_blocked
+permission_state: owner_authorized_one_conditional_0026_apply_not_attempted_preflight_ready
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -61,8 +61,8 @@ preview:
     pending_exactly:
       - 0026_background_d1_cost_controls.sql
     last_recorded_foreign_key_violations: 0
-    quota_precondition: confirmed_by_account_analytics_2026_09_03T13_12_27Z_revalidate_before_future_write
-    integrity_precondition: blocked_quick_check_sqlite_nomem_7500_no_integrity_result
+    quota_precondition: confirmed_by_account_analytics_2026_09_03T14_07_48Z_revalidate_immediately_before_future_write
+    integrity_precondition: affected_table_scoped_quick_check_supported_largest_table_remote_ok_full_postcondition_local_ok
     migration_attempted: false
   synthetic_state:
     users: 0
@@ -80,7 +80,7 @@ known_deployed_preview_p1:
   - id: P1-DEPLOYED-D1-001
     impact: old_health_and_cron_paths_can_exhaust_shared_d1_quota
     remediation: migration_0026_plus_reviewed_candidate
-blocked_migration_action:
+next_atomic_action:
   id: preview-d1-apply-0026
   permission: owner_authorized_exactly_once_subject_to_all_preconditions_not_consumed
   target: exact_dedicated_preview_d1_from_protected_config
@@ -93,7 +93,7 @@ blocked_migration_action:
     - recovery_or_time_travel_containment_is_still_available
     - required_integrity_postcondition_is_executable_without_weakening_the_owner_gate
   postcondition:
-    - one_bounded_read_only_ledger_schema_fk_check
+    - one_bounded_read_only_command_path_ledger_schema_fk_affected_table_integrity_check
     - ledger_applied_through_0026
     - exactly_fast_and_maintenance_cadence_rows_exist
     - expected_indexes_present_and_foreign_key_check_zero
@@ -107,15 +107,6 @@ blocked_migration_action:
     - provider_send_or_secret_flag_access_change
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
-next_atomic_action:
-  id: read-only-reconcile-preview-d1-integrity-postcondition
-  permission: read_only_only_under_existing_scope
-  target: exact_dedicated_preview_d1_from_protected_config
-  action: establish_supported_bounded_integrity_verification_for_the_required_migration_checkpoint
-  blocker: D1_INTEGRITY_POSTCONDITION_UNAVAILABLE_SQLITE_NOMEM_7500
-  containment: no_apply_no_deploy_no_retry_or_polling_preserve_access_and_existing_provider_gates
-  success_transition: return_to_conditional_0026_apply_only_after_all_preconditions_are_revalidated
-  failed_transition: retain_blocker_no_remote_mutation
 following_route_requires_separate_permissions:
   - deploy_exact_reviewed_candidate_then_one_bounded_cadence_health_postcondition
   - one_controlled_registration_retry_and_verification_delivery
@@ -123,6 +114,50 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Read-only integrity reconciliation checkpoint — 2026-09-03
+
+Result: `success`; migration `0026` remains **not attempted**, and its conditional
+permission is not consumed. The earlier database-wide `PRAGMA quick_check(1)`
+failure is a bounded-execution limitation, not evidence of corruption. Cloudflare
+documents `quick_check` as supported, but D1 query execution shares Workers CPU
+and memory limits; SQLite documents the database-wide form as an O(N) scan. The
+preview database currently has an approximately 80 MB logical image, 854 schema
+objects and more than 80,000 retained scheduled-history rows.
+
+The supported migration-specific integrity gate is now proven. Remote
+`PRAGMA quick_check('scheduled_job_runs')` on the largest affected table returned
+`ok` in 1.78 seconds with 241,848 reads and 0 writes. An isolated clean local D1
+through `0026` then passed the exact command-path postcondition: ledger 26,
+exactly two cadence rows, 10 required schema objects, 0 removed legacy indexes,
+FK 0 and `ok` for table-scoped `quick_check` on all 10 tables whose table/index
+structures `0026` changes. The remote postcondition must use `--command`, not
+Wrangler's file-import path, so each result and `changed_db=false` remain visible.
+
+Fresh control evidence at `14:07:48Z`–`14:12:14Z` confirms account-wide daily D1
+usage of 357,811 reads and 23,055 writes, the unchanged protected config/target
+fingerprints, the expected Worker fingerprint at 100% traffic, Access login
+redirect `302` and an available Time Travel bookmark. Candidate ancestry,
+runtime/migration/dependency/deploy-config equivalence and the reviewed `0026`
+blob/hash remain unchanged.
+
+One attempted SELECT-only precondition used `wrangler d1 execute --file`; Wrangler
+reported 85,822 reads and 0 rows written, but also the contradictory transport
+metadata `changed_db=true`. It is not accepted as evidence. The required single
+query-path reconciliation immediately afterward returned ledger 25, no cadence
+table, FK 0, 80,667 retained scheduled rows, `changes=0`, `changed_db=false` and
+0 rows written. Therefore no logical schema/data mutation occurred, `0026` is
+still pending and no recovery action is needed. Do not use `--file` for this
+read-only checkpoint again.
+
+Containment until the authorized write: no deploy, registration, provider send,
+bootstrap, recovery or health polling. Immediately before apply, revalidate that
+the Wrangler pending set is exactly `0026`; then apply it once and execute one
+bounded `--command` ledger/schema/retention/FK/affected-table integrity
+postcondition. `rollover_required: no`;
+`recommended_next_session_mode: High`, because target, mutation, postcondition
+and containment are exact and the contradictory read-path metadata was resolved
+without a logical D1 write.
 
 ## Read-only preflight checkpoint — 2026-09-03
 
