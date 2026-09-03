@@ -19,6 +19,26 @@
 
 ## Append-only evidence history
 
+### First controlled registration and terminal verification delivery — 2026-09-03
+
+- The owner submitted the authorized synthetic registration once and received
+  the verification email. The bounded `16:50:10Z` reconciliation confirmed one
+  active unverified parent, one privacy acknowledgement, one unused verification
+  token, one register rate-limit consumption and one registration audit event.
+- The single verification outbox row was terminal `sent` with attempts 1 and one
+  provider receipt. Verification commits, sessions, admins/bootstrap and all
+  unrelated provider/storage state stayed zero. Eleven SELECT statements read
+  49 rows and wrote 0; target, reviewed Worker, bindings, gates and recipient
+  hashes remained exact.
+- Owner feedback `P2-REG-UX-001`: the success message sits inside the cleared
+  form and is easy to mistake for an error; a distinct success panel/state would
+  make completion clearer. The prompt forbids code changes and the successful
+  required flow is not blocked, so this does not reopen candidate review.
+- Protected evidence: `tmp/first-registration-20260903-owner/after-registration-safe.json`,
+  SHA-256 `50fdfc0e9cb7c0d65fc9c63f2d26641d9cf6059a8999db196b8e6d9ba4c79f22`.
+  Current permissions and next action remain exclusively in
+  [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### Prompt 04 registration preflight and owner-input boundary — 2026-09-03
 
 - The fourth owner-invoked prompt authorized one controlled synthetic-parent

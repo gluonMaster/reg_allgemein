@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T16:31:39Z
+updated_utc: 2026-09-03T16:50:10Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-first-registration-readonly-preflight-success
-next_gate: phase-4-owner-controlled-first-registration
+last_completed_gate: phase-4-first-registration-and-verification-delivery-success
+next_gate: phase-4-first-email-verification-with-automatic-welcome-delivery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-registration-authorized-awaiting-owner-browser-input
-last_atomic_action: preview-worker-deploy-reviewed-candidate
+current_phase: phase-4-first-parent-unverified-awaiting-welcome-send-permission
+last_atomic_action: preview-first-registration-and-verification-delivery
 last_atomic_result: success
-next_atomic_action: owner-submit-one-controlled-registration-then-readonly-reconcile-and-checkpoint
+next_atomic_action: authorize-then-owner-open-verification-link-with-one-automatic-welcome-delivery
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: controlled-preview-registration-target-procedure-and-containment-are-known
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: one_controlled_registration_and_verification_delivery_authorized_not_attempted
+permission_state: registration_permission_consumed_verification_authorized_welcome_delivery_not_authorized
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -79,8 +79,14 @@ preview:
     automatic_history_growth: stopped
     health: head_204_empty_no_store_noindex
   synthetic_state:
-    users: 0
+    users: 1
+    parents: 1
+    verified_users: 0
     admins: 0
+    privacy_acknowledgements: 1
+    unused_verification_tokens: 1
+    verification_deliveries_sent_with_receipt: 1
+    auth_sessions: 0
     import_pair: 2_plus_1703
   providers:
     auth_and_resend: enabled_only_behind_access_and_two_recipient_hashes
@@ -89,29 +95,29 @@ preview:
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
-  controlled_registration: authorized_preflight_passed_owner_browser_input_pending_not_attempted
+  controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: permission_conflict_automatic_auth_welcome_requires_one_additional_delivery_authorization
   login_logout: authorized_after_verified_account_and_per_action_checkpoints
 next_atomic_action:
-  id: preview-controlled-registration-retry
-  permission: owner_invoked_prompt_04_one_attempt_and_one_verification_delivery_already_authorized
+  id: preview-first-email-verification-with-welcome-delivery
+  permission: verification_authorized_by_prompt_04_automatic_welcome_delivery_requires_explicit_additional_authorization
   target: exact_access_protected_preview_and_existing_controlled_recipient_record
-  mutation: one_controlled_registration_retry_with_verification_delivery
+  mutation: owner_opens_existing_verification_link_once_then_exactly_one_automatic_auth_welcome_delivery
   preconditions:
     - exact_reviewed_worker_and_migration_0026_deploy_checkpoint_successful
     - protected_preview_target_access_and_recipient_allowlist_unchanged
-    - synthetic_identity_and_provider_destination_from_protected_record_only
-    - owner_enters_access_email_otp_registration_email_password_and_privacy_acceptance_personally
-    - timestamped_preflight_is_current_for_the_supervised_attempt_no_known_drift
+    - registration_postcondition_exactly_one_unverified_parent_and_one_terminal_verification_delivery
+    - owner_opens_verification_link_personally_without_sharing_or_recording_it
+    - separate_explicit_authorization_for_one_auth_welcome_delivery_to_same_allowlisted_recipient
   postcondition:
-    - one_bounded_reconciliation_of_account_token_and_verification_delivery_outcome
-    - no_duplicate_account_or_provider_send_on_failed_or_ambiguous_response
+    - one_bounded_reconciliation_of_user_family_assignment_used_token_verification_commit_welcome_outbox_provider_receipt_and_audit
+    - no_duplicate_user_token_outbox_send_bootstrap_or_session
     - checkpoint_before_any_following_mutation
-  success_transition: checkpoint_then_resolve_automatic_welcome_delivery_permission_before_verification
+  success_transition: checkpoint_then_owner_login_under_prompt_04_authorization
   failed_or_ambiguous_transition: stop_reconcile_no_blind_retry_or_automatic_worker_rollback
   forbidden_in_this_action:
-    - second_registration_attempt_second_account_or_resend
-    - verification_before_separate_authorization_for_its_automatic_welcome_delivery
+    - registration_retry_second_account_or_resend
+    - verification_without_separate_authorization_for_its_automatic_welcome_delivery
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
     - bootstrap_role_change_or_unrelated_session_mutation
@@ -124,6 +130,58 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## First controlled registration and verification delivery — 2026-09-03
+
+Result: `success`. The owner submitted the authorized synthetic registration
+form exactly once and reported receipt of its verification email. The bounded
+read-only reconciliation completed at `16:50:10Z` against the recorded preview
+target and confirmed the expected reviewed Worker fingerprint `ad3134edb662` at
+100% traffic, unchanged bindings/feature gates/Cron schedules and the same two
+recipient hashes. Registration permission is consumed; there was no retry,
+resend, second account, bootstrap, deploy or configuration mutation.
+
+The 11 SELECT statements read 49 rows, wrote 0 and reported `changes=0`,
+`changed_db=false`. The exact ledger remains `0001`–`0026`, pending 0. Before →
+after counts are: users/parents `0 → 1`, privacy acknowledgements `0 → 1`,
+unused unexpired email-verification tokens `0 → 1`, and register rate-limit
+buckets `0 → 1` with consumed count 1. The sole account is active, unblocked,
+unverified and has no FamilyID before verification, as required. The sole outbox
+row is `auth.email_verification`, terminal `sent`, attempts 1, provider receipt
+1 and no safe error code. Audit contains exactly one
+`auth.registration_created`. Verification commits, sessions, admins/bootstrap,
+Telegram outbox/attempts and storage intents remain zero. Both fixed cadence
+rows were successful with no recent failures. No PII, password, token/link,
+cookie or raw provider identifier was read or saved.
+
+The owner reported that the successful German confirmation is rendered inside
+the now-cleared registration form and can initially look like an error. This is
+`P2-REG-UX-001`: the registration flow succeeded and the message is explicit,
+but a visually separate success panel or success state would reduce uncertainty.
+Per the current prompt, no runtime/UI code is changed and this P2 does not open
+a new review loop or block the next manual-preview step.
+
+Protected current-user-only ignored evidence:
+`tmp/first-registration-20260903-owner/after-registration-safe.json`, SHA-256
+`50fdfc0e9cb7c0d65fc9c63f2d26641d9cf6059a8999db196b8e6d9ba4c79f22`.
+An attempted helper invocation after the evidence already existed stopped at
+its local one-observation guard before any Cloudflare call; no duplicate remote
+read or mutation occurred.
+
+Containment: do not click the verification link, resend, repeat registration,
+log in or perform another mutation before the docs-only checkpoint and explicit
+authorization for the one automatically enqueued `auth.welcome` delivery. A
+failed or ambiguous future verification is reconciled once and never retried
+blindly. Access and recipient restrictions remain unchanged.
+
+Validation for this operational checkpoint is limited to `npm run docs:check`,
+`npm run release:scan` and `git diff --check`. Runtime, migrations, dependencies
+and config are unchanged, so the existing full release gate and independent GO
+are reused; full check/Vitest/E2E/build/audit/review are not repeated.
+`rollover_required: no`; `recommended_next_session_mode: High`: the next
+verification mutation and its automatic welcome send have a known target,
+postcondition and containment, but the additional provider delivery requires
+explicit permission.
 
 ## First registration preflight and owner handoff — 2026-09-03
 
