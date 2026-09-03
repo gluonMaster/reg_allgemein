@@ -4,18 +4,18 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T16:59:16Z
+updated_utc: 2026-09-03T17:02:36Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-first-registration-and-verification-delivery-success
-next_gate: phase-4-first-email-verification-with-automatic-welcome-delivery
+last_completed_gate: phase-4-first-email-verification-and-welcome-delivery-success
+next_gate: phase-4-first-verified-parent-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-welcome-authorized-awaiting-owner-email-verification
-last_atomic_action: preview-first-registration-and-verification-delivery
+current_phase: phase-4-first-parent-verified-awaiting-owner-login
+last_atomic_action: preview-first-email-verification-and-automatic-welcome-delivery
 last_atomic_result: success
-next_atomic_action: authorize-then-owner-open-verification-link-with-one-automatic-welcome-delivery
+next_atomic_action: owner-login-once-then-readonly-reconcile-and-checkpoint
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: controlled-preview-registration-target-procedure-and-containment-are-known
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: one_email_verification_and_one_automatic_welcome_delivery_authorized_not_attempted
+permission_state: verification_and_welcome_permission_consumed_login_logout_authorized_by_prompt_04
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -81,11 +81,15 @@ preview:
   synthetic_state:
     users: 1
     parents: 1
-    verified_users: 0
+    verified_users: 1
     admins: 0
     privacy_acknowledgements: 1
-    unused_verification_tokens: 1
+    unused_verification_tokens: 0
+    used_verification_tokens: 1
+    verification_commits: 1
+    users_with_family_id: 1
     verification_deliveries_sent_with_receipt: 1
+    welcome_deliveries_sent_with_receipt: 1
     auth_sessions: 0
     import_pair: 2_plus_1703
   providers:
@@ -96,28 +100,27 @@ preview:
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
-  email_verification: permission_conflict_automatic_auth_welcome_requires_one_additional_delivery_authorization
-  login_logout: authorized_after_verified_account_and_per_action_checkpoints
+  email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
+  login_logout: authorized_not_attempted_checkpoint_required_between_login_and_logout
 next_atomic_action:
-  id: preview-first-email-verification-with-welcome-delivery
-  permission: verification_authorized_by_prompt_04_and_one_automatic_welcome_delivery_explicitly_authorized_2026_09_03T16_59_16Z
+  id: preview-first-verified-parent-login
+  permission: owner_invoked_prompt_04_login_authorization_active
   target: exact_access_protected_preview_and_existing_controlled_recipient_record
-  mutation: owner_opens_existing_verification_link_once_then_exactly_one_automatic_auth_welcome_delivery
+  mutation: owner_logs_in_once_with_existing_verified_synthetic_account
   preconditions:
     - exact_reviewed_worker_and_migration_0026_deploy_checkpoint_successful
     - protected_preview_target_access_and_recipient_allowlist_unchanged
-    - registration_postcondition_exactly_one_unverified_parent_and_one_terminal_verification_delivery
-    - owner_opens_verification_link_personally_without_sharing_or_recording_it
-    - separate_explicit_authorization_for_one_auth_welcome_delivery_to_same_allowlisted_recipient
+    - verification_postcondition_exactly_one_verified_parent_one_family_id_and_two_terminal_email_deliveries
+    - owner_enters_email_and_password_personally_without_sharing_or_recording_them
   postcondition:
-    - one_bounded_reconciliation_of_user_family_assignment_used_token_verification_commit_welcome_outbox_provider_receipt_and_audit
-    - no_duplicate_user_token_outbox_send_bootstrap_or_session
+    - one_bounded_reconciliation_of_exactly_one_nonrevoked_session_and_auth_state
+    - no_duplicate_user_token_outbox_send_or_bootstrap
     - checkpoint_before_any_following_mutation
-  success_transition: checkpoint_then_owner_login_under_prompt_04_authorization
-  failed_or_ambiguous_transition: stop_reconcile_no_blind_retry_or_automatic_worker_rollback
+  success_transition: checkpoint_then_owner_logout_under_prompt_04_authorization
+  failed_or_ambiguous_transition: stop_reconcile_no_blind_login_retry_or_automatic_worker_rollback
   forbidden_in_this_action:
-    - registration_retry_second_account_or_resend
-    - verification_without_separate_authorization_for_its_automatic_welcome_delivery
+    - registration_retry_resend_or_verification_link_replay
+    - logout_before_post_login_checkpoint
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
     - bootstrap_role_change_or_unrelated_session_mutation
@@ -130,6 +133,46 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## First email verification and welcome delivery — 2026-09-03
+
+Result: `success`. The owner personally opened the existing verification link
+once and reported both the successful portal message and receipt of the expected
+welcome email. The additional one-welcome permission is consumed. No link replay,
+resend, registration retry, login, bootstrap, deploy or configuration mutation
+was performed before the bounded reconciliation.
+
+At `17:02:23Z`, the protected single observation confirmed the exact reviewed
+Worker fingerprint `ad3134edb662` at 100% traffic with unchanged bindings,
+feature gates, Cron schedules and recipient hashes. Its 11 SELECT statements
+read 54 rows, wrote 0 and reported `changes=0`, `changed_db=false`; ledger remains
+exact `0001`–`0026`, pending 0.
+
+The one account is now an active, unblocked, verified parent with exactly one
+FamilyID. Its one email-verification token is used; unused count is zero; there
+is exactly one verification commit. The email outbox contains exactly one
+terminal `auth.email_verification` and one terminal `auth.welcome`: each has
+attempts 1, provider receipt 1 and no safe error code. Audit contains exactly one
+`auth.registration_created` and one `auth.email_verified`. Privacy acceptance
+remains exactly one. Sessions, admins/bootstrap, Telegram outbox/attempts and
+storage intents remain zero. Both fixed cadence rows were successful with no
+recent failures. No identity value, password, token/link, cookie or raw provider
+identifier was queried or stored.
+
+Protected current-user-only ignored evidence:
+`tmp/first-registration-20260903-owner/after-verification-safe.json`, SHA-256
+`5854946c323032b4e42a3b74f983aade14b8ede3c6b7326047ed3b9ecac9094d`.
+
+Containment: do not replay the verification link, resend, register again,
+bootstrap or perform unrelated actions. The next atomic action is exactly one
+owner login with the same account under prompt 04 authorization, followed by
+one bounded read-only reconciliation and docs-only checkpoint before logout.
+
+Validation remains docs-only: `npm run docs:check`, `npm run release:scan` and
+`git diff --check`. Runtime/config are unchanged; full suite and independent
+review are inherited and not repeated. `rollover_required: no`;
+`recommended_next_session_mode: High` because the authorized login/session
+mutation, postcondition and containment are known.
 
 ## Welcome-delivery permission checkpoint — 2026-09-03
 

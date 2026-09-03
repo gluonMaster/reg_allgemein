@@ -19,6 +19,23 @@
 
 ## Append-only evidence history
 
+### First verification and welcome delivery — 2026-09-03
+
+- The owner opened the existing verification link once and received the single
+  separately authorized welcome email. The bounded postcondition confirmed one
+  verified parent with one FamilyID, one used verification token, zero unused
+  tokens and one verification commit.
+- Verification and welcome outbox rows are each terminal `sent` with attempts 1
+  and one provider receipt; registration/verification audit rows are each
+  exactly one. Sessions, admins/bootstrap and unrelated provider/storage state
+  remained zero. Eleven SELECTs read 54 rows and wrote 0; target, reviewed
+  Worker, bindings, gates, schedules and recipient hashes remained exact.
+- Protected evidence:
+  `tmp/first-registration-20260903-owner/after-verification-safe.json`, SHA-256
+  `5854946c323032b4e42a3b74f983aade14b8ede3c6b7326047ed3b9ecac9094d`.
+  Current next action and containment remain in
+  [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### First controlled registration and terminal verification delivery — 2026-09-03
 
 - The owner submitted the authorized synthetic registration once and received
