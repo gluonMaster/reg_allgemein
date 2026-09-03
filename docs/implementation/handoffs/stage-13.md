@@ -19,6 +19,37 @@
 
 ## Append-only evidence history
 
+### Exact preview Worker deployment checkpoint — 2026-09-03
+
+- The owner-invoked third prompt authorized one Worker deploy. It was executed
+  once from a separate clean detached worktree of the reviewed candidate, with
+  an unchanged protected preview config copied inside that worktree. The primary
+  worktree was not switched or cleaned. Offline exact-lockfile installation,
+  verification of 274 installed packages, build and strict dry-run passed; all
+  396 bundle inputs resolved inside the detached worktree. Actual deploy and
+  dry-run bundles were byte-identical.
+- The immediate read-only checkpoint proved one expected version at 100%
+  traffic, exact annotation, unchanged bindings/runtime configuration/feature
+  gates, Access denials, valid root and closed versioned URL. After the prescribed
+  wait, one bounded postcondition at `16:01:48Z` proved two fresh successful
+  cadences, empty health `204`, ledger through `0026`, pending 0, FK 0 and stopped
+  automatic history growth. Its 13 SELECTs read 37 rows and wrote 0. User,
+  session, bootstrap, provider and storage-intent counters remained zero.
+- Full release checks and independent GO were inherited from the exact SHA
+  recorded in [the local D1-cost candidate evidence](#local-d1-cost-remediation-candidate-2026-09-02):
+  78 Vitest files, 580 passed/1 expected Windows skip, Chromium 23/23. No runtime,
+  migration, dependency or deploy-config change justified rerunning those gates.
+  Only docs/link/command/continuity, release scan and diff checks accompany the
+  docs-only checkpoint commit. Production readiness was not changed.
+- Protected evidence: `tmp/worker-deploy-20260903/success-safe.json`, SHA-256
+  `256863b209a03ec0e1c12e388affebcbccb0c8a704cd417fdf9ae76b3369a58b`.
+  Full target/version IDs and recovery data remain protected and ignored.
+  Current permission, deployed fingerprint and the single next action are
+  recorded only in [active state](../STAGE_13_ACTIVE_STATE.md). This deployment
+  does not authorize registration, provider send, bootstrap, rollback or any
+  production/CMS action. The compatible previous Worker retains its D1-cost P1;
+  rollback requires a new explicit authorization and preserved containment.
+
 Исторический reviewed registration remediation anchor
 `146f9c54ff082ad695ef47c7da9c6a578e09a9a5`, direct parent
 `fbb9520eb670cd22f5ac236f1203823942078c1a`, получил fresh independent **GO**:

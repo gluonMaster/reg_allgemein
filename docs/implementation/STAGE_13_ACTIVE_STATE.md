@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T14:33:27Z
+updated_utc: 2026-09-03T16:01:48Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-preview-d1-0026-apply-success
-next_gate: phase-4-separately-authorized-reviewed-worker-deploy
+last_completed_gate: phase-4-exact-reviewed-worker-deploy-success
+next_gate: phase-4-separately-authorized-controlled-registration
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-preview-d1-0026-applied-awaiting-worker-deploy-permission
-last_atomic_action: preview-d1-apply-0026
+current_phase: phase-4-exact-worker-deployed-awaiting-registration-permission
+last_atomic_action: preview-worker-deploy-reviewed-candidate
 last_atomic_result: success
-next_atomic_action: request-separate-owner-authorization-for-reviewed-worker-deploy
+next_atomic_action: request-separate-owner-authorization-for-one-controlled-registration-retry
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: exact-worker-target-candidate-postcondition-and-containment-are-known
+mode_reason_plain: controlled-preview-registration-target-procedure-and-containment-are-known
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: no_remote_mutation_authorized_0026_permission_consumed
+permission_state: no_remote_mutation_authorized_worker_deploy_permission_consumed
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -48,9 +48,13 @@ review:
     docs_continuity_release_scan_diff: passed
 preview:
   access: enforced
-  deployed_candidate: bef578917575f233ce4853a1432f1d0d29b22289
-  deployed_fingerprint: 745295d36248
+  deployed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  deployed_fingerprint: ad3134edb662
   traffic_percent: 100
+  active_version_count: 1
+  candidate_annotation_exact: true
+  bindings_and_feature_gates_unchanged: true
+  deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -60,10 +64,20 @@ preview:
     applied_through: 0026_background_d1_cost_controls.sql
     pending_exactly: []
     last_recorded_foreign_key_violations: 0
-    quota_precondition: confirmed_by_account_analytics_2026_09_03T14_20_50Z_consumed_by_successful_apply
+    quota_precondition: confirmed_by_one_account_analytics_observation_2026_09_03T15_45_22Z_for_worker_deploy
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
+    latest_bounded_postcondition_utc: 2026-09-03T16:01:48Z
+    postcondition_rows_read: 37
+    postcondition_rows_written: 0
+  scheduled:
+    fast: succeeded_fresh
+    maintenance: succeeded_fresh
+    fixed_cadence_rows: 2
+    recent_failures: 0
+    automatic_history_growth: stopped
+    health: head_204_empty_no_store_noindex
   synthetic_state:
     users: 0
     admins: 0
@@ -73,38 +87,31 @@ preview:
     telegram: fail_closed_until_separate_manual_preview_phase
     documents: fail_closed_until_separate_manual_preview_phase
     contracts: fail_closed_until_separate_manual_preview_phase
-known_deployed_preview_p1:
-  - id: P1-DEPLOYED-AUTH-001
-    impact: controlled_registration_fails_at_server_siteverify
-    remediation: included_in_reviewed_candidate
-  - id: P1-DEPLOYED-D1-001
-    impact: old_health_and_cron_paths_can_exhaust_shared_d1_quota
-    remediation: migration_0026_applied_reviewed_candidate_deploy_pending
+flow_verification:
+  cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
+  controlled_registration: reviewed_remediation_deployed_retry_requires_separate_permission
 next_atomic_action:
-  id: preview-worker-deploy-reviewed-candidate
+  id: preview-controlled-registration-retry
   permission: separate_explicit_owner_authorization_required
-  target: exact_dedicated_access_protected_preview_worker_from_protected_config
-  mutation: deploy_only_reviewed_candidate_0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  target: exact_access_protected_preview_and_existing_controlled_recipient_record
+  mutation: one_controlled_registration_retry_with_verification_delivery
   preconditions:
-    - worktree_is_clean_docs_only_descendant_of_reviewed_candidate
-    - protected_target_record_matches_preview_and_excludes_production
-    - reviewed_candidate_and_compatible_previous_worker_match_protected_record
-    - access_redirect_and_exact_preview_bindings_are_unchanged
-    - preview_d1_ledger_is_0001_through_0026_with_pending_zero
-    - current_version_and_rollback_or_containment_are_known
+    - exact_reviewed_worker_and_migration_0026_deploy_checkpoint_successful
+    - protected_preview_target_access_and_recipient_allowlist_unchanged
+    - synthetic_identity_and_provider_destination_from_protected_record_only
+    - no_new_remote_mutation_without_separate_owner_authorization
   postcondition:
-    - exact_reviewed_worker_version_receives_100_percent_preview_traffic
-    - access_and_exact_d1_r2_kv_queue_and_secret_bindings_remain_unchanged
-    - one_bounded_cadence_and_health_postcondition_after_the_required_wait
-    - automatic_historical_ledger_growth_is_stopped
-  success_transition: request_separate_permission_for_controlled_registration_retry
-  failed_or_ambiguous_transition: stop_reconcile_and_rollback_only_with_explicit_permission
+    - one_bounded_reconciliation_of_account_token_and_verification_delivery_outcome
+    - no_duplicate_account_or_provider_send_on_failed_or_ambiguous_response
+    - checkpoint_before_any_following_mutation
+  success_transition: checkpoint_then_next_separately_authorized_phase
+  failed_or_ambiguous_transition: stop_reconcile_no_blind_retry_or_automatic_worker_rollback
   forbidden_in_this_action:
-    - deploy_without_separate_owner_authorization
+    - registration_or_provider_send_without_separate_owner_authorization
+    - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
-    - registration_or_verification
     - bootstrap_role_or_session_mutation
-    - provider_send_or_secret_flag_access_change
+    - unrelated_provider_send_or_secret_flag_access_change
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
@@ -113,6 +120,75 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Exact Worker deploy checkpoint — 2026-09-03
+
+Result: `success`. The one owner-authorized deploy was attempted at `15:46:37Z`;
+the command completed at `15:47:39Z` with exit 0. The immediate read-only control check at
+`15:47:58Z` confirmed the returned version fingerprint `ad3134edb662`, exact
+candidate annotation and one active version at 100% traffic. All bindings,
+runtime configuration class, existing feature gates and both Cron schedules
+match the protected pre-deploy record. Anonymous and invalid Access probes
+returned login redirects `302`; valid Access root returned `200`; the versioned
+public route returned `404`. No retry or other remote mutation was performed.
+
+The single bounded D1/cadence/health postcondition completed at `16:01:48Z`, after
+waiting for the maintenance delivery without polling. Both fixed cadence rows
+were fresh and `succeeded`, with zero recent failures: maintenance finished at
+`16:00:49Z`, fast at `16:01:44Z`. Email claimed/sent counts were zero; Telegram
+remained explicitly disabled. All seven maintenance jobs succeeded with no
+business/storage work. This proves the scheduled deployment checkpoint, not the
+separately gated Telegram/document/contract feature flows.
+
+The ledger remains exact `0001`–`0026`, pending 0 and FK 0. The 13 SELECT
+statements read 37 rows and wrote 0, with `changes=0` and `changed_db=false` for
+every statement. Nine indexed latest-history seeks found no automatic rows
+newer than `15:46:43Z`, before deploy completion; the retained ledger is no
+longer growing. Users, sessions, auth tokens, bootstrap, email/Telegram outboxes,
+Telegram delivery attempts and storage intents remain zero. One authenticated
+health `HEAD` returned empty `204` with `no-store` and `noindex`. No unexpected
+provider send or feature-gate weakening was observed.
+
+The deploy permission is consumed. The only next action is to request separate
+owner authorization for one controlled registration retry. Registration,
+verification, provider send, bootstrap, rollback and feature/Access/secret changes
+remain unauthorized. A later feature-flow failure alone does not justify
+rolling back this successful Worker deployment.
+
+Source proof: the primary worktree was clean at
+`aa40dc766bc85e5158350a1abcf118f00d242615`, a docs-only descendant of the reviewed
+candidate. A separate clean detached worktree at the exact candidate received
+an offline `npm ci` from its unchanged lockfile; 274 installed packages were
+verified. The protected preview config was copied byte-for-byte inside that
+worktree. Wrangler resolved all 396 bundle inputs, the source entrypoint,
+adapter output and assets inside it. Build and strict dry-run passed with
+Wrangler `4.120.1`. Actual deploy and dry-run Worker bundles have the same SHA-256
+`eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`.
+
+The bounded preflight at `15:45:25Z` reconfirmed migration ledger 26/pending 0,
+FK 0, two idle cadence rows, no users/sessions/tokens/bootstrap/provider outbox/
+storage-intent rows, Time Travel availability and unchanged protected target.
+Its 13 SELECT statements read 37 rows and wrote 0; all reported
+`changed_db=false`. Prior successful affected-table integrity evidence is reused.
+One account-wide analytics observation showed 940,255 reads and 25,314 writes.
+
+Protected, current-user-only evidence is under `tmp/worker-deploy-20260903/`;
+full resource/version IDs, raw configuration and Time Travel bookmark remain
+there. `success-safe.json` has SHA-256
+`256863b209a03ec0e1c12e388affebcbccb0c8a704cd417fdf9ae76b3369a58b`.
+The previous version fingerprint `745295d36248` is recorded as schema-
+compatible through `0026`; it retains the old D1-cost P1. A rollback requires a
+new explicit owner authorization and must preserve Access/provider containment.
+`rollover_required: no`; `recommended_next_session_mode: High`: the next
+controlled preview registration has known target/procedure and containment,
+and requires its own permission for a remote write/provider delivery.
+
+Validation for this checkpoint: exact detached build, strict dry-run and bounded
+live pre/postconditions passed. Full `npm run check`, Vitest, Chromium E2E,
+production dependency audit and independent GO are inherited from the unchanged
+reviewed candidate above; none was repeated. The docs-only commit uses only
+`npm run docs:check`, `npm run release:scan` and `git diff --check`. Production
+readiness remains unchanged and blocked.
 
 ## Migration 0026 checkpoint — 2026-09-03
 
