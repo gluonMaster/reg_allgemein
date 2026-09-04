@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T11:11:54Z
+updated_utc: 2026-09-04T11:17:36Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-second-registration-and-verification-delivery-success
-next_gate: phase-4-second-email-verification-and-welcome-delivery
+last_completed_gate: phase-4-second-email-verification-and-welcome-success
+next_gate: phase-4-second-verified-parent-single-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-prompt-05-second-verification-and-one-welcome-authorized
-last_atomic_action: preview-second-registration-and-verification-delivery
+current_phase: phase-4-prompt-05-two-verified-parents-second-login-pending
+last_atomic_action: preview-second-email-verification-and-welcome-delivery
 last_atomic_result: success
-next_atomic_action: owner-opens-second-verification-link-once
+next_atomic_action: owner-logs-in-as-second-verified-parent-once
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: one-verification-and-one-welcome-are-authorized-with-known-target-postcondition-and-containment
+mode_reason_plain: one-second-parent-login-remains-authorized-with-known-target-session-postcondition-and-containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: prompt_05_registration_consumed_verification_login_retained_owner_authorized_one_second_recipient_welcome_unused
+permission_state: prompt_05_registration_verification_and_both_deliveries_consumed_single_second_login_authorized_unused
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -68,8 +68,8 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T11:08:26Z
-    postcondition_rows_read: 82
+    latest_bounded_postcondition_utc: 2026-09-04T11:17:36Z
+    postcondition_rows_read: 1854
     postcondition_rows_written: 0
   scheduled:
     fast: succeeded_fresh
@@ -81,23 +81,27 @@ preview:
   synthetic_state:
     users: 2
     parents: 2
-    verified_users: 1
+    verified_users: 2
     admins: 0
     privacy_acknowledgements: 2
-    unused_verification_tokens: 1
-    used_verification_tokens: 1
-    verification_commits: 1
-    users_with_family_id: 1
+    unused_verification_tokens: 0
+    used_verification_tokens: 2
+    verification_commits: 2
+    users_with_family_id: 2
     verification_deliveries_sent_with_receipt: 2
-    welcome_deliveries_sent_with_receipt: 1
+    welcome_deliveries_sent_with_receipt: 2
     auth_sessions: 2
     nonrevoked_auth_sessions: 1
     logged_out_auth_sessions: 1
     distinct_identities: 2
-    distinct_assigned_families: 1
+    distinct_assigned_families: 2
     nonrevoked_session_owners: 1
     distinct_delivery_recipients: 2
     orphan_sessions_and_recipients: 0
+    token_commit_delivery_family_and_child_owner_mismatches: 0
+    first_parent_sessions_total_nonrevoked_valid: 2_1_1
+    second_parent_sessions_total_nonrevoked_valid: 0_0_0
+    owned_children_per_parent: 0
     import_pair: 2_plus_1703
   providers:
     auth_and_resend: enabled_only_behind_access_and_two_recipient_hashes
@@ -111,31 +115,32 @@ flow_verification:
   login_logout: success_current_session_revoked_one_owner_created_parallel_session_remains_active
   second_registration: success_one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
-  second_verification_welcome: one_automatic_welcome_explicitly_authorized_by_owner_not_yet_attempted
+  second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
+  second_login: not_attempted_single_owner_login_authorized
 next_atomic_action:
-  id: owner-opens-second-verification-link-once
-  permission: prompt_05_verification_plus_owner_explicit_one_welcome_to_same_second_recipient
-  target: same_second_owner_controlled_allowlisted_preview_recipient
-  mutation: one_initial_email_verification_and_its_single_automatic_welcome_delivery
+  id: owner-logs-in-as-second-verified-parent-once
+  permission: prompt_05_single_login_for_second_verified_synthetic_parent
+  target: same_access_protected_preview_normal_login_form_second_account
+  mutation: one_login_post_creating_one_second_parent_session
   preconditions:
-    - second_registration_and_single_verification_delivery_reconciled_and_checkpoint_committed
+    - second_verification_and_welcome_reconciled_and_checkpoint_committed
     - second_recipient_allowlist_membership_previously_proved_without_identity_disclosure
-    - verification_unconditionally_enqueues_one_welcome_under_unchanged_runtime
-    - first_account_and_session_aggregate_state_unchanged_admins_zero
-    - owner_explicit_one_welcome_permission_recorded_before_link_open
-    - owner_uses_existing_second_account_link_privately_without_sharing_token
+    - two_active_verified_parents_with_distinct_families_and_zero_owner_mismatches
+    - first_parent_has_two_sessions_one_valid_second_parent_has_zero_sessions_admins_zero
+    - owner_uses_second_account_credentials_privately_in_normal_login_form
   postcondition:
-    - two_distinct_active_verified_parents_admins_zero_two_distinct_assigned_families
-    - used_verification_tokens_two_unused_zero_verification_commits_two
-    - verification_and_welcome_deliveries_two_each_terminal_with_single_attempt_and_receipt_per_row
-    - first_account_sessions_unchanged_no_extra_recipients_or_unrelated_state
-  success_transition: bounded_after_verification_reconcile_and_docs_commit_before_authorized_second_login
-  failed_or_ambiguous_transition: stop_no_link_replay_resend_or_login_reconcile_once_and_record_containment
+    - owner_sees_second_parent_cabinet_after_exactly_one_successful_login
+    - total_sessions_three_nonrevoked_two_logged_out_one_with_two_distinct_valid_session_owners
+    - first_parent_sessions_two_with_one_valid_second_parent_sessions_one_with_one_valid
+    - accounts_families_privacy_tokens_commits_deliveries_and_zero_owner_mismatches_unchanged
+    - admins_bootstrap_and_unrelated_provider_storage_state_remain_zero
+  success_transition: bounded_after_login_reconcile_then_docs_checkpoint_prompt_05_complete
+  failed_or_ambiguous_transition: stop_no_login_retry_or_session_cleanup_reconcile_once_and_record_containment
   forbidden_in_this_action:
     - registration_retry_resend_or_verification_link_replay
     - any_further_registration_or_recipient_change
     - first_account_login_logout_edit_or_session_cleanup
-    - login_before_verification_postcondition_and_docs_checkpoint
+    - login_retry_second_session_or_logout_without_separate_permission
     - bootstrap_or_role_mutation
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
@@ -149,6 +154,63 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Second email verification and welcome delivery — 2026-09-04
+
+Result: `success`. Under the recorded one-welcome permission, the owner opened
+the existing second-account verification link and reported successful
+verification and welcome receipt. The single read-only reconciliation completed
+at `11:17:36Z`; no link replay, resend, new login or other mutation was attempted
+by this session. Verification and the additional welcome permissions are consumed.
+
+There are exactly two distinct active/unblocked verified `parent` accounts and
+two distinct assigned FamilyIDs, admins 0. Verified users, used verification
+tokens, verification commits and assigned families each changed `1 -> 2`;
+unused tokens changed `1 -> 0`. Privacy acknowledgements remain 2. Outbox totals
+are two `auth.email_verification` and two `auth.welcome`, all terminal `sent`,
+each category with attempts 2, receipts 2 and no error. Per-owner checks prove
+exactly one verification and one welcome sent with attempts/receipt 1 for each
+parent. There are exactly two recipients, no extra rows or sends, and exactly
+two registration and two verification audit events.
+
+Fourteen SELECT statements read 1,854 rows and wrote 0; all reported
+`changes=0` and `changed_db=false`. Two aggregate-only ownership queries extend
+the ignored read-only helper for this required isolation check and the upcoming
+login: no raw identity, user/family ID, session token, password or document body
+is returned. Token-to-user, verification-commit-to-token/user, token/welcome
+outbox-to-owner, assigned-family-to-owner and owned-child-to-family mismatch
+counts are all zero. Each parent has one privacy acknowledgement and one
+verification commit, and no owned children. The first parent still has exactly
+two session rows, one nonrevoked/valid; the second has zero sessions. Session
+totals remain 2, nonrevoked 1 and logged-out 1. The two independent session
+boundaries will be verified after the authorized second login, not claimed now.
+
+Exact migration ledger remains `0001`–`0026`, pending 0. The reviewed Worker
+fingerprint `ad3134edb662` remains at 100% with unchanged candidate annotation,
+bindings, feature gates, schedules, target fingerprints and recipient hashes.
+Both fixed cadence rows are fresh and successful with no recent failures.
+Bootstrap, Telegram outbox/attempts and storage intents remain zero. Prior
+Access and scoped integrity/FK evidence are reused without repeated polling.
+
+Protected current-user-only ignored evidence:
+`tmp/second-registration-20260904-owner/after-verification-safe.json`, SHA-256
+`c072881632998c17679854d6622f5c2520f8b8476b2fb57ab4eb33c3e55370e8`.
+The helper's `mutationAttempted=false` refers to its own read-only operation;
+this checkpoint records the owner's preceding verification/provider mutation.
+
+The one next action is exactly one owner login using the second account under
+the retained Prompt 05 permission. Use the normal preview login form and keep
+credentials private. After the cabinet opens, run one bounded `after-login`
+reconciliation and commit active state. First-account access/edit/logout,
+another second-account login, logout/session cleanup, bootstrap, resend,
+verification replay, unrelated sends and configuration changes remain forbidden.
+On failure or ambiguity, do not retry; reconcile once and preserve containment.
+
+Validation: `npm run docs:check`, `npm run release:scan` and
+`git diff --check` only. No runtime/config change occurred; the exact reviewed
+candidate's full check/Vitest/E2E/build/audit/review evidence is reused.
+`rollover_required: no`; `recommended_next_session_mode: High`: the remaining
+authorized login/session mutation has known target, postcondition and containment.
 
 ## Second welcome-delivery permission checkpoint — 2026-09-04
 

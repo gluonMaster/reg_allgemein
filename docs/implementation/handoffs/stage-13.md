@@ -3134,3 +3134,17 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
 - No link was opened or login attempted. The known automatic welcome delivery
   requires explicit scope before verification. Only docs checks, release scan
   and diff check are run; exact-candidate runtime/review evidence is reused.
+
+## Continuation 2026-09-04: second verification and welcome
+
+- Following the owner's explicit welcome permission, one verification and its
+  welcome delivery were reconciled successfully. Both synthetic parents are
+  verified with distinct families; aggregate per-owner delivery and relationship
+  checks found no extra sends or cross-links. The first parent's sessions remain
+  unchanged and the second parent has no session yet.
+- The mandatory checkpoint, protected evidence digest and exact next action
+  are in [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Second email verification and welcome delivery — 2026-09-04". Prompt 05 still
+  authorizes one second-account login; bootstrap remains outside scope.
+- Runtime/config are unchanged. Only docs checks, release scan and diff check
+  are run; full exact-candidate runtime/review evidence is reused.
