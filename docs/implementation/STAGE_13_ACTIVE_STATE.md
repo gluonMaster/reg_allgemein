@@ -1,24 +1,25 @@
 # Stage 13: current operational state
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T11:36:53Z
+updated_utc: 2026-09-04T11:50:55Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-last_completed_gate: phase-4-prompt-05-two-verified-parents-independent-sessions-success
-next_gate: phase-4-owner-decision-on-local-auth09-bootstrap-eligibility-fix
+local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
+last_completed_gate: phase-4-local-auth09-eligibility-fix-focused-validation-passed
+next_gate: phase-4-local-full-release-validation-before-independent-review
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: independent_go
-current_phase: phase-4-prompt-06-blocked-before-bootstrap-by-registration-finalization-guard
-last_atomic_action: preview-first-admin-bootstrap-readonly-preflight
-last_atomic_result: failed
-next_atomic_action: request-local-auth09-bootstrap-eligibility-fix-authorization
+current_review_status: pending_independent_review
+current_phase: phase-4-local-bootstrap-eligibility-fixed-preview-unchanged
+last_atomic_action: local-auth09-bootstrap-eligibility-fix-and-focused-regression
+last_atomic_result: success
+next_atomic_action: run-local-full-release-validation-for-bootstrap-fix
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: next-action-is-owner-scope-decision-only-no-write-was-attempted-and-no-mutation-ambiguity-exists
+mode_reason_plain: next-work-is-local-validation-and-evidence-without-remote-write-or-mutation-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,15 +34,25 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: prompt_06_one_bootstrap_authorized_but_unattempted_precondition_failed_no_code_or_repair_permission
+permission_state: owner_authorized_local_fix_complete_no_remote_mutation_performed_prompt_06_bootstrap_unattempted_pending_candidate_gates
 review:
-  status: independent_go
-  candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  status: pending_independent_review
+  candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
+  last_independently_reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
   unresolved_candidate_p0: 0
-  unresolved_candidate_p1: 1
-  newly_observed_blocker: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001
-  verdict_scope: prior_independent_go_record_retained_new_operational_p1_blocks_bootstrap
-  inherited_release_evidence:
+  unresolved_candidate_p1: 0
+  local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
+  deployed_blocker: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_still_present
+  verdict_scope: new_runtime_candidate_requires_its_own_release_gate_and_independent_review
+  local_validation:
+    check: passed_0_errors_0_warnings
+    focused_unit_integration: 52_pass_across_9_files_including_one_repaired_test_harness_rerun
+    chromium_e2e: 2_of_2_affected_role_owner_csrf_scenarios
+    build: passed
+    full_release_gate: not_run_local_fix_scope_only_required_before_remote_release
+    independent_review: not_performed
+  previous_candidate_release_evidence:
+    candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
     check: passed
     vitest: 78_files_580_pass_1_expected_windows_skip
     chromium_e2e: 23_of_23
@@ -129,40 +140,107 @@ flow_verification:
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
   prompt_05: historically_complete_at_11_23_43Z_second_session_now_logged_out
-  prompt_06: blocked_preflight_bootstrap_not_attempted
+  prompt_06: bootstrap_not_attempted_deployed_eligibility_blocker_remains
+  local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
   role_isolation_live: not_attempted_authenticated_get_touches_session_and_login_requires_separate_scope
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: request-local-auth09-bootstrap-eligibility-fix-authorization
-  permission: owner_decision_only_prompt_06_explicitly_forbids_code_changes
-  target: local_repository_auth09_eligibility_surface_no_remote_target
-  mutation: none
+  id: run-local-full-release-validation-for-bootstrap-fix
+  permission: local_validation_only_no_remote_mutation_or_provider_send
+  target: exact_local_remediation_candidate_in_review_section
+  mutation: none_remote
   preconditions:
-    - P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_proven_by_31_branch_readonly_diagnostic
-    - bootstrap_cli_invocations_zero_control_available_and_chain_empty
-    - preserve_existing_registration_evidence_accounts_and_sessions
+    - local_auth09_fix_and_five_regressions_committed
+    - focused_52_tests_and_2_browser_scenarios_check_build_passed
+    - previous_candidate_full_gate_is_historical_not_inherited_for_new_runtime
   postcondition:
-    - owner_decides_scope_for_local_eligibility_fix_and_representative_registration_to_bootstrap_regression
-    - no_remote_mutation_during_scope_decision
-  success_transition: prepare_local_fix_only_with_owner_authorization_then_define_candidate_gates
-  failed_or_ambiguous_transition: remain_stopped_before_bootstrap_with_access_and_evidence_intact
+    - one_full_release_gate_recorded_for_exact_new_runtime_candidate_before_review_and_remote_release
+    - no_remote_data_role_session_provider_or_config_change
+  success_transition: independent_readonly_review_of_exact_validated_candidate
+  failed_or_ambiguous_transition: classify_and_resolve_relevant_failure_locally_preserve_preview
   forbidden_in_this_action:
-    - bootstrap_attempt_while_canonical_eligibility_precondition_is_false
+    - remote_bootstrap_before_new_candidate_validation_and_exact_target_preconditions
     - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
-    - login_logout_session_repair_or_authenticated_live_probe
-    - code_change_under_prompt_06_scope
+    - login_logout_session_repair_or_authenticated_live_preview_probe
     - provider_send_or_registration_verification_replay
     - deploy_rollback_migration_or_unrelated_d1_r2_write
     - secret_flag_access_change
     - production_cms_or_real_pii_action
-    - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
-  - local_auth09_bootstrap_eligibility_remediation_and_representative_regression
-  - any_new_candidate_remote_deploy_or_bootstrap_after_preconditions_are_reestablished
+  - any_new_candidate_remote_deploy_or_changed_bootstrap_scope
   - admin_login_parent_login_and_live_rbac_csrf_owner_denial_session_writes
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Local AUTH-09 bootstrap eligibility remediation — 2026-09-04
+
+Result: `success` for the owner-authorized **local fix and regression**.
+Implementation commit: `438a51399ac5f58b428b624c52ca2cbbc059ae9c`. The user explicitly
+approved local code changes after the preceding no-code Prompt 06 preflight.
+No remote operation, bootstrap invocation, deploy, session change or provider
+send occurred. Preview state below remains the last read-only observation;
+the deployed code still has the recorded bootstrap blocker.
+
+The only executable change is the finalization branch of
+`NO_RETAINED_PARENT_STATE_SQL`: a `portal_allocated` receipt no longer
+blocks promotion. This implements the existing empty-registration allowance
+in `AUTH-09`. The receipt is retained; `exact_email` and all 30 other
+retained-state checks continue to block both bootstrap and ordinary audited
+admin assignment. No schema, migration, runtime configuration, provider,
+dependency or route change was made. The specification, acceptance criterion
+and test plan clarify this same registration-evidence distinction.
+
+The new integration file uses `createAuthRuntime` with its **default**
+family-verification extension, a local migrated D1 and a promoted synthetic
+snapshot. It exercises ordinary registration, the generated verification link,
+verification and login before promotion. Only local test providers are fake;
+this is regression evidence, not a substitute for the required live preview.
+Five scenarios cover repository bootstrap, the CLI's rendered statements with
+its terminal result assertion, normal admin assignment, portal allocation with
+a retained child, and isolated historical exact-email finalization. Assertions
+cover retained verification receipts, unchanged second parent, revoked target
+session, linked one-shot action/assertion/audit/control and replay denial.
+
+Validation and evidence (all logs Git-ignored under `tmp/`):
+
+- RED: `bootstrap-registration-red.log` proves the ordinary-registration
+  repository scenario failed with `ADMIN_BOOTSTRAP_REJECTED` before the fix.
+- Focused run: `bootstrap-registration-focused.log` contains nine files,
+  52 tests: 51 passed, with one initial failure in the new local SQL test adapter.
+  The Wrangler SQL splitter returned six chunks for seven controlled statements,
+  combining the final INSERT/SELECT; local D1 prepare accepts one statement.
+  The test now renders each original CLI statement separately for local batch
+  execution. `bootstrap-registration-rendered-green.log` proves that one
+  affected scenario passed after the test-only correction. No production
+  splitter/CLI code changed. Combined final evidence covers all 52 tests;
+  no relevant assertion failure remains unresolved.
+- Direct consumers checked: auth lifecycle, family/cabinet verification,
+  bootstrap/role-transition D1, exact-target command/rendering and security units.
+- `bootstrap-registration-e2e.log`: two Chromium scenarios passed, role/
+  route isolation and the complete cross-owner/CSRF matrix.
+- `bootstrap-registration-check.log`: check passed, 0 errors/0 warnings.
+  `bootstrap-registration-build.log`: production bundle/Cloudflare adapter
+  build passed. Docs checks, release scan and diff check passed.
+
+The full Vitest/E2E release gate, dependency audit and independent review were
+deliberately not run for this bounded local repair. They are not claimed from
+the old candidate for this new runtime. Before remote release, the new exact
+candidate must receive its own required release gate and independent review.
+The next atomic action is that local release validation, not an unreviewed
+bootstrap. The continuity field `reviewed_candidate` retains the last
+actually reviewed SHA; `local_remediation_candidate` and `review.candidate`
+identify the new pending candidate. Current review markers are synchronized to
+pending; no production-readiness gate is declared passed.
+
+Containment remains Access plus the existing provider restrictions. Preserve
+both accounts, sessions and registration evidence. Prompt 06's one-shot
+permission remains unconsumed; it does not bypass the new candidate gates or
+authorize a new Worker deploy, session recovery or live authenticated probes.
+There is no remote change to roll back. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: next work is local validation and
+evidence, with no remote write or mutation ambiguity. Full manual preview and
+production remain blocked until their actual remote/manual gates pass.
 
 ## Prompt 06 preflight: registration finalization blocks bootstrap — 2026-09-04
 

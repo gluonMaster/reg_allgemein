@@ -1,6 +1,6 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-09-02.
 
@@ -3188,3 +3188,23 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   scope decision. This session uses only docs checks, release scan and diff
   check; unchanged-candidate test/review results remain historical evidence and
   do not override the demonstrated bootstrap blocker.
+
+## Continuation 2026-09-04: local bootstrap eligibility fix
+
+- The owner authorized the local AUTH-09 correction after Prompt 06 preflight
+  stopped. A successful empty-portal verification receipt is now registration
+  evidence; exact-email finalization and other retained business/workflow state
+  still block both role-transition entrypoints. Receipts are not removed.
+- A new regression uses ordinary registration and the runtime's default family
+  verification extension. It reproduced the failure before the fix and now
+  covers both bootstrap transports, normal assignment, receipt/session/audit/
+  control preservation and negative retained-child/exact-email cases.
+- Final focused evidence covers 52 unit/integration tests across nine files,
+  including the resolved and individually rerun SQL test-adapter case; two
+  Chromium role/owner/CSRF scenarios, check and build passed. Full release and
+  independent review remain pending for the new runtime; old results are not
+  presented as a release gate for this change.
+- See [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Local AUTH-09 bootstrap eligibility remediation — 2026-09-04", for the exact
+  implementation commit, logs, unchanged remote state, permissions and next gate.
+  No remote write, bootstrap, deploy or session/provider action was performed.
