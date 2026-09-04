@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T15:46:11Z
+updated_utc: 2026-09-04T15:47:46Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-p2-new-form
-next_gate: phase-4-create-Q2
+last_completed_gate: phase-4-p2-draft
+next_gate: phase-4-logout-P2
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-create-Q2
-last_atomic_action: probe
+current_phase: phase-4-06b-logout-P2
+last_atomic_action: draft
 last_atomic_result: success
-next_atomic_action: create-Q2
+next_atomic_action: logout-P2
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: last_step_success_known_next_authorized_finite_operation_with_bounded_postcondition
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T15:46:11.473Z
-    postcondition_rows_read: 1031
-    latest_read_kind: bounded_06b_p2_new_form_postcondition
+    latest_bounded_postcondition_utc: 2026-09-04T15:47:46.400Z
+    postcondition_rows_read: 1036
+    latest_read_kind: bounded_06b_p2_draft_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -225,7 +225,7 @@ role_isolation_plan:
   observed_roles: one_verified_admin_two_verified_active_parents
   current_nonrevoked_sessions: 1
   children: 1704_total_1_owned_portal_1703_unclaimed_legacy_baseline
-  requests_documents_offers_artifacts_threads_price_items: all_zero
+  requests_documents_offers_artifacts_threads_price_items: requests_1_other_five_categories_zero
   rbac_csrf_cases: 14_bounded_steps_including_logins_and_normal_logouts_no_live_execution
   cross_parent_fixture_gap: P2_verified_now_need_one_C2_and_one_Q2_through_normal_forms
   owner_input: additional_controlled_recipient_proposed_in_conversation_if_needed_not_copied_into_tracked_state
@@ -238,7 +238,7 @@ role_isolation_plan:
   authenticated_probe_executed: false
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: create-Q2
+  id: logout-P2
   permission: entire_finite_06b_package_explicitly_authorized_no_repeat_permission_needed
   target: exact_preview_origin_88ed782ba25a_Worker_14841fbf75b2_D1_ccdeb22bb2a1
   mutation: only_the_next_named_normal_form_or_probe_and_its_permitted_linked_effects
@@ -262,6 +262,34 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B p2-draft: successful atomic checkpoint — 2026-09-04T15:47:46Z
+
+Result: **success**. Action `draft` passed the exact protected before/after
+verifier. Safe postcondition: {"actor":"P2","case":"p2-draft","ui":"Q2_created_owner_detail_200_draft_B01_request","httpStatus":303,"sessionEffect":"current_session_touch_only","oldSessionsPreserved":true,"rolesFamiliesReceiptsBootstrapProvidersPreserved":true,"portalChildren":1,"requests":1,"requestVersion":1,"businessChangedOnly":"one_Q2_draft"}.
+Audit delta: {"individual_request.created":1}. Read-only reconciliation used
+1036 rows, wrote zero, changed_db=false. A/P1 roles/FamilyIDs, historical
+revocations, sealed bootstrap and unrelated business/provider state are preserved
+as required by this case. No blind retry or direct repair.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/p2-draft-verified-safe.json`,
+SHA-256 `c306ed83c0f13fa25fcabc005c6964598a173bd3f38c32558a83841f79346673`; paired D1 snapshots remain owner-only and ignored.
+Current totals: three users (1 admin, 2 parents),
+3 verified, 3 distinct assigned families;
+sessions 5/1 total/nonrevoked;
+verification/welcome sent receipts 3/3;
+portal children 1, requests 1.
+Prompt 06 remains partial until its remaining live cases and final logout pass.
+
+Only next atomic action: `logout-P2`, already within the authorized package.
+Private credential/link input stays in the browser. Existing exact Worker/code,
+Access and rollback containment continue unchanged. Checks for this status-only
+commit: docs:check, release:scan, git diff --check; helper syntax/affected
+postcondition as needed. Full runtime/E2E/build and reviewer gates are inherited
+from the unchanged candidates above. No unresolved P0/P1 or ambiguous result.
+`rollover_required: no`; `recommended_next_session_mode: High`: known next
+operation, target and postcondition.
+
 
 ## Prompt 06B p2-new-form: successful atomic checkpoint — 2026-09-04T15:46:11Z
 
