@@ -19,6 +19,31 @@
 
 ## Append-only evidence history
 
+### First admin login succeeded — 2026-09-04
+
+- The owner reported login success and supplied the protected admin shell and
+  dashboard screenshot. The browser context reports `/admin`. One new session
+  was created at `13:37:12.010Z` for the first synthetic admin at version 2;
+  reconciliation at `13:38:25.183Z` confirmed first totals `3/1/1` and preserved
+  second-parent totals `1/0/0`. All three historical revoked session rows,
+  bootstrap control digest and `1/1/1` chain counts, registration receipts and
+  terminal verification/welcome deliveries match the preflight.
+- Seven SELECTs read 47 rows and wrote 0. Exact target and Worker fingerprint
+  `ad3134edb662` at 100% with protected bindings remained unchanged. No new
+  provider send or agent-authenticated request occurred. No P0/P1 or ambiguity
+  was found; no retry, repair, logout or bootstrap replay was needed.
+- Protected evidence: `tmp/admin-first-login-20260904-owner/after-safe.json`,
+  SHA-256 `2588ab582312d5255518b0621f8433cba402293a84b41da84b562369a5cc8845`;
+  `ui-safe.json` in the same folder, SHA-256
+  `136aed93385b598b63c930bd7f943143eab14854e3fef0ee41c80e12999c1f6a`.
+  No raw screenshot, credential, identity or session/resource ID was copied
+  into tracked evidence. Only docs/release-scan/diff validation applies.
+- First admin entry is complete. Prompt 06 still needs remaining live role,
+  owner and CSRF denial evidence. The next work is read-only preparation of a
+  bounded execution plan; current scope and containment are exclusively in
+  [active state](../STAGE_13_ACTIVE_STATE.md). No rollover is needed; next mode
+  is Medium because the preparation requires no remote write.
+
 ### First admin login preflight and private credential handoff — 2026-09-04
 
 - The owner explicitly authorized the first admin login and linked session

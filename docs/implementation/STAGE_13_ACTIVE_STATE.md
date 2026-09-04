@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T12:59:01Z
+updated_utc: 2026-09-04T13:38:25Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-first-admin-login-readonly-preflight-passed
-next_gate: phase-4-owner-private-first-admin-login
+last_completed_gate: phase-4-first-admin-login-success-reconciled
+next_gate: phase-4-remaining-live-role-isolation-plan
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-first-admin-login-authorized-private-credentials-pending
-last_atomic_action: execute-exact-preview-cli-bootstrap-once
+current_phase: phase-4-bootstrap-and-first-admin-login-complete-live-role-isolation-pending
+last_atomic_action: owner-first-admin-login-on-prepared-form
 last_atomic_result: success
-next_atomic_action: owner-first-admin-login-on-prepared-form
+next_atomic_action: prepare-bounded-live-role-isolation-plan-readonly
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: owner-authorized-first-admin-login-target-and-postcondition-known-private-credentials-required-no-ambiguity
+recommended_next_session_mode: Medium
+mode_reason_plain: first-admin-login-reconciled-next-is-readonly-preparation-of-remaining-role-checks-no-remote-write-or-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicitly_authorized_first_admin_login_and_linked_session_touches_bootstrap_permission_consumed_other_flows_not_authorized
+permission_state: bootstrap_and_first_admin_login_completed_authorized_linked_session_touches_reconciled_other_live_flows_not_authorized
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T12:58:58Z
+  latest_readonly_control_utc: 2026-09-04T13:38:22Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T12:59:01Z
-    postcondition_rows_read: 45
-    latest_read_kind: seven_selects_first_admin_login_preflight_accounts_sessions_sealed_control_receipts_providers_and_login_rate_limits
+    latest_bounded_postcondition_utc: 2026-09-04T13:38:25Z
+    postcondition_rows_read: 47
+    latest_read_kind: seven_selects_first_admin_login_postcondition_accounts_sessions_sealed_control_receipts_providers_and_login_rate_limits
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -115,6 +115,20 @@ preview:
     immutable_seal_triggers: 6
     permission_consumed: true
     retry_forbidden: true
+  first_admin_login:
+    result: success
+    actor: owner_using_existing_private_credentials
+    target_slot: 1
+    preserved_parent_slot: 2
+    new_sessions: 1
+    new_session_version: 2
+    new_session_created_utc: 2026-09-04T13:37:12.010Z
+    latest_observed_session_touch_utc: 2026-09-04T13:38:08.263Z
+    database_postcondition: success_reconciled_2026_09_04T13_38_25Z
+    ui_postcondition: owner_screenshot_shows_protected_admin_shell_and_dashboard_ambient_route_admin
+    historical_sessions_bootstrap_receipts_providers_unchanged: true
+    authenticated_requests_by_agent_during_reconciliation: 0
+    permission_completed: true
   scheduled:
     fast: running_at_bounded_snapshot_age_under_two_seconds_no_recent_failures
     maintenance: succeeded_fresh
@@ -134,17 +148,17 @@ preview:
     users_with_family_id: 2
     verification_deliveries_sent_with_receipt: 2
     welcome_deliveries_sent_with_receipt: 2
-    auth_sessions: 3
-    nonrevoked_auth_sessions: 0
+    auth_sessions: 4
+    nonrevoked_auth_sessions: 1
     logged_out_auth_sessions: 2
     role_change_revoked_auth_sessions: 1
     distinct_identities: 2
     distinct_assigned_families: 2
-    nonrevoked_session_owners: 0
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 2
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 2_0_0
+    first_admin_sessions_total_nonrevoked_valid: 3_1_1
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 1_0_0
     second_parent_session_version: 1
@@ -176,45 +190,115 @@ flow_verification:
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
   prompt_05: historically_complete_at_11_23_43Z_second_session_now_logged_out
-  prompt_06: partial_bootstrap_role_session_audit_control_complete_live_authenticated_role_isolation_pending_separate_scope
+  prompt_06: partial_bootstrap_and_first_admin_login_complete_remaining_live_role_owner_csrf_denials_pending
   first_admin_bootstrap: success_one_official_cli_attempt_and_bounded_remote_postcondition
-  first_admin_login: authorized_readonly_preflight_passed_form_open_private_owner_credentials_pending_no_login_attempt
+  first_admin_login: success_admin_shell_visible_one_new_valid_version_2_session_preserved_state_reconciled
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
-  role_isolation_live: not_attempted_first_admin_login_now_authorized_remaining_cross_role_scope_pending
+  role_isolation_live: admin_positive_entry_passed_remaining_cross_role_and_owner_csrf_denials_not_attempted
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: owner-first-admin-login-on-prepared-form
-  permission: explicit_owner_request_2026_09_04_first_admin_login_and_linked_session_touches_authorized_no_repeat_confirmation
-  target: first_verified_synthetic_admin_slot_1_on_existing_access_protected_preview_origin_fingerprint_88ed782ba25a
-  mutation: one_normal_admin_login_session_creation_login_rate_limit_consumption_and_linked_authentication_touches
+  id: prepare-bounded-live-role-isolation-plan-readonly
+  permission: read_only_source_docs_and_sanitized_evidence_preparation_no_new_remote_write
+  target: existing_preview_fingerprint_88ed782ba25a_admin_slot_1_parent_slot_2_and_exact_deployed_source
+  mutation: none_do_not_navigate_authenticated_routes_or_create_sessions_during_preparation
   preconditions:
-    - explicit_owner_scope_obtained_and_fresh_readonly_preflight_passed_at_2026_09_04T12_59_01Z
-    - exact_preview_origin_and_database_first_slot_identity_reconfirmed_without_logging_credentials
-    - bootstrap_checkpoint_committed_control_consumed_one_admin_one_parent_no_unresolved_mutation_ambiguity
-    - owner_enters_existing_first_account_credentials_privately_and_submits_once_on_prepared_auth_login_form
-    - old_revoked_sessions_are_not_repaired_or_reused_second_parent_remains_unchanged
+    - successful_first_admin_login_and_preserved_state_reconciled_and_checkpoint_committed
+    - use_canonical_auth09_authorization_routes_and_inherited_exact_candidate_tests
+    - keep_active_admin_session_private_old_revoked_sessions_and_second_parent_unchanged
   postcondition:
-    - first_admin_has_one_new_normal_session_at_user_session_version_2_and_reaches_admin_shell
-    - historical_revocations_second_parent_sessions_bootstrap_control_audit_and_provider_counts_unchanged
-    - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_remote_mutation
-  success_transition: checkpoint_then_scope_remaining_parent_login_and_live_role_owner_csrf_checks_separately
-  failed_or_ambiguous_transition: preserve_access_no_session_repair_or_bootstrap_retry_reconcile_and_checkpoint
+    - concrete_remaining_checks_map_parent_admin_surface_denial_admin_parent_actor_denial_csrf_and_owner_denial
+    - exact_routes_isolated_browser_session_requirements_expected_denials_no_send_guards_and_containment_documented
+    - distinguish_session_touch_or_login_writes_from_no_business_write_denial_assertions_before_requesting_execution_scope
+  success_transition: review_concrete_plan_with_owner_before_additional_live_session_or_probe_writes
+  failed_or_ambiguous_transition: record_missing_precondition_preserve_access_and_existing_sessions_no_remote_retry_or_repair
   forbidden_in_this_action:
     - automatic_full_vitest_e2e_release_verify_or_nested_review
-    - runtime_or_test_changes_during_independent_review
+    - runtime_or_test_changes_during_readonly_plan_preparation
     - any_bootstrap_retry_direct_role_edit_control_reset_remote_deploy_rollback_or_migration
-    - second_parent_login_additional_login_session_repair_or_unrelated_live_probe
+    - any_login_logout_session_repair_or_authenticated_route_probe_during_readonly_preparation
     - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
     - provider_send_or_registration_verification_replay
     - secret_flag_access_change_or_unrelated_d1_r2_write
     - production_cms_or_real_pii_action
 following_route_permission_boundaries:
   - bootstrap_permission_consumed_successfully_no_remote_replay_or_reset
+  - first_admin_login_completed_no_extra_login_or_logout_requested
   - any_worker_deploy_only_if_required_by_the_next_execution_surface
   - remaining_parent_login_and_live_rbac_csrf_owner_denial_session_writes_require_separate_scope
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## First admin login succeeded and reconciled — 2026-09-04
+
+Result: **success**. The owner reported successful authorization and supplied a
+screenshot showing `Geschützter Verwaltungsbereich`, `Verwaltung`, the admin
+navigation and `Übersicht` dashboard, with all four visible metrics at zero.
+The accompanying browser context reports the exact preview `/admin` route.
+This is owner-provided UI evidence; no authenticated request, reload, login or
+navigation was performed by the agent during reconciliation.
+
+The new first-account session was created at `13:37:12.010Z`; the bounded
+snapshot observed its latest authentication touch at `13:38:08.263Z`. At
+`13:38:25.183Z`, the prepared SELECT-only helper confirmed exactly one new valid
+admin session at user/session version 2: first-account totals changed from
+`2/0/0` to `3/1/1` (total/nonrevoked/valid). The second account remains an active
+verified parent at version 1, totals `1/0/0`. Global totals are four sessions,
+one nonrevoked, two historical logout revocations and one role-change revocation.
+The hashes of all three historical session rows match the preflight exactly.
+
+The bootstrap control digest is unchanged and consumed, with action/assertion/
+audit counts `1/1/1`. Both registration-finalization receipts match exactly.
+Verification and welcome deliveries remain two each, all terminal sent with
+one attempt and one receipt per row; no new send, unused token, orphan session,
+Telegram or storage state was observed. No login rate-limit bucket remained
+at this snapshot; this does not independently establish the POST attempt count.
+One successful new session and the owner's reported login are established.
+
+Seven SELECTs read 47 rows, wrote 0, with `changes=0`, `changed_db=false`.
+Target fingerprints remain account `5dbd04a4763a`, Worker `242c1796e930`,
+origin host `88ed782ba25a`, D1 `ccdeb22bb2a1`. Worker fingerprint
+`ad3134edb662` remains the sole version at 100%, with exact protected bindings
+at `13:38:22.497Z`; local reviewed source is unchanged. The before snapshot
+was recorded at `12:59:01.110Z`, with its preparation committed in
+`be86309cb4ecc99587467c83d9daa0138f669519`.
+
+Protected Git-ignored evidence:
+
+- `tmp/admin-first-login-20260904-owner/after-safe.json`, SHA-256
+  `2588ab582312d5255518b0621f8433cba402293a84b41da84b562369a5cc8845`;
+- `tmp/admin-first-login-20260904-owner/ui-safe.json`, SHA-256
+  `136aed93385b598b63c930bd7f943143eab14854e3fef0ee41c80e12999c1f6a`;
+- owner screenshot SHA-256
+  `a7135f8d8515315f1dbba0f19b44b6711ccc33dfec672c23fe23d9c7bf468d45`;
+  the image was inspected as supplied, not copied into evidence or Git.
+
+No credentials, cookies, identity values or raw session/resource IDs were
+printed or persisted. The before/after helper modes are both consumed; do not
+repeat them blindly. No P0/P1 or unresolved outcome ambiguity was found.
+
+Containment: preserve Access, the current normal admin session, all historical
+revocations, the second parent and sealed bootstrap. No session repair, bootstrap
+replay, provider send or additional login/logout is part of this completed
+operation; ordinary expiry remains available. Any later session revocation
+or recovery needs its own explicit scope. There is no reason to undo this
+successful login.
+
+**One next action:** prepare a bounded read-only plan for the remaining live
+role-isolation checks, with exact routes, browser/session separation, expected
+denials, side effects and containment specified before requesting execution
+scope. First admin entry is complete; Prompt 06 remains partial because live
+parent/admin cross-role and CSRF/owner denials are still pending. The inherited
+local/E2E denial evidence remains valid without a new live claim. Full manual
+preview and production gates remain blocked; this login does not change a
+production-readiness checklist gate.
+
+Validation is limited to `npm run docs:check`, `npm run release:scan` and
+`git diff --check`: only operational status documentation changes. No runtime,
+configuration or schema changes occurred, so full check/Vitest/E2E/build/review
+are not repeated. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: the next work is read-only preparation,
+with no remote write or unresolved ambiguity.
 
 ## First admin login authorized; private credentials pending — 2026-09-04
 
