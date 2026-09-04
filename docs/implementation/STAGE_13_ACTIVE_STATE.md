@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T10:39:55Z
+updated_utc: 2026-09-04T11:00:44Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-4-first-registration-verification-login-logout-success
-next_gate: phase-4-second-registration-owner-input-and-recipient-check
+next_gate: phase-4-single-second-registration-and-verification-delivery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-prompt-05-preflight-passed-registration-not-attempted
+current_phase: phase-4-prompt-05-recipient-validated-owner-single-submission-pending
 last_atomic_action: preview-owner-second-session-logout
 last_atomic_result: success
-next_atomic_action: validate-owner-entered-second-recipient-before-registration-post
+next_atomic_action: owner-submits-second-registration-exactly-once
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: next-action-is-private-browser-input-and-read-only-recipient-validation-before-any-post
+recommended_next_session_mode: High
+mode_reason_plain: authorized-single-registration-and-delivery-have-known-target-postcondition-and-containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -104,28 +104,30 @@ flow_verification:
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
   login_logout: success_current_session_revoked_one_owner_created_parallel_session_remains_active
-  second_registration: not_attempted_readonly_preflight_passed_owner_recipient_input_pending
-  second_recipient_membership: protected_allowlist_unchanged_actual_browser_value_not_yet_checked
+  second_registration: not_attempted_preflight_and_recipient_check_passed_owner_submission_pending
+  second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
   second_verification_welcome: automatic_one_welcome_requires_explicit_additional_delivery_permission
 next_atomic_action:
-  id: validate-owner-entered-second-recipient-before-registration-post
-  permission: prompt_05_readonly_preparation_for_authorized_single_second_registration
+  id: owner-submits-second-registration-exactly-once
+  permission: prompt_05_one_second_registration_and_one_allowlisted_verification_delivery
   target: existing_access_protected_preview_registration_browser_form
-  mutation: none
+  mutation: one_browser_registration_post_and_its_single_verification_email_delivery
   preconditions:
     - prompt_04_success_checkpoint_committed
     - bounded_prompt_05_preflight_passed_first_account_aggregate_state_unchanged
-    - owner_enters_only_second_previously_approved_email_in_browser_not_chat
-    - do_not_submit_or_read_password_token_cookie_or_verification_link
+    - owner_supplied_filled_form_screenshot_email_matches_exact_protected_allowlist_slot_2
+    - owner_confirms_registration_not_yet_submitted_and_keeps_checked_recipient_unchanged
+    - owner_personally_submits_form_with_new_password_under_computer_use_handoff_policy
   postcondition:
-    - normalized_browser_email_hash_matches_protected_allowlist_without_disclosing_identity
-    - owner_confirms_second_distinct_previously_approved_recipient
-    - no_registration_post_or_provider_send_during_input_check
-  success_transition: owner_submits_one_authorized_second_registration_then_bounded_reconcile_and_docs_checkpoint
-  failed_or_ambiguous_transition: stop_before_post_preserve_unused_permission_and_first_account
+    - two_distinct_parents_one_verified_first_parent_one_unverified_second_parent_admins_zero
+    - privacy_acknowledgements_two_used_verification_tokens_one_unused_tokens_one
+    - verification_deliveries_two_welcome_deliveries_one_each_terminal_with_one_attempt_and_receipt
+    - first_account_family_and_two_session_rows_unchanged_no_cross_links_or_unrelated_rows
+  success_transition: bounded_after_registration_reconcile_and_docs_commit_before_verification_or_login
+  failed_or_ambiguous_transition: stop_no_retry_resend_or_link_open_reconcile_once_and_record_containment
   forbidden_in_this_action:
     - registration_retry_resend_or_verification_link_replay
-    - registration_post_before_second_recipient_membership_check
+    - changing_checked_recipient_or_registration_more_than_once
     - first_account_login_logout_edit_or_session_cleanup
     - second_verification_before_explicit_one_welcome_delivery_permission
     - bootstrap_or_role_mutation
@@ -142,6 +144,45 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Second recipient validated from owner screenshot — 2026-09-04
+
+Result: `success`, local/read-only only; registration remains **not attempted**.
+The owner reported that the form was filled and not submitted, then supplied a
+screenshot proving the filled form, accepted privacy notice, successful
+Turnstile and enabled registration button. The previous empty email readings
+from browser DOM/accessibility do not establish that the actual form was empty;
+they are a limitation of this observation surface. No repeated input is needed.
+
+At `11:00:43Z`–`11:00:44Z`, local Windows OCR of that owner-supplied screenshot
+found exactly one email. Its normalized full SHA-256 matched slot 2 of the
+unchanged protected two-recipient allowlist using the same normalization as
+`assertAllowedRecipient` in `src/lib/server/email/resend.ts`. Only match/count
+booleans, the allowlist slot and screenshot hash were saved. No email, identity,
+password, token, cookie, OCR text or raw screenshot was copied into evidence/Git.
+The masked screenshot did not reveal the password. The prior bounded preview
+preflight is reused within this supervised registration window; no additional
+D1/control polling, remote mutation or send occurred.
+
+Protected ignored evidence:
+`tmp/second-registration-20260904-owner/recipient-screenshot-safe.json`, SHA-256
+`0ee69a08d0a2b0ee979ed6980dee9ab06cecf7833ee71cf44afef1ad4e8f299b`.
+The browser form was not changed or reloaded. Under the computer-use credential
+handoff rule, the one next action is the owner's single `Registrieren` click
+with the checked recipient unchanged. After its visible result and delivery,
+run the one prepared `after-registration` reconciliation and commit the active
+state before verification/login. Expected changes are one additional
+unverified parent, privacy acknowledgement, unused verification token and
+terminal verification delivery; first-account state and sessions remain intact.
+
+Containment remains no retry/resend, first-account action, bootstrap, unrelated
+send or config change. Do not open the new verification link until the
+registration checkpoint is committed and the one automatic welcome delivery
+has explicit permission. Existing Prompt 05 registration permission is retained
+and does not require another permission request. Runtime is unchanged; only
+docs checks, release scan and diff check apply. `rollover_required: no`;
+`recommended_next_session_mode: High`: the authorized registration/delivery,
+target, expected result and containment are known.
 
 ## Second registration preflight and private browser input — 2026-09-04
 

@@ -3109,3 +3109,14 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   "Second registration preflight and private browser input — 2026-09-04".
 - Runtime/config remain unchanged. Exact-candidate full release/review evidence
   is reused; this session runs only docs checks, release scan and diff check.
+
+## Continuation 2026-09-04: second-recipient private validation
+
+- The owner-supplied filled-form screenshot resolved the browser observation
+  limitation. A local OCR/hash comparison proved that its sole email matches
+  protected allowlist slot 2; no identity or raw screenshot was saved to evidence.
+- No registration or provider send was attempted. The checked form remains
+  ready for the owner's one authorized submission, followed by the mandatory
+  bounded reconciliation/checkpoint. See the dated recipient-validation section
+  of [active state](../STAGE_13_ACTIVE_STATE.md) for evidence and containment.
+- Only docs checks, release scan and diff check apply; runtime is unchanged.
