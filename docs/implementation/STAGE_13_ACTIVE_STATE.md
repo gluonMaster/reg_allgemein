@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T13:47:19Z
+updated_utc: 2026-09-04T14:05:27Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-first-admin-logout-success-reconciled
-next_gate: phase-4-remaining-live-role-isolation-plan
+last_completed_gate: phase-4-readonly-live-role-isolation-plan-complete
+next_gate: phase-4-third-parent-recipient-change-preparation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-bootstrap-admin-login-logout-complete-no-active-sessions-role-isolation-pending
+current_phase: phase-4-role-check-plan-ready-second-parent-fixtures-required-no-active-sessions
 last_atomic_action: owner-normal-admin-logout
 last_atomic_result: success
-next_atomic_action: prepare-bounded-live-role-isolation-plan-readonly
+next_atomic_action: prepare-exact-third-recipient-allowlist-change-readonly
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: admin-logout-reconciled-no-active-sessions-next-is-readonly-role-check-preparation-no-remote-write-or-ambiguity
+mode_reason_plain: next-is-local-protected-recipient-config-diff-and-readonly-preflight-no-remote-write-or-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: bootstrap_first_admin_login_and_owner_normal_logout_completed_and_reconciled_other_live_flows_not_authorized
+permission_state: readonly_role_plan_prepared_owner_proposed_third_account_recipient_if_needed_need_confirmed_no_config_account_or_probe_mutation_performed
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T13:47:16Z
+  latest_readonly_control_utc: 2026-09-04T13:53:56Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T13:47:19Z
-    postcondition_rows_read: 55
-    latest_read_kind: eight_selects_admin_logout_postcondition_sessions_linked_audit_and_preserved_accounts_bootstrap_receipts_providers
+    latest_bounded_postcondition_utc: 2026-09-04T13:53:59Z
+    postcondition_rows_read: 1727
+    latest_read_kind: five_selects_readonly_role_fixture_inventory_no_identity_values_or_app_requests
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -209,25 +209,45 @@ flow_verification:
   first_admin_logout: success_matching_admin_session_revoked_logout_linked_audit_one_no_active_sessions
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
   role_isolation_live: admin_positive_entry_passed_remaining_cross_role_and_owner_csrf_denials_not_attempted
+  role_isolation_preparation: complete_exact_rbac_csrf_protocol_and_conditional_cross_owner_fixture_plan
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
+role_isolation_plan:
+  document: docs/implementation/STAGE_13_LIVE_ROLE_ISOLATION_PLAN.md
+  inventory_utc: 2026-09-04T13:53:59.152Z
+  inventory_result: success_readonly
+  observed_roles: one_admin_one_parent_both_verified_active
+  current_nonrevoked_sessions: 0
+  children: 1703_unclaimed_legacy_zero_owned_zero_portal
+  requests_documents_offers_artifacts_threads_price_items: all_zero
+  rbac_csrf_cases: 14_bounded_steps_including_logins_and_normal_logouts_no_live_execution
+  cross_parent_fixture_gap: need_second_current_parent_and_existing_owned_child_request
+  owner_input: additional_controlled_recipient_proposed_in_conversation_if_needed_not_copied_into_tracked_state
+  third_parent_need: confirmed_for_parent_to_parent_child_request_ownership_controls
+  proposed_account_setup: append_one_recipient_hash_then_normal_registration_verification_welcome_login_each_checkpointed
+  proposed_fixture_setup: one_synthetic_portal_child_and_one_individual_self_pay_draft_via_normal_routes_no_submit
+  live_allowlist_changed: false
+  third_account_created: false
+  fixture_created: false
+  authenticated_probe_executed: false
+  candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: prepare-bounded-live-role-isolation-plan-readonly
-  permission: read_only_source_docs_and_sanitized_evidence_preparation_no_new_remote_write
-  target: existing_preview_fingerprint_88ed782ba25a_admin_slot_1_parent_slot_2_and_exact_deployed_source
-  mutation: none_do_not_navigate_authenticated_routes_or_create_sessions_during_preparation
+  id: prepare-exact-third-recipient-allowlist-change-readonly
+  permission: local_protected_config_diff_and_readonly_target_preflight_based_on_owner_proposed_recipient_no_live_write
+  target: exact_preview_origin_88ed782ba25a_existing_recipient_hashes_plus_one_owner_selected_additional_recipient
+  mutation: none_prepare_config_diff_application_method_postcondition_and_containment_before_live_change
   preconditions:
-    - successful_first_admin_login_and_subsequent_owner_logout_reconciled_and_checkpoint_committed
-    - use_canonical_auth09_authorization_routes_and_inherited_exact_candidate_tests
-    - both_accounts_have_no_active_sessions_preserve_all_revocations_and_plan_fresh_isolated_logins_for_later_live_checks
+    - completed_readonly_role_isolation_plan_and_aggregate_fixture_inventory
+    - use_owner_provided_recipient_from_conversation_privately_no_email_in_code_logs_or_tracked_docs
+    - preserve_existing_admin_parent_roles_sessions_bootstrap_and_two_original_recipient_hashes
   postcondition:
-    - concrete_remaining_checks_map_parent_admin_surface_denial_admin_parent_actor_denial_csrf_and_owner_denial
-    - exact_routes_isolated_browser_session_requirements_expected_denials_no_send_guards_and_containment_documented
-    - distinguish_session_touch_or_login_writes_from_no_business_write_denial_assertions_before_requesting_execution_scope
-  success_transition: review_concrete_plan_with_owner_before_additional_live_session_or_probe_writes
-  failed_or_ambiguous_transition: record_missing_precondition_preserve_access_and_existing_sessions_no_remote_retry_or_repair
+    - exactly_one_append_to_preview_email_recipient_hashes_with_canonical_normalization_protected_diff
+    - supported_exact_binding_update_and_rollback_method_reviewed_without_incidental_code_feature_or_access_change
+    - future_three_account_readonly_helpers_and_registration_verification_welcome_fixture_scope_explicit
+  success_transition: concrete_reviewable_allowlist_change_then_scoped_third_parent_setup_each_remote_step_checkpointed
+  failed_or_ambiguous_transition: record_missing_precondition_preserve_existing_live_config_no_remote_retry_or_repair
   forbidden_in_this_action:
     - automatic_full_vitest_e2e_release_verify_or_nested_review
-    - runtime_or_test_changes_during_readonly_plan_preparation
+    - runtime_or_test_changes_during_readonly_config_preparation
     - any_bootstrap_retry_direct_role_edit_control_reset_remote_deploy_rollback_or_migration
     - any_login_logout_session_repair_or_authenticated_route_probe_during_readonly_preparation
     - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
@@ -237,11 +257,66 @@ next_atomic_action:
 following_route_permission_boundaries:
   - bootstrap_permission_consumed_successfully_no_remote_replay_or_reset
   - first_admin_login_and_owner_logout_completed_further_live_checks_require_fresh_scoped_logins
+  - owner_proposed_third_recipient_account_prepare_exact_config_and_two_delivery_scope_before_execution
   - any_worker_deploy_only_if_required_by_the_next_execution_surface
   - remaining_parent_login_and_live_rbac_csrf_owner_denial_session_writes_require_separate_scope
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Read-only role plan complete; second parent required — 2026-09-04
+
+Result: **success, read-only preparation**. The owner requested a live
+role-isolation plan, then proposed an additional controlled recipient for a
+second parent if needed. The requirement is confirmed: current roles are one
+admin plus one parent; parent-to-parent ownership cannot be established with
+an admin actor or only unclaimed legacy objects. No new permission decision
+about the identity is needed merely to continue preparation; the supplied
+address stays outside tracked docs and logs.
+
+The [prepared plan](STAGE_13_LIVE_ROLE_ISOLATION_PLAN.md) maps exact RBAC/CSRF
+routes and expected middleware/action responses, session effects, per-operation
+checkpoints, normal logout containment and the conditional owner-fixture path.
+It distinguishes JSON ActionFailure status from HTTP 200 and keeps no-send
+validation controls for CSRF. Creating P2 requires a precise append to the
+preview recipient hash allowlist, ordinary registration, verification and its
+automatic welcome email; the proposed fixtures are one portal child and one
+self-pay individual draft through normal product routes. Their later creation
+does not authorize provider/contract sends or direct SQL provisioning.
+
+Fresh aggregate inventory at `13:53:59.152Z`: one active verified admin at
+version 2, one active verified parent at version 1; four sessions all revoked;
+1703 unclaimed legacy children, zero owned/portal children; requests, documents,
+offers, artifacts, threads and price items all zero. Bootstrap remains consumed
+with action/assertion/audit `1/1/1`. Five SELECTs read 1727 rows, wrote 0,
+`changes=0`, `changed_db=false`; identity values were not selected. Exact target
+and protected Worker bindings remain unchanged, version `ad3134edb662` at 100%.
+No application HTTP probe, account creation, provider send, fixture write,
+allowlist/Access change or deployment was performed. The last atomic remote
+action remains the owner's reconciled logout.
+
+Protected ignored evidence:
+`tmp/admin-first-login-20260904-owner/role-inventory-safe.json`, SHA-256
+`65ffa2c2c50d1f129823d05e4b99134401f55d64be5b22349cd28c2ba7d674fc`;
+SELECT-only helper `tmp/role-isolation-inventory-readonly.cjs`, SHA-256
+`2999691eecb9762a8035d0ac4fe5a79bee1cd7f24308b76961fd41bda40a349a`.
+The interrupted preparation had completed this bounded read; it was not rerun.
+
+No candidate P0/P1 was found. Missing owner fixtures are an explicit next-phase
+prerequisite, not a justification for changing roles, claiming absent-ID denial
+as ownership proof, or reopening the reviewed runtime. The role/security route
+surface and E2E matrix match deployed ancestor `0db3884`; existing gated evidence
+is reused. Prompt 06 and full manual preview remain incomplete pending real
+live checks; production-readiness gate status is unchanged.
+
+**One next action:** prepare the exact protected third-recipient config diff,
+supported application method, read-only postcondition and rollback/containment.
+Keep live configuration unchanged during that preparation. Then the proposed
+third-parent setup can proceed under its concrete scope with checkpoints.
+Validation: helper syntax, `npm run docs:check`, `npm run release:scan`,
+`git diff --check`; no full runtime suite/build/E2E/review for this docs-only
+plan. `rollover_required: no`; `recommended_next_session_mode: Medium`: the next
+work is local/read-only preparation, without a remote write or ambiguity.
 
 ## Owner admin logout succeeded and reconciled — 2026-09-04
 

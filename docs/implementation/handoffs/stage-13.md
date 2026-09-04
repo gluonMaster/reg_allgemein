@@ -19,6 +19,28 @@
 
 ## Append-only evidence history
 
+### Read-only live role plan and third-account prerequisite — 2026-09-04
+
+- [Plan](../STAGE_13_LIVE_ROLE_ISOLATION_PLAN.md) prepared with exact RBAC/CSRF
+  requests, SvelteKit action-denial interpretation, session effects, per-action
+  postconditions/commits and cross-parent fixture prerequisites. No live probes
+  or new accounts/fixtures/configuration writes were executed.
+- Five SELECTs at `13:53:59.152Z` read 1727 rows and wrote 0: one admin, one
+  parent, four revoked sessions; 1703 unclaimed legacy children with zero owned
+  children; requests/documents/offers/artifacts/threads/price items all zero.
+  Protected Worker version/bindings and consumed bootstrap remained unchanged.
+- Owner proposed a controlled additional recipient if a second parent is needed.
+  The need is confirmed for parent-to-parent checks. Proposed setup preserves
+  admin/P1 and adds P2 through normal allowlisted registration/verification/welcome,
+  followed by one synthetic portal child and individual self-pay draft. Address
+  and future credentials are excluded from tracked evidence. Exact recipient
+  config diff/application/rollback is the next read-only preparation.
+- Protected evidence: `tmp/admin-first-login-20260904-owner/role-inventory-safe.json`,
+  SHA-256 `65ffa2c2c50d1f129823d05e4b99134401f55d64be5b22349cd28c2ba7d674fc`.
+  Only helper syntax/docs/release-scan/diff checks; runtime gates reused. No
+  rollover; next mode Medium. Current permissions and next action live only in
+  [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### Owner admin logout succeeded — 2026-09-04
 
 - The owner reported normal logout and the browser context returned to
