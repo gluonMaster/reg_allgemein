@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T11:23:43Z
+updated_utc: 2026-09-04T11:36:53Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-4-prompt-05-two-verified-parents-independent-sessions-success
-next_gate: phase-4-separate-owner-decision-before-one-shot-admin-bootstrap
+next_gate: phase-4-owner-decision-on-local-auth09-bootstrap-eligibility-fix
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-prompt-05-complete-two-verified-parents-with-independent-valid-sessions
-last_atomic_action: preview-second-verified-parent-single-login
-last_atomic_result: success
-next_atomic_action: request-separate-one-shot-admin-bootstrap-authorization
+current_phase: phase-4-prompt-06-blocked-before-bootstrap-by-registration-finalization-guard
+last_atomic_action: preview-first-admin-bootstrap-readonly-preflight
+last_atomic_result: failed
+next_atomic_action: request-local-auth09-bootstrap-eligibility-fix-authorization
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: next-planned-bootstrap-has-known-preview-target-and-containment-but-requires-separate-owner-authorization
+recommended_next_session_mode: Medium
+mode_reason_plain: next-action-is-owner-scope-decision-only-no-write-was-attempted-and-no-mutation-ambiguity-exists
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,12 +33,14 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: prompt_05_and_one_welcome_permissions_consumed_no_further_remote_mutation_authorized
+permission_state: prompt_06_one_bootstrap_authorized_but_unattempted_precondition_failed_no_code_or_repair_permission
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
   unresolved_candidate_p0: 0
-  unresolved_candidate_p1: 0
+  unresolved_candidate_p1: 1
+  newly_observed_blocker: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001
+  verdict_scope: prior_independent_go_record_retained_new_operational_p1_blocks_bootstrap
   inherited_release_evidence:
     check: passed
     vitest: 78_files_580_pass_1_expected_windows_skip
@@ -68,8 +70,10 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T11:23:43Z
-    postcondition_rows_read: 1865
+    latest_bounded_postcondition_utc: 2026-09-04T11:36:53Z
+    postcondition_rows_read: 58
+    latest_read_kind: targeted_readonly_eligibility_diagnostic
+    preceding_preflight_rows_read: 944
     postcondition_rows_written: 0
   scheduled:
     fast: running_at_bounded_snapshot_age_under_two_seconds_no_recent_failures
@@ -91,17 +95,24 @@ preview:
     verification_deliveries_sent_with_receipt: 2
     welcome_deliveries_sent_with_receipt: 2
     auth_sessions: 3
-    nonrevoked_auth_sessions: 2
-    logged_out_auth_sessions: 1
+    nonrevoked_auth_sessions: 1
+    logged_out_auth_sessions: 2
     distinct_identities: 2
     distinct_assigned_families: 2
-    nonrevoked_session_owners: 2
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 2
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
     first_parent_sessions_total_nonrevoked_valid: 2_1_1
-    second_parent_sessions_total_nonrevoked_valid: 1_1_1
+    second_parent_sessions_total_nonrevoked_valid: 1_0_0
+    second_parent_session_drift: logout_observed_after_prompt_05_not_performed_by_this_session
     owned_children_per_parent: 0
+    bootstrap_control: available
+    bootstrap_actions_assertions_audit: 0_0_0
+    canonical_bootstrap_eligible_accounts: 0
+    registration_finalization_commits_per_account: 1
+    registration_finalization_result: portal_allocated_assertion_passed
+    other_retained_state_guard_branches_nonzero: 0
     import_pair: 2_plus_1703
   providers:
     auth_and_resend: enabled_only_behind_access_and_two_recipient_hashes
@@ -117,40 +128,143 @@ flow_verification:
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
-  prompt_05: complete_two_verified_parents_distinct_families_independent_valid_sessions_no_cross_links_or_extra_sends
+  prompt_05: historically_complete_at_11_23_43Z_second_session_now_logged_out
+  prompt_06: blocked_preflight_bootstrap_not_attempted
+  role_isolation_live: not_attempted_authenticated_get_touches_session_and_login_requires_separate_scope
+  rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: request-separate-one-shot-admin-bootstrap-authorization
-  permission: none_waiting_for_separate_explicit_owner_bootstrap_authorization
-  target: no_remote_target_permission_request_only
+  id: request-local-auth09-bootstrap-eligibility-fix-authorization
+  permission: owner_decision_only_prompt_06_explicitly_forbids_code_changes
+  target: local_repository_auth09_eligibility_surface_no_remote_target
   mutation: none
   preconditions:
-    - prompt_05_success_reconciled_and_checkpoint_committed
-    - two_verified_synthetic_parents_with_independent_valid_sessions_recorded
-    - admins_and_bootstrap_remain_zero_no_parent_owned_children_created
-    - no_further_login_logout_or_session_cleanup_is_implied
+    - P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_proven_by_31_branch_readonly_diagnostic
+    - bootstrap_cli_invocations_zero_control_available_and_chain_empty
+    - preserve_existing_registration_evidence_accounts_and_sessions
   postcondition:
-    - separate_owner_decision_defines_exact_one_shot_bootstrap_scope_and_target_parent
-    - no_remote_mutation_or_provider_send_during_permission_checkpoint
-  success_transition: prepare_exact_preconditions_for_separately_authorized_bootstrap
-  failed_or_ambiguous_transition: remain_stopped_with_prompt_05_success_and_containment_intact
+    - owner_decides_scope_for_local_eligibility_fix_and_representative_registration_to_bootstrap_regression
+    - no_remote_mutation_during_scope_decision
+  success_transition: prepare_local_fix_only_with_owner_authorization_then_define_candidate_gates
+  failed_or_ambiguous_transition: remain_stopped_before_bootstrap_with_access_and_evidence_intact
   forbidden_in_this_action:
-    - registration_retry_resend_or_verification_link_replay
-    - any_further_registration_or_recipient_change
-    - first_account_login_logout_edit_or_session_cleanup
-    - any_further_login_logout_or_session_cleanup_without_separate_permission
-    - bootstrap_or_role_mutation
-    - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
-    - migration_reapply_or_unrelated_d1_r2_write
-    - bootstrap_role_change_or_unrelated_session_mutation
-    - unrelated_provider_send_or_secret_flag_access_change
+    - bootstrap_attempt_while_canonical_eligibility_precondition_is_false
+    - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
+    - login_logout_session_repair_or_authenticated_live_probe
+    - code_change_under_prompt_06_scope
+    - provider_send_or_registration_verification_replay
+    - deploy_rollback_migration_or_unrelated_d1_r2_write
+    - secret_flag_access_change
     - production_cms_or_real_pii_action
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
-  - optional_early_revocation_of_the_known_remaining_owner_created_session
-  - one_shot_admin_bootstrap_after_two_verified_synthetic_parents
+  - local_auth09_bootstrap_eligibility_remediation_and_representative_regression
+  - any_new_candidate_remote_deploy_or_bootstrap_after_preconditions_are_reestablished
+  - admin_login_parent_login_and_live_rbac_csrf_owner_denial_session_writes
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Prompt 06 preflight: registration finalization blocks bootstrap — 2026-09-04
+
+Result: `failed` preflight; **bootstrap not attempted, CLI invocations 0**.
+The owner invoked Prompt 06 and authorized one official preview bootstrap for
+the first registered verified synthetic account; the second must remain parent.
+Its permission is unconsumed, but cannot be exercised while the required
+canonical eligibility check is false. The prompt expressly forbids code
+changes, direct SQL role edits, repeated bootstrap, session repair and other
+remote mutations. No remote mutation or provider send was attempted here.
+
+**P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001** blocks the mandatory Stage-13
+bootstrap flow. The deployed candidate's
+`src/lib/server/auth/admin-role-transition.ts`,
+`NO_RETAINED_PARENT_STATE_SQL` rejects every target having any
+`family_finalization_commits` row. The ordinary verification extension
+in `src/lib/server/family/verification-extension.ts` inserts that row
+for successful empty portal allocation, with `result_kind=portal_allocated`.
+The bounded live diagnostic found exactly one such successful row for each
+account, and zero matching rows in each of the other 30 retained-state guard
+branches. Both accounts therefore fail the actual bootstrap guard despite
+having no child/claim/request/contract/price/message/privacy business state.
+This conflicts with the empty-FamilyID/registration allowance in `AUTH-09`
+and its existing acceptance criterion; no new business rule is needed.
+
+Existing bootstrap success fixtures directly seed a verified user and empty
+FamilyID; they omit the ordinary verification finalization record. The prior
+full release gate and independent GO remain historical evidence for the exact
+unchanged candidate, but cannot override this newly demonstrated P1. No review
+loop or runtime test was started under this no-code operational scope.
+
+Before any write, local source/config hashes and the protected record matched.
+Clean HEAD `6abee8b3546b6e23d552407dc30d15288dbcf633` is a docs-only
+descendant of the reviewed candidate. The clean exact detached source and all
+396 bundle inputs retain their recorded build hashes. Preview target
+fingerprints are account `5dbd04a4763a`, Worker `242c1796e930`,
+origin host `88ed782ba25a` and D1 `ccdeb22bb2a1`. The live version
+fingerprint remains `ad3134edb662` at 100%, with exact candidate annotation,
+unchanged bindings/vars/feature gates/schedules and protected recipient hashes.
+The official confirmation helper validated the preview environment and exact
+D1 target in memory; no confirmation, user ID or identity was printed or saved.
+
+The first HTTP helper stopped before the account SELECT with an unclassified
+local/HTTP error. Its successful control snapshot was reused. The bounded
+continuation confirmed anonymous Access redirect `302` and valid Access
+root `200`, then performed nine SELECTs reading 944 rows and writing 0.
+Exact ledger is `0001`–`0026`, pending 0. Both accounts are verified,
+active and unblocked; their normalized identity hashes match the respective
+protected recipient slots. Roles remain two parents and zero admins.
+Bootstrap control is `available`; actions/assertions/bootstrap audit are
+all 0; all six immutable control/action/assertion triggers are present.
+
+The second session has drifted since Prompt 05: its one session is now revoked
+with reason `logout`, so its total/nonrevoked/valid counts are `1/0/0`.
+The first account remains `2/1/1`. Total sessions remain 3, with 1
+nonrevoked and 2 logged out; no session has `role_change`. The read-only
+session did not perform or attribute this intervening logout. No recovery or
+fresh login is implied. Email remains exactly two verification and two welcome
+deliveries, terminal sent with one attempt/receipt per row and no errors.
+Telegram/storage intents remain 0; no extra send or orphan session was found.
+
+The targeted eligibility diagnostic completed at `11:36:53Z`: three
+SELECTs read 58 rows and wrote 0, checking all 31 guard branches per account,
+the finalization kind/assertion and relevant aggregate audit counts. All 12
+completed D1 SELECT statements across the preflight and diagnostic reported
+`changes=0` and `changed_db=false`. Prior scoped integrity/FK and
+deployment-cadence evidence is reused; no broad scan or health polling occurred.
+
+Fresh authenticated browser denial checks were not attempted: even successful
+session authentication calls `AuthRepository.touchSession` and writes
+`auth_sessions.last_seen_at`. New admin login also creates a session.
+RBAC/CSRF/ownership and replay-denial coverage remains the inherited exact-
+candidate unit/integration/Chromium evidence, not a new live success claim.
+One-admin/one-parent and sealed-bootstrap postconditions are **not achieved**.
+
+Protected current-user-only ignored evidence:
+`tmp/bootstrap-roles-20260904-owner/resume-before-safe.json`, SHA-256
+`03158c4853144af0e06160fdb16f93c6ce7df68409643b7b20f1482b1a587dcf`;
+`eligibility-detail-safe.json`, SHA-256
+`6a64a262547ceac5f923e82e3e824ce95db2d3c15efc21985d2bb85a9dfab473`.
+Resource/config evidence remains protected and ignored; identities and user IDs
+were held only in process memory. Local Wrangler disk logging was disabled to
+avoid storing query/argument identities. The application/config were unchanged.
+
+Containment: preserve Access, provider restrictions, accounts, sessions and
+registration proof. Do not execute bootstrap against a failing guard, delete
+finalization rows, edit roles directly or reset the one-shot control. There is
+no mutation to roll back and no ambiguous write. The sole next action is an
+owner decision authorizing a local `AUTH-09` eligibility fix with a regression
+covering ordinary registration/verification followed by bootstrap. Prompt 06's
+no-code instruction is the reason implementation stops here. Any later remote
+action requires valid candidate/target/eligibility gates and explicit scope.
+
+Validation: only `npm run docs:check`, `npm run release:scan` and
+`git diff --check` for this docs-only checkpoint. Full check/Vitest/E2E/build,
+dependency audit and independent review are not repeated: runtime, migrations,
+dependencies and configuration are unchanged. A future fix must cover this
+concrete regression; inherited green fixtures do not dismiss the failure.
+`rollover_required: no`; `recommended_next_session_mode: Medium`:
+the next action is a scope decision, with no remote write, ambiguous mutation,
+corruption, authorization bypass or reason to escalate to Max. Full manual
+preview and production remain blocked.
 
 ## Second verified-parent login and Prompt 05 completion — 2026-09-04
 

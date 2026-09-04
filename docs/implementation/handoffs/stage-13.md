@@ -3167,3 +3167,24 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   migrations, dependencies and config are unchanged. Full manual preview and
   production still require their later gates, and bootstrap requires a separate
   explicit owner instruction.
+
+## Continuation 2026-09-04: Prompt 06 stopped before bootstrap
+
+- The owner's one-shot bootstrap scope was read and its preview target, exact
+  candidate, migration ledger, Access and two verified synthetic identities were
+  checked without mutation. The official bootstrap CLI was not invoked.
+- A concrete mandatory-flow P1 was isolated: ordinary email verification writes
+  a successful empty-portal family finalization, while the role guard rejects
+  every such finalization. All other retained-state branches were empty. Existing
+  bootstrap success fixtures omit the ordinary verification record. No role
+  repair, evidence deletion, code change or review loop was performed.
+- A separate observed logout of the second parent means its earlier valid
+  session is no longer current. No fresh login or session repair was attempted.
+- Counts, fingerprints, protected evidence hashes, permission boundary,
+  containment and the sole current next action are in
+  [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Prompt 06 preflight: registration finalization blocks bootstrap — 2026-09-04".
+- Prompt 06 prohibits code changes, so a local eligibility fix needs an owner
+  scope decision. This session uses only docs checks, release scan and diff
+  check; unchanged-candidate test/review results remain historical evidence and
+  do not override the demonstrated bootstrap blocker.
