@@ -19,6 +19,26 @@
 
 ## Append-only evidence history
 
+### First admin login preflight and private credential handoff — 2026-09-04
+
+- The owner explicitly authorized the first admin login and linked session
+  writes. At `12:59:01Z`, seven SELECTs read 45 rows and wrote 0; exact target,
+  Worker/bindings, active verified admin version 2 and preserved parent version
+  1 matched the committed bootstrap checkpoint. All three historical sessions
+  remain revoked; bootstrap `1/1/1` and consumed control, receipts and providers
+  are unchanged. The login form is open behind the existing Access session.
+- No login was attempted. The remaining input is the owner's existing first
+  account credentials, entered privately in the form. The request already
+  authorizes one submission; no additional permission is required. After its
+  visible result, the bounded SELECT-only after helper must reconcile a new
+  admin session and preserved state before the next remote mutation.
+- Protected evidence: `tmp/admin-first-login-20260904-owner/before-safe.json`,
+  SHA-256 `1c6b3df4987bbeb741a041d2fa13e428161b8086d0ca55a621403c0933bc5de6`.
+  Helper SHA-256 `03f5c83d6a17f812fe1438ef64835af4fd199b93b9856a59bc09185ddb7d1553`.
+  Only syntax/docs/release-scan/diff checks apply; runtime gates are inherited.
+  Current permissions, containment and next action are exclusively in
+  [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### First logout, explained parallel session and Prompt 04 completion — 2026-09-03
 
 - The owner used `Abmelden` and returned to the login route. The bounded
