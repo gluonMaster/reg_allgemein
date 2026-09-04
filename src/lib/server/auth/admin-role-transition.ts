@@ -1,9 +1,9 @@
 /**
  * Correlated SQL guard for `UPDATE users ... WHERE ...` role transitions.
  *
- * A verified account's empty assigned FamilyID is intentionally absent: the
- * first-admin bootstrap must remain possible before the account has acquired
- * any parent-side business or workflow state.
+ * An empty assigned FamilyID and its portal_allocated verification receipt are
+ * registration evidence, not parent business state. Exact-email finalization
+ * retains legacy-claim evidence; all other guards still reject later workflows.
  */
 export const NO_RETAINED_PARENT_STATE_SQL = `NOT EXISTS (
 			SELECT 1 FROM children AS retained_child
@@ -23,6 +23,7 @@ export const NO_RETAINED_PARENT_STATE_SQL = `NOT EXISTS (
 		) AND NOT EXISTS (
 			SELECT 1 FROM family_finalization_commits AS retained_family_finalization
 			WHERE retained_family_finalization.user_id = users.id
+				AND retained_family_finalization.result_kind <> 'portal_allocated'
 		) AND NOT EXISTS (
 			SELECT 1 FROM family_transaction_assertions AS retained_family_assertion
 			WHERE retained_family_assertion.user_id = users.id

@@ -97,7 +97,12 @@ MVP готов, когда:
   назначение существующим admin) атомарно отклоняют verified target с любым
   retained parent workflow/business state: роль и sessions не меняются,
   успешное role/bootstrap audit evidence не появляется. Verified target с
-  только пустой FamilyID allocation может пройти разрешённый bootstrap;
+  только пустой FamilyID allocation и её служебным verification receipt
+  `family_finalization_commits.result_kind=portal_allocated` может пройти
+  разрешённый bootstrap и обычное назначение admin. Receipt сохраняется;
+  `exact_email` и любое другое retained business/workflow state остаются
+  блокирующими. Regression проходит обычные registration и email verification
+  с default family extension, затем проверяет role/session/audit/control;
   последующая fresh login ведёт parent в `/cabinet`, admin в `/admin`.
   (`AUTH-09`, `ADMIN-02`)
 

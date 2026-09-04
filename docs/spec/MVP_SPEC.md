@@ -136,7 +136,9 @@ release gates сохраняются.
   state (включая детей, claim/correction, trial/request, enrollment/contract,
   price-review, message или privacy workflow). Первый bootstrap может повысить
   только verified active parent без такого состояния; одна лишь пустая
-  зарезервированная FamilyID/регистрационная запись не считается business state.
+  зарезервированная FamilyID/регистрационная запись, включая её служебный
+  verification receipt `portal_allocated`, не считается business state.
+  Finalization `exact_email` сохраняет claim evidence и остаётся блокирующей.
 
 ## 5. Legacy claim и дети
 

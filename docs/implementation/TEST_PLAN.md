@@ -755,7 +755,12 @@ blocked gates и local suite их не заменяет.
   privacy state одним batch без role/session/audit/control side effects;
 - canonical retained-state guard явно перечисляет все 31 unique
   table/column reference, но не считает пустую FamilyID allocation
-  retained business state;
+  и её `portal_allocated` verification receipt retained business state;
+  regression использует ordinary registration/verification с default family
+  extension, затем repository bootstrap, remote SQL rendering и обычное admin
+  assignment; receipt сохраняется, target sessions отзываются, второй parent
+  не меняется, replay отклоняется. `exact_email` finalization и portal allocation
+  с retained child по-прежнему запрещают обе операции без side effects;
 - import issue/review task typed resolution и audit;
 - legacy search pagination/redaction, user block session revocation;
 - mapping/capacity/publish handlers и price diagnostics without raw source;
