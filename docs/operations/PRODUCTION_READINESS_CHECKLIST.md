@@ -1,6 +1,6 @@
 # Production readiness checklist
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Актуально на 2026-09-02. Это production evidence ledger, а не current Stage-13
 state и не инструкция продолжения. Production verdict: **`blocked` / NO-GO**.
@@ -13,7 +13,7 @@ Current candidate, deployed preview version и next atomic action читать �
 commands и не дают permission. Этот файл обновляется только при фактическом
 изменении production gate или на production phase boundary.
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 0db38842524ebc146eaa56a9d089e3c3484bf0f3 -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 438a51399ac5f58b428b624c52ca2cbbc059ae9c -->
 
 ## Production release record
 

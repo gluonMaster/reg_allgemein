@@ -368,7 +368,7 @@ Exit gate:
 
 ## 13. Независимый hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Roadmap хранит только stable scope и exit criteria. Current reviewed candidate,
 deployed preview version, pending migration и next atomic action находятся

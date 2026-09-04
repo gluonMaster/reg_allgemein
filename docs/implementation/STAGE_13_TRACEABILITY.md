@@ -1,6 +1,6 @@
 # Stage 13: traceability требований и release evidence
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 > Этот файл — stable requirement→code→test→evidence mapping, не current
 > operational state. SHA, deployed version и next action брать только из

@@ -1,6 +1,6 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
@@ -10,7 +10,7 @@
 > status/SHA/next-action ниже являются историческими снимками и никогда не
 > переопределяют active state. Обновлять его только на границе фазы/сессии.
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 0db38842524ebc146eaa56a9d089e3c3484bf0f3 -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 438a51399ac5f58b428b624c52ca2cbbc059ae9c -->
 
 Последний сохранённый phase-boundary record: exact D1-cost remediation candidate
 получил independent GO с `P0/P1 = 0`; production остаётся **NO-GO**. Текущее
@@ -3226,3 +3226,38 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   a Worker deploy; no remote permission is granted by preparing this prompt.
 - This preparation is docs-only: docs checks, release scan and diff check only.
   No runtime test, independent review or remote action was performed here.
+
+## Continuation 2026-09-04: independent scoped bootstrap review GO
+
+- At `2026-09-04T12:12:34Z`, exact implementation candidate
+  `438a51399ac5f58b428b624c52ca2cbbc059ae9c` received independent **GO** under
+  the owner-selected scoped gate. New findings: `P0: 0`, `P1: 0`, `P2: 0`,
+  `P3: 0`. No nested reviewer, runtime edits or test edits were used.
+- Clean inspected HEAD `3c386c3977b67faac42d33f15df09438e7350cd5` is a docs-only
+  descendant. Baseline ancestry and all 17 changed paths prove one executable
+  guard change, one new test file and 15 docs files, with unchanged migrations,
+  dependencies, config, CLI, hooks, routes and session implementation.
+- One independent three-file run passed all 8 tests. Ignored output:
+  `tmp/bootstrap-registration-review-06a-20260904.log`, SHA-256
+  `b1f85f62927e2f2e4315d82f7aff8982d70417a5cb7903ed677c65f09861a19d`.
+  The 51-pass/one-adapter-failure implementation log and successful one-test
+  correction rerun were reconciled; all five inherited log hashes matched.
+  The other 44 related tests, two Chromium scenarios, check/build and exact
+  baseline `0db38842524ebc146eaa56a9d089e3c3484bf0f3` full Vitest/E2E/dependency
+  evidence are reused for unchanged surfaces, not represented as fresh runs.
+- Local CLI imports the corrected builder and executes directly against pinned
+  D1; it does not call the deployed Worker. No Worker deployment is necessary
+  for that bootstrap operation. Local SQL regression executes all seven
+  controlled statements, including terminal SELECT; remote transport was not run.
+- No remote reads/writes, bootstrap, session/provider actions or authenticated
+  preview access occurred. Production and full manual preview remain blocked.
+  Only required current-review/compatibility markers were synchronized outside
+  active state/handoff; production readiness/business rules were not changed.
+- The one next action and permission/containment boundary are in
+  [active state](../STAGE_13_ACTIVE_STATE.md#independent-scoped-bootstrap-review-go-2026-09-04):
+  prepare the exact-preview CLI bootstrap continuation with fresh read-only
+  eligibility/session preflight. No new generic full gate or reviewer follows
+  this GO for the unchanged diff. `rollover_required: no`;
+  `recommended_next_session_mode: Medium`, because next is read-only preparation.
+- Docs-only checkpoint validation: `docs:check`, `release:scan`, `git diff --check`;
+  no runtime rerun after the checkpoint commit.

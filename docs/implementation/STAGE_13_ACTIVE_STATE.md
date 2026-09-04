@@ -1,25 +1,25 @@
 # Stage 13: current operational state
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T12:00:39Z
-reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+updated_utc: 2026-09-04T12:12:34Z
+reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-local-auth09-eligibility-fix-focused-validation-passed
-next_gate: phase-4-independent-scoped-bootstrap-review-with-eight-focused-tests
+last_completed_gate: phase-4-independent-scoped-bootstrap-review-go-eight-tests-passed
+next_gate: phase-4-exact-target-cli-bootstrap-continuation-preparation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: pending_independent_review
-current_phase: phase-4-local-bootstrap-eligibility-fixed-preview-unchanged
-last_atomic_action: local-auth09-bootstrap-eligibility-fix-and-focused-regression
+current_review_status: independent_go
+current_phase: phase-4-reviewed-cli-bootstrap-ready-for-continuation-preparation-preview-unchanged
+last_atomic_action: independent-scoped-bootstrap-review
 last_atomic_result: success
-next_atomic_action: independent-scoped-bootstrap-review
+next_atomic_action: prepare-exact-preview-cli-bootstrap-continuation
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: next-session-performs-scoped-readonly-review-and-local-test-evidence-without-remote-write
+mode_reason_plain: next-action-is-readonly-bootstrap-scope-target-eligibility-and-session-preparation-without-remote-write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -36,16 +36,20 @@ milestone_status: blocked
 production_status: blocked
 permission_state: owner_requested_scoped_validation_of_exact_local_fix_no_remote_mutation_authorized_by_this_review
 review:
-  status: pending_independent_review
+  status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-  last_independently_reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  last_independently_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
   local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
   deployed_blocker: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_still_present
-  verdict_scope: independent_scoped_review_pending_baseline_full_evidence_plus_focused_changed_surface_gate
+  verdict_scope: independent_go_baseline_full_evidence_plus_focused_changed_surface_gate_no_remote_success_claim
   validation_policy: owner_requested_candidate_specific_scoped_gate_2026_09_04
   mandatory_reviewer_tests: 8_tests_3_files_one_run
+  reviewer_validation: passed_8_of_8_in_one_run_at_2026_09_04T12_12_34Z
+  inspected_head: 3c386c3977b67faac42d33f15df09438e7350cd5
+  scope_verified: baseline_ancestor_one_executable_guard_one_new_test_file_other_paths_docs_only_clean_worktree
+  worker_deploy_required_for_cli_bootstrap: false_local_cli_renders_guard_and_executes_directly_against_pinned_d1
   full_suite_expansion: only_if_pinned_scope_fails_or_concrete_unbounded_impact_is_demonstrated
   local_validation:
     check: passed_0_errors_0_warnings
@@ -53,7 +57,7 @@ review:
     chromium_e2e: 2_of_2_affected_role_owner_csrf_scenarios
     build: passed
     full_release_gate: not_required_for_this_pinned_bounded_diff_previous_blanket_requirement_superseded
-    independent_review: not_performed
+    independent_review: passed_scoped_gate_2026_09_04
   previous_candidate_release_evidence:
     candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
     check: passed
@@ -148,21 +152,22 @@ flow_verification:
   role_isolation_live: not_attempted_authenticated_get_touches_session_and_login_requires_separate_scope
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: independent-scoped-bootstrap-review
-  permission: local_readonly_review_focused_tests_and_docs_checkpoint_only
-  target: exact_local_remediation_candidate_in_review_section
+  id: prepare-exact-preview-cli-bootstrap-continuation
+  permission: preparation_only_review_does_not_expand_unconsumed_prompt_06_bootstrap_permission
+  target: reviewed_cli_candidate_438a51399ac5f58b428b624c52ca2cbbc059ae9c_preview_d1_fingerprint_ccdeb22bb2a1
   mutation: none_remote
   preconditions:
-    - candidate_is_438a51399ac5f58b428b624c52ca2cbbc059ae9c_or_runtime_identical_docs_only_descendant
-    - complete_diff_from_baseline_has_only_one_changed_executable_guard
-    - migrations_dependencies_config_cli_hooks_routes_and_session_code_unchanged
-    - inherited_evidence_and_final_test_harness_correction_reconciled
+    - reviewed_cli_source_and_dependencies_unchanged_or_runtime_identical_docs_only_descendant
+    - reconcile_existing_unconsumed_prompt_06_permission_with_exact_cli_scope_no_new_permission_implied
+    - fresh_readonly_exact_config_app_env_account_d1_schema_and_control_preflight_in_continuation
+    - fresh_eligibility_of_first_synthetic_parent_under_reviewed_guard_and_second_parent_identity_preserved
+    - fresh_readonly_session_counts_preserve_observed_second_parent_logout_no_login_touch_or_repair
+    - recovery_containment_and_single_attempt_postcondition_checkpoint_defined_before_any_later_write
   postcondition:
-    - independent_code_verdict_and_one_run_of_8_tests_in_3_files
-    - baseline_full_and_existing_52_tests_2_e2e_check_build_evidence_reused_by_surface
-    - no_unresolved_p0_p1_for_scoped_go_no_claim_of_full_rerun_or_remote_success
-  success_transition: prepare_or_request_exact_preview_bootstrap_continuation_from_reviewed_cli_after_fresh_preconditions
-  failed_or_ambiguous_transition: record_exact_p0_p1_or_verification_blocker_without_broad_test_or_repair_loop
+    - exact_preview_cli_bootstrap_is_concrete_and_scope_target_eligibility_sessions_and_containment_reconciled
+    - no_worker_deploy_required_for_out_of_band_cli_operation_no_remote_success_claim
+  success_transition: separately_scoped_single_official_cli_bootstrap_attempt_only_after_all_fresh_preconditions
+  failed_or_ambiguous_transition: record_exact_missing_precondition_and_stop_without_write_or_blind_retry
   forbidden_in_this_action:
     - automatic_full_vitest_e2e_release_verify_or_nested_review
     - runtime_or_test_changes_during_independent_review
@@ -179,6 +184,117 @@ following_route_requires_separate_permissions:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Independent scoped bootstrap review GO — 2026-09-04
+
+At `2026-09-04T12:12:34Z`, independent verdict: **GO** for exact implementation
+candidate `438a51399ac5f58b428b624c52ca2cbbc059ae9c`, using the owner-selected
+scoped gate. Unresolved candidate `P0: 0`, `P1: 0`; no new P2/P3 findings.
+This closes the local review of `P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001`.
+Full manual preview and production remain blocked pending their actual flows.
+No second reviewer or generic full gate is needed for this unchanged diff.
+
+Scope proof: baseline `0db38842524ebc146eaa56a9d089e3c3484bf0f3` is an ancestor
+of the implementation candidate, which is an ancestor of inspected clean HEAD
+`3c386c3977b67faac42d33f15df09438e7350cd5`. The complete baseline-to-HEAD diff
+has 17 paths: 15 documentation files, the guard and one new regression file.
+The only executable diff is the comment and `result_kind <> 'portal_allocated'`
+predicate in `src/lib/server/auth/admin-role-transition.ts`.
+The new test is `tests/integration/admin-bootstrap-registration-d1.test.ts`.
+Candidate-to-HEAD changes are documentation only; existing tests, migrations,
+dependencies/lockfile, toolchain, config, hooks, routes, sessions and both CLI
+implementation files have no drift. No runtime or test file was edited here.
+
+Independent code findings:
+
+- Migration `0006` constrains `result_kind` to non-null `exact_email` or
+  `portal_allocated`, with a successful finalization assertion. The default
+  `LegacyFamilyVerificationExtension` writes the receipt inside the ordinary
+  verification batch. Promotion never deletes or changes it.
+- The shared guard has exactly the same 31 correlated branches. Only the
+  finalization branch changes: `exact_email` still rejects, and each of the
+  other 30 predicates is unchanged. They are evaluated at the role update,
+  including business state acquired after portal registration. The receipt
+  does not short-circuit child, claim, contract, message or privacy predicates.
+- `buildAdminBootstrapStatements` and `AdminIdentityRepository.assignAdmin`
+  use this same guard. Verified/active/unblocked parent eligibility, zero-admin
+  bootstrap precondition, existing-admin authority for normal assignment,
+  session-version increment/revocation and audit predicates are unchanged.
+  Repository statements share one D1 batch; bootstrap assertion constraints
+  reject the transaction on failure. Migration `0014` keeps one-shot control
+  and append-only action/assertion evidence. Rejection preserves target role,
+  sessions and successful audit/control evidence.
+- The new regression really calls register, verification with the runtime's
+  default family extension and login. It verifies second-parent isolation,
+  unchanged receipts, target session revocation/version, linked action/audit/
+  assertion/control, replay denial, normal assignment and child/exact-email
+  rejection. Its SQL case renders all six controlled writes plus the terminal
+  SELECT individually into one local D1 batch and validates all seven results.
+  This is local SQL evidence, not execution of the real remote CLI transport.
+- `scripts/bootstrap-admin.ts` imports the statement builder from local source,
+  appends the terminal SELECT, then invokes exact-ID D1 execution through the
+  isolated pinned config. It never invokes the deployed Worker. Therefore no
+  Worker deploy is required for the next out-of-band bootstrap from this
+  reviewed checkout. Config/APP_ENV/UUID pinning, escaping, statement cardinality
+  and terminal-result validation in the CLI/command helpers are unchanged.
+
+Fresh independent validation: one invocation of the three required files,
+**8 passed / 3 files**, exit 0, duration 102.11 seconds. Five ordinary-registration
+scenarios, two retained-state scenarios for both consumers and the canonical
+guard-coverage test cover the changed behavior and its immediate consumers.
+Output is separately retained in Git-ignored
+`tmp/bootstrap-registration-review-06a-20260904.log`, SHA-256
+`b1f85f62927e2f2e4315d82f7aff8982d70417a5cb7903ed677c65f09861a19d`.
+
+Inherited evidence was read and all five hashes matched:
+
+| File under `tmp/` | SHA-256 | Reused result |
+| --- | --- | --- |
+| `bootstrap-registration-focused.log` | `68d943c54d6f03b48962965fa03c30b64f29183c170c5ff20c53a6352f61e69e` | 51 pass + 1 SQL-adapter failure across 9 files |
+| `bootstrap-registration-rendered-green.log` | `3a651e9bea7afb82131ab33737363bafe7e596d64a3d1007db5337e1d9e086c8` | affected SQL scenario passed; other 4 skipped in this rerun |
+| `bootstrap-registration-check.log` | `0bbf0b58829d7036a178be7a5183e229304ede456f8cfbd6eb6778333a17c445` | check: 0 errors, 0 warnings |
+| `bootstrap-registration-e2e.log` | `e320aa587c4d2d0d302ae4d45d2bdbc6fb4b1fffaebb4ce1b46684ea383aab20` | 2 Chromium role/owner/CSRF scenarios passed |
+| `bootstrap-registration-build.log` | `b9d970207f414f86950d0be5ef451fa28453e41446305171964797becd9fee55` | production build/Cloudflare adapter passed |
+
+The initial `ADMIN_BOOTSTRAP_REMOTE_RESULT_INVALID` is not hidden: the prior
+splitter-based local adapter combined the final INSERT/SELECT and returned six
+results. The final test renders each original statement separately. The single
+successful correction rerun and this independent eight-test run validate that
+final harness; production CLI/splitter code was not changed. Combined inherited
+implementation evidence covers 52 tests, including the other 44 not rerun here.
+
+Full baseline evidence is separately inherited from exact `0db38842524ebc146eaa56a9d089e3c3484bf0f3`:
+check, 78 Vitest files / 580 pass / 1 expected Windows skip, Chromium 23/23,
+build and production dependency audit with 0 advisories, as recorded in
+[the baseline handoff](handoffs/stage-13.md#local-d1-cost-remediation-candidate-2026-09-02).
+These are historical full results for unchanged surfaces, not a fresh full run
+of `438a51399ac5f58b428b624c52ca2cbbc059ae9c`. Full Vitest/E2E, the other
+44 tests, check/build and dependency audit were deliberately not repeated:
+ancestry, complete path/diff inspection and evidence hashes support reuse.
+
+No remote read or mutation, authenticated preview access, bootstrap, login,
+session touch/repair, provider send, deployment, migration or config/Access
+change occurred. The `preview` and live `flow_verification` observations above
+are retained exactly; the old Worker still contains the baseline predicate,
+and no live bootstrap success is asserted. Containment remains Access and the
+existing provider restrictions. There is no remote mutation to roll back.
+
+**One next atomic action:** prepare/reconcile the exact-preview CLI bootstrap
+continuation from the reviewed source, with fresh read-only target, eligibility
+and session preflight. Preserve Prompt 06's unconsumed permission and confirm
+its applicable scope without extending it; do not repair the second parent's
+logged-out session. Before any later single authorized attempt, define bounded
+postcondition and recovery/containment: no direct role edit, control reset or
+blind retry; ambiguous outcome stops for read-only reconciliation and the
+mandatory docs-only checkpoint. This review grants no remote mutation or
+production GO. `rollover_required: no`; `recommended_next_session_mode: Medium`:
+the next action is read-only preparation, with no unresolved write ambiguity.
+
+Checkpoint checks passed: `npm run docs:check` (206 links, 110 command lines,
+continuity), `npm run release:scan` (575 files, no findings) and `git diff --check`.
+The first docs check caught two new report-link anchors; they were corrected
+and the docs check passed. No checker was changed. Runtime tests are not repeated
+after this docs-only commit.
 
 ## Scoped validation decision for the bootstrap fix — 2026-09-04
 
