@@ -3120,3 +3120,17 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   bounded reconciliation/checkpoint. See the dated recipient-validation section
   of [active state](../STAGE_13_ACTIVE_STATE.md) for evidence and containment.
 - Only docs checks, release scan and diff check apply; runtime is unchanged.
+
+## Continuation 2026-09-04: second registration and delivery
+
+- The owner's single second registration and receipt of its verification email
+  were confirmed by one aggregate-only read-only reconciliation. The added
+  parent remains unverified, the first-account session counts remain unchanged,
+  administrators remain absent, and no extra delivery was found.
+- The per-mutation active-state checkpoint records exact before/after counts,
+  unchanged candidate/target controls, protected evidence digest and containment.
+  See [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Second controlled registration and verification delivery — 2026-09-04".
+- No link was opened or login attempted. The known automatic welcome delivery
+  requires explicit scope before verification. Only docs checks, release scan
+  and diff check are run; exact-candidate runtime/review evidence is reused.
