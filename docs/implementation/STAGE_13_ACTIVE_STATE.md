@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T14:41:20Z
+updated_utc: 2026-09-04T14:45:00Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-4-fresh-preflight-and-exact-config-plan
-next_gate: phase-4-readonly-config-request-diagnosis
+next_gate: phase-4-same-bundle-config-delivery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-config-patch-rejected-confirmed-no-change
+current_phase: phase-4-same-bundle-config-fallback-ready
 last_atomic_action: single-preview-recipient-settings-patch
 last_atomic_result: failed
-next_atomic_action: inspect-supported-config-request-format-readonly
+next_atomic_action: deploy-same-reviewed-bundle-one-recipient-change
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: finite_preview_package_target_procedure_postconditions_and_rollback_known_no_unresolved_ambiguity
@@ -238,10 +238,10 @@ role_isolation_plan:
   authenticated_probe_executed: false
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: inspect-supported-config-request-format-readonly
+  id: deploy-same-reviewed-bundle-one-recipient-change
   permission: explicit_owner_invocation_of_06b_entire_finite_package_no_repeat_permission_needed
   target: exact_Access_protected_preview_fingerprints_recorded_above
-  mutation: none_readonly_inspection_after_confirmed_no_change
+  mutation: one_Wrangler_deploy_of_exact_previous_bundle_with_only_recipient_value_changed
   preconditions:
     - exact_target_code_settings_and_baseline_reconciled_in_protected_06b_evidence
     - preserve_A_P1_bootstrap_receipts_and_historical_revocations
@@ -249,7 +249,7 @@ next_atomic_action:
   postcondition:
     - one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
     - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_mutation
-  success_transition: concrete_corrected_config_operation_after_supported_format_proof
+  success_transition: normal_P2_registration_after_readonly_postcondition_and_docs_checkpoint
   failed_or_ambiguous_transition: reconcile_checkpoint_preserve_Access_no_blind_retry
   forbidden_in_this_action:
     - bootstrap_replay_control_reset_direct_SQL_role_session_or_business_repair
@@ -261,6 +261,34 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B supported same-bundle fallback prepared — 2026-09-04T14:45:00Z
+
+The rejected PATCH is not retried: its before state was positively reconciled
+and committed. Its detailed provider error was not retained, so the exact
+rejection cause is unknown. Use the separately authorized standard Wrangler
+strict deploy path for the same existing bundle with one recipient value change.
+The detached deployed ancestor and all protected build-file hashes are unchanged.
+Strict local dry-run succeeded; emitted Worker SHA-256 is
+`eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`, equal to live before code.
+No build, runtime, schema or dependency candidate change occurred. Original
+preview config is backed up in protected evidence; only its recipient value
+changes. Exact old-version rollback remains pinned at 100%.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/same-bundle-plan-safe.json`,
+SHA-256 `e6e495581404ec3b3d57e7b5f3b6721ff356e68597f9424186566637bbc4f346`.
+The first local fallback preparation stopped because its new config filename was
+not Git-ignored; that untracked helper copy was removed and the existing ignored
+preview config was used. No remote write occurred during either preparation.
+Only next action: one standard Wrangler deploy, immediate read-only postcondition
+and docs-only commit. Other live steps wait for that checkpoint.
+
+Checks: helper syntax, strict dry-run, exact code/config/build-file comparison;
+docs:check, release:scan and git diff --check for this checkpoint. Inherit the
+unchanged full runtime/E2E/reviewer gates. `rollover_required: no`;
+`recommended_next_session_mode: High`: exact target/code/postcondition and
+rollback known; no ambiguous write or candidate P0/P1.
+
 
 ## Prompt 06B config PATCH rejected: no change reconciled — 2026-09-04T14:41:20Z
 
