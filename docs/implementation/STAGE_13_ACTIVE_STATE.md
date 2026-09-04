@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T15:49:04Z
+updated_utc: 2026-09-04T15:54:24Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-p2-logout
-next_gate: phase-4-A01-P1-login
+last_completed_gate: phase-4-p1-a01
+next_gate: phase-4-A02-P1-admin-denial
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-P2-fixtures-complete-awaiting-private-P1-login
-last_atomic_action: logout
+current_phase: phase-4-06b-A02-P1-admin-denial
+last_atomic_action: login
 last_atomic_result: success
-next_atomic_action: A01-P1-login
+next_atomic_action: A02-P1-admin-denial
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: last_step_success_known_next_authorized_finite_operation_with_bounded_postcondition
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T15:49:04.083Z
-    postcondition_rows_read: 1041
-    latest_read_kind: bounded_06b_p2_logout_postcondition
+    latest_bounded_postcondition_utc: 2026-09-04T15:54:24.637Z
+    postcondition_rows_read: 1043
+    latest_read_kind: bounded_06b_p1_a01_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -161,19 +161,19 @@ preview:
     users_with_family_id: 3
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
-    auth_sessions: 5
-    nonrevoked_auth_sessions: 0
+    auth_sessions: 6
+    nonrevoked_auth_sessions: 1
     logged_out_auth_sessions: 4
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 0
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
     first_admin_sessions_total_nonrevoked_valid: 3_0_0
     first_admin_session_version: 2
-    second_parent_sessions_total_nonrevoked_valid: 1_0_0
+    second_parent_sessions_total_nonrevoked_valid: 2_1_1
     second_parent_session_version: 1
     second_parent_session_drift: logout_observed_after_prompt_05_not_performed_by_this_session
     owned_children_per_parent: P1_0_P2_1
@@ -223,7 +223,7 @@ role_isolation_plan:
   inventory_utc: 2026-09-04T13:53:59.152Z
   inventory_result: success_readonly
   observed_roles: one_verified_admin_two_verified_active_parents
-  current_nonrevoked_sessions: 0
+  current_nonrevoked_sessions: 1
   children: 1704_total_1_owned_portal_1703_unclaimed_legacy_baseline
   requests_documents_offers_artifacts_threads_price_items: requests_1_other_five_categories_zero
   rbac_csrf_cases: A01_A14_pending_P2_fixture_and_positive_owner_sequence_completed
@@ -238,7 +238,7 @@ role_isolation_plan:
   authenticated_probe_executed: true
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: A01-P1-login
+  id: A02-P1-admin-denial
   permission: entire_finite_06b_package_explicitly_authorized_no_repeat_permission_needed
   target: exact_preview_origin_88ed782ba25a_Worker_14841fbf75b2_D1_ccdeb22bb2a1
   mutation: only_the_next_named_normal_form_or_probe_and_its_permitted_linked_effects
@@ -262,6 +262,34 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B p1-a01: successful atomic checkpoint — 2026-09-04T15:54:24Z
+
+Result: **success**. Action `login` passed the exact protected before/after
+verifier. Safe postcondition: {"actor":"P1","case":"p1-a01","ui":"A01_P1_login_redirect_cabinet_200","httpStatus":303,"sessionEffect":"one_new_session","oldSessionsPreserved":true,"rolesFamiliesReceiptsBootstrapProvidersPreserved":true,"portalChildren":1,"requests":1,"requestVersion":1,"businessChangedOnly":"none"}.
+Audit delta: {}. Read-only reconciliation used
+1043 rows, wrote zero, changed_db=false. A/P1 roles/FamilyIDs, historical
+revocations, sealed bootstrap and unrelated business/provider state are preserved
+as required by this case. No blind retry or direct repair.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/p1-a01-verified-safe.json`,
+SHA-256 `36d9ae55e339eb9efa9e04196dd2fba555b3de0bbd8bb0d775a0ea1071fd699b`; paired D1 snapshots remain owner-only and ignored.
+Current totals: three users (1 admin, 2 parents),
+3 verified, 3 distinct assigned families;
+sessions 6/1 total/nonrevoked;
+verification/welcome sent receipts 3/3;
+portal children 1, requests 1.
+Prompt 06 remains partial until its remaining live cases and final logout pass.
+
+Only next atomic action: `A02-P1-admin-denial`, already within the authorized package.
+Private credential/link input stays in the browser. Existing exact Worker/code,
+Access and rollback containment continue unchanged. Checks for this status-only
+commit: docs:check, release:scan, git diff --check; helper syntax/affected
+postcondition as needed. Full runtime/E2E/build and reviewer gates are inherited
+from the unchanged candidates above. No unresolved P0/P1 or ambiguous result.
+`rollover_required: no`; `recommended_next_session_mode: High`: known next
+operation, target and postcondition.
+
 
 ## Prompt 06B P2 fixture phase complete — 2026-09-04T15:50:24Z
 
