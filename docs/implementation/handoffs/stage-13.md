@@ -3208,3 +3208,21 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   "Local AUTH-09 bootstrap eligibility remediation — 2026-09-04", for the exact
   implementation commit, logs, unchanged remote state, permissions and next gate.
   No remote write, bootstrap, deploy or session/provider action was performed.
+
+## Continuation 2026-09-04: owner-requested scoped bootstrap review
+
+- The owner requested a targeted prompt for a separate review session instead
+  of the previously scheduled full-suite cycle. Exact diff inspection confirms
+  one executable guard change with two immediate consumers; the generic full
+  gate next action is superseded for this candidate, not repository-wide.
+- A dedicated ignored 06A prompt now defines one independent code review, one
+  three-file/eight-test run, inherited baseline/52-test/E2E/check/build evidence,
+  exact evidence hashes and bounded fallback only for a concrete missing fact.
+  No second review or automatic full suite follows a valid scoped GO.
+- The active protocol, pending verdict, unchanged preview state and next action
+  are in [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Scoped validation decision for the bootstrap fix — 2026-09-04". The reviewer
+  will also establish whether the next out-of-band CLI bootstrap actually needs
+  a Worker deploy; no remote permission is granted by preparing this prompt.
+- This preparation is docs-only: docs checks, release scan and diff check only.
+  No runtime test, independent review or remote action was performed here.

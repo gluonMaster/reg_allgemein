@@ -4,11 +4,11 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T11:50:55Z
+updated_utc: 2026-09-04T12:00:39Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-4-local-auth09-eligibility-fix-focused-validation-passed
-next_gate: phase-4-local-full-release-validation-before-independent-review
+next_gate: phase-4-independent-scoped-bootstrap-review-with-eight-focused-tests
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -16,10 +16,10 @@ current_review_status: pending_independent_review
 current_phase: phase-4-local-bootstrap-eligibility-fixed-preview-unchanged
 last_atomic_action: local-auth09-bootstrap-eligibility-fix-and-focused-regression
 last_atomic_result: success
-next_atomic_action: run-local-full-release-validation-for-bootstrap-fix
+next_atomic_action: independent-scoped-bootstrap-review
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: next-work-is-local-validation-and-evidence-without-remote-write-or-mutation-ambiguity
+mode_reason_plain: next-session-performs-scoped-readonly-review-and-local-test-evidence-without-remote-write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_authorized_local_fix_complete_no_remote_mutation_performed_prompt_06_bootstrap_unattempted_pending_candidate_gates
+permission_state: owner_requested_scoped_validation_of_exact_local_fix_no_remote_mutation_authorized_by_this_review
 review:
   status: pending_independent_review
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -43,13 +43,16 @@ review:
   unresolved_candidate_p1: 0
   local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
   deployed_blocker: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_still_present
-  verdict_scope: new_runtime_candidate_requires_its_own_release_gate_and_independent_review
+  verdict_scope: independent_scoped_review_pending_baseline_full_evidence_plus_focused_changed_surface_gate
+  validation_policy: owner_requested_candidate_specific_scoped_gate_2026_09_04
+  mandatory_reviewer_tests: 8_tests_3_files_one_run
+  full_suite_expansion: only_if_pinned_scope_fails_or_concrete_unbounded_impact_is_demonstrated
   local_validation:
     check: passed_0_errors_0_warnings
     focused_unit_integration: 52_pass_across_9_files_including_one_repaired_test_harness_rerun
     chromium_e2e: 2_of_2_affected_role_owner_csrf_scenarios
     build: passed
-    full_release_gate: not_run_local_fix_scope_only_required_before_remote_release
+    full_release_gate: not_required_for_this_pinned_bounded_diff_previous_blanket_requirement_superseded
     independent_review: not_performed
   previous_candidate_release_evidence:
     candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -145,33 +148,103 @@ flow_verification:
   role_isolation_live: not_attempted_authenticated_get_touches_session_and_login_requires_separate_scope
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: run-local-full-release-validation-for-bootstrap-fix
-  permission: local_validation_only_no_remote_mutation_or_provider_send
+  id: independent-scoped-bootstrap-review
+  permission: local_readonly_review_focused_tests_and_docs_checkpoint_only
   target: exact_local_remediation_candidate_in_review_section
   mutation: none_remote
   preconditions:
-    - local_auth09_fix_and_five_regressions_committed
-    - focused_52_tests_and_2_browser_scenarios_check_build_passed
-    - previous_candidate_full_gate_is_historical_not_inherited_for_new_runtime
+    - candidate_is_438a51399ac5f58b428b624c52ca2cbbc059ae9c_or_runtime_identical_docs_only_descendant
+    - complete_diff_from_baseline_has_only_one_changed_executable_guard
+    - migrations_dependencies_config_cli_hooks_routes_and_session_code_unchanged
+    - inherited_evidence_and_final_test_harness_correction_reconciled
   postcondition:
-    - one_full_release_gate_recorded_for_exact_new_runtime_candidate_before_review_and_remote_release
-    - no_remote_data_role_session_provider_or_config_change
-  success_transition: independent_readonly_review_of_exact_validated_candidate
-  failed_or_ambiguous_transition: classify_and_resolve_relevant_failure_locally_preserve_preview
+    - independent_code_verdict_and_one_run_of_8_tests_in_3_files
+    - baseline_full_and_existing_52_tests_2_e2e_check_build_evidence_reused_by_surface
+    - no_unresolved_p0_p1_for_scoped_go_no_claim_of_full_rerun_or_remote_success
+  success_transition: prepare_or_request_exact_preview_bootstrap_continuation_from_reviewed_cli_after_fresh_preconditions
+  failed_or_ambiguous_transition: record_exact_p0_p1_or_verification_blocker_without_broad_test_or_repair_loop
   forbidden_in_this_action:
-    - remote_bootstrap_before_new_candidate_validation_and_exact_target_preconditions
-    - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
+    - automatic_full_vitest_e2e_release_verify_or_nested_review
+    - runtime_or_test_changes_during_independent_review
+    - remote_bootstrap_deploy_rollback_or_migration
     - login_logout_session_repair_or_authenticated_live_preview_probe
+    - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
     - provider_send_or_registration_verification_replay
-    - deploy_rollback_migration_or_unrelated_d1_r2_write
-    - secret_flag_access_change
+    - secret_flag_access_change_or_unrelated_d1_r2_write
     - production_cms_or_real_pii_action
 following_route_requires_separate_permissions:
-  - any_new_candidate_remote_deploy_or_changed_bootstrap_scope
+  - actual_remote_bootstrap_continuation_with_exact_reviewed_cli_and_fresh_preconditions
+  - any_worker_deploy_only_if_required_by_the_next_execution_surface
   - admin_login_parent_login_and_live_rbac_csrf_owner_denial_session_writes
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Scoped validation decision for the bootstrap fix — 2026-09-04
+
+The owner requested a focused, bounded independent check of the local fix and
+explicitly rejected an automatic new full-suite/review cycle. The earlier
+generic full-release next action was overbroad for this demonstrated diff and
+is **superseded for this candidate only**. Repository-wide validation rules are
+unchanged. This entry records the owner's scope decision, not a completed
+independent verdict or a waiver of a known product failure.
+
+Exact code candidate `438a51399ac5f58b428b624c52ca2cbbc059ae9c` changes only
+one executable file relative to fully gated baseline
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3`: one eligibility predicate and
+its comment. Its only consumers are bootstrap and normal audited assignment.
+All 31 guard references remain; the finalization branch distinguishes a
+registration receipt from legacy-claim evidence. Migrations, dependency/lock,
+toolchain, config, CLI implementation, route/hooks and session implementation
+have no diff. Later HEAD changes are documentation only. Line count alone is
+not the reason for scoping; this call graph and the existing focused evidence
+bound the affected behavior.
+
+The separate reviewer must read that diff and the immediate consumers once,
+reconcile inherited logs and run exactly this normal-path validation:
+
+```powershell
+npx vitest run tests/integration/admin-bootstrap-registration-d1.test.ts tests/integration/admin-role-transition-d1.test.ts tests/unit/admin-role-transition.test.ts
+```
+
+This is three files / eight tests: five registration/transition regressions,
+two representative retained-state tests for both entrypoints and one canonical
+guard coverage test. Existing evidence for the other 44 related tests, two
+Chromium role/owner/CSRF scenarios, check and build is reused after scope and
+log verification. The old complete release evidence covers unchanged surfaces;
+the new focused evidence covers the changed surface. Neither is misrepresented
+as a fresh full run of the new candidate. The initial 51-pass/one-test-adapter-
+failure log must be read together with the successful final one-test rerun.
+
+A missing/corrupt log or actual relevant drift permits only its affected
+check/scenario to be repeated. A newly demonstrated broader diff or unbounded
+impact requires an exact scope/verification blocker, not an automatic full
+suite. New relevant assertion failures must be resolved/classified and cannot
+be dismissed. P2/P3 alone do not block the milestone or create another loop.
+
+The ready-to-run ignored prompt is
+`out/codex-two-day-preview-prompts-2026-09-03/06A_FOCUSED_BOOTSTRAP_REVIEW.md`.
+It includes exact hashes of five existing logs, a single reviewer run, bounded
+fallbacks, verdict/continuity instructions and no runtime edits or remote
+actions. The prior generic P1-fix prompt was not a dedicated review procedure.
+The protocol above remains tracked so the ignored prompt is not the only
+source of the verification decision.
+
+If scoped review is GO and no new P0/P1 remains, do not schedule another full
+gate or another reviewer for this same unchanged candidate. Record independent
+GO with its actual scoped evidence, then identify the smallest next bootstrap
+operation and its exact target/permissions/preconditions. The reviewer must
+check whether the out-of-band CLI exercise needs any Worker deploy; changing
+a shared source file alone does not establish that dependency. No operation is
+authorized by this instruction merely because it is the next planned step.
+
+This preparation session changes only the prompt/operational documentation;
+it performs `docs:check`, `release:scan` and `git diff --check`.
+Runtime tests, independent review and all remote actions were not performed.
+Review status remains pending and the last observed preview state is retained.
+`rollover_required: no`; `recommended_next_session_mode: Medium`:
+the requested separate session has bounded code inspection and local test
+evidence work without remote writes or unresolved mutation ambiguity.
 
 ## Local AUTH-09 bootstrap eligibility remediation — 2026-09-04
 
@@ -224,11 +297,10 @@ Validation and evidence (all logs Git-ignored under `tmp/`):
   build passed. Docs checks, release scan and diff check passed.
 
 The full Vitest/E2E release gate, dependency audit and independent review were
-deliberately not run for this bounded local repair. They are not claimed from
-the old candidate for this new runtime. Before remote release, the new exact
-candidate must receive its own required release gate and independent review.
-The next atomic action is that local release validation, not an unreviewed
-bootstrap. The continuity field `reviewed_candidate` retains the last
+not run in the local repair session. Its initial blanket requirement for a new
+full gate is superseded by the owner's later scoped validation decision above.
+Inherited baseline evidence and new focused evidence remain explicitly distinct;
+the independent scoped review is still pending. The continuity field `reviewed_candidate` retains the last
 actually reviewed SHA; `local_remediation_candidate` and `review.candidate`
 identify the new pending candidate. Current review markers are synchronized to
 pending; no production-readiness gate is declared passed.
