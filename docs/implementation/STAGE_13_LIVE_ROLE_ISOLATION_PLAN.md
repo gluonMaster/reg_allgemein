@@ -112,6 +112,17 @@ envelope `type='failure'`, `status=403|404|400`; `data` — сериализов
 Cloudflare Access redirect, 5xx, HTML вместо ожидаемого JSON или неизвестный
 envelope — unresolved/failed probe, без автоматического retry.
 
+Уточнение транспорта по live-наблюдению 2026-09-04: B03 является page-load,
+и установленный SvelteKit возвращает его ожидаемую 404 через SSR error page
+даже с `Accept: application/json`. Это отличается от middleware denial и
+JSON action envelope выше: `page/respond_with_error.js` вызывает
+`render_response`, а `page/render.js` сериализует структурированный `error`.
+Для B03 проверять HTTP 404, `error.code=REQUEST_NOT_FOUND`, только безопасные
+error fields (`code/message/requestId`), отсутствие request/child model и
+неизменность C2/Q2. Не считать любой HTML успешным denial. В первом B03 JSON
+parse не прошёл; сохранённый исходный HTTP response был проверен по этому
+SSR протоколу без повторного запроса, начальное failure evidence сохранено.
+
 ## 4. Минимальный RBAC/CSRF пакет
 
 Этот пакет возможен с A/P1 и не требует нового ребёнка. P2 нужен для § 5.
