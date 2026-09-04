@@ -3546,3 +3546,64 @@ manual-preview/production gate change. Checks: per-case HTTP/D1 evidence and
 docs:check/release:scan/git diff --check; full runtime/E2E/build evidence inherited.
 `rollover_required: no`; `recommended_next_session_mode: High`: exact
 remaining scope and postconditions known; no unresolved P0/P1 or ambiguity.
+
+
+## Prompt 06 complete: bounded live role isolation closeout — 2026-09-04T16:28:48Z
+
+**Prompt 06: complete** under the explicit finite Prompt 06B scope.
+
+| Проверка | Результат | Evidence |
+| --- | --- | --- |
+| One-shot bootstrap и seals | PASS; consumed, chain 1/1/1, seals 6; replay не выполнялся | Historical bootstrap checkpoint и final sealed-state comparison |
+| A/P1/P2 и прежние receipts | PASS; admin + два verified parents, разные FamilyID | Before-registration baseline и final-closeout |
+| Parent → admin | PASS; A02/A03 HTTP 403 FORBIDDEN | p1-a02-r1, p1-a03 |
+| Admin → parent | PASS; A10/A11/A13 HTTP 403 FORBIDDEN | a-a10, a-a11, a-a13 |
+| CSRF valid/missing/wrong | PASS; failure 400/403/403, correct Origin | p1-a05, p1-a06, p1-a07 |
+| C2/Q2 owner и cross-owner | PASS; owner 200; foreign absent/404; fields/version/audit unchanged | p2-child, p2-draft, p1-b02, p1-b03-observed, p1-b04, p1-b05 |
+| Побочные эффекты и logout | PASS; только разрешённые дельты, active sessions 0 | p2-logout, p1-a08, a-a14, final-closeout |
+| Финальная сверка | PASS; exact bundle/config/Access/schema и ограниченные инварианты | final-closeout-verified-safe.json |
+
+Final state: A is active verified admin/version 2; P1/P2 are active verified
+parents/version 1, three distinct portal FamilyIDs. One portal C2 and one
+individual/self-pay Q2 remain; Q2 is draft/version 1 and unchanged since creation.
+Seven sessions are revoked: six normal logout and one historical bootstrap role
+change. The package added exactly one normal login/logout for each A/P1/P2.
+Verification/welcome sent receipt totals are 3/3; P2 added only one of each,
+one delivery attempt each. Original A/P1 state/receipts/revocations and bootstrap
+chain/seals are preserved. Legacy children remain 1703 unclaimed; no funding
+authorization, document, contract, R2 intent, Telegram or unrelated provider
+effect was introduced. Final audit delta: {"auth.email_verified":1,"auth.registration_created":1,"auth.session_revoked":3,"child.portal_created":1,"individual_request.created":1}.
+
+Target fingerprints: account 5dbd04a4763a, Worker 242c1796e930, host 88ed782ba25a,
+D1 ccdeb22bb2a1. Version 14841fbf75b2 at 100%, three recipient hashes, other
+bindings/settings preserved. Worker module SHA-256
+`eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`
+is unchanged. Access remains enforced; migrations 26 through 0026, pending 0.
+
+Protected evidence: `tmp/role-isolation-06b-owner/execution/final-closeout-verified-safe.json`,
+SHA-256 `9200ca6c6b258374d0530d733e1bdd66db4aa0282c402df7386e3536fe380996`; 25 successful bounded operation records plus exact
+control/final D1/integrity evidence. Final SELECTs read 4492 rows
+and wrote zero. Initial config PATCH rejection, A02 local no-request error and
+B03 JSON-parser mismatch were reconciled; failed evidence is retained and no
+result remains ambiguous. The A login identity precheck also blocked a local
+mismatched input before submission. All completed remote operations retain
+individual reconciliation/docs-only checkpoints.
+
+Validation: safe HTTP/SSR/action-envelope observations, canonical B04/B05 payload
+validation, exact per-case D1 deltas, final bounded controls, docs:check,
+release:scan, git diff --check. No runtime/schema/dependency changes: reuse
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3` full 580 pass/1 expected Windows skip,
+23 E2E and build evidence; reviewed candidate
+`438a51399ac5f58b428b624c52ca2cbbc059ae9c` focused reviewer 8/8. Full suite,
+build and another independent review were intentionally not repeated.
+Production readiness ledger is unchanged because no production gate changed.
+
+Containment: keep Access, P2/C2/Q2 and immutable evidence; no bootstrap replay,
+cleanup deletion or direct SQL repair. Document/contract/message/price owner
+checks remain for their real later flows and are not claimed live-passed here.
+Full manual preview and production remain **blocked**. One next action:
+read-only document-phase manifest under roadmap phase 5; further config or
+remote document operations require their separate bounded scope.
+`rollover_required: no`; `recommended_next_session_mode: Medium`: next work
+is read-only preparation with no unresolved ambiguity. Use High for a subsequently
+authorized known deployment/execution phase.

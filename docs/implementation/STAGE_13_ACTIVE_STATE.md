@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T16:27:02Z
+updated_utc: 2026-09-04T16:28:48Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-a-a14
-next_gate: phase-4-final-bounded-readonly-closeout
+last_completed_gate: phase-4-prompt-06-complete
+next_gate: phase-5-document-flow-readonly-manifest
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-final-bounded-readonly-closeout
-last_atomic_action: logout
+current_phase: phase-4-closed-bounded-06b-role-isolation
+last_atomic_action: final-bounded-readonly-closeout
 last_atomic_result: success
-next_atomic_action: final-bounded-readonly-closeout
+next_atomic_action: read-only-document-phase-manifest
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: all_live_operations_success_next_only_readonly_final_reconciliation_and_docs
+mode_reason_plain: 06b_complete_next_action_readonly_document_manifest_no_remote_write_or_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicitly_invoked_06b_finite_package_allowlist_P2_registration_verification_welcome_C2_Q2_role_csrf_owner_probes_normal_sessions_checkpoints
+permission_state: 06b_finite_package_completed_further_document_contract_provider_writes_require_separate_scope
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_one_authorized_recipient_hash_added_other_settings_exact
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T15:41:27.829Z
+  latest_readonly_control_utc: 2026-09-04T16:28:05.301Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T16:27:02.733Z
-    postcondition_rows_read: 1055
-    latest_read_kind: bounded_06b_a_a14_postcondition
+    latest_bounded_postcondition_utc: 2026-09-04T16:28:08.423Z
+    postcondition_rows_read: 4492
+    latest_read_kind: final_06b_bounded_readonly_closeout_plus_integrity
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -198,35 +198,35 @@ flow_verification:
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
   login_logout: historical_parent_login_logout_passed_remaining_first_session_now_revoked_by_bootstrap
-  second_registration: success_P2_verified_one_distinct_portal_family_one_receipt_one_terminal_welcome_old_state_preserved
+  second_registration: historical_P1_registration_complete_P2_addition_recorded_in_06b_closeout
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
   prompt_05: historically_complete_at_11_23_43Z_second_session_now_logged_out
-  prompt_06: partial_bootstrap_and_first_admin_login_complete_remaining_live_role_owner_csrf_denials_pending
+  prompt_06: complete
   first_admin_bootstrap: success_one_official_cli_attempt_and_bounded_remote_postcondition
   first_admin_login: success_admin_shell_visible_one_new_valid_version_2_session_preserved_state_reconciled
   first_admin_logout: success_matching_admin_session_revoked_logout_linked_audit_one_no_active_sessions
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
-  role_isolation_live: P1_admin_denials_CSRF_and_real_C2_Q2_owner_denials_passed_admin_cases_pending
+  role_isolation_live: passed_scoped_parent_admin_CSRF_real_child_request_owner_controls_and_all_normal_logouts
   role_isolation_preparation: complete_exact_rbac_csrf_protocol_and_conditional_cross_owner_fixture_plan
-  rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
+  rbac_csrf_owner_denial: live_A01_A14_B01_B06_passed_plus_inherited_exact_candidate_evidence_other_object_surfaces_pending
 role_isolation_plan:
   document: docs/implementation/STAGE_13_LIVE_ROLE_ISOLATION_PLAN.md
   local_execution_prompt: out/codex-two-day-preview-prompts-2026-09-03/06B_HIGH_LIVE_ROLE_ISOLATION_CLOSEOUT.md
   private_recipient_reference: tmp/role-isolation-06b-owner/recipient-private.json
   private_recipient_record: owner_only_git_ignored_contains_owner_selected_address_and_digest_no_password
-  execution_prompt_status: invoked_execution_in_progress
+  execution_prompt_status: complete
   prompt_06_interpretation: original_did_not_explicitly_require_extra_live_sessions_or_third_account_this_is_separately_requested_bounded_extension
   closeout_scope: sealed_bootstrap_plus_role_csrf_child_request_owner_pass_explained_side_effects_and_final_normal_logout
   later_full_preview_scope: document_contract_message_price_provider_checks_remain_separate_not_a_new_06_closeout_gate
-  inventory_utc: 2026-09-04T13:53:59.152Z
-  inventory_result: success_readonly
+  inventory_utc: 2026-09-04T16:28:08.423Z
+  inventory_result: success_final_bounded_readonly_06b_closeout
   observed_roles: one_verified_admin_two_verified_active_parents
   current_nonrevoked_sessions: 0
   children: 1704_total_1_owned_portal_1703_unclaimed_legacy_baseline
   requests_documents_offers_artifacts_threads_price_items: requests_1_other_five_categories_zero
-  rbac_csrf_cases: A01_A08_and_B01_B06_passed_A09_A14_pending
+  rbac_csrf_cases: A01_A14_and_B01_B06_passed_final_reconciliation_passed
   cross_parent_fixture_gap: resolved_one_C2_and_one_Q2_draft_owned_by_P2_positive_controls_passed
   owner_input: additional_controlled_recipient_proposed_in_conversation_if_needed_not_copied_into_tracked_state
   third_parent_need: satisfied_P2_verified_active_parent
@@ -238,30 +238,87 @@ role_isolation_plan:
   authenticated_probe_executed: true
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: final-bounded-readonly-closeout
-  permission: entire_finite_06b_package_explicitly_authorized_no_repeat_permission_needed
-  target: exact_preview_origin_88ed782ba25a_Worker_14841fbf75b2_D1_ccdeb22bb2a1
-  mutation: none_final_readonly_reconciliation_and_documentation
+  id: read-only-document-phase-manifest
+  permission: read_only_preparation_only_following_roadmap_phase_5
+  target: existing_exact_Access_protected_preview_use_current_protected_records
+  mutation: none
   preconditions:
-    - preceding_atomic_operation_readonly_postcondition_and_docs_only_commit_complete
-    - ordinary_owner_entered_credentials_and_same_browser_cookie_context
-    - exact_case_payload_current_actor_valid_CSRF_where_required_and_target
+    - prompt_06_complete_evidence_and_checkpoint_preserved
+    - read_document_security_requirements_and_next_phase_prompt
   postcondition:
-    - exact_expected_role_owner_transport_action_status_and_bounded_side_effect_delta
-    - readonly_reconciliation_then_docs_check_release_scan_diff_check_and_commit
-  success_transition: following_named_case_in_06b_finite_sequence
-  failed_or_ambiguous_transition: reconcile_checkpoint_preserve_Access_no_blind_retry
+    - concrete_exact_target_document_manifest_expected_effects_and_containment
+  success_transition: obtain_separate_bounded_document_or_config_scope_if_needed
+  failed_or_ambiguous_transition: retain_current_Access_and_fixtures_report_exact_gap
   forbidden_in_this_action:
-    - replay_bootstrap_or_completed_registration_verification_or_deploy
-    - direct_SQL_provisioning_role_session_or_business_repair
-    - fixture_submit_contract_funding_R2_Telegram_or_unrelated_provider_send
-    - production_CMS_upstream_PII_or_new_runtime_candidate
+    - remote_business_provider_R2_flag_deploy_or_session_write
+    - bootstrap_replay_role_repair_or_production_CMS_upstream_PII
 following_route_permission_boundaries:
-  - entire_06b_finite_package_authorized_continue_from_first_unfinished_action
-  - one_P2_registration_verification_and_welcome_then_C2_and_self_pay_individual_draft_Q2_no_submit
-  - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
-  - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
+  - 06b_finite_package_complete_no_replay_of_completed_operations
+  - retain_P2_C2_and_Q2_as_synthetic_fixtures_all_sessions_logged_out
+  - next_document_manifest_is_readonly_remote_scenario_and_config_changes_need_separate_scope
+  - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 06 complete: bounded live role isolation closeout — 2026-09-04T16:28:48Z
+
+**Prompt 06: complete** under the explicit finite Prompt 06B scope.
+
+| Проверка | Результат | Evidence |
+| --- | --- | --- |
+| One-shot bootstrap и seals | PASS; consumed, chain 1/1/1, seals 6; replay не выполнялся | Historical bootstrap checkpoint и final sealed-state comparison |
+| A/P1/P2 и прежние receipts | PASS; admin + два verified parents, разные FamilyID | Before-registration baseline и final-closeout |
+| Parent → admin | PASS; A02/A03 HTTP 403 FORBIDDEN | p1-a02-r1, p1-a03 |
+| Admin → parent | PASS; A10/A11/A13 HTTP 403 FORBIDDEN | a-a10, a-a11, a-a13 |
+| CSRF valid/missing/wrong | PASS; failure 400/403/403, correct Origin | p1-a05, p1-a06, p1-a07 |
+| C2/Q2 owner и cross-owner | PASS; owner 200; foreign absent/404; fields/version/audit unchanged | p2-child, p2-draft, p1-b02, p1-b03-observed, p1-b04, p1-b05 |
+| Побочные эффекты и logout | PASS; только разрешённые дельты, active sessions 0 | p2-logout, p1-a08, a-a14, final-closeout |
+| Финальная сверка | PASS; exact bundle/config/Access/schema и ограниченные инварианты | final-closeout-verified-safe.json |
+
+Final state: A is active verified admin/version 2; P1/P2 are active verified
+parents/version 1, three distinct portal FamilyIDs. One portal C2 and one
+individual/self-pay Q2 remain; Q2 is draft/version 1 and unchanged since creation.
+Seven sessions are revoked: six normal logout and one historical bootstrap role
+change. The package added exactly one normal login/logout for each A/P1/P2.
+Verification/welcome sent receipt totals are 3/3; P2 added only one of each,
+one delivery attempt each. Original A/P1 state/receipts/revocations and bootstrap
+chain/seals are preserved. Legacy children remain 1703 unclaimed; no funding
+authorization, document, contract, R2 intent, Telegram or unrelated provider
+effect was introduced. Final audit delta: {"auth.email_verified":1,"auth.registration_created":1,"auth.session_revoked":3,"child.portal_created":1,"individual_request.created":1}.
+
+Target fingerprints: account 5dbd04a4763a, Worker 242c1796e930, host 88ed782ba25a,
+D1 ccdeb22bb2a1. Version 14841fbf75b2 at 100%, three recipient hashes, other
+bindings/settings preserved. Worker module SHA-256
+`eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`
+is unchanged. Access remains enforced; migrations 26 through 0026, pending 0.
+
+Protected evidence: `tmp/role-isolation-06b-owner/execution/final-closeout-verified-safe.json`,
+SHA-256 `9200ca6c6b258374d0530d733e1bdd66db4aa0282c402df7386e3536fe380996`; 25 successful bounded operation records plus exact
+control/final D1/integrity evidence. Final SELECTs read 4492 rows
+and wrote zero. Initial config PATCH rejection, A02 local no-request error and
+B03 JSON-parser mismatch were reconciled; failed evidence is retained and no
+result remains ambiguous. The A login identity precheck also blocked a local
+mismatched input before submission. All completed remote operations retain
+individual reconciliation/docs-only checkpoints.
+
+Validation: safe HTTP/SSR/action-envelope observations, canonical B04/B05 payload
+validation, exact per-case D1 deltas, final bounded controls, docs:check,
+release:scan, git diff --check. No runtime/schema/dependency changes: reuse
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3` full 580 pass/1 expected Windows skip,
+23 E2E and build evidence; reviewed candidate
+`438a51399ac5f58b428b624c52ca2cbbc059ae9c` focused reviewer 8/8. Full suite,
+build and another independent review were intentionally not repeated.
+Production readiness ledger is unchanged because no production gate changed.
+
+Containment: keep Access, P2/C2/Q2 and immutable evidence; no bootstrap replay,
+cleanup deletion or direct SQL repair. Document/contract/message/price owner
+checks remain for their real later flows and are not claimed live-passed here.
+Full manual preview and production remain **blocked**. One next action:
+read-only document-phase manifest under roadmap phase 5; further config or
+remote document operations require their separate bounded scope.
+`rollover_required: no`; `recommended_next_session_mode: Medium`: next work
+is read-only preparation with no unresolved ambiguity. Use High for a subsequently
+authorized known deployment/execution phase.
+
 
 ## Prompt 06B a-a14: successful atomic checkpoint — 2026-09-04T16:27:02Z
 
@@ -287,8 +344,7 @@ Access and rollback containment continue unchanged. Checks for this status-only
 commit: docs:check, release:scan, git diff --check; helper syntax/affected
 postcondition as needed. Full runtime/E2E/build and reviewer gates are inherited
 from the unchanged candidates above. No unresolved P0/P1 or ambiguous result.
-`rollover_required: no`; `recommended_next_session_mode: High`: known next
-operation, target and postcondition.
+`rollover_required: no`; `recommended_next_session_mode: Medium`: next work is read-only final reconciliation and documentation.
 
 
 ## Prompt 06B a-a13: successful atomic checkpoint — 2026-09-04T16:25:35Z

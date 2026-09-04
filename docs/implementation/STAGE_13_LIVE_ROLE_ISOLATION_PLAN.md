@@ -1,8 +1,8 @@
 # Stage 13: план live-проверок ролей и ownership
 
-Подготовлен 2026-09-04. Статус: **read-only preparation complete**;
-live-пробы и создание новых fixtures не выполнялись. Текущее разрешение,
-target/version и следующее действие задаёт только
+Подготовлен 2026-09-04; технический протокол уточнён при live-выполнении 06B.
+Датированные исходные snapshots ниже сохраняют контекст подготовки.
+Итоговую PASS/evidence matrix, текущее разрешение, target/version и следующее действие задаёт только
 [active state](STAGE_13_ACTIVE_STATE.md). Этот план не расширяет разрешения.
 
 ## 1. Требования и проверенная исходная точка
@@ -55,7 +55,8 @@ guard. Для перечисленных probes новый deploy кода не 
 `PREVIEW_EMAIL_RECIPIENT_HASHES`: сохранить два текущих значения и добавить
 ровно SHA-256 от `trim().toLowerCase()` выбранного адреса. Нормализация взята из
 `src/lib/server/email/resend.ts`; provider отклоняет неразрешённый recipient
-до отправки. Сейчас это **проект изменения**, live allowlist не менялся.
+до отправки. В исходном snapshot § 1 это был **проект изменения**;
+фактический config checkpoint хранится в active state.
 Добавление адреса не должно включать другие providers, routes, flags или роли.
 
 После exact allowlist change и его checkpoint:
@@ -227,8 +228,8 @@ live-дополнением. Подготовлен локальный execution
 его создание не является запуском операций. После прямого применения владельцем
 он разрешает конкретный конечный пакет без повторного запроса scope на каждый шаг.
 
-- Подготовка выполнена: exact routes, результаты, эффект, checkpoints и gaps
-  описаны; ни live denial, ни создание третьего аккаунта ещё не заявляются.
+- Exact routes, ожидаемые результаты, эффекты и checkpoints заданы этим
+  протоколом; фактическое выполнение и закрытие отражаются в active state.
 - A закрывает scoped live role/CSRF checks; B закрывает child/request owner
   компонент только после реального выполнения с P2/C2/Q2.
 - Для запрошенного владельцем live-закрытия Prompt 06 достаточно сохранённого
@@ -244,6 +245,7 @@ Windows skip, 23 E2E; candidate-specific focused review 8/8. Проверенн�
 соответствия: `tests/unit/auth-security.test.ts`,
 `tests/unit/parent-product-route-security.test.ts`,
 `tests/unit/parent-product-service-security.test.ts`,
-`tests/e2e/authenticated-access.spec.ts`; production paths в этом turn не менялись.
-Выполняются только helper syntax, docs checks, release scan и diff check.
-Полные runtime suites/build/E2E не повторяются ради планирования.
+`tests/e2e/authenticated-access.spec.ts`; runtime paths при 06B не менялись.
+Live HTTP/D1 и operator-helper проверки фиксируются в каждом checkpoint.
+Для docs-only commits выполняются docs checks, release scan и diff check.
+Полные runtime suites/build/E2E не повторяются без нового material diff.
