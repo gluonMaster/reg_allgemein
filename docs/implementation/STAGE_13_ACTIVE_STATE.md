@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T16:25:35Z
+updated_utc: 2026-09-04T16:27:02Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-a-a13
-next_gate: phase-4-A14-admin-normal-logout
+last_completed_gate: phase-4-a-a14
+next_gate: phase-4-final-bounded-readonly-closeout
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-A14-admin-normal-logout
-last_atomic_action: probe
+current_phase: phase-4-06b-final-bounded-readonly-closeout
+last_atomic_action: logout
 last_atomic_result: success
-next_atomic_action: A14-admin-normal-logout
+next_atomic_action: final-bounded-readonly-closeout
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: last_step_success_known_next_authorized_finite_operation_with_bounded_postcondition
+recommended_next_session_mode: Medium
+mode_reason_plain: all_live_operations_success_next_only_readonly_final_reconciliation_and_docs
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T16:25:35.109Z
-    postcondition_rows_read: 1050
-    latest_read_kind: bounded_06b_a_a13_postcondition
+    latest_bounded_postcondition_utc: 2026-09-04T16:27:02.733Z
+    postcondition_rows_read: 1055
+    latest_read_kind: bounded_06b_a_a14_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -162,16 +162,16 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 7
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 5
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 6
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 4_1_1
+    first_admin_sessions_total_nonrevoked_valid: 4_0_0
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 2_0_0
     second_parent_session_version: 1
@@ -223,7 +223,7 @@ role_isolation_plan:
   inventory_utc: 2026-09-04T13:53:59.152Z
   inventory_result: success_readonly
   observed_roles: one_verified_admin_two_verified_active_parents
-  current_nonrevoked_sessions: 1
+  current_nonrevoked_sessions: 0
   children: 1704_total_1_owned_portal_1703_unclaimed_legacy_baseline
   requests_documents_offers_artifacts_threads_price_items: requests_1_other_five_categories_zero
   rbac_csrf_cases: A01_A08_and_B01_B06_passed_A09_A14_pending
@@ -238,10 +238,10 @@ role_isolation_plan:
   authenticated_probe_executed: true
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: A14-admin-normal-logout
+  id: final-bounded-readonly-closeout
   permission: entire_finite_06b_package_explicitly_authorized_no_repeat_permission_needed
   target: exact_preview_origin_88ed782ba25a_Worker_14841fbf75b2_D1_ccdeb22bb2a1
-  mutation: only_the_next_named_normal_form_or_probe_and_its_permitted_linked_effects
+  mutation: none_final_readonly_reconciliation_and_documentation
   preconditions:
     - preceding_atomic_operation_readonly_postcondition_and_docs_only_commit_complete
     - ordinary_owner_entered_credentials_and_same_browser_cookie_context
@@ -262,6 +262,34 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B a-a14: successful atomic checkpoint — 2026-09-04T16:27:02Z
+
+Result: **success**. Action `logout` passed the exact protected before/after
+verifier. Safe postcondition: {"actor":"A","case":"a-a14","ui":"A14_admin_normal_logout_redirect_login","httpStatus":200,"actionStatus":303,"sessionEffect":"current_session_revoked_logout","oldSessionsPreserved":true,"rolesFamiliesReceiptsBootstrapProvidersPreserved":true,"portalChildren":1,"requests":1,"requestVersion":1,"businessChangedOnly":"none"}.
+Audit delta: {"auth.session_revoked":1}. Read-only reconciliation used
+1055 rows, wrote zero, changed_db=false. A/P1 roles/FamilyIDs, historical
+revocations, sealed bootstrap and unrelated business/provider state are preserved
+as required by this case. No blind retry or direct repair.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/a-a14-verified-safe.json`,
+SHA-256 `8e547e00a1c6a67bed53eb67e55768d566ca72ce56c41d93e053d407381f7b8c`; paired D1 snapshots remain owner-only and ignored.
+Current totals: three users (1 admin, 2 parents),
+3 verified, 3 distinct assigned families;
+sessions 7/0 total/nonrevoked;
+verification/welcome sent receipts 3/3;
+portal children 1, requests 1.
+Prompt 06 remains partial until its remaining live cases and final logout pass.
+
+Only next atomic action: `final-bounded-readonly-closeout`, already within the authorized package.
+Private credential/link input stays in the browser. Existing exact Worker/code,
+Access and rollback containment continue unchanged. Checks for this status-only
+commit: docs:check, release:scan, git diff --check; helper syntax/affected
+postcondition as needed. Full runtime/E2E/build and reviewer gates are inherited
+from the unchanged candidates above. No unresolved P0/P1 or ambiguous result.
+`rollover_required: no`; `recommended_next_session_mode: High`: known next
+operation, target and postcondition.
+
 
 ## Prompt 06B a-a13: successful atomic checkpoint — 2026-09-04T16:25:35Z
 
