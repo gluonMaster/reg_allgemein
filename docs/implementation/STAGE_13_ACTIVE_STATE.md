@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T14:45:00Z
+updated_utc: 2026-09-04T14:46:41Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-fresh-preflight-and-exact-config-plan
-next_gate: phase-4-same-bundle-config-delivery
+last_completed_gate: phase-4-exact-recipient-config-change
+next_gate: phase-4-P2-registration
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-same-bundle-config-fallback-ready
-last_atomic_action: single-preview-recipient-settings-patch
-last_atomic_result: failed
-next_atomic_action: deploy-same-reviewed-bundle-one-recipient-change
+current_phase: phase-4-live-closeout-P2-registration-ready
+last_atomic_action: same-reviewed-bundle-one-recipient-config-deploy
+last_atomic_result: success
+next_atomic_action: normal-register-P2-once-owner-private-password
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: finite_preview_package_target_procedure_postconditions_and_rollback_known_no_unresolved_ambiguity
@@ -69,13 +69,13 @@ review:
 preview:
   access: enforced
   deployed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-  deployed_fingerprint: ad3134edb662
+  deployed_fingerprint: 14841fbf75b2
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
-  bindings_and_feature_gates_unchanged: true
+  bindings_and_feature_gates_unchanged: false_only_one_authorized_recipient_hash_added_other_settings_exact
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T14:40:27.113Z
+  latest_readonly_control_utc: 2026-09-04T14:46:28.729Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T14:40:31.033Z
+    latest_bounded_postcondition_utc: 2026-09-04T14:46:30.571Z
     postcondition_rows_read: 2642
-    latest_read_kind: bounded_failed_config_postcondition_no_code_settings_data_or_session_change
+    latest_read_kind: bounded_config_postcondition_preserved_accounts_sessions_bootstrap_providers_fixtures
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -189,7 +189,7 @@ preview:
     other_retained_state_guard_branches_nonzero: 0
     import_pair: 2_plus_1703
   providers:
-    auth_and_resend: enabled_only_behind_access_and_two_recipient_hashes
+    auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
     documents: fail_closed_until_separate_manual_preview_phase
     contracts: fail_closed_until_separate_manual_preview_phase
@@ -232,16 +232,16 @@ role_isolation_plan:
   third_parent_need: confirmed_for_parent_to_parent_child_request_ownership_controls
   proposed_account_setup: append_one_recipient_hash_then_normal_registration_verification_welcome_login_each_checkpointed
   proposed_fixture_setup: one_synthetic_portal_child_and_one_individual_self_pay_draft_via_normal_routes_no_submit
-  live_allowlist_changed: false
+  live_allowlist_changed: true
   third_account_created: false
   fixture_created: false
   authenticated_probe_executed: false
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: deploy-same-reviewed-bundle-one-recipient-change
+  id: normal-register-P2-once-owner-private-password
   permission: explicit_owner_invocation_of_06b_entire_finite_package_no_repeat_permission_needed
   target: exact_Access_protected_preview_fingerprints_recorded_above
-  mutation: one_Wrangler_deploy_of_exact_previous_bundle_with_only_recipient_value_changed
+  mutation: one_normal_P2_registration_and_linked_verification_delivery
   preconditions:
     - exact_target_code_settings_and_baseline_reconciled_in_protected_06b_evidence
     - preserve_A_P1_bootstrap_receipts_and_historical_revocations
@@ -249,7 +249,7 @@ next_atomic_action:
   postcondition:
     - one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
     - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_mutation
-  success_transition: normal_P2_registration_after_readonly_postcondition_and_docs_checkpoint
+  success_transition: owner_private_verification_then_terminal_welcome
   failed_or_ambiguous_transition: reconcile_checkpoint_preserve_Access_no_blind_retry
   forbidden_in_this_action:
     - bootstrap_replay_control_reset_direct_SQL_role_session_or_business_repair
@@ -261,6 +261,40 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B allowlist mutation checkpoint — 2026-09-04T14:46:41Z
+
+Result: **success**. One authorized standard Wrangler deployment of the same reviewed bundle changed only
+PREVIEW_EMAIL_RECIPIENT_HASHES from two to three entries, preserving the two
+original entries. Active version changed from `ad3134edb662` to
+`14841fbf75b2`, single version at 100% traffic. Downloaded deployed code
+remains byte-identical SHA-256 `eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`.
+All other bindings, secret-name inventory, runtime/settings, user annotations, Cron and subdomain
+settings are preserved. Access remains enforced (anonymous 302). Protected local
+preview TOML and normalized config are synchronized with the new value; older
+records remain immutable. No new runtime candidate was deployed.
+
+Immediate SELECT-only reconciliation read 2642 rows, wrote zero:
+A/P1, all four revoked sessions, sealed bootstrap, registration receipts,
+providers and business/fixture counters exactly equal before. No P2 registration
+or provider send attempted yet. Prompt 06 remains partial. Next: owner enters a
+private password in the managed browser for one normal P2 registration, then
+terminal verification delivery and checkpoint before verification.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/same-bundle-result-safe.json`, SHA-256
+`31cce7d7383b79a7ed77f9a1bcb80c68bf4fd720de6701642d38be247df8097b`. Before/after settings, code hashes, D1
+snapshots and pinned rollback are retained in that owner-only ignored directory.
+Rollback containment: Access stays enforced; rollback is only for this own failed
+or drifted config change after read-only reconciliation, never a blind retry.
+
+Validation: exact one-value diff, inherited bindings, byte-identical live code,
+live target/Access and bounded D1 postcondition pass. For this status-only commit
+only docs:check, release:scan and git diff --check run. Full runtime tests/E2E/build
+and independent review reuse the exact candidate gates above. No unresolved
+P0/P1 or ambiguous mutation. `rollover_required: no`;
+`recommended_next_session_mode: High`: known next registration procedure and
+postconditions; private owner password/CAPTCHA handoff remains necessary.
+
 
 ## Prompt 06B supported same-bundle fallback prepared — 2026-09-04T14:45:00Z
 
