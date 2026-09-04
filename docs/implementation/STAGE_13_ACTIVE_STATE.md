@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T15:54:24Z
+updated_utc: 2026-09-04T15:57:50Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-4-p1-a01
-next_gate: phase-4-A02-P1-admin-denial
+next_gate: phase-4-A02-P1-admin-denial-corrected-transport
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-A02-P1-admin-denial
-last_atomic_action: login
-last_atomic_result: success
-next_atomic_action: A02-P1-admin-denial
+current_phase: phase-4-A02-local-transport-fixed-before-first-HTTP
+last_atomic_action: A02_local_pretransport
+last_atomic_result: failed
+next_atomic_action: A02-P1-admin-denial-corrected-transport
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: last_step_success_known_next_authorized_finite_operation_with_bounded_postcondition
+mode_reason_plain: local_URL_ReferenceError_before_HTTP_all_remote_state_exact_known_corrected_transport
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -90,7 +90,7 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T15:54:24.637Z
+    latest_bounded_postcondition_utc: 2026-09-04T15:55:46.242Z
     postcondition_rows_read: 1043
     latest_read_kind: bounded_06b_p1_a01_postcondition
     preceding_preflight_rows_read: 45
@@ -238,7 +238,7 @@ role_isolation_plan:
   authenticated_probe_executed: true
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: A02-P1-admin-denial
+  id: A02-P1-admin-denial-corrected-transport
   permission: entire_finite_06b_package_explicitly_authorized_no_repeat_permission_needed
   target: exact_preview_origin_88ed782ba25a_Worker_14841fbf75b2_D1_ccdeb22bb2a1
   mutation: only_the_next_named_normal_form_or_probe_and_its_permitted_linked_effects
@@ -262,6 +262,31 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B A02 local transport precondition failed before HTTP — 2026-09-04T15:57:50Z
+
+Result: **failed, confirmed no HTTP request and no remote change**. The browser
+helper referenced the unavailable global URL constructor in its initial origin
+guard. The guarded catch ran before fetch. Request inventory confirms zero
+GET /admin requests; the page remains P1 cabinet at the exact origin. Bounded
+read-only snapshots before/after match exactly in every selected field except
+observation time, including session last_seen, C2/Q2, roles, bootstrap and providers.
+This is a local operator-helper defect, not an application authorization failure.
+
+Protected evidence: `tmp/role-isolation-06b-owner/execution/p1-a02-no-request-safe.json`,
+SHA-256 `59cb9eec9f2f3500c230708af7351ee0612c952379efc74202617df27ad7e01b`. The original attempt/evidence is retained; no blind
+retry occurred. The helper guard now compares the origin string using supported
+VM operations. No runtime or deployed code changed. A02 has not passed and the
+phase is not promoted. One next action: `A02-P1-admin-denial-corrected-transport`
+under the same verified P1 session, followed by its normal reconciliation/commit.
+
+Containment: Access and all business data remain intact; preserve the active P1
+session and use the corrected one-request helper. Checks: helper syntax and
+no-network capability proof, docs:check, release:scan, git diff --check.
+Full runtime suite is inherited. `rollover_required: no`;
+`recommended_next_session_mode: High`: confirmed no-write local error, known
+correction and postcondition; no unresolved ambiguity or P0/P1 runtime finding.
+
 
 ## Prompt 06B p1-a01: successful atomic checkpoint — 2026-09-04T15:54:24Z
 
