@@ -3488,3 +3488,29 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   Full runtime/E2E/build/reviewer gates inherited from unchanged candidates.
   Prompt 06 remains partial. No unresolved P0/P1 or ambiguous mutation.
   `rollover_required: no`; `recommended_next_session_mode: High`.
+
+
+## Prompt 06B P2 fixture phase handoff — 2026-09-04T15:50:24Z
+
+One normal P2 login passed (`0af22f9`), one portal child C2 was created
+(`740d6eb`), the individual form load passed (`7a8f828`), and one self-pay
+individual draft Q2 was created (`1e8e4e1`). The normal creation response/load
+provided B01 owner controls: C2 is visible in the P2 cabinet and Q2 returns
+200/draft/version 1 with the matching C2. The subsequent normal logout passed
+with one matching audit. Five sessions are now revoked (four logout, one historical
+role change); all old sessions, A/P1 identities/roles/families, bootstrap seals,
+registration receipts and provider state are preserved. No fixture submit/send.
+
+Fresh control at 15:41:27Z proved current Worker fingerprint 14841fbf75b2 at 100%,
+three recipients, exact other bindings/runtime, matching bundle SHA-256 and
+anonymous Access redirect. An earlier read-only control ended with a sanitized
+technical error; a fresh complete read-only control succeeded before login.
+There was no mutation/retry ambiguity. Exact protected evidence is under
+`tmp/role-isolation-06b-owner/execution/`; completed attempts must not be replayed.
+
+Only next action is A01, normal P1 login after private owner credential input.
+Then execute A02–A07, B02–B05, A08; A09–A14; final bounded reconciliation.
+Each request/touch must retain its own read-only postcondition, active-state
+update, docs:check/release:scan/git diff --check and docs-only commit. C2/Q2
+remain fixtures. Prompt 06 is partial; full manual preview and production gates
+remain blocked. `rollover_required: no`; `recommended_next_session_mode: High`: known authorized operations, no unresolved P0/P1 or ambiguous outcome.

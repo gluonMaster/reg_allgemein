@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T15:47:46Z
+updated_utc: 2026-09-04T15:49:04Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-p2-draft
-next_gate: phase-4-logout-P2
+last_completed_gate: phase-4-p2-logout
+next_gate: phase-4-A01-P1-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-logout-P2
-last_atomic_action: draft
+current_phase: phase-4-P2-fixtures-complete-awaiting-private-P1-login
+last_atomic_action: logout
 last_atomic_result: success
-next_atomic_action: logout-P2
+next_atomic_action: A01-P1-login
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: last_step_success_known_next_authorized_finite_operation_with_bounded_postcondition
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_one_authorized_recipient_hash_added_other_settings_exact
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T14:46:28.729Z
+  latest_readonly_control_utc: 2026-09-04T15:41:27.829Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T15:47:46.400Z
-    postcondition_rows_read: 1036
-    latest_read_kind: bounded_06b_p2_draft_postcondition
+    latest_bounded_postcondition_utc: 2026-09-04T15:49:04.083Z
+    postcondition_rows_read: 1041
+    latest_read_kind: bounded_06b_p2_logout_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -162,12 +162,12 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 5
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 3
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 4
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
@@ -208,7 +208,7 @@ flow_verification:
   first_admin_login: success_admin_shell_visible_one_new_valid_version_2_session_preserved_state_reconciled
   first_admin_logout: success_matching_admin_session_revoked_logout_linked_audit_one_no_active_sessions
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
-  role_isolation_live: admin_positive_entry_passed_remaining_cross_role_and_owner_csrf_denials_not_attempted
+  role_isolation_live: admin_positive_entry_and_P2_child_request_owner_controls_passed_A_B_denials_pending
   role_isolation_preparation: complete_exact_rbac_csrf_protocol_and_conditional_cross_owner_fixture_plan
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 role_isolation_plan:
@@ -223,11 +223,11 @@ role_isolation_plan:
   inventory_utc: 2026-09-04T13:53:59.152Z
   inventory_result: success_readonly
   observed_roles: one_verified_admin_two_verified_active_parents
-  current_nonrevoked_sessions: 1
+  current_nonrevoked_sessions: 0
   children: 1704_total_1_owned_portal_1703_unclaimed_legacy_baseline
   requests_documents_offers_artifacts_threads_price_items: requests_1_other_five_categories_zero
-  rbac_csrf_cases: 14_bounded_steps_including_logins_and_normal_logouts_no_live_execution
-  cross_parent_fixture_gap: P2_verified_now_need_one_C2_and_one_Q2_through_normal_forms
+  rbac_csrf_cases: A01_A14_pending_P2_fixture_and_positive_owner_sequence_completed
+  cross_parent_fixture_gap: resolved_one_C2_and_one_Q2_draft_owned_by_P2_positive_controls_passed
   owner_input: additional_controlled_recipient_proposed_in_conversation_if_needed_not_copied_into_tracked_state
   third_parent_need: satisfied_P2_verified_active_parent
   proposed_account_setup: append_one_recipient_hash_then_normal_registration_verification_welcome_login_each_checkpointed
@@ -235,10 +235,10 @@ role_isolation_plan:
   live_allowlist_changed: true
   third_account_created: true
   fixture_created: true
-  authenticated_probe_executed: false
+  authenticated_probe_executed: true
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: logout-P2
+  id: A01-P1-login
   permission: entire_finite_06b_package_explicitly_authorized_no_repeat_permission_needed
   target: exact_preview_origin_88ed782ba25a_Worker_14841fbf75b2_D1_ccdeb22bb2a1
   mutation: only_the_next_named_normal_form_or_probe_and_its_permitted_linked_effects
@@ -262,6 +262,60 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B P2 fixture phase complete — 2026-09-04T15:50:24Z
+
+One normal P2 login passed (`0af22f9`), one portal child C2 was created
+(`740d6eb`), the individual form load passed (`7a8f828`), and one self-pay
+individual draft Q2 was created (`1e8e4e1`). The normal creation response/load
+provided B01 owner controls: C2 is visible in the P2 cabinet and Q2 returns
+200/draft/version 1 with the matching C2. The subsequent normal logout passed
+with one matching audit. Five sessions are now revoked (four logout, one historical
+role change); all old sessions, A/P1 identities/roles/families, bootstrap seals,
+registration receipts and provider state are preserved. No fixture submit/send.
+
+Fresh control at 15:41:27Z proved current Worker fingerprint 14841fbf75b2 at 100%,
+three recipients, exact other bindings/runtime, matching bundle SHA-256 and
+anonymous Access redirect. An earlier read-only control ended with a sanitized
+technical error; a fresh complete read-only control succeeded before login.
+There was no mutation/retry ambiguity. Exact protected evidence is under
+`tmp/role-isolation-06b-owner/execution/`; completed attempts must not be replayed.
+
+Only next action is A01, normal P1 login after private owner credential input.
+Then execute A02–A07, B02–B05, A08; A09–A14; final bounded reconciliation.
+Each request/touch must retain its own read-only postcondition, active-state
+update, docs:check/release:scan/git diff --check and docs-only commit. C2/Q2
+remain fixtures. Prompt 06 is partial; full manual preview and production gates
+remain blocked. `rollover_required: no`; `recommended_next_session_mode: High`: known authorized operations, no unresolved P0/P1 or ambiguous outcome.
+
+
+## Prompt 06B p2-logout: successful atomic checkpoint — 2026-09-04T15:49:04Z
+
+Result: **success**. Action `logout` passed the exact protected before/after
+verifier. Safe postcondition: {"actor":"P2","case":"p2-logout","ui":"P2_normal_logout_redirect_login","httpStatus":200,"actionStatus":303,"sessionEffect":"current_session_revoked_logout","oldSessionsPreserved":true,"rolesFamiliesReceiptsBootstrapProvidersPreserved":true,"portalChildren":1,"requests":1,"requestVersion":1,"businessChangedOnly":"none"}.
+Audit delta: {"auth.session_revoked":1}. Read-only reconciliation used
+1041 rows, wrote zero, changed_db=false. A/P1 roles/FamilyIDs, historical
+revocations, sealed bootstrap and unrelated business/provider state are preserved
+as required by this case. No blind retry or direct repair.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/p2-logout-verified-safe.json`,
+SHA-256 `66b0149dee4e18d28e861f835cea53baabc3abd8843d025e8ae82d0ad157c83d`; paired D1 snapshots remain owner-only and ignored.
+Current totals: three users (1 admin, 2 parents),
+3 verified, 3 distinct assigned families;
+sessions 5/0 total/nonrevoked;
+verification/welcome sent receipts 3/3;
+portal children 1, requests 1.
+Prompt 06 remains partial until its remaining live cases and final logout pass.
+
+Only next atomic action: `A01-P1-login`, already within the authorized package.
+Private credential/link input stays in the browser. Existing exact Worker/code,
+Access and rollback containment continue unchanged. Checks for this status-only
+commit: docs:check, release:scan, git diff --check; helper syntax/affected
+postcondition as needed. Full runtime/E2E/build and reviewer gates are inherited
+from the unchanged candidates above. No unresolved P0/P1 or ambiguous result.
+`rollover_required: no`; `recommended_next_session_mode: High`: known next
+operation, target and postcondition.
+
 
 ## Prompt 06B p2-draft: successful atomic checkpoint — 2026-09-04T15:47:46Z
 
