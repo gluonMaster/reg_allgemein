@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T14:50:07Z
+updated_utc: 2026-09-04T15:01:04Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-exact-recipient-config-change
-next_gate: phase-4-owner-private-Access-login-then-P2-registration
+last_completed_gate: phase-4-P2-registration-terminal-verification-delivery
+next_gate: phase-4-P2-email-verification-and-welcome
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-P2-registration-awaiting-private-Access-login
-last_atomic_action: same-reviewed-bundle-one-recipient-config-deploy
+current_phase: phase-4-P2-registered-awaiting-private-verification-link
+last_atomic_action: normal-P2-registration-with-one-verification-delivery
 last_atomic_result: success
-next_atomic_action: owner-private-Access-login-in-preserved-managed-tab
+next_atomic_action: owner-opens-current-P2-verification-link-privately
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: finite_package_authorized_known_target_no_ambiguity_private_Access_and_password_handoff_required
+mode_reason_plain: registration_terminal_success_known_next_verification_and_welcome_scope_private_link_handoff_required
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T14:46:30.571Z
-    postcondition_rows_read: 2642
-    latest_read_kind: bounded_config_postcondition_preserved_accounts_sessions_bootstrap_providers_fixtures
+    latest_bounded_postcondition_utc: 2026-09-04T14:59:54.026Z
+    postcondition_rows_read: 988
+    latest_read_kind: bounded_P2_registration_terminal_delivery_and_preserved_state
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -150,25 +150,25 @@ preview:
     automatic_history_growth: stopped
     health: head_204_empty_no_store_noindex
   synthetic_state:
-    users: 2
-    parents: 1
+    users: 3
+    parents: 2
     verified_users: 2
     admins: 1
-    privacy_acknowledgements: 2
-    unused_verification_tokens: 0
+    privacy_acknowledgements: 3
+    unused_verification_tokens: 1
     used_verification_tokens: 2
     verification_commits: 2
     users_with_family_id: 2
-    verification_deliveries_sent_with_receipt: 2
+    verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 2
     auth_sessions: 4
     nonrevoked_auth_sessions: 0
     logged_out_auth_sessions: 3
     role_change_revoked_auth_sessions: 1
-    distinct_identities: 2
+    distinct_identities: 3
     distinct_assigned_families: 2
     nonrevoked_session_owners: 0
-    distinct_delivery_recipients: 2
+    distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
     first_admin_sessions_total_nonrevoked_valid: 3_0_0
@@ -181,7 +181,7 @@ preview:
     bootstrap_actions_assertions_audit: 1_1_1
     canonical_bootstrap_eligible_accounts: 0
     canonical_bootstrap_ineligibility_reason: control_consumed_and_active_admin_exists
-    accounts_without_retained_parent_state: 2
+    accounts_without_retained_parent_state: 3
     eligibility_guard_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
     bootstrap_session_change: only_first_accounts_previously_nonrevoked_session_revoked_with_role_change
     registration_finalization_commits_per_account: 1
@@ -198,7 +198,7 @@ flow_verification:
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
   login_logout: historical_parent_login_logout_passed_remaining_first_session_now_revoked_by_bootstrap
-  second_registration: success_managed_tab_reaches_exact_preview_registration_form_without_portal_POST
+  second_registration: success_P2_verified_one_distinct_portal_family_one_receipt_one_terminal_welcome_old_state_preserved
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
@@ -222,7 +222,7 @@ role_isolation_plan:
   later_full_preview_scope: document_contract_message_price_provider_checks_remain_separate_not_a_new_06_closeout_gate
   inventory_utc: 2026-09-04T13:53:59.152Z
   inventory_result: success_readonly
-  observed_roles: one_admin_one_parent_both_verified_active
+  observed_roles: one_verified_admin_one_verified_parent_one_unverified_parent
   current_nonrevoked_sessions: 0
   children: 1703_unclaimed_legacy_zero_owned_zero_portal
   requests_documents_offers_artifacts_threads_price_items: all_zero
@@ -233,23 +233,23 @@ role_isolation_plan:
   proposed_account_setup: append_one_recipient_hash_then_normal_registration_verification_welcome_login_each_checkpointed
   proposed_fixture_setup: one_synthetic_portal_child_and_one_individual_self_pay_draft_via_normal_routes_no_submit
   live_allowlist_changed: true
-  third_account_created: false
+  third_account_created: true
   fixture_created: false
   authenticated_probe_executed: false
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: owner-private-Access-login-in-preserved-managed-tab
+  id: owner-opens-current-P2-verification-link-privately
   permission: explicit_owner_invocation_of_06b_entire_finite_package_no_repeat_permission_needed
   target: exact_Access_protected_preview_fingerprints_recorded_above
-  mutation: owner_private_Cloudflare_Access_login_no_portal_registration_yet
+  mutation: one_normal_P2_email_verification_and_automatically_linked_welcome_delivery
   preconditions:
     - exact_target_code_settings_and_baseline_reconciled_in_protected_06b_evidence
     - preserve_A_P1_bootstrap_receipts_and_historical_revocations
-    - owner_completes_Access_privately_then_registration_password_and_CAPTCHA_when_form_ready
+    - owner_opens_current_verification_link_privately_in_preserved_browser_no_link_token_in_chat
   postcondition:
     - one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
     - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_mutation
-  success_transition: normal_P2_registration_once_then_terminal_verification_delivery_and_checkpoint
+  success_transition: normal_P2_login_after_verification_welcome_checkpoint
   failed_or_ambiguous_transition: reconcile_checkpoint_preserve_Access_no_blind_retry
   forbidden_in_this_action:
     - bootstrap_replay_control_reset_direct_SQL_role_session_or_business_repair
@@ -261,6 +261,49 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B P2 registration and terminal verification delivery — 2026-09-04T15:01:04Z
+
+Result: **success**. One ordinary browser form submission returned HTTP 200
+with the registration-accepted message. The owner entered the selected address
+and password privately; email hash matched the protected recipient record,
+synthetic first/last names matched the planned values, privacy was checked and
+Turnstile was ready. The password was never returned or saved by the agent.
+The native POST had literal null Origin with same-origin/navigate/document
+Fetch Metadata, the explicitly supported AUTH-06 native-form path; this is not
+the exact-Origin control required for later CSRF probes.
+
+Immediate SELECT reconciliation found one unverified active P2 parent, one new
+privacy receipt/token and one pending verification outbox item. One bounded read
+after the next scheduled email cycle confirmed sent, one attempt, provider
+receipt and timestamp, no error. No resend or repeat registration occurred.
+A/P1 and their roles/versions/FamilyIDs, all four revoked sessions, original
+registration/token/delivery/privacy records and sealed bootstrap are unchanged.
+Bootstrap control/action/assertion/audit remains consumed 1/1/1 with six seals;
+its aggregate users counter is now three, which is expected. No child/request,
+other provider, storage or contract write. The sole audit delta is
+auth.registration_created +1. P2 is unverified, has no current FamilyID and
+no session. Verification/welcome delivery totals are now 3/2.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/registration-terminal-verified-safe.json`,
+SHA-256 `b281b1b728ad34fecc3fdf81e81e8e85e1e71e2403fc5e0fe0f9a1dbc3c43e04`; before/immediate/terminal snapshots and one-attempt
+marker in the same owner-only ignored directory. Terminal read used 988
+rows, wrote zero, changed_db=false throughout. Existing Worker/config checkpoint
+remains exact; resumed controls confirmed three recipients and no other drift.
+
+Next single action: the owner opens the current verification link privately in
+the preserved managed browser, then one normal confirmation. Its automatic
+welcome delivery is already expressly authorized. Do not resend, replay, log
+the link/token, log in or create C2/Q2 before its terminal postcondition/checkpoint.
+Prompt 06 remains partial; A/B live denials are not yet run.
+
+Validation: helper syntax, recipient digest/form checks, live response and
+exact registration/delivery/preservation assertions pass. This status-only commit
+runs docs:check, release:scan and git diff --check; full runtime/E2E/build/reviewer
+gates remain inherited. No unresolved P0/P1 or ambiguous registration.
+`rollover_required: no`; `recommended_next_session_mode: High`: known target
+and next verification/welcome procedure, private owner link handoff required.
+
 
 ## Prompt 06B private browser handoff — 2026-09-04T14:50:07Z
 
