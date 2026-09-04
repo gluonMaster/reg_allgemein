@@ -19,6 +19,23 @@
 
 ## Append-only evidence history
 
+### Owner admin logout succeeded — 2026-09-04
+
+- The owner reported normal logout and the browser context returned to
+  `/auth/login`. The bounded `13:47:19.269Z` reconciliation confirmed the first
+  admin session revoked at `13:44:57.676Z` with reason `logout` and exactly one
+  matching audit. First sessions are `3/0/0`, second-parent sessions `1/0/0`;
+  all four sessions are revoked. Roles and user session versions remain intact.
+- Eight SELECTs read 55 rows and wrote 0. Historical revocations, bootstrap
+  control/chain counts, receipts, providers, exact target and Worker/bindings
+  remained unchanged. No new login, provider send or agent UI request occurred.
+- Protected evidence: `tmp/admin-first-login-20260904-owner/logout-safe.json`,
+  SHA-256 `bd36ee3cbc599a442e6993343eac513f9d4888ff8f71bb861fc090f78df0cf00`.
+  Syntax/docs/release-scan/diff checks apply; full runtime gates are inherited.
+  The next step remains read-only preparation of live role checks, with fresh
+  sessions needed only for later scoped execution. No rollover; next mode Medium.
+  Current operational scope is exclusively in [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### First admin login succeeded — 2026-09-04
 
 - The owner reported login success and supplied the protected admin shell and

@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T13:38:25Z
+updated_utc: 2026-09-04T13:47:19Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-first-admin-login-success-reconciled
+last_completed_gate: phase-4-first-admin-logout-success-reconciled
 next_gate: phase-4-remaining-live-role-isolation-plan
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-bootstrap-and-first-admin-login-complete-live-role-isolation-pending
-last_atomic_action: owner-first-admin-login-on-prepared-form
+current_phase: phase-4-bootstrap-admin-login-logout-complete-no-active-sessions-role-isolation-pending
+last_atomic_action: owner-normal-admin-logout
 last_atomic_result: success
 next_atomic_action: prepare-bounded-live-role-isolation-plan-readonly
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: first-admin-login-reconciled-next-is-readonly-preparation-of-remaining-role-checks-no-remote-write-or-ambiguity
+mode_reason_plain: admin-logout-reconciled-no-active-sessions-next-is-readonly-role-check-preparation-no-remote-write-or-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: bootstrap_and_first_admin_login_completed_authorized_linked_session_touches_reconciled_other_live_flows_not_authorized
+permission_state: bootstrap_first_admin_login_and_owner_normal_logout_completed_and_reconciled_other_live_flows_not_authorized
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T13:38:22Z
+  latest_readonly_control_utc: 2026-09-04T13:47:16Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T13:38:25Z
-    postcondition_rows_read: 47
-    latest_read_kind: seven_selects_first_admin_login_postcondition_accounts_sessions_sealed_control_receipts_providers_and_login_rate_limits
+    latest_bounded_postcondition_utc: 2026-09-04T13:47:19Z
+    postcondition_rows_read: 55
+    latest_read_kind: eight_selects_admin_logout_postcondition_sessions_linked_audit_and_preserved_accounts_bootstrap_receipts_providers
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -129,6 +129,19 @@ preview:
     historical_sessions_bootstrap_receipts_providers_unchanged: true
     authenticated_requests_by_agent_during_reconciliation: 0
     permission_completed: true
+  first_admin_logout:
+    result: success
+    actor: owner_normal_logout_reported_in_chat
+    target_slot: 1
+    matched_first_admin_login_session: true
+    revoked_utc: 2026-09-04T13:44:57.676Z
+    revocation_reason: logout
+    linked_audit_count: 1
+    audit_actor_and_timestamp_match: true
+    database_postcondition: success_reconciled_2026_09_04T13_47_19Z
+    other_historical_sessions_and_second_parent_unchanged: true
+    global_nonrevoked_sessions: 0
+    agent_authenticated_requests: 0
   scheduled:
     fast: running_at_bounded_snapshot_age_under_two_seconds_no_recent_failures
     maintenance: succeeded_fresh
@@ -149,16 +162,16 @@ preview:
     verification_deliveries_sent_with_receipt: 2
     welcome_deliveries_sent_with_receipt: 2
     auth_sessions: 4
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 2
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 3
     role_change_revoked_auth_sessions: 1
     distinct_identities: 2
     distinct_assigned_families: 2
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 2
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 3_1_1
+    first_admin_sessions_total_nonrevoked_valid: 3_0_0
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 1_0_0
     second_parent_session_version: 1
@@ -193,6 +206,7 @@ flow_verification:
   prompt_06: partial_bootstrap_and_first_admin_login_complete_remaining_live_role_owner_csrf_denials_pending
   first_admin_bootstrap: success_one_official_cli_attempt_and_bounded_remote_postcondition
   first_admin_login: success_admin_shell_visible_one_new_valid_version_2_session_preserved_state_reconciled
+  first_admin_logout: success_matching_admin_session_revoked_logout_linked_audit_one_no_active_sessions
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
   role_isolation_live: admin_positive_entry_passed_remaining_cross_role_and_owner_csrf_denials_not_attempted
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
@@ -202,9 +216,9 @@ next_atomic_action:
   target: existing_preview_fingerprint_88ed782ba25a_admin_slot_1_parent_slot_2_and_exact_deployed_source
   mutation: none_do_not_navigate_authenticated_routes_or_create_sessions_during_preparation
   preconditions:
-    - successful_first_admin_login_and_preserved_state_reconciled_and_checkpoint_committed
+    - successful_first_admin_login_and_subsequent_owner_logout_reconciled_and_checkpoint_committed
     - use_canonical_auth09_authorization_routes_and_inherited_exact_candidate_tests
-    - keep_active_admin_session_private_old_revoked_sessions_and_second_parent_unchanged
+    - both_accounts_have_no_active_sessions_preserve_all_revocations_and_plan_fresh_isolated_logins_for_later_live_checks
   postcondition:
     - concrete_remaining_checks_map_parent_admin_surface_denial_admin_parent_actor_denial_csrf_and_owner_denial
     - exact_routes_isolated_browser_session_requirements_expected_denials_no_send_guards_and_containment_documented
@@ -222,12 +236,60 @@ next_atomic_action:
     - production_cms_or_real_pii_action
 following_route_permission_boundaries:
   - bootstrap_permission_consumed_successfully_no_remote_replay_or_reset
-  - first_admin_login_completed_no_extra_login_or_logout_requested
+  - first_admin_login_and_owner_logout_completed_further_live_checks_require_fresh_scoped_logins
   - any_worker_deploy_only_if_required_by_the_next_execution_surface
   - remaining_parent_login_and_live_rbac_csrf_owner_denial_session_writes_require_separate_scope
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Owner admin logout succeeded and reconciled — 2026-09-04
+
+Result: **success**. After asking whether an active admin session was needed,
+the owner chose normal logout and reported completion. The supplied browser
+context is now `/auth/login`. No UI action or authenticated request was made
+by the agent; only the read-only postcondition was executed.
+
+At `13:47:19.269Z`, eight SELECTs read 55 rows and wrote 0, with `changes=0`
+and `changed_db=false`. The session created by the first admin login at
+`13:37:12.010Z` is now revoked at `13:44:57.676Z`, reason `logout`. Exactly one
+linked `auth.session_revoked` audit matches the admin actor, session, logout
+reason and revocation timestamp. First-account session totals changed from
+`3/1/1` to `3/0/0` (total/nonrevoked/valid); the user remains an active verified
+admin at session version 2. Second-parent state remains version 1, `1/0/0`.
+All four sessions are revoked: three by logout and one by role change.
+
+The three previously revoked session hashes, sealed bootstrap control digest
+and `1/1/1` action/assertion/audit counts, registration receipt digest, provider
+counts and other observed auth/Telegram/storage state match the committed
+login checkpoint `4244d8e686c512feb2d59a169796f3e28b9fb89a`. No new session,
+provider send or unrelated state change was observed. Target fingerprints
+remain account `5dbd04a4763a`, Worker `242c1796e930`, origin host `88ed782ba25a`
+and D1 `ccdeb22bb2a1`. Worker fingerprint `ad3134edb662` remains the sole
+version at 100%, with exact protected bindings at `13:47:16.480Z`.
+
+Protected ignored evidence:
+`tmp/admin-first-login-20260904-owner/logout-safe.json`, SHA-256
+`bd36ee3cbc599a442e6993343eac513f9d4888ff8f71bb861fc090f78df0cf00`.
+The separate SELECT-only helper `tmp/admin-logout-readonly.cjs`, SHA-256
+`b81061e9082bcb8a2cd37312ca69e62034f421b8a00d73d08acf285a991d6491`,
+uses a new bounded logout observation; the consumed login helper and its
+before/after evidence were not modified or rerun. Credentials, identities,
+cookies and raw session/resource IDs were not printed or persisted.
+
+Containment: preserve Access, all revocations and sealed bootstrap; no repair,
+replay or new login is needed for this successful logout. No P0/P1 or ambiguity
+was found. **One next action:** prepare the bounded remaining live role-isolation
+plan read-only. Later execution will need fresh appropriately separated
+admin/parent sessions; the owner does not need to stay logged in now. Prompt 06,
+full manual preview and production gates remain unchanged and incomplete.
+
+Validation: `npm run docs:check`, `npm run release:scan`, `git diff --check`,
+plus syntax validation of the local SELECT-only helper. Full runtime suites,
+E2E, build and review are not repeated for status-only documentation; no runtime,
+schema or configuration changed. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: the next work is read-only preparation,
+with no active session, remote write or unresolved ambiguity required.
 
 ## First admin login succeeded and reconciled — 2026-09-04
 
