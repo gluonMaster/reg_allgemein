@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T11:08:26Z
+updated_utc: 2026-09-04T11:11:54Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-4-second-registration-and-verification-delivery-success
-next_gate: phase-4-second-verification-welcome-permission
+next_gate: phase-4-second-email-verification-and-welcome-delivery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-prompt-05-second-unverified-parent-created-delivery-terminal
+current_phase: phase-4-prompt-05-second-verification-and-one-welcome-authorized
 last_atomic_action: preview-second-registration-and-verification-delivery
 last_atomic_result: success
-next_atomic_action: request-one-second-recipient-welcome-delivery-authorization
+next_atomic_action: owner-opens-second-verification-link-once
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: next-verification-and-automatic-welcome-have-known-target-and-containment-but-welcome-needs-explicit-scope
+mode_reason_plain: one-verification-and-one-welcome-are-authorized-with-known-target-postcondition-and-containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: prompt_05_second_registration_and_verification_delivery_consumed_verification_login_retained_welcome_not_authorized
+permission_state: prompt_05_registration_consumed_verification_login_retained_owner_authorized_one_second_recipient_welcome_unused
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -111,27 +111,31 @@ flow_verification:
   login_logout: success_current_session_revoked_one_owner_created_parallel_session_remains_active
   second_registration: success_one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
-  second_verification_welcome: automatic_one_welcome_requires_explicit_additional_delivery_permission
+  second_verification_welcome: one_automatic_welcome_explicitly_authorized_by_owner_not_yet_attempted
 next_atomic_action:
-  id: request-one-second-recipient-welcome-delivery-authorization
-  permission: none_waiting_for_explicit_one_automatic_welcome_delivery_scope
+  id: owner-opens-second-verification-link-once
+  permission: prompt_05_verification_plus_owner_explicit_one_welcome_to_same_second_recipient
   target: same_second_owner_controlled_allowlisted_preview_recipient
-  mutation: none_permission_checkpoint_only
+  mutation: one_initial_email_verification_and_its_single_automatic_welcome_delivery
   preconditions:
     - second_registration_and_single_verification_delivery_reconciled_and_checkpoint_committed
     - second_recipient_allowlist_membership_previously_proved_without_identity_disclosure
     - verification_unconditionally_enqueues_one_welcome_under_unchanged_runtime
     - first_account_and_session_aggregate_state_unchanged_admins_zero
+    - owner_explicit_one_welcome_permission_recorded_before_link_open
+    - owner_uses_existing_second_account_link_privately_without_sharing_token
   postcondition:
-    - owner_explicitly_authorizes_one_automatic_welcome_to_same_second_recipient_after_single_verification
-    - no_remote_mutation_or_provider_send_during_permission_checkpoint
-  success_transition: owner_opens_existing_verification_link_once_then_bounded_reconcile_and_docs_commit_before_login
-  failed_or_ambiguous_transition: remain_stopped_second_account_unverified_no_link_open_or_resend
+    - two_distinct_active_verified_parents_admins_zero_two_distinct_assigned_families
+    - used_verification_tokens_two_unused_zero_verification_commits_two
+    - verification_and_welcome_deliveries_two_each_terminal_with_single_attempt_and_receipt_per_row
+    - first_account_sessions_unchanged_no_extra_recipients_or_unrelated_state
+  success_transition: bounded_after_verification_reconcile_and_docs_commit_before_authorized_second_login
+  failed_or_ambiguous_transition: stop_no_link_replay_resend_or_login_reconcile_once_and_record_containment
   forbidden_in_this_action:
     - registration_retry_resend_or_verification_link_replay
     - any_further_registration_or_recipient_change
     - first_account_login_logout_edit_or_session_cleanup
-    - second_verification_before_explicit_one_welcome_delivery_permission
+    - login_before_verification_postcondition_and_docs_checkpoint
     - bootstrap_or_role_mutation
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
@@ -141,11 +145,36 @@ next_atomic_action:
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
   - optional_early_revocation_of_the_known_remaining_owner_created_session
-  - one_automatic_welcome_delivery_to_second_recipient_at_verification
   - one_shot_admin_bootstrap_after_two_verified_synthetic_parents
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Second welcome-delivery permission checkpoint — 2026-09-04
+
+The owner explicitly authorized exactly one automatic `auth.welcome` delivery
+to the same second allowlisted recipient. This completes the delivery scope for
+the single initial verification already authorized by Prompt 05. Registration
+and its verification delivery remain consumed; verification, the one welcome
+and the subsequent single login remain unused. No new remote mutation or
+provider send was attempted while recording this permission.
+
+The one next action is the owner's single personal opening of the existing
+second-account verification link. Do not share the link/token in chat or
+evidence. After the visible result and expected welcome delivery, run the
+prepared single `after-verification` read-only reconciliation and commit active
+state before login. No replay, resend, first-account action, bootstrap or
+unrelated write/send is authorized. A failed or ambiguous result is reconciled
+once without blindly repeating the link open.
+
+The immediately preceding registration postcondition and protected target
+evidence are reused within this supervised window. No additional D1, analytics,
+health or control polling is required for this permission-only update. Only
+`npm run docs:check`, `npm run release:scan` and `git diff --check` are run;
+full runtime tests/build/review remain inherited because runtime/config are
+unchanged. `rollover_required: no`; `recommended_next_session_mode: High`:
+the next verification/provider mutation is authorized and its target,
+postcondition and containment are known.
 
 ## Second controlled registration and verification delivery — 2026-09-04
 
