@@ -3465,3 +3465,26 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   config, never replay bootstrap or one-attempt config helpers, never repair D1
   directly. `rollover_required: no`; `recommended_next_session_mode: High`
   because the remaining finite execution scope and postconditions are known.
+
+
+## Prompt 06B resumed: P2 verified, private normal login pending — 2026-09-04T15:12:55Z
+
+- Access handoff succeeded in the preserved managed context. One ordinary
+  registration created exactly P2/token/privacy and one terminal verification
+  delivery, checkpoint `ed9c981`. One verification created exactly one portal
+  family/finalization receipt and one terminal welcome, checkpoint `0596402`.
+- Fresh read-only assertions prove three verified separate identities/families,
+  one admin/two parents, preserved A/P1 roles and registration evidence, sealed
+  bootstrap consumed 1/1/1 with six seals, four historical sessions all revoked.
+  Verification/welcome sent receipt totals are 3/3, one attempt per new delivery.
+- New P2 login, C2/Q2 and live A/B probes have not started. Managed browser is at
+  login awaiting private P2 credentials; continue the same authorized sequence
+  from there. No password/cookie/token was stored in protected evidence by the agent.
+- Current exact target/version, safe evidence hashes and one next action are in
+  [active state](../STAGE_13_ACTIVE_STATE.md). Use new 06B helpers, never replay
+  completed one-attempt operations. No new runtime change or production gate.
+- Passed helper syntax, safe browser response checks, exact per-action D1 and
+  terminal provider postconditions, docs:check/release:scan/git diff --check.
+  Full runtime/E2E/build/reviewer gates inherited from unchanged candidates.
+  Prompt 06 remains partial. No unresolved P0/P1 or ambiguous mutation.
+  `rollover_required: no`; `recommended_next_session_mode: High`.

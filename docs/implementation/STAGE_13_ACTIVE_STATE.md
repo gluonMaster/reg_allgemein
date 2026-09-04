@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T15:07:30Z
+updated_utc: 2026-09-04T15:12:55Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-4-verification-terminal
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-normal-P2-login
+current_phase: phase-4-P2-verified-awaiting-private-login-form
 last_atomic_action: verification
 last_atomic_result: success
 next_atomic_action: normal-P2-login
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: last_step_success_known_next_authorized_finite_operation_with_bounded_postcondition
+mode_reason_plain: verification_welcome_success_private_P2_login_input_pending_no_live_portal_sessions
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -227,9 +227,9 @@ role_isolation_plan:
   children: 1703_unclaimed_legacy_zero_owned_zero_portal
   requests_documents_offers_artifacts_threads_price_items: all_zero
   rbac_csrf_cases: 14_bounded_steps_including_logins_and_normal_logouts_no_live_execution
-  cross_parent_fixture_gap: need_second_current_parent_and_existing_owned_child_request
+  cross_parent_fixture_gap: P2_verified_now_need_one_C2_and_one_Q2_through_normal_forms
   owner_input: additional_controlled_recipient_proposed_in_conversation_if_needed_not_copied_into_tracked_state
-  third_parent_need: confirmed_for_parent_to_parent_child_request_ownership_controls
+  third_parent_need: satisfied_P2_verified_active_parent
   proposed_account_setup: append_one_recipient_hash_then_normal_registration_verification_welcome_login_each_checkpointed
   proposed_fixture_setup: one_synthetic_portal_child_and_one_individual_self_pay_draft_via_normal_routes_no_submit
   live_allowlist_changed: true
@@ -262,6 +262,35 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B verification complete: private P2 login handoff — 2026-09-04T15:12:55Z
+
+The owner completed Access and privately filled the P2 registration form.
+One normal registration and its single terminal verification delivery passed
+(`ed9c981`). One normal verification, portal family allocation/receipt and
+single terminal welcome passed (`0596402`). All three accounts are now verified
+with separate portal families, one admin and two parents. All four historical
+sessions remain revoked; no new portal login/session has been created.
+
+The preserved managed browser is on the ordinary login form. Only next action:
+owner enters P2 email/password privately and reports readiness, then submit
+once and reconcile/checkpoint before C2. Private browser sandbox does not
+support reading the protected recipient record directly (ordinary dynamic
+import was unavailable); no alternate credential extraction was attempted.
+Official devalue parser from the installed dependency is installed in this
+temporary browser context and passed a no-network decode proof for later
+JSON action checks. No live role/CSRF/owner probes have run yet.
+
+Continue the authorized sequence after P2 login: C2, new-request form load, Q2
+draft, owner positive controls, P2 logout, P1 A/B cases and logout, A cases and
+logout, final bounded closeout. Every request that touches a session receives
+its own reconciliation and docs-only checkpoint. Do not repeat registration,
+verification, welcome, bootstrap or config operations. Prompt 06 is partial;
+full manual preview and production are still blocked. No unresolved P0/P1 or
+ambiguous mutation. `rollover_required: no`;
+`recommended_next_session_mode: High`: finite next operations remain authorized
+with known target/postconditions; the only immediate dependency is private input.
+
 
 ## Prompt 06B verification-terminal: successful atomic checkpoint — 2026-09-04T15:07:30Z
 
