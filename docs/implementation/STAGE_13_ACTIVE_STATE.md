@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T14:39:17Z
+updated_utc: 2026-09-04T14:41:20Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-4-fresh-preflight-and-exact-config-plan
-next_gate: phase-4-exact-single-recipient-config-change
+next_gate: phase-4-readonly-config-request-diagnosis
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-live-closeout-config-ready
-last_atomic_action: owner-normal-admin-logout
-last_atomic_result: success
-next_atomic_action: apply-one-recipient-settings-patch
+current_phase: phase-4-config-patch-rejected-confirmed-no-change
+last_atomic_action: single-preview-recipient-settings-patch
+last_atomic_result: failed
+next_atomic_action: inspect-supported-config-request-format-readonly
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: finite_preview_package_target_procedure_postconditions_and_rollback_known_no_unresolved_ambiguity
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T14:36:04.872Z
+  latest_readonly_control_utc: 2026-09-04T14:40:27.113Z
   latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T14:36:06.952Z
-    postcondition_rows_read: 2668
-    latest_read_kind: bounded_06b_identity_session_bootstrap_provider_collision_and_fixture_preflight
+    latest_bounded_postcondition_utc: 2026-09-04T14:40:31.033Z
+    postcondition_rows_read: 2642
+    latest_read_kind: bounded_failed_config_postcondition_no_code_settings_data_or_session_change
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -238,18 +238,18 @@ role_isolation_plan:
   authenticated_probe_executed: false
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: apply-one-recipient-settings-patch
+  id: inspect-supported-config-request-format-readonly
   permission: explicit_owner_invocation_of_06b_entire_finite_package_no_repeat_permission_needed
   target: exact_Access_protected_preview_fingerprints_recorded_above
-  mutation: one_recipient_hash_value_change_same_deployed_bundle
+  mutation: none_readonly_inspection_after_confirmed_no_change
   preconditions:
     - exact_target_code_settings_and_baseline_reconciled_in_protected_06b_evidence
     - preserve_A_P1_bootstrap_receipts_and_historical_revocations
-    - pinned_inherited_bindings_exact_local_diff_and_previous_version_rollback_prepared
+    - owner_enters_password_privately_and_completes_required_CAPTCHA_in_managed_browser
   postcondition:
-    - three_recipient_hashes_same_code_other_bindings_settings_and_business_state
+    - one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
     - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_mutation
-  success_transition: normal_P2_registration
+  success_transition: concrete_corrected_config_operation_after_supported_format_proof
   failed_or_ambiguous_transition: reconcile_checkpoint_preserve_Access_no_blind_retry
   forbidden_in_this_action:
     - bootstrap_replay_control_reset_direct_SQL_role_session_or_business_repair
@@ -261,6 +261,31 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B config PATCH rejected: no change reconciled — 2026-09-04T14:41:20Z
+
+Result: **failed**, not ambiguous. The one PATCH attempt returned HTTP 400.
+Immediate independent GET controls and SELECT-only reconciliation confirm the
+same deployed version `ad3134edb662` at 100%, exactly two recipient hashes,
+byte-identical code, all settings/bindings/Cron/Access unchanged, and unchanged
+accounts/sessions/bootstrap/receipts/providers/fixtures. D1 read 2642
+rows, wrote zero; all changed_db=false. Protected local TOML is unchanged.
+The helper retained the HTTP status but did not retain the provider error detail;
+no guessed cause or replay is accepted. No registration/provider delivery occurred.
+
+Evidence: `tmp/role-isolation-06b-owner/execution/config-result-safe.json`, SHA-256
+`fc3c00dc04bec90b22a3decfd38b36d368e068a13ccc1ce2f40e59541d8228b7`; exact request, before/after controls and D1
+snapshots in the same owner-only ignored directory. No rollback is necessary:
+the before state is still active. Next atomic action is read-only inspection of
+the supported settings request format and a concrete corrected operation.
+The finite 06B scope remains authorized; this rejection is not a runtime P0/P1.
+
+Validation: bounded live no-change reconciliation passed; this docs-only
+checkpoint runs docs:check, release:scan and git diff --check. Unchanged runtime
+full suite/E2E/build/reviewer gates are inherited. `rollover_required: no`;
+`recommended_next_session_mode: High`: no-write result resolved, known target
+and containment; next execution needs a supported exact config request.
+
 
 ## Prompt 06B invoked: exact preflight and config plan — 2026-09-04T14:39:17Z
 
