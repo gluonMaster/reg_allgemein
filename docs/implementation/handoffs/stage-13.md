@@ -3093,3 +3093,19 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   отсутствуют display name, inclusive dates, current, operator, canonical
   timestamp и exact permission на одну preview D1 mutation. Remote reconcile,
   D1 write и любые прочие remote actions не выполнялись.
+
+## Continuation 2026-09-04: Prompt 05 second-registration preflight
+
+- Owner invoked the single second synthetic-parent registration prompt. One
+  bounded read-only preflight matched the completed first-account checkpoint,
+  exact reviewed deployment, protected target, Access and recipient allowlist.
+  No registration, provider delivery or other remote mutation was attempted.
+- The browser form is prepared for private owner input. Actual second-recipient
+  membership must pass before POST; the known automatic welcome delivery needs
+  explicit scope before verification. First account and sessions remain intact.
+- Aggregate-only evidence, its digest, retained permissions, containment and the
+  sole current next action are recorded in
+  [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Second registration preflight and private browser input — 2026-09-04".
+- Runtime/config remain unchanged. Exact-candidate full release/review evidence
+  is reused; this session runs only docs checks, release scan and diff check.

@@ -4,21 +4,21 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-03T17:32:29Z
+updated_utc: 2026-09-04T10:39:55Z
 reviewed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
 last_completed_gate: phase-4-first-registration-verification-login-logout-success
-next_gate: phase-4-separate-owner-decision-before-second-account-bootstrap
+next_gate: phase-4-second-registration-owner-input-and-recipient-check
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-prompt-04-complete-one-owner-created-session-remains-active
+current_phase: phase-4-prompt-05-preflight-passed-registration-not-attempted
 last_atomic_action: preview-owner-second-session-logout
 last_atomic_result: success
-next_atomic_action: request-separate-owner-authorization-before-second-account-bootstrap
+next_atomic_action: validate-owner-entered-second-recipient-before-registration-post
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: next-remote-preview-scenario-needs-separate-owner-authorization-but-target-and-containment-are-known
+recommended_next_session_mode: Medium
+mode_reason_plain: next-action-is-private-browser-input-and-read-only-recipient-validation-before-any-post
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -33,7 +33,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: prompt_04_permissions_consumed_no_further_mutation_authorized
+permission_state: prompt_05_single_second_registration_verification_delivery_and_login_authorized_unused_welcome_not_authorized
 review:
   status: independent_go
   candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -64,12 +64,12 @@ preview:
     applied_through: 0026_background_d1_cost_controls.sql
     pending_exactly: []
     last_recorded_foreign_key_violations: 0
-    quota_precondition: confirmed_by_one_account_analytics_observation_2026_09_03T16_31_37Z_for_registration
+    quota_precondition: confirmed_by_one_account_analytics_observation_2026_09_04T10_39_52Z_for_second_registration
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-03T17:29:09Z
-    postcondition_rows_read: 57
+    latest_bounded_postcondition_utc: 2026-09-04T10:39:55Z
+    postcondition_rows_read: 69
     postcondition_rows_written: 0
   scheduled:
     fast: succeeded_fresh
@@ -104,23 +104,31 @@ flow_verification:
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
   login_logout: success_current_session_revoked_one_owner_created_parallel_session_remains_active
+  second_registration: not_attempted_readonly_preflight_passed_owner_recipient_input_pending
+  second_recipient_membership: protected_allowlist_unchanged_actual_browser_value_not_yet_checked
+  second_verification_welcome: automatic_one_welcome_requires_explicit_additional_delivery_permission
 next_atomic_action:
-  id: request-separate-second-account-bootstrap-authorization
-  permission: none_waiting_for_separate_explicit_owner_authorization
-  target: no_remote_target_permission_request_only
+  id: validate-owner-entered-second-recipient-before-registration-post
+  permission: prompt_05_readonly_preparation_for_authorized_single_second_registration
+  target: existing_access_protected_preview_registration_browser_form
   mutation: none
   preconditions:
     - prompt_04_success_checkpoint_committed
-    - known_remaining_owner_created_session_recorded_and_contained
-    - no_new_login_or_session_cleanup_is_implied
+    - bounded_prompt_05_preflight_passed_first_account_aggregate_state_unchanged
+    - owner_enters_only_second_previously_approved_email_in_browser_not_chat
+    - do_not_submit_or_read_password_token_cookie_or_verification_link
   postcondition:
-    - explicit_owner_decision_defines_exactly_one_next_bounded_remote_scenario
-    - no_remote_mutation_or_provider_send_during_the_permission_checkpoint
-  success_transition: prepare_exact_preconditions_for_the_separately_authorized_scenario
-  failed_or_ambiguous_transition: remain_stopped_with_prompt_04_state_unchanged
+    - normalized_browser_email_hash_matches_protected_allowlist_without_disclosing_identity
+    - owner_confirms_second_distinct_previously_approved_recipient
+    - no_registration_post_or_provider_send_during_input_check
+  success_transition: owner_submits_one_authorized_second_registration_then_bounded_reconcile_and_docs_checkpoint
+  failed_or_ambiguous_transition: stop_before_post_preserve_unused_permission_and_first_account
   forbidden_in_this_action:
     - registration_retry_resend_or_verification_link_replay
-    - login_session_cleanup_second_account_or_bootstrap_without_new_permission
+    - registration_post_before_second_recipient_membership_check
+    - first_account_login_logout_edit_or_session_cleanup
+    - second_verification_before_explicit_one_welcome_delivery_permission
+    - bootstrap_or_role_mutation
     - repeat_deploy_or_rollback_without_new_explicit_owner_authorization
     - migration_reapply_or_unrelated_d1_r2_write
     - bootstrap_role_change_or_unrelated_session_mutation
@@ -129,10 +137,81 @@ next_atomic_action:
     - repeated_health_sql_or_analytics_polling
 following_route_requires_separate_permissions:
   - optional_early_revocation_of_the_known_remaining_owner_created_session
-  - second_verified_synthetic_account_then_one_shot_admin_bootstrap
+  - one_automatic_welcome_delivery_to_second_recipient_at_verification
+  - one_shot_admin_bootstrap_after_two_verified_synthetic_parents
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Second registration preflight and private browser input — 2026-09-04
+
+Result: read-only preflight `success`; second registration **not attempted**.
+The owner invoked Prompt 05, authorizing one separate second synthetic parent
+registration, one allowlisted verification delivery, verification and login.
+These permissions remain unused. First-account changes, bootstrap/role mutation,
+resend/retry, unrelated sends and configuration changes are forbidden.
+
+At `10:39:35Z`–`10:39:55Z`, the single preflight confirmed clean HEAD
+`15280fa45248d8099d9a79507f4792723b2aa4e6`, a docs-only descendant of the reviewed
+candidate, with unchanged exact detached source/build proof. Worker fingerprint
+`ad3134edb662` remains the sole version at 100%, with exact candidate annotation,
+bindings, feature gates, schedules and protected target fingerprints. Anonymous
+and invalid Access probes returned login redirects `302`, authorized root and
+registration GET returned `200`, and the versioned route returned `404`. The
+two-recipient allowlist is unchanged; membership of the actual second
+browser-entered address is **pending** and must be checked before POST.
+
+One account-wide quota observation recorded 20,290 reads and 4,560 writes.
+Twelve SELECT statements read 69 rows and wrote 0, all with `changes=0` and
+`changed_db=false`. Ledger is exact `0001`–`0026`, pending 0. First account,
+privacy acknowledgement, used token, verification commit, FamilyID, terminal
+verification/welcome rows and receipts, session totals and auth audit counts
+match the Prompt 04 logout checkpoint. There is one distinct identity, one
+assigned family, one owner of nonrevoked sessions, no orphan sessions/recipients
+and one email recipient. Users/parents/verified remain 1, admins/bootstrap 0,
+sessions 2 with one nonrevoked and one logged out. Both cadences are fresh and
+successful; Telegram/storage counts remain 0. Expired auth rate-limit buckets
+have naturally disappeared. Previous scoped integrity/FK evidence is reused.
+
+The separate in-app browser is open on the registration form with no account
+fields entered by the agent. The one next action is private owner entry of only
+the second approved email, followed by a value-free allowlist check; do not
+submit yet. Credential creation/submission is handed to the owner under the
+computer-use credential-entry policy. Passwords, OTPs, links and cookies must
+not enter chat or evidence. No application mutation or provider send was
+attempted, and the last atomic mutation remains the successful prior logout.
+
+The existing delivery-scope constraint applies again:
+`src/lib/server/auth/auth-repository.ts` unconditionally enqueues one
+`auth.welcome` after initial verification. Prompt 05 explicitly authorizes the
+verification delivery only. Before opening the verification link, obtain
+explicit permission for that one additional welcome delivery to the same second
+recipient. Registration remains authorized once recipient preconditions pass.
+Do not change runtime/config or suppress the outbox to bypass the scope boundary.
+No new runtime P0/P1 was demonstrated.
+
+Protected current-user-only ignored evidence:
+`tmp/second-registration-20260904-owner/before-safe.json`, SHA-256
+`79cee0af5f374700b63e849467f1f0c6dd06f53aef3d93f01a4200b44f815165`.
+The ignored `tmp/second-registration-readonly.cjs` permits one observation per
+named stage, read-only control APIs and SELECT statements, storing aggregates
+only. Do not rerun `before` blindly; outside this supervised window revalidate
+stale preconditions once with a new bounded record.
+
+Containment: preserve Access and recipient restrictions; no POST before the
+address check, no verification before welcome scope is explicit, no first-account
+action, retry, resend, bootstrap or direct D1 repair. After each authorized
+registration/verification/login mutation, reconcile once and commit active state
+before the next mutation, as required by `AGENTS.md` even though the operational
+prompt describes the overall sequence with one reconcile.
+
+Validation: only `npm run docs:check`, `npm run release:scan` and
+`git diff --check`. Runtime/config are unchanged; full check/Vitest/E2E/build/
+audit/review are inherited from the exact reviewed candidate and not repeated.
+`rollover_required: no`; `recommended_next_session_mode: Medium`: the immediate
+next action is private browser input/read-only recipient validation without a
+remote write or unresolved mutation ambiguity. The subsequent known authorized
+registration procedure uses canonical mode `High`.
 
 ## First verified-parent logout and Prompt 04 completion — 2026-09-03
 
