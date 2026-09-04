@@ -3148,3 +3148,22 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   authorizes one second-account login; bootstrap remains outside scope.
 - Runtime/config are unchanged. Only docs checks, release scan and diff check
   are run; full exact-candidate runtime/review evidence is reused.
+
+## Continuation 2026-09-04: Prompt 05 complete
+
+- The owner opened the second verified parent's cabinet after one login.
+  Its single bounded read-only postcondition proves two distinct verified
+  synthetic parents, distinct families, one valid session per owner, unchanged
+  first-parent session totals, no checked owner cross-links, no extra sends and
+  zero administrators/bootstrap. Prompt 05 and its separately authorized welcome
+  delivery are complete; no logout or role mutation is implied.
+- Exact before/after session counts, the protected evidence digest and retained
+  containment are in [active state](../STAGE_13_ACTIVE_STATE.md), section
+  "Second verified-parent login and Prompt 05 completion — 2026-09-04".
+  A normal just-started fast cadence observed during the snapshot does not
+  reopen the successful deployment gate.
+- Full release/review evidence is reused from the exact candidate recorded in
+  active state. Only docs checks, release scan and diff check were run; runtime,
+  migrations, dependencies and config are unchanged. Full manual preview and
+  production still require their later gates, and bootstrap requires a separate
+  explicit owner instruction.
