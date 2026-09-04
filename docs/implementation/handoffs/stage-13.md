@@ -19,6 +19,23 @@
 
 ## Append-only evidence history
 
+### Finite Prompt 06B prepared — 2026-09-04
+
+- Owner requested an executable prompt for the new session, not remote
+  execution in this turn. Created local ignored
+  `out/codex-two-day-preview-prompts-2026-09-03/06B_HIGH_LIVE_ROLE_ISOLATION_CLOSEOUT.md`.
+  On explicit invocation it grants the bounded recipient/P2/two-delivery/
+  child/draft/session/role-CSRF-owner-probe/logout package and all checkpoints.
+- Selected recipient is carried privately in owner-only ignored
+  `tmp/role-isolation-06b-owner/recipient-private.json`, with no password;
+  no raw address in the prompt or tracked docs. No remote writes or sends occurred.
+- Clarified that the original Prompt 06 did not explicitly prescribe the added
+  live sessions or third account. The new requested closeout is finite;
+  document/contract/message/price flows remain separate full-preview work.
+  Current runtime/remote observations are unchanged. Local prompt/docs checks
+  only; no full suite. New execution session mode High, rollover not required.
+  Current state remains [active state](../STAGE_13_ACTIVE_STATE.md).
+
 ### Read-only live role plan and third-account prerequisite — 2026-09-04
 
 - [Plan](../STAGE_13_LIVE_ROLE_ISOLATION_PLAN.md) prepared with exact RBAC/CSRF

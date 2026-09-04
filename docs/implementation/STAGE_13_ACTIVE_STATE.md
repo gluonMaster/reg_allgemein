@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T14:05:27Z
+updated_utc: 2026-09-04T14:21:06Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-readonly-live-role-isolation-plan-complete
-next_gate: phase-4-third-parent-recipient-change-preparation
+last_completed_gate: phase-4-finite-live-closeout-execution-prompt-prepared
+next_gate: phase-4-owner-invocation-of-live-closeout-scope
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-role-check-plan-ready-second-parent-fixtures-required-no-active-sessions
+current_phase: phase-4-finite-live-closeout-prompt-ready-not-executed
 last_atomic_action: owner-normal-admin-logout
 last_atomic_result: success
 next_atomic_action: prepare-exact-third-recipient-allowlist-change-readonly
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: next-is-local-protected-recipient-config-diff-and-readonly-preflight-no-remote-write-or-ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: owner-requested-next-session-execution-prompt-is-ready-known-bounded-target-procedure-and-postconditions-no-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: readonly_role_plan_prepared_owner_proposed_third_account_recipient_if_needed_need_confirmed_no_config_account_or_probe_mutation_performed
+permission_state: owner_requested_execution_prompt_file_only_06b_prepared_new_live_scope_begins_on_explicit_invocation_no_remote_mutation_this_turn
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -213,6 +213,13 @@ flow_verification:
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 role_isolation_plan:
   document: docs/implementation/STAGE_13_LIVE_ROLE_ISOLATION_PLAN.md
+  local_execution_prompt: out/codex-two-day-preview-prompts-2026-09-03/06B_HIGH_LIVE_ROLE_ISOLATION_CLOSEOUT.md
+  private_recipient_reference: tmp/role-isolation-06b-owner/recipient-private.json
+  private_recipient_record: owner_only_git_ignored_contains_owner_selected_address_and_digest_no_password
+  execution_prompt_status: prepared_not_applied_no_live_permissions_consumed
+  prompt_06_interpretation: original_did_not_explicitly_require_extra_live_sessions_or_third_account_this_is_separately_requested_bounded_extension
+  closeout_scope: sealed_bootstrap_plus_role_csrf_child_request_owner_pass_explained_side_effects_and_final_normal_logout
+  later_full_preview_scope: document_contract_message_price_provider_checks_remain_separate_not_a_new_06_closeout_gate
   inventory_utc: 2026-09-04T13:53:59.152Z
   inventory_result: success_readonly
   observed_roles: one_admin_one_parent_both_verified_active
@@ -255,6 +262,7 @@ next_atomic_action:
     - secret_flag_access_change_or_unrelated_d1_r2_write
     - production_cms_or_real_pii_action
 following_route_permission_boundaries:
+  - explicit_application_of_06b_supplies_the_whole_finite_package_scope_then_advance_current_state_without_repeated_permission_requests
   - bootstrap_permission_consumed_successfully_no_remote_replay_or_reset
   - first_admin_login_and_owner_logout_completed_further_live_checks_require_fresh_scoped_logins
   - owner_proposed_third_recipient_account_prepare_exact_config_and_two_delivery_scope_before_execution
@@ -263,6 +271,46 @@ following_route_permission_boundaries:
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Finite live closeout prompt prepared for a new session — 2026-09-04
+
+Result: **success, local prompt/docs only**. The owner requested an executable
+new-session prompt to finish the live role-isolation work and close Prompt 06.
+Prepared `out/codex-two-day-preview-prompts-2026-09-03/06B_HIGH_LIVE_ROLE_ISOLATION_CLOSEOUT.md`
+and linked it from the local prompt package README. No remote operation was
+performed, and Prompt 06 is not being marked complete by prompt preparation.
+
+The prompt explicitly grants its finite package when invoked: one recipient
+allowlist append with exact unchanged-code config delivery/rollback if required;
+one P2 registration, verification and its welcome delivery; normal sessions;
+one synthetic child and individual self-pay draft; the named RBAC/CSRF/ownership
+probes; normal final logouts and per-operation docs checkpoints. It prevents
+repeat permission questions for included actions while preserving private
+credential handoffs, tool approvals and real failure/ambiguity stops.
+
+The owner-selected address is available to the next session through owner-only
+ignored `tmp/role-isolation-06b-owner/recipient-private.json`, with normalized
+hash and no password. The address is absent from the prompt and tracked state.
+No email was sent; no config, account, fixture or session was created remotely.
+
+The previous statement that the original Prompt 06 itself explicitly required
+all additional live work was too strong. The tracked plan now distinguishes the
+original postcondition from this separately requested extension. The closeout
+criterion is finite: existing bootstrap evidence plus role/CSRF/child-request
+ownership PASS, preserved invariants, explained side effects and final logout.
+Other document/contract/message/price/provider flows remain full-preview gates,
+without becoming new blockers for this bounded Prompt 06 closeout.
+
+The next atomic implementation action remains protected recipient-change
+preparation. When the owner applies 06B, its explicit scope governs subsequent
+execution and must be reflected in active state after fresh preflight; this
+file-creation turn does not execute or consume that future permission.
+All remote observations remain those dated above; no new remote claim is made.
+Validation: local prompt references/privacy checks, `npm run docs:check`,
+`npm run release:scan`, `git diff --check`; runtime/full-suite/build/E2E not
+repeated because only documentation and local operator inputs changed.
+`rollover_required: no`; `recommended_next_session_mode: High` for the requested
+new execution session with a bounded target/procedure and no unresolved ambiguity.
 
 ## Read-only role plan complete; second parent required — 2026-09-04
 

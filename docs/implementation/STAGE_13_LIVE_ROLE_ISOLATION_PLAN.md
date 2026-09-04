@@ -200,21 +200,33 @@ booleans/counts и evidence hashes. Raw response body после проверк�
 При mismatch: остановить пакет, сохранить Access, read-only reconciliation и
 checkpoint даже при timeout/ambiguous ответе. Не делать blind retry, SQL repair,
 bootstrap replay, role switch, secret change или автоматический restore. Для
-обычного завершения согласовать normal logout созданных сессий. Подтверждённый
+обычного завершения использовать normal logout созданных сессий в пределах
+execution scope; Prompt 06B явно включает этот logout. Подтверждённый
 authorization bypass/неожиданная запись — P0 и recovery scope; обычный expired
 session/Access login redirect требует нового preflight, сам по себе не Max.
 Нехватка P2/fixtures — известный prerequisite, не новый runtime P0/P1.
 
 ## 7. Что считается выполненным
 
+Уточнение владельца 2026-09-04: исходный Prompt 06 требует подтверждения
+изоляции ролей, но не предписывает буквально дополнительные live-сессии,
+третий аккаунт или все object fixtures. Этот план является отдельно предложенным
+live-дополнением. Подготовлен локальный execution prompt
+`out/codex-two-day-preview-prompts-2026-09-03/06B_HIGH_LIVE_ROLE_ISOLATION_CLOSEOUT.md`;
+его создание не является запуском операций. После прямого применения владельцем
+он разрешает конкретный конечный пакет без повторного запроса scope на каждый шаг.
+
 - Подготовка выполнена: exact routes, результаты, эффект, checkpoints и gaps
   описаны; ни live denial, ни создание третьего аккаунта ещё не заявляются.
 - A закрывает scoped live role/CSRF checks; B закрывает child/request owner
   компонент только после реального выполнения с P2/C2/Q2.
-- Prompt 06 пока partial. Нельзя объявлять его завершённым только по этому
-  плану, созданию P2 или одному успешному `/admin`; remaining live evidence
-  фиксируется по каждому требованию. Полный AUTH-08 контур и full-manual-preview
-  требуют также реальных document/contract/message/price flows.
+- Для запрошенного владельцем live-закрытия Prompt 06 достаточно сохранённого
+  one-shot bootstrap evidence, A/B RBAC/CSRF/child-request owner PASS, объяснённых
+  registration/provider/session effects, завершённых normal sessions и docs
+  checkpoint без unresolved P0/P1. Сам план, P2 или один `/admin` этого не доказывают.
+- Document/contract/message/price owner checks сохраняются для следующих реальных
+  flows полного AUTH-08/`full-manual-preview`. Их нельзя объявлять live-passed,
+  но они не являются дополнительным gate закрытия ограниченного Prompt 06B/06.
 
 Повторно использованы gated tests deployed ancestor: 580 pass/1 expected
 Windows skip, 23 E2E; candidate-specific focused review 8/8. Проверенные
