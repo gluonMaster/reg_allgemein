@@ -13,7 +13,7 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-06b-A09-admin-normal-login
+current_phase: phase-4-P1-cases-complete-awaiting-private-admin-login
 last_atomic_action: logout
 last_atomic_result: success
 next_atomic_action: A09-admin-normal-login
@@ -208,7 +208,7 @@ flow_verification:
   first_admin_login: success_admin_shell_visible_one_new_valid_version_2_session_preserved_state_reconciled
   first_admin_logout: success_matching_admin_session_revoked_logout_linked_audit_one_no_active_sessions
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
-  role_isolation_live: admin_positive_entry_and_P2_child_request_owner_controls_passed_A_B_denials_pending
+  role_isolation_live: P1_admin_denials_CSRF_and_real_C2_Q2_owner_denials_passed_admin_cases_pending
   role_isolation_preparation: complete_exact_rbac_csrf_protocol_and_conditional_cross_owner_fixture_plan
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 role_isolation_plan:
@@ -226,7 +226,7 @@ role_isolation_plan:
   current_nonrevoked_sessions: 0
   children: 1704_total_1_owned_portal_1703_unclaimed_legacy_baseline
   requests_documents_offers_artifacts_threads_price_items: requests_1_other_five_categories_zero
-  rbac_csrf_cases: A01_A14_pending_P2_fixture_and_positive_owner_sequence_completed
+  rbac_csrf_cases: A01_A08_and_B01_B06_passed_A09_A14_pending
   cross_parent_fixture_gap: resolved_one_C2_and_one_Q2_draft_owned_by_P2_positive_controls_passed
   owner_input: additional_controlled_recipient_proposed_in_conversation_if_needed_not_copied_into_tracked_state
   third_parent_need: satisfied_P2_verified_active_parent
@@ -262,6 +262,38 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B P1 phase complete, private A login next — 2026-09-04T16:13:38Z
+
+A01 login, A02/A03 admin denials, A04 shared security page, A05 valid-CSRF
+validation control and A06/A07 missing/wrong-CSRF denials passed. B02 omitted
+foreign C2/Q2 from P1 cabinet; B03 returned 404 REQUEST_NOT_FOUND; B04/B05
+rejected real foreign C2/Q2 writes with failure 404, valid CSRF/Origin and
+canonically valid original payload. Full C2/Q2 fields, version 1, ownership,
+timestamps, actions/assertions and business audit remained unchanged after
+each probe. A08 normal logout passed, checkpoint `9d0253c`. Six sessions are
+revoked (five logout, one historical role change); no active app sessions.
+
+Two local transport observations are resolved: A02 first guard failed before
+any HTTP because URL was unavailable in the browser VM (`d479a09`, corrected
+A02 `63ded0d`); B03 initially expected JSON but its normal SvelteKit page-load
+returned SSR HTML. The original captured 404/error object was verified without
+a second HTTP request, old failed-parser evidence retained (`c22217d`).
+These did not change runtime code or require a new deploy. Remaining JSON
+actions were decoded with the installed official devalue parser.
+
+Only next action: A09 normal login after owner enters A/slot-1 credentials
+privately in the preserved managed browser. Continue A10/A11 parent-route
+403 denials, A12 shared security page, A13 parent POST middleware denial,
+A14 normal logout, then bounded final closeout. Each mutation/touch keeps its
+own reconciliation and docs-only commit. All three users/FamilyIDs, bootstrap
+seals, receipts and provider state remain intact; one C2 and one draft Q2 retained.
+Prompt 06 remains partial until A09–A14 and final reconciliation pass. No full
+manual-preview/production gate change. Checks: per-case HTTP/D1 evidence and
+docs:check/release:scan/git diff --check; full runtime/E2E/build evidence inherited.
+`rollover_required: no`; `recommended_next_session_mode: High`: exact
+remaining scope and postconditions known; no unresolved P0/P1 or ambiguity.
+
 
 ## Prompt 06B p1-a08: successful atomic checkpoint — 2026-09-04T16:12:25Z
 

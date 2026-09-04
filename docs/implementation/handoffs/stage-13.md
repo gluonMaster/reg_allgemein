@@ -3514,3 +3514,35 @@ Each request/touch must retain its own read-only postcondition, active-state
 update, docs:check/release:scan/git diff --check and docs-only commit. C2/Q2
 remain fixtures. Prompt 06 is partial; full manual preview and production gates
 remain blocked. `rollover_required: no`; `recommended_next_session_mode: High`: known authorized operations, no unresolved P0/P1 or ambiguous outcome.
+
+
+## Prompt 06B P1 phase complete, private A login next — 2026-09-04T16:13:38Z
+
+A01 login, A02/A03 admin denials, A04 shared security page, A05 valid-CSRF
+validation control and A06/A07 missing/wrong-CSRF denials passed. B02 omitted
+foreign C2/Q2 from P1 cabinet; B03 returned 404 REQUEST_NOT_FOUND; B04/B05
+rejected real foreign C2/Q2 writes with failure 404, valid CSRF/Origin and
+canonically valid original payload. Full C2/Q2 fields, version 1, ownership,
+timestamps, actions/assertions and business audit remained unchanged after
+each probe. A08 normal logout passed, checkpoint `9d0253c`. Six sessions are
+revoked (five logout, one historical role change); no active app sessions.
+
+Two local transport observations are resolved: A02 first guard failed before
+any HTTP because URL was unavailable in the browser VM (`d479a09`, corrected
+A02 `63ded0d`); B03 initially expected JSON but its normal SvelteKit page-load
+returned SSR HTML. The original captured 404/error object was verified without
+a second HTTP request, old failed-parser evidence retained (`c22217d`).
+These did not change runtime code or require a new deploy. Remaining JSON
+actions were decoded with the installed official devalue parser.
+
+Only next action: A09 normal login after owner enters A/slot-1 credentials
+privately in the preserved managed browser. Continue A10/A11 parent-route
+403 denials, A12 shared security page, A13 parent POST middleware denial,
+A14 normal logout, then bounded final closeout. Each mutation/touch keeps its
+own reconciliation and docs-only commit. All three users/FamilyIDs, bootstrap
+seals, receipts and provider state remain intact; one C2 and one draft Q2 retained.
+Prompt 06 remains partial until A09–A14 and final reconciliation pass. No full
+manual-preview/production gate change. Checks: per-case HTTP/D1 evidence and
+docs:check/release:scan/git diff --check; full runtime/E2E/build evidence inherited.
+`rollover_required: no`; `recommended_next_session_mode: High`: exact
+remaining scope and postconditions known; no unresolved P0/P1 or ambiguity.
