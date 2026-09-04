@@ -3434,3 +3434,34 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
 - After-mutation checkpoint checks: `docs:check`, `release:scan`, `git diff --check`
   only. Existing scoped GO/test evidence is inherited because runtime, tests,
   migrations, dependencies and config did not change. No new P0/P1 was found.
+
+
+## Prompt 06B bounded execution: allowlist complete, private Access handoff — 2026-09-04T14:50:07Z
+
+- Owner invoked the finite live role/CSRF/child-request isolation closeout scope.
+  Original Prompt 06 did not itself mandate a third account; 06B supplies this
+  extension and all listed session/fixture/verification/welcome permissions.
+- Fresh read-only preflight preserved bootstrap consumed 1/1/1 with six seals,
+  A/P1 identities/roles and historical revocations. The selected third recipient
+  had no current/pending collision or legacy email match.
+- One settings PATCH was rejected HTTP 400; independent controls and D1 proved
+  no change, checkpoint `1e4c831`. No blind retry followed. The authorized
+  standard Wrangler fallback used the same detached code/build, passed strict
+  dry-run byte equality, then delivered only one recipient value change.
+  Immediate code/settings/Access/D1/session/provider postconditions passed and
+  were committed in `2010882`. Protected old records are immutable.
+- Live registration/probes have not begun: managed browser tab 0 is at Cloudflare
+  Access, awaiting private owner login. Preserve the tab and resume P2 registration
+  after Access; then follow 06B checkpoints through verification/welcome, C2/Q2,
+  A/B probes and normal logout. No new portal sessions or deliveries exist yet.
+- Prompt 06 remains partial. Current exact target/version, permissions, evidence
+  references and one next action are solely in [active state](../STAGE_13_ACTIVE_STATE.md).
+  No production/readiness gate changed; full manual preview is not complete.
+- Executed helper syntax, exact config/build/bundle comparisons, strict dry-run,
+  bounded live pre/postconditions and docs:check/release:scan/git diff --check.
+  Reused pinned 580-pass/1-skip, 23 E2E and reviewer 8/8; no runtime change warranted
+  full-suite repetition. No unresolved P0/P1 or ambiguous mutation.
+- Containment: Access remains enabled; use new protected 06B evidence and current
+  config, never replay bootstrap or one-attempt config helpers, never repair D1
+  directly. `rollover_required: no`; `recommended_next_session_mode: High`
+  because the remaining finite execution scope and postconditions are known.

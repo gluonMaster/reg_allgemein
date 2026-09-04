@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T14:46:41Z
+updated_utc: 2026-09-04T14:50:07Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-4-exact-recipient-config-change
-next_gate: phase-4-P2-registration
+next_gate: phase-4-owner-private-Access-login-then-P2-registration
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-live-closeout-P2-registration-ready
+current_phase: phase-4-P2-registration-awaiting-private-Access-login
 last_atomic_action: same-reviewed-bundle-one-recipient-config-deploy
 last_atomic_result: success
-next_atomic_action: normal-register-P2-once-owner-private-password
+next_atomic_action: owner-private-Access-login-in-preserved-managed-tab
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: finite_preview_package_target_procedure_postconditions_and_rollback_known_no_unresolved_ambiguity
+mode_reason_plain: finite_package_authorized_known_target_no_ambiguity_private_Access_and_password_handoff_required
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -198,7 +198,7 @@ flow_verification:
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
   login_logout: historical_parent_login_logout_passed_remaining_first_session_now_revoked_by_bootstrap
-  second_registration: success_one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
+  second_registration: success_managed_tab_reaches_exact_preview_registration_form_without_portal_POST
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
@@ -238,18 +238,18 @@ role_isolation_plan:
   authenticated_probe_executed: false
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
 next_atomic_action:
-  id: normal-register-P2-once-owner-private-password
+  id: owner-private-Access-login-in-preserved-managed-tab
   permission: explicit_owner_invocation_of_06b_entire_finite_package_no_repeat_permission_needed
   target: exact_Access_protected_preview_fingerprints_recorded_above
-  mutation: one_normal_P2_registration_and_linked_verification_delivery
+  mutation: owner_private_Cloudflare_Access_login_no_portal_registration_yet
   preconditions:
     - exact_target_code_settings_and_baseline_reconciled_in_protected_06b_evidence
     - preserve_A_P1_bootstrap_receipts_and_historical_revocations
-    - owner_enters_password_privately_and_completes_required_CAPTCHA_in_managed_browser
+    - owner_completes_Access_privately_then_registration_password_and_CAPTCHA_when_form_ready
   postcondition:
     - one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
     - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_mutation
-  success_transition: owner_private_verification_then_terminal_welcome
+  success_transition: normal_P2_registration_once_then_terminal_verification_delivery_and_checkpoint
   failed_or_ambiguous_transition: reconcile_checkpoint_preserve_Access_no_blind_retry
   forbidden_in_this_action:
     - bootstrap_replay_control_reset_direct_SQL_role_session_or_business_repair
@@ -261,6 +261,57 @@ following_route_permission_boundaries:
   - A_P1_P2_normal_sessions_and_exact_A_B_probes_each_with_checkpoint_then_normal_logout
   - remaining_full_manual_preview_provider_document_contract_message_price_flows_are_separate
 ```
+
+## Prompt 06B private browser handoff — 2026-09-04T14:50:07Z
+
+Prompt 06 remains **partial**. The whole finite 06B scope is authorized; no new
+permission is requested. Same-bundle allowlist delivery succeeded and its required
+postcondition/docs-only checkpoint is commit `2010882`. Initial PATCH rejection
+was separately reconciled as no change and checkpointed in `1e4c831`. No blind
+retry, rollback, bootstrap replay or runtime candidate change occurred.
+
+The managed Playwright browser context has one preserved tab, index 0. Navigation
+to the exact preview registration route reached Cloudflare Access. Inspection
+confirmed Access handoff pending, registration form absent. No portal credentials,
+registration POST, verification, login, logout, C2/Q2 fixture or authenticated
+probe has been attempted. The owner must complete Access privately in this tab
+and report readiness; passwords/OTP/verification links must not enter chat or
+evidence. Browser fetch/request transports are available; live authenticated
+transport/session/CSRF proof must still be established with the first normal
+owner-created session before probes. Keep this context; do not switch profiles
+or export cookies. Owner Access authentication is a prerequisite, not a new
+business permission or a candidate defect.
+
+| Closeout requirement | Evidence/status at handoff |
+| --- | --- |
+| Bootstrap one-shot and seals | PASS inherited chain plus fresh consumed 1/1/1, six seals |
+| A/P1 preserved | PASS verified active admin/parent, versions 2/1; four old sessions revoked |
+| One recipient append, same code/settings | PASS live unchanged bundle, three recipients, same other settings, Access enforced |
+| P2 and its verification/welcome | NOT ATTEMPTED, private Access login required first |
+| C2/Q2 and owner positive control | NOT ATTEMPTED |
+| Live role, CSRF, existing-object ownership denials | NOT ATTEMPTED |
+| New session logout | No new portal sessions created yet |
+
+Continue after owner readiness from P2 registration, not bootstrap/config setup.
+Do not rerun historical helpers or the one-attempt PATCH/deploy helpers. Fresh
+controls, if stale, use `node tmp/role-06b-ops.cjs control <unique-label>` and
+`node tmp/role-06b-ops.cjs snapshot <unique-label>`; the old preflight mode
+intentionally requires the before-config baseline and must not be reused after
+this change. Current protected normalized config is
+`tmp/role-isolation-06b-owner/execution/same-bundle-config-normalized.json`.
+The resumed object snapshots use the owner index, avoiding a repeated full
+legacy-child scan. Any new remote operation still needs its individual
+reconciliation and docs-only commit.
+
+Validation for the boundary: helper syntax, docs:check, release:scan and
+git diff --check. Full check/Vitest/E2E/build and independent review are inherited
+from the pinned unchanged gates; strict config dry-run and live byte equality
+were run for this config delivery. No unresolved P0/P1 or ambiguous remote
+mutation. Full manual preview and production remain blocked.
+`rollover_required: no`; `recommended_next_session_mode: High`: continue
+the already authorized package after private owner input with known target,
+postconditions and containment.
+
 
 ## Prompt 06B allowlist mutation checkpoint — 2026-09-04T14:46:41Z
 
