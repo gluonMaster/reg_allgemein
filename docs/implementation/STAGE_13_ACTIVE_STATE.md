@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T12:12:34Z
+updated_utc: 2026-09-04T12:25:36Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-independent-scoped-bootstrap-review-go-eight-tests-passed
-next_gate: phase-4-exact-target-cli-bootstrap-continuation-preparation
+last_completed_gate: phase-4-exact-target-cli-bootstrap-readonly-preflight-passed
+next_gate: phase-4-one-official-exact-preview-cli-bootstrap
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-reviewed-cli-bootstrap-ready-for-continuation-preparation-preview-unchanged
-last_atomic_action: independent-scoped-bootstrap-review
+current_phase: phase-4-cli-bootstrap-prepared-fresh-eligibility-passed-no-mutation
+last_atomic_action: prepare-exact-preview-cli-bootstrap-continuation
 last_atomic_result: success
-next_atomic_action: prepare-exact-preview-cli-bootstrap-continuation
+next_atomic_action: execute-exact-preview-cli-bootstrap-once
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: next-action-is-readonly-bootstrap-scope-target-eligibility-and-session-preparation-without-remote-write
+recommended_next_session_mode: High
+mode_reason_plain: next-is-one-known-cli-bootstrap-with-exact-target-postcondition-and-time-travel-containment-no-unresolved-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_requested_scoped_validation_of_exact_local_fix_no_remote_mutation_authorized_by_this_review
+permission_state: current_request_readonly_preparation_completed_prior_prompt_06_single_bootstrap_permission_unconsumed_no_execution_in_this_turn
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -42,7 +42,7 @@ review:
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
   local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
-  deployed_blocker: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_still_present
+  deployed_source_guard: baseline_predicate_unchanged_not_used_by_reviewed_out_of_band_cli
   verdict_scope: independent_go_baseline_full_evidence_plus_focused_changed_surface_gate_no_remote_success_claim
   validation_policy: owner_requested_candidate_specific_scoped_gate_2026_09_04
   mandatory_reviewer_tests: 8_tests_3_files_one_run
@@ -75,6 +75,8 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
+  latest_readonly_control_utc: 2026-09-04T12:25:29Z
+  latest_anonymous_access_check: 2026_09_04T12_25_30Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -88,11 +90,15 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T11:36:53Z
-    postcondition_rows_read: 58
-    latest_read_kind: targeted_readonly_eligibility_diagnostic
-    preceding_preflight_rows_read: 944
+    latest_bounded_postcondition_utc: 2026-09-04T12:25:36Z
+    postcondition_rows_read: 970
+    latest_read_kind: seven_selects_exact_ledger_corrected_guard_control_sessions_provider_counts
+    preceding_preflight_rows_read: 58
     postcondition_rows_written: 0
+    postcondition_changes: 0
+    postcondition_changed_db: false
+    time_travel_available: true
+    time_travel_observed_utc: 2026-09-04T12:25:33Z
   scheduled:
     fast: running_at_bounded_snapshot_age_under_two_seconds_no_recent_failures
     maintenance: succeeded_fresh
@@ -127,7 +133,9 @@ preview:
     owned_children_per_parent: 0
     bootstrap_control: available
     bootstrap_actions_assertions_audit: 0_0_0
-    canonical_bootstrap_eligible_accounts: 0
+    canonical_bootstrap_eligible_accounts: 2
+    eligibility_guard_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
+    session_drift_since_11_36_53Z_preflight: none
     registration_finalization_commits_per_account: 1
     registration_finalization_result: portal_allocated_assertion_passed
     other_retained_state_guard_branches_nonzero: 0
@@ -147,43 +155,154 @@ flow_verification:
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
   prompt_05: historically_complete_at_11_23_43Z_second_session_now_logged_out
-  prompt_06: bootstrap_not_attempted_deployed_eligibility_blocker_remains
+  prompt_06: bootstrap_not_attempted_reviewed_cli_eligibility_passed_2026_09_04T12_25_36Z
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
   role_isolation_live: not_attempted_authenticated_get_touches_session_and_login_requires_separate_scope
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: prepare-exact-preview-cli-bootstrap-continuation
-  permission: preparation_only_review_does_not_expand_unconsumed_prompt_06_bootstrap_permission
+  id: execute-exact-preview-cli-bootstrap-once
+  permission: continuation_only_within_prior_unconsumed_prompt_06_single_bootstrap_scope_current_readonly_request_did_not_execute_it
   target: reviewed_cli_candidate_438a51399ac5f58b428b624c52ca2cbbc059ae9c_preview_d1_fingerprint_ccdeb22bb2a1
-  mutation: none_remote
+  mutation: one_official_admin_bootstrap_cli_attempt_first_verified_synthetic_slot_only
   preconditions:
     - reviewed_cli_source_and_dependencies_unchanged_or_runtime_identical_docs_only_descendant
-    - reconcile_existing_unconsumed_prompt_06_permission_with_exact_cli_scope_no_new_permission_implied
-    - fresh_readonly_exact_config_app_env_account_d1_schema_and_control_preflight_in_continuation
-    - fresh_eligibility_of_first_synthetic_parent_under_reviewed_guard_and_second_parent_identity_preserved
-    - fresh_readonly_session_counts_preserve_observed_second_parent_logout_no_login_touch_or_repair
-    - recovery_containment_and_single_attempt_postcondition_checkpoint_defined_before_any_later_write
+    - use_repository_root_cli_not_old_deploy_exact_0db3884_checkout_or_old_bootstrap_roles_wrapper
+    - bounded_readonly_recheck_immediately_before_attempt_if_continuation_is_later_no_blind_reuse_of_snapshot
+    - exact_config_app_env_account_d1_26_migrations_control_available_zero_admins_and_target_eligibility_still_match
+    - identities_and_confirmation_resolved_in_memory_using_protected_slots_and_canonical_helpers_no_raw_arguments_logged
+    - sessions_preserved_before_attempt_second_parent_logout_does_not_require_login_or_repair
+    - time_travel_recovery_available_access_and_provider_containment_preserved
   postcondition:
-    - exact_preview_cli_bootstrap_is_concrete_and_scope_target_eligibility_sessions_and_containment_reconciled
-    - no_worker_deploy_required_for_out_of_band_cli_operation_no_remote_success_claim
-  success_transition: separately_scoped_single_official_cli_bootstrap_attempt_only_after_all_fresh_preconditions
-  failed_or_ambiguous_transition: record_exact_missing_precondition_and_stop_without_write_or_blind_retry
+    - one_admin_slot_1_and_one_parent_slot_2_both_active_verified
+    - first_session_version_2_all_first_sessions_revoked_one_role_change_second_version_1_and_sessions_unchanged
+    - exactly_one_linked_action_assertion_audit_control_chain_and_control_consumed_six_seal_triggers_retained
+    - registration_receipts_provider_deliveries_other_workflow_counts_and_orphan_zero_unchanged
+    - immediate_bounded_readonly_reconciliation_after_any_attempt_including_failed_or_ambiguous_result
+    - active_state_docs_checks_and_small_docs_only_commit_before_any_next_remote_mutation
+  success_transition: checkpoint_only_live_admin_login_and_other_session_writes_require_separate_scope
+  failed_or_ambiguous_transition: no_retry_no_reset_no_direct_sql_preserve_access_reconcile_and_checkpoint_containment_or_blocker
   forbidden_in_this_action:
     - automatic_full_vitest_e2e_release_verify_or_nested_review
     - runtime_or_test_changes_during_independent_review
-    - remote_bootstrap_deploy_rollback_or_migration
+    - repeated_bootstrap_remote_deploy_rollback_or_migration
     - login_logout_session_repair_or_authenticated_live_preview_probe
     - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
     - provider_send_or_registration_verification_replay
     - secret_flag_access_change_or_unrelated_d1_r2_write
     - production_cms_or_real_pii_action
-following_route_requires_separate_permissions:
-  - actual_remote_bootstrap_continuation_with_exact_reviewed_cli_and_fresh_preconditions
+following_route_permission_boundaries:
+  - first_official_bootstrap_uses_only_prior_unconsumed_prompt_06_permission_after_fresh_preconditions
   - any_worker_deploy_only_if_required_by_the_next_execution_surface
   - admin_login_parent_login_and_live_rbac_csrf_owner_denial_session_writes
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## Exact-target CLI bootstrap prepared; fresh read-only preflight — 2026-09-04
+
+Result at `2026-09-04T12:25:36Z`: **success, prepared only**. The owner requested
+exact-target CLI preparation and fresh read-only eligibility/session preflight.
+Bootstrap invocations, remote mutations, provider sends and authenticated
+preview requests are all **0**. Prompt 06's earlier single-attempt permission
+remains unconsumed; this preparatory request was not treated as an execution.
+
+Clean HEAD `ad18c84205b2f95b0777484e012653a9533e6259` is a docs-only descendant
+of independently reviewed `438a51399ac5f58b428b624c52ca2cbbc059ae9c`. Source,
+dependency lock and preview config match their checked records. The official
+configuration/argument helpers accepted `APP_ENV=preview`, the single deployed
+D1 binding, exact protected UUID and its generated confirmation. Fingerprints:
+account `5dbd04a4763a`, Worker `242c1796e930`, origin host `88ed782ba25a`,
+D1 `ccdeb22bb2a1`. Full IDs, identities and confirmation were not printed.
+
+Live Worker version fingerprint `ad3134edb662` remains the sole version at 100%
+traffic with the exact baseline annotation and unchanged vars/bindings. Its D1
+binding matches the prepared CLI target. Anonymous root returned the expected
+Cloudflare Access `302`; no cookies or service-auth headers were sent. Access
+policy internals and authenticated application routes were not newly exercised.
+Time Travel returned an available bookmark at `12:25:33Z`; the bookmark and
+exact recovery resource IDs are in protected ignored evidence only. No restore
+was attempted and no new recovery permission is implied.
+
+Seven SELECT statements finished at `12:25:36Z`: **970 rows read, 0 rows written,
+0 changes, changed_db=false for every statement**. They confirmed:
+
+- Exact migrations `0001`–`0026`, pending 0; no schema change.
+- Exactly two active, unblocked, verified parents and zero admins. Registration
+  order matches both protected recipient slots. Both pass all 31 predicates of
+  the reviewed guard and each retains one successful `portal_allocated` receipt,
+  with zero `exact_email` receipts. The eligibility change from the preceding
+  diagnostic is due to using the reviewed CLI predicate, not a remote data write.
+- Bootstrap control is `available`, consumed fields empty; actions/assertions/
+  successful bootstrap audits are `0/0/0`; all six immutable seal triggers exist.
+- First parent: session version 1; sessions total/nonrevoked/valid `2/1/1`,
+  one historical logout and no role-change revocation. Second parent: version 1,
+  `1/0/0`, one historical logout and no role-change revocation. Neither aggregate
+  changed since the prior preflight. These are SQL validity checks, not new JWT
+  authentication. The second parent's logout is preserved and does not block
+  promotion of the first parent.
+- Exactly two verification and two welcome deliveries remain terminal sent,
+  one attempt/receipt per delivery, zero errors. Privacy acknowledgements and
+  verification commits are 2 each; used/unused tokens `2/0`; Telegram outbox,
+  Telegram attempts, storage intents and orphan sessions are 0.
+
+Prepared official invocation from the **repository root**:
+
+```powershell
+npm run admin:bootstrap -- --environment preview --database-id <PINNED_PREVIEW_D1_UUID> --user-id <VERIFIED_SLOT_1_USER_ID> --reason "Owner-authorized synthetic preview first-account admin bootstrap" --confirmation <CANONICAL_EXACT_TARGET_CONFIRMATION> --config wrangler.preview.toml --remote
+```
+
+The placeholders intentionally keep full IDs out of tracked documents. The
+preflight resolved their actual values in memory, passed the real CLI option/
+target helpers and rendered the six controlled writes plus terminal SELECT
+without executing them. Slot 1 is the sole target; slot 2 must remain parent.
+`expectedBootstrapConfirmation('preview', pinnedDatabaseId)` supplies the exact
+confirmation. Preserve `WRANGLER_WRITE_LOGS=false`, `WRANGLER_LOG_SANITIZE=true`
+and `WRANGLER_SEND_METRICS=false`; raw arguments/results must not be logged.
+Resolve identity and arguments afresh in memory when continuing. No Worker
+deployment is required: this CLI loads the corrected statement builder locally.
+
+Do not run the older `tmp/bootstrap-roles-operation.cjs`: it is pinned to
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3` and expects the superseded second-parent
+session state. It was neither changed nor executed. The new ignored helper
+`tmp/bootstrap-cli-readonly-preflight.cjs` has no write mode, guards its commands
+as read-only and refuses to overwrite its existing attempt/evidence. Its syntax
+check passed; the successful live run above is its actual validation. A later
+continuation must use new protected evidence for its fresh bounded recheck.
+
+Protected current-user-only evidence under
+`tmp/bootstrap-cli-preflight-20260904-owner/`:
+
+| Evidence | SHA-256 |
+| --- | --- |
+| `preflight-safe.json` | `4a7310332696c017ff46c69474b05d2289bf2bd9fa2fd00775f98da28fb5d3bc` |
+| `recovery-private.json` | `2e271473f1a41986fed42899055e6370975d95bc59f7246d7f1466399b831bfd` |
+| Read-only helper, in parent `tmp/` | `25328cabe2ff0e7e69e073ea09d1bac8b607b673c1e64695914b8eac6897f640` |
+
+**One next atomic action:** one official exact-preview CLI bootstrap attempt
+within the existing unconsumed Prompt 06 scope. Recheck the bounded preconditions
+immediately before any later attempt; this timestamped snapshot is not a promise
+that concurrent state cannot change. Expected result: slot 1 admin/version 2,
+all its sessions invalid (one `role_change`, one prior logout), slot 2 unchanged
+parent/version 1 with its existing logout, exactly one action/assertion/audit/
+consumed-control chain, receipts and provider counts unchanged. Regardless of
+CLI exit status, perform one immediate bounded read-only reconciliation and
+the mandatory active-state/docs-only commit before any further remote mutation.
+
+On mismatch/ambiguity: preserve Access/provider containment, do not retry the
+bootstrap, reset control, edit roles directly or repair sessions. Time Travel
+provides a possible separately authorized recovery route; there is no dedicated
+last-admin recovery CLI. Do not run a restore or assume live admin login/RBAC
+has passed. Those session writes require their own scope. No new P0/P1 was found.
+The independent GO and inherited test evidence remain valid; full preview and
+production remain blocked on their actual remaining flows.
+
+For this local-helper/docs checkpoint, checks are the helper syntax check,
+read-only preflight, `npm run docs:check`, `npm run release:scan` and
+`git diff --check`. Runtime tests, E2E, check/build and dependency audit are not
+repeated: application, tests, migrations, dependencies and config are unchanged.
+`rollover_required: no`; `recommended_next_session_mode: High`: next is the
+known single bootstrap with exact target, postcondition and recovery/containment,
+without unresolved write ambiguity.
 
 ## Independent scoped bootstrap review GO — 2026-09-04
 

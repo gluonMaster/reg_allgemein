@@ -3261,3 +3261,36 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   `recommended_next_session_mode: Medium`, because next is read-only preparation.
 - Docs-only checkpoint validation: `docs:check`, `release:scan`, `git diff --check`;
   no runtime rerun after the checkpoint commit.
+
+## Continuation 2026-09-04: exact-target CLI bootstrap preparation passed
+
+- At `2026-09-04T12:25:36Z`, owner-requested read-only preparation succeeded.
+  Clean `ad18c84205b2f95b0777484e012653a9533e6259` retains exact reviewed CLI
+  source `438a51399ac5f58b428b624c52ca2cbbc059ae9c`; config and target match
+  protected evidence. Worker version/bindings are unchanged; anonymous Access
+  redirect and Time Travel availability were freshly confirmed.
+- Seven SELECTs read 970 rows, wrote 0, with 0 changes and changed_db=false.
+  Ledger is exactly through `0026`; both synthetic parents are verified, active
+  and eligible under the corrected guard. Admins 0; control available;
+  actions/assertions/audits `0/0/0`; six seal triggers present. Registration
+  receipts and provider counts are intact. Session aggregates remain first
+  `2/1/1`, second `1/0/0`; the second parent's existing logout was not repaired.
+- Official CLI options/target/confirmation helpers validated the actual arguments
+  in memory; all seven controlled statements were rendered but not executed.
+  The old baseline-pinned wrapper was not used. New read-only helper syntax and
+  actual preflight passed; no write mode exists. No Worker deployment is needed.
+- Protected evidence: `tmp/bootstrap-cli-preflight-20260904-owner/preflight-safe.json`,
+  SHA-256 `4a7310332696c017ff46c69474b05d2289bf2bd9fa2fd00775f98da28fb5d3bc`.
+  The exact command mapping, private recovery evidence, expected role/session/
+  audit/control postcondition and no-retry containment are in
+  [active state](../STAGE_13_ACTIVE_STATE.md#exact-target-cli-bootstrap-prepared-fresh-read-only-preflight-2026-09-04).
+- Bootstrap/remote mutation/provider send/authenticated preview invocations: 0.
+  One next action is the single official exact-preview bootstrap under Prompt
+  06's unconsumed scope, after a fresh bounded recheck when continued. It must
+  checkpoint immediately after its read-only reconciliation; no live session
+  recovery or additional writes are implied. Full preview/production remain blocked.
+- Checkpoint validation: helper syntax, fresh read-only preflight, docs checks,
+  release scan and diff check. Runtime/tests/config/dependencies are unchanged,
+  so inherited review and test gates are reused. `rollover_required: no`;
+  `recommended_next_session_mode: High`: known target, procedure, postcondition
+  and Time Travel containment, with no unresolved mutation ambiguity.
