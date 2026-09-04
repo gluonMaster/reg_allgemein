@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T12:25:36Z
+updated_utc: 2026-09-04T12:40:39Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-exact-target-cli-bootstrap-readonly-preflight-passed
-next_gate: phase-4-one-official-exact-preview-cli-bootstrap
+last_completed_gate: phase-4-one-official-exact-preview-cli-bootstrap-success-reconciled
+next_gate: phase-4-first-admin-login-under-separate-session-scope
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-cli-bootstrap-prepared-fresh-eligibility-passed-no-mutation
-last_atomic_action: prepare-exact-preview-cli-bootstrap-continuation
+current_phase: phase-4-bootstrap-consumed-one-admin-one-parent-live-role-checks-pending
+last_atomic_action: execute-exact-preview-cli-bootstrap-once
 last_atomic_result: success
-next_atomic_action: execute-exact-preview-cli-bootstrap-once
+next_atomic_action: first-admin-login-after-explicit-session-scope
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: next-is-one-known-cli-bootstrap-with-exact-target-postcondition-and-time-travel-containment-no-unresolved-ambiguity
+mode_reason_plain: next-is-standard-first-admin-login-with-known-target-and-postcondition-separate-session-write-scope-required-no-ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: current_request_readonly_preparation_completed_prior_prompt_06_single_bootstrap_permission_unconsumed_no_execution_in_this_turn
+permission_state: owner_requested_single_official_bootstrap_executed_once_and_consumed_no_login_or_additional_session_write_authorized
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,8 +75,8 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T12:25:29Z
-  latest_anonymous_access_check: 2026_09_04T12_25_30Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
+  latest_readonly_control_utc: 2026-09-04T12:40:25Z
+  latest_anonymous_access_check: 2026_09_04T12_40_25Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -90,15 +90,31 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T12:25:36Z
-    postcondition_rows_read: 970
-    latest_read_kind: seven_selects_exact_ledger_corrected_guard_control_sessions_provider_counts
-    preceding_preflight_rows_read: 58
+    latest_bounded_postcondition_utc: 2026-09-04T12:40:39Z
+    postcondition_rows_read: 979
+    latest_read_kind: nine_selects_bootstrap_roles_sessions_control_linked_audit_receipt_and_provider_reconciliation
+    preceding_preflight_rows_read: 972
     postcondition_rows_written: 0
     postcondition_changes: 0
     postcondition_changed_db: false
     time_travel_available: true
-    time_travel_observed_utc: 2026-09-04T12:25:33Z
+    time_travel_observed_utc: 2026-09-04T12:40:28Z
+  bootstrap:
+    result: success
+    cli_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
+    cli_invocations: 1
+    cli_completed_utc: 2026-09-04T12:40:37Z
+    cli_exit_code: 0
+    cli_reported_status: consumed
+    database_postcondition: success_reconciled_2026_09_04T12_40_39Z
+    target_slot: 1
+    preserved_parent_slot: 2
+    request_fingerprint: e7c28770458d
+    receipt_preservation: exact_before_after_equality
+    linked_action_assertion_audit_control_chains: 1
+    immutable_seal_triggers: 6
+    permission_consumed: true
+    retry_forbidden: true
   scheduled:
     fast: running_at_bounded_snapshot_age_under_two_seconds_no_recent_failures
     maintenance: succeeded_fresh
@@ -108,9 +124,9 @@ preview:
     health: head_204_empty_no_store_noindex
   synthetic_state:
     users: 2
-    parents: 2
+    parents: 1
     verified_users: 2
-    admins: 0
+    admins: 1
     privacy_acknowledgements: 2
     unused_verification_tokens: 0
     used_verification_tokens: 2
@@ -119,23 +135,28 @@ preview:
     verification_deliveries_sent_with_receipt: 2
     welcome_deliveries_sent_with_receipt: 2
     auth_sessions: 3
-    nonrevoked_auth_sessions: 1
+    nonrevoked_auth_sessions: 0
     logged_out_auth_sessions: 2
+    role_change_revoked_auth_sessions: 1
     distinct_identities: 2
     distinct_assigned_families: 2
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 2
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_parent_sessions_total_nonrevoked_valid: 2_1_1
+    first_admin_sessions_total_nonrevoked_valid: 2_0_0
+    first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 1_0_0
+    second_parent_session_version: 1
     second_parent_session_drift: logout_observed_after_prompt_05_not_performed_by_this_session
     owned_children_per_parent: 0
-    bootstrap_control: available
-    bootstrap_actions_assertions_audit: 0_0_0
-    canonical_bootstrap_eligible_accounts: 2
+    bootstrap_control: consumed
+    bootstrap_actions_assertions_audit: 1_1_1
+    canonical_bootstrap_eligible_accounts: 0
+    canonical_bootstrap_ineligibility_reason: control_consumed_and_active_admin_exists
+    accounts_without_retained_parent_state: 2
     eligibility_guard_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-    session_drift_since_11_36_53Z_preflight: none
+    bootstrap_session_change: only_first_accounts_previously_nonrevoked_session_revoked_with_role_change
     registration_finalization_commits_per_account: 1
     registration_finalization_result: portal_allocated_assertion_passed
     other_retained_state_guard_branches_nonzero: 0
@@ -149,54 +170,164 @@ flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
   email_verification: success_one_used_token_one_commit_one_family_assignment_one_terminal_welcome_delivery
-  login_logout: success_current_session_revoked_one_owner_created_parallel_session_remains_active
+  login_logout: historical_parent_login_logout_passed_remaining_first_session_now_revoked_by_bootstrap
   second_registration: success_one_added_unverified_parent_privacy_token_and_terminal_verification_delivery
   second_recipient_membership: owner_screenshot_email_exact_sha256_matches_protected_allowlist_slot_2
   second_verification_welcome: success_second_used_token_commit_distinct_family_and_single_terminal_welcome
   second_login: success_one_new_second_parent_session_cabinet_open_first_parent_sessions_unchanged
   prompt_05: historically_complete_at_11_23_43Z_second_session_now_logged_out
-  prompt_06: bootstrap_not_attempted_reviewed_cli_eligibility_passed_2026_09_04T12_25_36Z
+  prompt_06: partial_bootstrap_role_session_audit_control_complete_live_authenticated_role_isolation_pending_separate_scope
+  first_admin_bootstrap: success_one_official_cli_attempt_and_bounded_remote_postcondition
   local_auth09_remediation: passed_five_regressions_plus_direct_consumers_and_affected_browser_scenarios
   role_isolation_live: not_attempted_authenticated_get_touches_session_and_login_requires_separate_scope
   rbac_csrf_owner_denial: inherited_exact_candidate_unit_and_e2e_evidence_no_new_live_claim
 next_atomic_action:
-  id: execute-exact-preview-cli-bootstrap-once
-  permission: continuation_only_within_prior_unconsumed_prompt_06_single_bootstrap_scope_current_readonly_request_did_not_execute_it
-  target: reviewed_cli_candidate_438a51399ac5f58b428b624c52ca2cbbc059ae9c_preview_d1_fingerprint_ccdeb22bb2a1
-  mutation: one_official_admin_bootstrap_cli_attempt_first_verified_synthetic_slot_only
+  id: first-admin-login-after-explicit-session-scope
+  permission: requires_explicit_owner_scope_for_login_and_linked_session_touches_bootstrap_only_permission_is_consumed
+  target: first_verified_synthetic_admin_slot_1_on_existing_access_protected_preview_origin_fingerprint_88ed782ba25a
+  mutation: normal_admin_login_session_creation_and_linked_authentication_touches_only_if_authorized
   preconditions:
-    - reviewed_cli_source_and_dependencies_unchanged_or_runtime_identical_docs_only_descendant
-    - use_repository_root_cli_not_old_deploy_exact_0db3884_checkout_or_old_bootstrap_roles_wrapper
-    - bounded_readonly_recheck_immediately_before_attempt_if_continuation_is_later_no_blind_reuse_of_snapshot
-    - exact_config_app_env_account_d1_26_migrations_control_available_zero_admins_and_target_eligibility_still_match
-    - identities_and_confirmation_resolved_in_memory_using_protected_slots_and_canonical_helpers_no_raw_arguments_logged
-    - sessions_preserved_before_attempt_second_parent_logout_does_not_require_login_or_repair
-    - time_travel_recovery_available_access_and_provider_containment_preserved
+    - explicit_scope_for_first_admin_login_and_its_linked_session_writes_obtained_before_execution
+    - exact_access_protected_preview_origin_and_first_slot_identity_reconfirmed_without_logging_credentials
+    - bootstrap_checkpoint_committed_control_consumed_one_admin_one_parent_no_unresolved_mutation_ambiguity
+    - owner_uses_private_credentials_no_password_token_cookie_or_identity_in_evidence
+    - old_revoked_sessions_are_not_repaired_or_reused_second_parent_remains_unchanged
   postcondition:
-    - one_admin_slot_1_and_one_parent_slot_2_both_active_verified
-    - first_session_version_2_all_first_sessions_revoked_one_role_change_second_version_1_and_sessions_unchanged
-    - exactly_one_linked_action_assertion_audit_control_chain_and_control_consumed_six_seal_triggers_retained
-    - registration_receipts_provider_deliveries_other_workflow_counts_and_orphan_zero_unchanged
-    - immediate_bounded_readonly_reconciliation_after_any_attempt_including_failed_or_ambiguous_result
-    - active_state_docs_checks_and_small_docs_only_commit_before_any_next_remote_mutation
-  success_transition: checkpoint_only_live_admin_login_and_other_session_writes_require_separate_scope
-  failed_or_ambiguous_transition: no_retry_no_reset_no_direct_sql_preserve_access_reconcile_and_checkpoint_containment_or_blocker
+    - first_admin_has_one_new_normal_session_at_user_session_version_2_and_reaches_admin_shell
+    - historical_revocations_second_parent_sessions_bootstrap_control_audit_and_provider_counts_unchanged
+    - bounded_readonly_reconciliation_and_docs_only_checkpoint_before_next_remote_mutation
+  success_transition: checkpoint_then_scope_remaining_parent_login_and_live_role_owner_csrf_checks_separately
+  failed_or_ambiguous_transition: preserve_access_no_session_repair_or_bootstrap_retry_reconcile_and_checkpoint
   forbidden_in_this_action:
     - automatic_full_vitest_e2e_release_verify_or_nested_review
     - runtime_or_test_changes_during_independent_review
-    - repeated_bootstrap_remote_deploy_rollback_or_migration
-    - login_logout_session_repair_or_authenticated_live_preview_probe
+    - any_bootstrap_retry_direct_role_edit_control_reset_remote_deploy_rollback_or_migration
+    - login_or_session_touch_without_explicit_new_scope_session_repair_or_unrelated_live_probe
     - direct_sql_role_edit_or_deletion_of_registration_finalization_evidence
     - provider_send_or_registration_verification_replay
     - secret_flag_access_change_or_unrelated_d1_r2_write
     - production_cms_or_real_pii_action
 following_route_permission_boundaries:
-  - first_official_bootstrap_uses_only_prior_unconsumed_prompt_06_permission_after_fresh_preconditions
+  - bootstrap_permission_consumed_successfully_no_remote_replay_or_reset
   - any_worker_deploy_only_if_required_by_the_next_execution_surface
   - admin_login_parent_login_and_live_rbac_csrf_owner_denial_session_writes
   - real_preview_document_contract_email_and_telegram_flows
   - owner_full_manual_exploratory_pass
 ```
+
+## One official exact-target bootstrap succeeded — 2026-09-04
+
+Result: **success**. The owner explicitly requested one official exact-target
+bootstrap within the previously authorized scope. From clean docs-only HEAD
+`9c8a52fb21dfcdc5de5366046c6bee42ac3f9320`, the repository-root CLI used reviewed
+source `438a51399ac5f58b428b624c52ca2cbbc059ae9c` and was invoked **exactly once**.
+CLI completed at `2026-09-04T12:40:37Z`, exit 0, status `consumed`, preview,
+activeAdminCount 1. Immediate independent D1 SELECT reconciliation completed at
+`2026-09-04T12:40:39Z` and confirmed the database outcome. No retry occurred.
+
+Authorized scope: promote only the first previously registered verified
+synthetic account; preserve the second as parent. Exact target fingerprints
+remain account `5dbd04a4763a`, Worker `242c1796e930`, origin host `88ed782ba25a`
+and D1 `ccdeb22bb2a1`. The CLI candidate is distinct from deployed Worker
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3`, version fingerprint `ad3134edb662`.
+The Worker was not deployed or modified. Current vars/bindings, single version
+at 100%, exact D1, config/lock/guard hashes and the corrected local source were
+reconfirmed before the attempt. The anonymous Access redirect remained `302`.
+
+Fresh preflight completed at `12:40:31Z`: eight SELECTs read 972 rows, wrote 0;
+all reported changes 0 and changed_db=false. Ledger was exactly `0001`–`0026`,
+pending 0. Both protected identity slots matched, both accounts were verified,
+active, unblocked and eligible under the corrected guard, admins 0, control
+available and actions/assertions/audits 0. Session aggregates matched the
+preceding preparation. The additional bounded query captured the two exact
+registration receipts in memory for comparison after the operation. Time Travel
+availability and a private pre-attempt bookmark were refreshed at `12:40:28Z`.
+
+The ignored single-attempt wrapper validated the official npm script and built
+its arguments with canonical target/confirmation helpers. It invoked only
+`npm run --silent admin:bootstrap -- ...` from the repository root, with values
+held in memory and raw stdout/stderr captured without logging. Wrangler metrics
+and disk logs were disabled. A protected exclusive attempt marker preceded the
+invocation; the wrapper has no remote retry/reset route. The original read-only
+preparation helper and old baseline-pinned wrapper were not modified or run.
+
+The immediate postcondition used **nine SELECTs, 979 rows read, 0 rows written,
+0 changes, changed_db=false for every statement**. Observed before/after:
+
+| Invariant | Before | After |
+| --- | --- | --- |
+| Roles, slots 1 / 2 | parent / parent | admin / parent |
+| User session versions | 1 / 1 | 2 / 1 |
+| Slot 1 sessions total/nonrevoked/valid | 2/1/1 | 2/0/0 |
+| Slot 1 revocations logout/role_change | 1/0 | 1/1 |
+| Slot 2 sessions total/nonrevoked/valid | 1/0/0 | 1/0/0 |
+| Bootstrap control | available | consumed |
+| Actions / assertions / successful audits | 0/0/0 | 1/1/1 |
+| Immutable seal triggers | 6 | 6 |
+| Registration receipts | two successful portal allocations | exact records unchanged |
+| Verification / welcome deliveries | 2 / 2, sent | unchanged, one attempt/receipt each |
+
+Both accounts remain verified, active and unblocked with no retained parent
+business state. The one action/assertion/audit/control chain names the exact
+first target, links the same audit and request, has assertion 1 and matching
+timestamps/reason; audit actor is system and safe diff is exactly role admin,
+sessions revoked, one-shot. Its request matches the successful CLI response;
+only fingerprint `e7c28770458d` is retained here. The second identity, role,
+version and session aggregate did not change. Ledger, receipts, privacy/token/
+verification counters, Telegram/storage counts and orphan-session zero remain
+unchanged. There are currently **no valid application sessions** for either
+account: the first's remaining parent session was revoked and the second was
+already logged out. Neither account was logged in or repaired by this operation.
+
+Prompt 06 status is **partial, not fully complete**: its bootstrap/role/session/
+audit/control portion has live success; replay denial is supported by the
+consumed control, immutable triggers and inherited tests without a remote retry.
+Parent/admin HTTP isolation and CSRF/ownership remain inherited local unit/E2E
+evidence. A real admin login and live authenticated role checks were not run.
+The canonical bootstrap runbook requires a fresh admin login, while Prompt 06
+authorized only the bootstrap mutation and excluded session repair. Normal
+login/session touches are additional writes; the present bootstrap-only request
+does not authorize them. A successful role mutation alone therefore does not
+close every verification item in Prompt 06 or the `SYS-04` manual-preview gate.
+This is an outstanding permission/flow boundary, not a new runtime P0/P1 or a
+reason to repeat the review/full suite.
+
+Protected owner-only Git-ignored evidence under
+`tmp/bootstrap-cli-execution-20260904-owner/`:
+
+| Evidence | SHA-256 |
+| --- | --- |
+| `operation-safe.json` | `9b1dea913cd5fc288f9ca0f4c0fd280035601b8f34d15c98a87ebb53da2527ef` |
+| `postcondition-observed-safe.json` | `35c0df9eff5689fcf8c7d0b14394fb7c53634d2a6bbb040cc48ceb930cefa1f7` |
+| `recovery-private.json` | `d54c1e75d673a24e0b70769324266a51a871a52306d097cb7e56952e7dae0bc6` |
+| Single-attempt helper in parent `tmp/` | `bc631b0b2973278c7094c41fbc2e75cbfca78be1cb0bc262502feabb0018e2a8` |
+
+Containment: preserve Access/provider restrictions and all immutable evidence.
+Bootstrap permission is now consumed. Do not replay/reset it, directly edit
+roles, restore old sessions or retry the wrapper. No rollback is needed for the
+verified success. Time Travel is a possible separately authorized recovery
+route, not permission to restore; there is no dedicated last-admin recovery CLI.
+No provider send, deploy, migration, Access/secret/config change, production/CMS
+action or real PII operation occurred.
+
+**One next atomic action:** first admin login in the existing protected preview,
+only after explicit scope for its new session and linked authentication touches.
+It should create the normal admin session at version 2 and reach `/admin`,
+preserving both historical revocations and the second parent's logout. Then
+reconcile and checkpoint before any next remote mutation. Remaining parent
+login and live role/owner/CSRF checks need their own scope; they are not silently
+folded into this bootstrap result.
+
+The helper syntax check passed before the attempt. For the mandatory docs-only
+checkpoint after it, run only `npm run docs:check`, `npm run release:scan` and
+`git diff --check`. Runtime tests, E2E, check/build, dependency audit and another
+review are deliberately not repeated: application/test/migration/dependency/
+config source is unchanged and exact scoped GO evidence is retained. No new
+P0/P1 or mutation ambiguity remains. Production readiness is unchanged; its
+historical ledger is not promoted by this synthetic preview result.
+`rollover_required: no`; `recommended_next_session_mode: High`: the next normal
+admin login has known target/postcondition and requires explicit session-write
+scope, with no reason for Max.
 
 ## Exact-target CLI bootstrap prepared; fresh read-only preflight — 2026-09-04
 

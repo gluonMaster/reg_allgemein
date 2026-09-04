@@ -3294,3 +3294,42 @@ check` завершился с 0 errors/warnings. Полные gates, immutable 
   so inherited review and test gates are reused. `rollover_required: no`;
   `recommended_next_session_mode: High`: known target, procedure, postcondition
   and Time Travel containment, with no unresolved mutation ambiguity.
+
+## Continuation 2026-09-04: one official bootstrap succeeded; live roles pending
+
+- The owner explicitly authorized execution within the earlier one-bootstrap
+  scope. Exactly one repository-root `npm run admin:bootstrap` invocation used
+  reviewed candidate `438a51399ac5f58b428b624c52ca2cbbc059ae9c` from clean
+  docs-only HEAD `9c8a52fb21dfcdc5de5366046c6bee42ac3f9320`. CLI exit 0/status
+  consumed at `2026-09-04T12:40:37Z`; read-only postcondition success at
+  `12:40:39Z`. No retry or additional remote mutation occurred.
+- Fresh preflight used eight SELECTs/972 rows read/0 writes and verified exact
+  target, deployed bindings, Access redirect, ledger through `0026`, both
+  eligible parents, available control and unchanged sessions. Time Travel was
+  refreshed before the attempt. Worker deployment was unnecessary and not done.
+- Nine postcondition SELECTs read 979 rows, wrote 0, changes 0, changed_db=false.
+  The first account is admin/version 2 with sessions `2/0/0`: one old logout and
+  one role-change revocation. The second remains parent/version 1 with sessions
+  `1/0/0`, its previous logout unchanged. Control consumed; exactly one linked
+  action/assertion/audit/control chain matches the CLI request; six seal triggers
+  remain. Exact registration receipts, provider counts and other checked state
+  are unchanged. Both accounts now have no valid application session.
+- Prompt 06 is **partial**: bootstrap/role/session/audit/control have live evidence;
+  replay denial uses sealed state and inherited tests. Fresh admin login and live
+  authenticated role/owner/CSRF verification have not run. Those create/touch
+  sessions beyond the authorized bootstrap mutation. Full manual preview and
+  production remain blocked; no generic full suite or new reviewer is scheduled.
+- Evidence: `tmp/bootstrap-cli-execution-20260904-owner/operation-safe.json`,
+  SHA-256 `9b1dea913cd5fc288f9ca0f4c0fd280035601b8f34d15c98a87ebb53da2527ef`.
+  See [active state](../STAGE_13_ACTIVE_STATE.md#one-official-exact-target-bootstrap-succeeded-2026-09-04)
+  for exact postcondition/recovery hashes, permission consumption and containment.
+  No credentials, identities or full resource IDs are in this tracked checkpoint.
+- One next action is first admin login after explicit scope for its normal
+  session creation/touches, then bounded reconciliation and checkpoint. No
+  bootstrap retry/reset, session repair, provider/config/Access change or CMS
+  action is allowed by the completed request. `rollover_required: no`;
+  `recommended_next_session_mode: High`: known login target and postcondition,
+  separate permission boundary, no ambiguity or serious recovery risk.
+- After-mutation checkpoint checks: `docs:check`, `release:scan`, `git diff --check`
+  only. Existing scoped GO/test evidence is inherited because runtime, tests,
+  migrations, dependencies and config did not change. No new P0/P1 was found.
