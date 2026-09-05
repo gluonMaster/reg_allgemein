@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:57:07Z
+updated_utc: 2026-09-05T20:02:50Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D16
@@ -13,7 +13,7 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D16-verified
+current_phase: phase-5-D16-complete-awaiting-private-P1-input-for-D17a
 last_atomic_action: D16-normal-owner-P2-logout
 last_atomic_result: success
 next_atomic_action: D17a-normal-foreign-P1-login
@@ -327,6 +327,66 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## D10–D16 verified; final foreign-parent check awaiting private input — 2026-09-05T20:02:50Z
+
+Current last completed checkpoint: D16, commit 7289274. Actual owner ESET
+Internet Security clean scan, version 19.2.7.0, current definitions dated
+2026-09-05 and zero detections are recorded. The screenshot's displayed
+21:27:45 is retained with owner attribution; its filename association comes
+from the owner's exact-D0 scan reply. Local downloaded SHA/16954 bytes remain
+unchanged. No encryption setting was inspected or changed in this continuation.
+
+D11 deliberately wrong SHA rejected 409, with no document/attestation/archive/
+audit/idempotency change. D12 same-A exact-SHA clean attestation committed and
+linked to the preceding A download/audit. The owner separately inspected D0
+and confirmed suitable readable synthetic Nachhilfe/Jobcenter content. D13
+normal business approve linked one private archive object/intent/assertion and
+review audit; archive key fingerprint 581e3f17f58c. Server quarantine object
+absent, D1 delete_state=deleted; original 14-day expiry preserved. The separate
+FD remains pending_review and QD remains draft.
+
+D14 revoked the A session. D15a created exactly one P2 session; D15b actual
+owner archive download returned 200/forced attachment with exact SHA-256
+827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
+and 16954 bytes, separate owner-download audit/assertion and unchanged domain
+state. D16 revoked this P2 session with a matching logout audit. All ten sessions
+are now revoked; roles, C2/Q2, archived D0 and providers are preserved. Each
+application command has its own before/after evidence and docs-only commit.
+
+**One next action:** D17a normal P1 login after the owner fills email/password
+privately in the already-open fresh login form. The async input question remains
+pending. Do not request scope approval again; the complete D01a–D18b scope is
+already authorized. No D17a attempt marker exists, and no login was sent.
+Prepared protected helpers: D17a-browser.js, D17b-browser.js, D18a-browser.js.
+Use document-phase-07-access.cjs begin/reconcile per step, then
+document-phase-07-step-state.cjs and docs checks/commit before the next mutation.
+After successful P1 login: D17b foreign existing-D0 denial, D18a normal P1 logout,
+then D18b final bounded read-only reconciliation with document-phase-07-final.cjs
+and final handoff/readiness update with document-phase-07-complete-state.cjs.
+Prepared final helpers have passed syntax checks but have not run.
+
+The first anonymous login-page result formatter used unavailable URL in the
+tool VM after the page loaded. A DOM-only observation confirmed the fresh
+login form; the formatter was corrected for P1 preparation. No login retry or
+unreconciled mutation occurred. No document contents, credentials or cookies
+were exported. Exact responses/IDs remain in protected Git-ignored evidence.
+
+Containment: retained private approved archive and synthetic QD/FD/D0, local
+download retained in the owner's selected experimental directory, no direct
+repair/deletion/provider send/production/CMS change. The synthetic-only
+unencrypted directory exception remains as explicitly directed by the owner;
+it does not change production requirements. Full REQ-11 rejected and actual
+nonapproved 14-day cleanup, full manual preview and production remain pending.
+
+Passed: actual bounded response/D1/R2/checksum postconditions through D16,
+ignored helper syntax, docs:check, release:scan and git diff --check at every
+checkpoint. Not repeated: full runtime suite/E2E/build/review because deployed
+source 0db38842524ebc146eaa56a9d089e3c3484bf0f3 and config/version aba79c9fa0ae
+are unchanged; prior exact release evidence remains reusable.
+`rollover_required: no`; `recommended_next_session_mode: High`: the
+remaining authorized login/access/logout actions have known targets,
+postconditions and containment, with no unresolved remote ambiguity.
 
 ## Document scenario D16 verified — 2026-09-05T19:57:07Z
 
