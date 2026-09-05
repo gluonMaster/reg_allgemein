@@ -3607,3 +3607,74 @@ remote document operations require their separate bounded scope.
 `rollover_required: no`; `recommended_next_session_mode: Medium`: next work
 is read-only preparation with no unresolved ambiguity. Use High for a subsequently
 authorized known deployment/execution phase.
+
+
+## Prompt 07 read-only preparation complete — 2026-09-05T17:51:43Z
+
+Result: **success, local/read-only preparation**. [Bounded phase manifest](../STAGE_13_DOCUMENT_PHASE_MANIFEST.md)
+and the private exact config proposal are ready. Prompt 07 expressly excludes
+flag/deploy mutation and requires separate document-scenario scope; neither
+permission has been granted. No remote mutation or authenticated app request
+was attempted. The actual document lifecycle has not started.
+
+Fresh control at 2026-09-05T17:37:20.629Z confirms the same version fingerprint
+`14841fbf75b2` at 100%, exact deployed candidate
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3`, module SHA-256
+`eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`,
+settings/bindings/Cron and Access 302 as final 06B. D1 inventory at 2026-09-05T17:37:27.347Z
+read 16 rows, wrote 0, changes=0, changed_db=false. A/P1/P2 remain active
+verified admin/parent/parent at versions 2/1/1, all sessions revoked. C2 and Q2
+remain owned by P2; Q2 is individual/self-pay draft v1. Funding authorizations,
+documents and storage intents are all zero.
+
+Both different R2 buckets are EU Standard/private: quarantine fingerprint
+`442dca1871ce`, archive `3996cebdabb0`; r2.dev disabled, custom domains 0.
+Lifecycle contains only multipart-abort, no object-delete rules; locks 0.
+The official metadata list passed with exact random-key prefix/per_page=2 and
+empty results. HEAD returned 405 and is excluded. A local parser initially
+required optional result_info; the recorded successful empty response was
+reused after checking the official schema. There is no remote write ambiguity.
+
+Prepared exactly one config delta: DOCUMENT_UPLOAD_ENABLED false → true.
+Use protected `config-plan-final.json`: strict Wrangler deploy of the unchanged
+reviewed detached source/build. Local --dry-run passed with exact module SHA,
+all build files preserved, source config restored and root config unchanged.
+The initial local PATCH proposal is superseded without dispatch, because the
+06B history already records that method's rejection and successful strict-deploy
+alternative. Exact prior-version rollback at 100% is pinned in protected state.
+
+Prepared one synthetic PNG, 16954 bytes, SHA-256
+`827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81`; canonical upload validator and planned request schema
+passed. No Office/upstream input or client data was read. Q2 cannot host funding
+uploads; the later bounded scenario creates one new Nachhilfe/Jobcenter QD/FD
+for existing C2 through the ordinary parent route. The owner's real local AV
+scan after forced download and separate business decision remain mandatory.
+One approved D0 cannot close REQ-11's separate rejected/14-day cleanup outcomes.
+
+Protected ignored evidence under `tmp/document-phase-07-owner/`:
+
+| Record | SHA-256 |
+| --- | --- |
+| inventory-safe.json | 9975eec75a00fc9645f5341da2c5d0cc852963dd936012bcbbe5146b9ceaa386 |
+| local-validation-safe.json | 420f7eaab05730bc2f6879de26a6611b1294dce42138eff29a9acbe4462f3ba8 |
+| config-plan-final-safe.json | 6b07f93795a638f29a8e91e8df946de9d7ef69cf4c51e2daf628e1b248f0242f |
+| metadata-transport-safe.json | fe7fa95b61abae385c944a9d8129b7d37edf05aeb052c3156d7b02331c36d91c |
+
+Affected surface: operational documentation and ignored operator preparation
+only. Validation: scoped remote reads, canonical fixture/request validation,
+strict exact-bundle dry-run, then docs:check, release:scan and git diff --check.
+Reuse exact `0db38842524ebc146eaa56a9d089e3c3484bf0f3` full 580 pass/1 expected
+Windows skip, 23 E2E and build evidence; reviewed
+`438a51399ac5f58b428b624c52ca2cbbc059ae9c` focused independent review 8/8.
+Full runtime suite/E2E/build and another independent review are intentionally
+not repeated: no changed runtime/migration/dependency or live config. No new
+proven candidate P0/P1. Production readiness checklist is unchanged.
+
+Containment: preserve Access, flag=false, original fixtures and immutable
+evidence; no direct SQL/object repair, bootstrap replay or destructive cleanup.
+**One next action:** obtain the owner's separate permission for the prepared
+single-flag same-bundle preview deploy and conditional own-version rollback.
+Document execution remains separately gated. Full manual preview and production
+remain **blocked**. `rollover_required: no`;
+`recommended_next_session_mode: High`: planned config deployment has known
+target, postcondition and rollback, without unresolved ambiguity.

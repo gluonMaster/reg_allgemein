@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-04T16:28:48Z
+updated_utc: 2026-09-05T17:51:43Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-4-prompt-06-complete
-next_gate: phase-5-document-flow-readonly-manifest
+last_completed_gate: phase-5-document-readonly-manifest-and-exact-config-dry-run
+next_gate: phase-5-document-upload-config-permission
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-4-closed-bounded-06b-role-isolation
-last_atomic_action: final-bounded-readonly-closeout
+current_phase: phase-5-document-preparation-complete-awaiting-config-scope
+last_atomic_action: read-only-document-phase-manifest
 last_atomic_result: success
-next_atomic_action: read-only-document-phase-manifest
+next_atomic_action: await-owner-document-config-deploy-permission
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: 06b_complete_next_action_readonly_document_manifest_no_remote_write_or_unresolved_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: planned_single_preview_flag_deploy_has_exact_target_same_bundle_postcondition_and_rollback_no_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: 06b_finite_package_completed_further_document_contract_provider_writes_require_separate_scope
+permission_state: prompt_07_readonly_preparation_completed_config_deploy_and_document_scenario_each_require_separate_explicit_scope
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,8 +75,8 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_one_authorized_recipient_hash_added_other_settings_exact
   deployment_postcondition: success_version_access_cadence_health_and_no_send_verified
-  latest_readonly_control_utc: 2026-09-04T16:28:05.301Z
-  latest_anonymous_access_check: 2026_09_04T12_58_58Z_302_cloudflare_access_redirect_no_cookie_or_authenticated_probe
+  latest_readonly_control_utc: 2026-09-05T17:37:20.629Z
+  latest_anonymous_access_check: 2026_09_05_readonly_manifest_302_cloudflare_access_redirect_no_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-04T16:28:08.423Z
-    postcondition_rows_read: 4492
-    latest_read_kind: final_06b_bounded_readonly_closeout_plus_integrity
+    latest_bounded_postcondition_utc: 2026-09-05T17:37:27.347Z
+    postcondition_rows_read: 16
+    latest_read_kind: document_phase_scoped_identity_C2_Q2_and_empty_document_storage_inventory
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -237,27 +237,131 @@ role_isolation_plan:
   fixture_created: true
   authenticated_probe_executed: true
   candidate_p0_p1_introduced: false_known_data_prerequisite_not_runtime_defect
+document_phase_preparation:
+  manifest: docs/implementation/STAGE_13_DOCUMENT_PHASE_MANIFEST.md
+  result: success_readonly_local_preparation
+  inventory_utc: 2026-09-05T17:37:27.347Z
+  metadata_transport_utc: 2026-09-05T17:48:53.853Z
+  remote_mutations: 0
+  authenticated_app_requests: 0
+  exact_bundle_unchanged: true
+  private_eu_r2_distinct: true
+  quarantine_fingerprint: 442dca1871ce
+  archive_fingerprint: 3996cebdabb0
+  r2_dev_enabled: false
+  r2_custom_domains: 0
+  bucket_object_delete_lifecycle_rules: 0
+  bucket_lock_rules: 0
+  current_document_upload_enabled: false
+  proposed_only_change: DOCUMENT_UPLOAD_ENABLED_false_to_true
+  proposed_method: strict_deploy_same_exact_reviewed_bundle
+  strict_dry_run: passed_exact_module_digest_existing_build_and_restored_local_config
+  current_nonrevoked_sessions: 0
+  existing_funding_authorizations_documents_storage_intents: 0_0_0
+  fixture_prerequisite: one_new_P2_C2_nachhilfe_jobcenter_draft_QD_and_FD_via_normal_parent_route_Q2_preserved
+  synthetic_input: one_locally_generated_PNG_16954_bytes_canonical_upload_validator_passed
+  synthetic_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
+  actual_local_av_scan: pending_owner_after_audited_download
+  metadata_read_method: exact_key_prefix_per_page_2_zero_or_one_result_no_cursor_or_truncation
+  head_transport: unsupported_405_not_used
+  local_metadata_parser: optional_result_info_corrected_recorded_response_reused_no_write_ambiguity
+  actual_document_lifecycle: not_started
+  broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
+  protected_evidence: tmp/document-phase-07-owner
+  configuration_permission: not_granted
+  document_scenario_permission: not_granted
 next_atomic_action:
-  id: read-only-document-phase-manifest
-  permission: read_only_preparation_only_following_roadmap_phase_5
-  target: existing_exact_Access_protected_preview_use_current_protected_records
-  mutation: none
+  id: await-owner-document-config-deploy-permission
+  permission: required_prompt_07_explicitly_excludes_flag_and_deploy_mutations
+  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1
+  mutation: none_until_owner_approves_one_prepared_same_bundle_flag_deploy
   preconditions:
-    - prompt_06_complete_evidence_and_checkpoint_preserved
-    - read_document_security_requirements_and_next_phase_prompt
+    - exact_local_readonly_manifest_fixture_and_strict_dry_run_complete
+    - owner_reviews_one_flag_false_to_true_and_conditional_prior_version_rollback
   postcondition:
-    - concrete_exact_target_document_manifest_expected_effects_and_containment
-  success_transition: obtain_separate_bounded_document_or_config_scope_if_needed
-  failed_or_ambiguous_transition: retain_current_Access_and_fixtures_report_exact_gap
+    - explicit_bounded_scope_recorded_before_any_remote_dispatch
+  success_transition: fresh_exact_preflight_then_one_strict_same_bundle_document_flag_deploy_and_checkpoint
+  failed_or_ambiguous_transition: retain_Access_document_flag_false_and_synthetic_fixtures_no_remote_write
   forbidden_in_this_action:
-    - remote_business_provider_R2_flag_deploy_or_session_write
-    - bootstrap_replay_role_repair_or_production_CMS_upstream_PII
+    - config_deploy_Access_secret_R2_D1_provider_role_or_session_write_without_separate_scope
+    - bootstrap_replay_direct_SQL_repair_production_CMS_upstream_Office_or_PII
 following_route_permission_boundaries:
-  - 06b_finite_package_complete_no_replay_of_completed_operations
-  - retain_P2_C2_and_Q2_as_synthetic_fixtures_all_sessions_logged_out
-  - next_document_manifest_is_readonly_remote_scenario_and_config_changes_need_separate_scope
+  - config_permission_does_not_authorize_document_scenario_or_new_sessions
+  - subsequent_finite_document_package_requires_its_own_explicit_owner_scope
+  - actual_AV_and_business_decision_cannot_be_replaced_with_format_validation
+  - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 07 read-only preparation complete — 2026-09-05T17:51:43Z
+
+Result: **success, local/read-only preparation**. [Bounded phase manifest](STAGE_13_DOCUMENT_PHASE_MANIFEST.md)
+and the private exact config proposal are ready. Prompt 07 expressly excludes
+flag/deploy mutation and requires separate document-scenario scope; neither
+permission has been granted. No remote mutation or authenticated app request
+was attempted. The actual document lifecycle has not started.
+
+Fresh control at 2026-09-05T17:37:20.629Z confirms the same version fingerprint
+`14841fbf75b2` at 100%, exact deployed candidate
+`0db38842524ebc146eaa56a9d089e3c3484bf0f3`, module SHA-256
+`eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`,
+settings/bindings/Cron and Access 302 as final 06B. D1 inventory at 2026-09-05T17:37:27.347Z
+read 16 rows, wrote 0, changes=0, changed_db=false. A/P1/P2 remain active
+verified admin/parent/parent at versions 2/1/1, all sessions revoked. C2 and Q2
+remain owned by P2; Q2 is individual/self-pay draft v1. Funding authorizations,
+documents and storage intents are all zero.
+
+Both different R2 buckets are EU Standard/private: quarantine fingerprint
+`442dca1871ce`, archive `3996cebdabb0`; r2.dev disabled, custom domains 0.
+Lifecycle contains only multipart-abort, no object-delete rules; locks 0.
+The official metadata list passed with exact random-key prefix/per_page=2 and
+empty results. HEAD returned 405 and is excluded. A local parser initially
+required optional result_info; the recorded successful empty response was
+reused after checking the official schema. There is no remote write ambiguity.
+
+Prepared exactly one config delta: DOCUMENT_UPLOAD_ENABLED false → true.
+Use protected `config-plan-final.json`: strict Wrangler deploy of the unchanged
+reviewed detached source/build. Local --dry-run passed with exact module SHA,
+all build files preserved, source config restored and root config unchanged.
+The initial local PATCH proposal is superseded without dispatch, because the
+06B history already records that method's rejection and successful strict-deploy
+alternative. Exact prior-version rollback at 100% is pinned in protected state.
+
+Prepared one synthetic PNG, 16954 bytes, SHA-256
+`827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81`; canonical upload validator and planned request schema
+passed. No Office/upstream input or client data was read. Q2 cannot host funding
+uploads; the later bounded scenario creates one new Nachhilfe/Jobcenter QD/FD
+for existing C2 through the ordinary parent route. The owner's real local AV
+scan after forced download and separate business decision remain mandatory.
+One approved D0 cannot close REQ-11's separate rejected/14-day cleanup outcomes.
+
+Protected ignored evidence under `tmp/document-phase-07-owner/`:
+
+| Record | SHA-256 |
+| --- | --- |
+| inventory-safe.json | 9975eec75a00fc9645f5341da2c5d0cc852963dd936012bcbbe5146b9ceaa386 |
+| local-validation-safe.json | 420f7eaab05730bc2f6879de26a6611b1294dce42138eff29a9acbe4462f3ba8 |
+| config-plan-final-safe.json | 6b07f93795a638f29a8e91e8df946de9d7ef69cf4c51e2daf628e1b248f0242f |
+| metadata-transport-safe.json | fe7fa95b61abae385c944a9d8129b7d37edf05aeb052c3156d7b02331c36d91c |
+
+Affected surface: operational documentation and ignored operator preparation
+only. Validation: scoped remote reads, canonical fixture/request validation,
+strict exact-bundle dry-run, then docs:check, release:scan and git diff --check.
+Reuse exact `0db38842524ebc146eaa56a9d089e3c3484bf0f3` full 580 pass/1 expected
+Windows skip, 23 E2E and build evidence; reviewed
+`438a51399ac5f58b428b624c52ca2cbbc059ae9c` focused independent review 8/8.
+Full runtime suite/E2E/build and another independent review are intentionally
+not repeated: no changed runtime/migration/dependency or live config. No new
+proven candidate P0/P1. Production readiness checklist is unchanged.
+
+Containment: preserve Access, flag=false, original fixtures and immutable
+evidence; no direct SQL/object repair, bootstrap replay or destructive cleanup.
+**One next action:** obtain the owner's separate permission for the prepared
+single-flag same-bundle preview deploy and conditional own-version rollback.
+Document execution remains separately gated. Full manual preview and production
+remain **blocked**. `rollover_required: no`;
+`recommended_next_session_mode: High`: planned config deployment has known
+target, postcondition and rollback, without unresolved ambiguity.
 
 ## Prompt 06 complete: bounded live role isolation closeout — 2026-09-04T16:28:48Z
 
