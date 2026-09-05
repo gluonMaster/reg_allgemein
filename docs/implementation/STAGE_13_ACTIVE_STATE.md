@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:27:40Z
+updated_utc: 2026-09-05T19:36:53Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D09
-next_gate: phase-5-document-D10
+last_completed_gate: phase-5-document-D10
+next_gate: phase-5-document-D11
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-D09-complete-awaiting-owner-actual-local-AV
-last_atomic_action: D09-audited-forced-A-download-of-exact-D0
+current_phase: phase-5-document-scenario-D10-verified
+last_atomic_action: D10-recording-of-actual-owner-ESET-clean-scan
 last_atomic_result: success
-next_atomic_action: D10-owner-personally-scans-downloaded-D0
+next_atomic_action: D11-deny-deliberately-wrong-SHA-attestation
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: next_action_is_owner_local_AV_manual_inspection_no_remote_write_no_unresolved_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicitly_approved_entire_manifest_D01a_D18b_execution_in_progress_no_repeat_scope_approval_actual_owner_AV_pending
+permission_state: owner_explicitly_approved_entire_manifest_D01a_D18b_execution_in_progress_no_repeat_scope_approval_actual_owner_AV_clean_recorded
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T19:23:35.640Z
+    latest_bounded_postcondition_utc: 2026-09-05T19:35:58.283Z
     postcondition_rows_read: 175
-    latest_read_kind: document_scenario_D09_actual_bounded_postcondition
+    latest_read_kind: document_scenario_D10_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_authorized_scenario_D09_verified
+    documents: upload_enabled_authorized_scenario_D10_verified
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -261,11 +261,11 @@ document_phase_preparation:
   fixture_prerequisite: one_new_P2_C2_nachhilfe_jobcenter_draft_QD_and_FD_via_normal_parent_route_Q2_preserved
   synthetic_input: one_locally_generated_PNG_16954_bytes_canonical_upload_validator_passed
   synthetic_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
-  actual_local_av_scan: pending_owner_actual_scan_of_downloaded_SHA_verified_D0
+  actual_local_av_scan: owner_ESET_19_2_7_0_completed_zero_detections_definitions_current_2026_09_05_exact_local_SHA_unchanged
   metadata_read_method: exact_key_prefix_per_page_2_zero_or_one_result_no_cursor_or_truncation
   head_transport: unsupported_405_not_used
   local_metadata_parser: optional_result_info_corrected_recorded_response_reused_no_write_ambiguity
-  actual_document_lifecycle: D0_quarantined_exact_download_same_A_audit_assertion_verified_no_AV_or_archive
+  actual_document_lifecycle: D0_quarantined_actual_owner_AV_clean_recorded_same_A_download_audit_no_attestation_or_archive
   broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
   protected_evidence: tmp/document-phase-07-owner
   configuration_permission: completed_one_deploy_verified_no_rollback_needed
@@ -296,25 +296,25 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D09_success
+  result: D10_success
   scenario_mutation_attempts: 11
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
-  local_AV: pending_owner_product_engine_definitions_freshness_scan_completion_UTC_and_clean_or_detected
+  local_AV: actual_owner_clean_ESET_result_screenshot_and_local_product_version_evidence_recorded
   local_encrypted_unsynced_quarantine_workspace: owner_explicit_exact_D0_exception_no_encryption_changes_selected_local_directory_no_registered_sync_root_match
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D10-owner-personally-scans-downloaded-D0
+  id: D11-deny-deliberately-wrong-SHA-attestation
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: none_owner_local_AV_scan_only_no_remote_request
+  mutation: one_A_POST_documentAttestation_with_deliberately_incorrect_SHA_and_unique_key
   preconditions:
-    - previous_D09_actual_postcondition_and_docs_only_commit_success
+    - previous_D10_actual_postcondition_and_docs_only_commit_success
     - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - actual_current_approved_AV_scan_product_engine_definitions_freshness_UTC_clean_or_detected_for_exact_D0_owner_reports_result
+    - 409_rejection_D0_quarantined_no_attestation_archive_or_success_audit_only_A_session_touch
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -327,6 +327,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D10 verified — 2026-09-05T19:36:53Z
+
+Result: **success**. One recording of actual owner ESET clean scan under the owner's complete D01a–D18b scope.
+Before: downloaded exact D0 awaiting owner antivirus result. After: owner reports completed ESET Internet Security scan with zero detections and current definitions dated 2026-09-05; installed product version 19.2.7.0 verified read-only; local SHA and size unchanged, same A session and remote state preserved; no encryption change.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-05T19:35:58.283Z: 175 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D10-success-safe.json`,
+SHA-256 `ea0883557dd11151501abf751de2c3a49446d78ec6ba1d550c1f0f91e87d0426`; one-attempt marker, safe response and before/after D1 retained.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Actual owner AV clean evidence is recorded; business review remains a separate decision. One next action:
+D11-deny-deliberately-wrong-SHA-attestation, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known target/postcondition/containment
+and no unresolved ambiguity.
 
 ## Exact D09 download complete; owner AV handoff — 2026-09-05T19:27:40Z
 
