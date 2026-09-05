@@ -3918,3 +3918,64 @@ are unchanged; prior exact release evidence remains reusable.
 `rollover_required: no`; `recommended_next_session_mode: High`: the
 remaining authorized login/access/logout actions have known targets,
 postconditions and containment, with no unresolved remote ambiguity.
+
+
+## P1: owner native login failed with Worker 1102 — 2026-09-05T20:18:08Z
+
+After D16 checkpoint 7289274 and private-input handoff 9f37a88, the owner
+submitted the ordinary browser login form. The retained browser network list
+confirms POST /auth/login -> HTTP 503; the supplied screenshot shows Cloudflare
+1102 at 2026-09-05T20:08:16Z, Ray fingerprint ce4bbd2596e4. The agent did
+not submit D17a or retry the owner request. The previously pending request for
+private input is superseded by this reported failed login and diagnostic hold.
+
+Actual bounded read-only D1 postcondition 2026-09-05T20:11:58.413Z matches the entire
+D16 selected data/details snapshot exactly: no new session, all ten sessions
+revoked, approved D0/archive metadata, earlier AV/business/owner-download
+evidence, roles, C2/Q2/QD/FD and providers unchanged. No login-rate row remains;
+this point-in-time result does not reconstruct any expired transient metadata
+between the request and observation. This is a confirmed failed login, not an
+ambiguous successful session or a reason for direct repair.
+
+The pinned Worker remained at single version aba79c9fa0ae, 100%, exact settings
+unchanged; usage_model=standard and no explicit limits object. This does not
+establish Free versus Paid or the effective CPU cap. Metrics for this Worker
+in 20:06–20:10Z show one failed invocation at the exact screenshot second with
+status exceededResources and cpuTimeP50/P99=381493 microseconds (381.493 ms).
+The live GraphQL schema independently confirms microsecond units. Five other
+invocations succeeded in that window. These aggregates do not identify a code
+line, distinguish the CPU/memory subtype, or prove that every earlier successful
+login stayed below its effective budget.
+
+Persisted Workers Logs are enabled, but the single temporary/dry five-second
+telemetry read returned API 403; the worker-plan read also returned API 403.
+This is Cloudflare authorization, not an automatic approval-review rejection.
+No logging configuration, subscription, limit or permission was changed. The
+source uses bcryptjs with default cost 12, which is a plausible expensive login
+path; no request-level profile proves it caused this invocation's failure.
+Cloudflare documents 1102 for CPU/memory and 1027 for free-tier daily requests;
+the CPU limits documentation also describes burst flexibility. Free plan's
+10 ms must remain conditional until the actual plan is verified.
+
+Classification: **P1**, because normal login in the required manual-preview
+flow failed. P0/data-loss/authorization-bypass evidence is absent. Last completed
+gate remains D16; D17b/D18 are unexecuted, and the prepared final-complete helper
+must not be run. The earlier independent scoped candidate review is historical
+evidence; this new live P1 blocks continuation until resolved.
+
+Protected evidence: `tmp/document-phase-07-owner/D17a-owner-1102-incident-safe.json`,
+SHA-256 `30d074ae5a4c413bb6c9ead0ee9c301f6822ec577352d2f845fa90b48dd65885`; screenshot, exact raw metric query/result, schema units,
+version/settings and selected D1 snapshots remain Git-ignored with owner-only
+access. No password, email, cookie, document body or complete resource ID was
+exported. Existing approved archive and local downloaded file are retained;
+no encryption changes, deploy, provider send, direct repair or retry occurred.
+
+**One next action:** read-only confirmation of effective Worker limits and the
+failing login's resource path using available invocation diagnostics or a local
+profile. No weakening password verification, plan purchase or configuration
+change is authorized by this diagnosis. Passed: actual-state/metric/unit
+verification, docs:check, release:scan and git diff --check. Runtime tests,
+E2E/build were not rerun because this is diagnosis/docs with no runtime diff.
+`rollover_required: no`; `recommended_next_session_mode: Medium`: immediate
+work is read-only and the failed login is contained, with no active session or
+unresolved application-write outcome.

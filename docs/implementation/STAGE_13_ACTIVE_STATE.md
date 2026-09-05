@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T20:02:50Z
+updated_utc: 2026-09-05T20:18:08Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D16
-next_gate: phase-5-document-D17a
+next_gate: phase-5-D17a-resource-diagnosis
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-D16-complete-awaiting-private-P1-input-for-D17a
-last_atomic_action: D16-normal-owner-P2-logout
-last_atomic_result: success
-next_atomic_action: D17a-normal-foreign-P1-login
+current_phase: phase-5-D17a-owner-login-failed-1102-contained-awaiting-resource-diagnosis
+last_atomic_action: owner-native-POST-auth-login-D17a-1102
+last_atomic_result: failed
+next_atomic_action: readonly-identify-effective-Worker-limit-and-failing-login-CPU-path
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
+recommended_next_session_mode: Medium
+mode_reason_plain: next_action_readonly_diagnostics_no_session_created_no_domain_damage_no_unresolved_write_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -40,10 +40,10 @@ review:
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
   last_independently_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
   unresolved_candidate_p0: 0
-  unresolved_candidate_p1: 0
+  unresolved_candidate_p1: 1
   local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
   deployed_source_guard: baseline_predicate_unchanged_not_used_by_reviewed_out_of_band_cli
-  verdict_scope: independent_go_baseline_full_evidence_plus_focused_changed_surface_gate_no_remote_success_claim
+  verdict_scope: prior_scoped_candidate_review_preserved_new_live_P1_login_resource_failure_blocks_document_continuation
   validation_policy: owner_requested_candidate_specific_scoped_gate_2026_09_04
   mandatory_reviewer_tests: 8_tests_3_files_one_run
   reviewer_validation: passed_8_of_8_in_one_run_at_2026_09_04T12_12_34Z
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T19:57:07.521Z
+    latest_bounded_postcondition_utc: 2026-09-05T20:11:58.413Z
     postcondition_rows_read: 207
-    latest_read_kind: document_scenario_D16_actual_bounded_postcondition
+    latest_read_kind: owner_1102_failed_login_actual_postcondition_no_persisted_domain_session_delta
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -296,30 +296,47 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D16_success
-  scenario_mutation_attempts: 18
+  result: D16_complete_owner_D17a_native_login_failed_1102_contained
+  scenario_mutation_attempts: 19
   active_sessions: 0
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
   local_AV: actual_owner_clean_ESET_result_screenshot_and_local_product_version_evidence_recorded
   local_encrypted_unsynced_quarantine_workspace: owner_explicit_exact_D0_exception_no_encryption_changes_selected_local_directory_no_registered_sync_root_match
-  protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
+  protected_evidence: tmp/document-phase-07-owner/D17a-owner-1102-incident-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
+document_login_resource_incident:
+  classification: P1_breaks_required_normal_login_current_manual_preview
+  observed_utc: 2026-09-05T20:08:16Z
+  browser_request: native_POST_auth_login_HTTP503_Cloudflare1102
+  reported_owner_actor: P1_not_authenticated_no_session_created
+  ray_fingerprint: ce4bbd2596e4
+  analytics_outcome: exceededResources_exact_CPU_vs_memory_subtype_unconfirmed
+  cpu_time_microseconds: 381493
+  worker_version_fingerprint: aba79c9fa0ae
+  settings_exact_preserved: true
+  persisted_domain_session_provider_delta: none_at_readonly_observation
+  remaining_active_sessions: 0
+  actual_worker_plan_and_effective_CPU_cap: unconfirmed_API_403
+  detailed_logs_access: API_403_no_logs_or_tail_reconfiguration_attempted
+  working_hypothesis: CPU_cost_of_bcryptjs_round12_authentication_requires_profile_not_confirmed_root_cause
+  containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: D17a-normal-foreign-P1-login
-  permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
-  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_normal_P1_login_after_private_input_no_redirect_follow
+  id: readonly-identify-effective-Worker-limit-and-failing-login-CPU-path
+  permission: read_only_diagnosis_only_no_login_retry_config_deploy_or_plan_change
+  target: exact_preview_worker_242c1796e930_version_aba79c9fa0ae
+  mutation: none_read_only_effective_limits_and_available_trace_or_local_profile
   preconditions:
-    - previous_D16_actual_postcondition_and_docs_only_commit_success
-    - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
+    - failed_owner_login_actual_postcondition_recorded_and_committed
+    - no_guess_that_1102_is_daily_request_quota_or_that_bcrypt_is_proven_cause
   postcondition:
-    - one_new_foreign_P1_session_v1_other_sessions_roles_archive_domain_and_providers_preserved
-    - readonly_reconciliation_and_active_state_commit_before_next_mutation
-  success_transition: next_manifest_action_after_own_checkpoint
-  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
+    - distinguish_confirmed_metrics_from_unverified_CPU_memory_subtype_plan_and_function
+    - prepare_bounded_P1_resolution_with_actual_limits_evidence_before_any_retry
+  success_transition: define_exact_resolution_and_resume_D17a_only_after_own_checkpoint
+  failed_or_ambiguous_transition: preserve_archive_and_all_revoked_sessions_report_missing_diagnostic_access
   forbidden_in_this_action:
-    - provider_send_direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
+    - blind_login_retry_password_strength_reduction_or_direct_SQL_R2_repair
+    - config_deploy_plan_purchase_provider_send_production_CMS_or_encryption_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -327,6 +344,66 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## P1: owner native login failed with Worker 1102 — 2026-09-05T20:18:08Z
+
+After D16 checkpoint 7289274 and private-input handoff 9f37a88, the owner
+submitted the ordinary browser login form. The retained browser network list
+confirms POST /auth/login -> HTTP 503; the supplied screenshot shows Cloudflare
+1102 at 2026-09-05T20:08:16Z, Ray fingerprint ce4bbd2596e4. The agent did
+not submit D17a or retry the owner request. The previously pending request for
+private input is superseded by this reported failed login and diagnostic hold.
+
+Actual bounded read-only D1 postcondition 2026-09-05T20:11:58.413Z matches the entire
+D16 selected data/details snapshot exactly: no new session, all ten sessions
+revoked, approved D0/archive metadata, earlier AV/business/owner-download
+evidence, roles, C2/Q2/QD/FD and providers unchanged. No login-rate row remains;
+this point-in-time result does not reconstruct any expired transient metadata
+between the request and observation. This is a confirmed failed login, not an
+ambiguous successful session or a reason for direct repair.
+
+The pinned Worker remained at single version aba79c9fa0ae, 100%, exact settings
+unchanged; usage_model=standard and no explicit limits object. This does not
+establish Free versus Paid or the effective CPU cap. Metrics for this Worker
+in 20:06–20:10Z show one failed invocation at the exact screenshot second with
+status exceededResources and cpuTimeP50/P99=381493 microseconds (381.493 ms).
+The live GraphQL schema independently confirms microsecond units. Five other
+invocations succeeded in that window. These aggregates do not identify a code
+line, distinguish the CPU/memory subtype, or prove that every earlier successful
+login stayed below its effective budget.
+
+Persisted Workers Logs are enabled, but the single temporary/dry five-second
+telemetry read returned API 403; the worker-plan read also returned API 403.
+This is Cloudflare authorization, not an automatic approval-review rejection.
+No logging configuration, subscription, limit or permission was changed. The
+source uses bcryptjs with default cost 12, which is a plausible expensive login
+path; no request-level profile proves it caused this invocation's failure.
+Cloudflare documents 1102 for CPU/memory and 1027 for free-tier daily requests;
+the CPU limits documentation also describes burst flexibility. Free plan's
+10 ms must remain conditional until the actual plan is verified.
+
+Classification: **P1**, because normal login in the required manual-preview
+flow failed. P0/data-loss/authorization-bypass evidence is absent. Last completed
+gate remains D16; D17b/D18 are unexecuted, and the prepared final-complete helper
+must not be run. The earlier independent scoped candidate review is historical
+evidence; this new live P1 blocks continuation until resolved.
+
+Protected evidence: `tmp/document-phase-07-owner/D17a-owner-1102-incident-safe.json`,
+SHA-256 `30d074ae5a4c413bb6c9ead0ee9c301f6822ec577352d2f845fa90b48dd65885`; screenshot, exact raw metric query/result, schema units,
+version/settings and selected D1 snapshots remain Git-ignored with owner-only
+access. No password, email, cookie, document body or complete resource ID was
+exported. Existing approved archive and local downloaded file are retained;
+no encryption changes, deploy, provider send, direct repair or retry occurred.
+
+**One next action:** read-only confirmation of effective Worker limits and the
+failing login's resource path using available invocation diagnostics or a local
+profile. No weakening password verification, plan purchase or configuration
+change is authorized by this diagnosis. Passed: actual-state/metric/unit
+verification, docs:check, release:scan and git diff --check. Runtime tests,
+E2E/build were not rerun because this is diagnosis/docs with no runtime diff.
+`rollover_required: no`; `recommended_next_session_mode: Medium`: immediate
+work is read-only and the failed login is contained, with no active session or
+unresolved application-write outcome.
 
 ## D10–D16 verified; final foreign-parent check awaiting private input — 2026-09-05T20:02:50Z
 
