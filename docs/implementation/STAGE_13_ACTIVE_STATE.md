@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:40:55Z
+updated_utc: 2026-09-05T19:46:35Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D12
-next_gate: phase-5-document-D13
+last_completed_gate: phase-5-document-D13
+next_gate: phase-5-document-D14
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D12-verified
-last_atomic_action: D12-same-A-exact-SHA-actual-clean-attestation
+current_phase: phase-5-document-scenario-D13-verified
+last_atomic_action: D13-separate-business-approval-and-native-archive-handoff
 last_atomic_result: success
-next_atomic_action: D13-separate-business-inspection-and-approval
+next_atomic_action: D14-normal-A-logout
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T19:40:55.732Z
-    postcondition_rows_read: 182
-    latest_read_kind: document_scenario_D12_actual_bounded_postcondition
+    latest_bounded_postcondition_utc: 2026-09-05T19:45:06.296Z
+    postcondition_rows_read: 191
+    latest_read_kind: document_scenario_D13_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_authorized_scenario_D12_verified
+    documents: upload_enabled_authorized_scenario_D13_verified
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -265,7 +265,7 @@ document_phase_preparation:
   metadata_read_method: exact_key_prefix_per_page_2_zero_or_one_result_no_cursor_or_truncation
   head_transport: unsupported_405_not_used
   local_metadata_parser: optional_result_info_corrected_recorded_response_reused_no_write_ambiguity
-  actual_document_lifecycle: D0_clean_same_A_exact_SHA_immutable_attestation_download_audit_linked_no_business_approval_or_archive
+  actual_document_lifecycle: D0_approved_private_archive_same_A_AV_separate_business_review_quarantine_deleted
   broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
   protected_evidence: tmp/document-phase-07-owner
   configuration_permission: completed_one_deploy_verified_no_rollback_needed
@@ -296,8 +296,8 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D12_success
-  scenario_mutation_attempts: 13
+  result: D13_success
+  scenario_mutation_attempts: 14
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
@@ -306,15 +306,15 @@ document_scenario_execution:
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D13-separate-business-inspection-and-approval
+  id: D14-normal-A-logout
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_A_POST_documentReview_approve_only_after_separate_synthetic_business_inspection
+  mutation: one_normal_A_POST_account_security_logout_with_CSRF
   preconditions:
-    - previous_D12_actual_postcondition_and_docs_only_commit_success
+    - previous_D13_actual_postcondition_and_docs_only_commit_success
     - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - D0_approved_archive_random_key_exact_SHA_size_linked_intent_assertion_review_audit_quarantine_handoff_verified
+    - exact_A_session_revoked_one_linked_logout_audit_archive_and_all_domain_state_preserved
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -327,6 +327,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D13 verified — 2026-09-05T19:46:35Z
+
+Result: **success**. One separate business approval and native archive handoff under the owner's complete D01a–D18b scope.
+Before: D0 clean, owner separately inspected content and confirmed suitable synthetic document. After: D0 approved by A, one linked archive intent and assertion with exact SHA/size metadata in private EU R2; server quarantine object absent and delete_state deleted; AV evidence preserved; independent archive byte check remains D15b.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-05T19:45:06.296Z: 191 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D13-success-safe.json`,
+SHA-256 `8e43f3b001b90aa340f9c734616f68c68a2ede0c3e27a9a75d946effdbf6a764`; one-attempt marker, safe response and before/after D1 retained.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Actual owner AV clean and separate business inspection are recorded; approved archive is retained. One next action:
+D14-normal-A-logout, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known target/postcondition/containment
+and no unresolved ambiguity.
 
 ## Document scenario D12 verified — 2026-09-05T19:40:55Z
 
