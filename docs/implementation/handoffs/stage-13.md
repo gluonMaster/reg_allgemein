@@ -3799,3 +3799,61 @@ dependency or deployed-config change occurred; exact inherited evidence applies.
 `rollover_required: no`; `recommended_next_session_mode: High`: D09 has a
 known target, postcondition and containment; only workstation facts are pending,
 with no unresolved mutation ambiguity.
+
+
+## Exact D09 download complete; owner AV handoff — 2026-09-05T19:27:40Z
+
+The owner explicitly resumed the one synthetic D0 experiment in the selected
+local directory with no encryption changes. Canonical exception/check criterion
+and fresh exact-target/session preflight were committed as 7b64b78. No disk,
+folder or container encryption was enabled, disabled or reconfigured. The
+exception does not apply to production or real client documents.
+
+D09 dispatched once: normal A POST with CSRF and purpose local_av_scan.
+HTTP 200, forced attachment with opaque filename, application/octet-stream,
+private/no-store, nosniff and default-src none/sandbox all passed. The file was
+saved to the exact new destination in the owner-selected local directory.
+Full local SHA-256 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81 and 16954 bytes match D0.
+The path remains in protected `tmp/document-phase-07-owner/D09-download-plan.json`;
+no document contents were rendered, opened for inspection or exported to chat.
+
+Actual D1 postcondition 2026-09-05T19:23:35.640Z: 175 read-only rows,
+zero writes/changes; same A session version 2, one matching quarantine-download
+audit and one immutable quarantine_downloaded assertion with the same A/D0/SHA
+linkage. Prior upload assertion, roles, historical sessions, QD/FD/Q2, provider
+state, quarantine key/TTL/intent and status are preserved. D0 remains quarantined
+with no AV attestation or archive. The local verifier initially classified the
+expected new download assertion as drift; the deployed repository explicitly
+inserts it. The ignored verifier now validates its exact linkage and preserves
+older assertions, reusing the saved authoritative snapshot. No request retry,
+runtime change or unresolved mutation ambiguity occurred.
+
+D09 active-state checkpoint: 9e3edbd. Protected success evidence SHA-256
+20dc7c25ec271f668567a7978ac29875ecd0f2a1f8db0000011c5cdb1f57d5e0. Current count: 9 sessions, 8 revoked and 1 current A; document 1,
+funding authorization 1, requests 2, quarantine intent 1. Browser context is
+retained for the same-admin continuation. Do not refresh, relogin or download
+again merely to prepare the next step.
+
+**One next action:** owner personally scans the downloaded file with current
+approved local antivirus, without opening it first, and reports product/version,
+engine/definitions freshness, completion time with time zone and clean/detected.
+The agent's read-only Defender metadata inquiry was denied by local permissions;
+it ran no scan and provides no AV result. Do not treat that metadata limitation
+as evidence that antivirus is absent or ineffective. Owner scan facts are pending.
+
+After actual clean: continue the already authorized D11 wrong-SHA negative,
+D12 exact hash-bound attestation by the same A, then separate D13 business
+inspection/decision and archive/owner/foreign checks with individual checkpoints.
+If detected or uncertain, stop without inventing clean or approving business
+review. Local copy cleanup follows the owner's procedure; no deletion requested
+or performed. Current A session intentionally remains available for this flow.
+
+Full REQ-11/manual preview and production remain blocked. Rejected/14-day
+nonapproved cleanup outcomes remain separate. Passed: helper syntax, exact
+download response, local checksum/size and linked D1 postconditions, docs:check,
+release:scan and git diff --check. Full runtime/E2E/build/review deliberately
+reused from exact unchanged candidate; this turn changed docs and ignored
+operational helpers only. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: the immediate next action is local
+owner AV/manual inspection without remote mutation. Return to High when the
+reported scan facts permit the planned remote attestation steps.

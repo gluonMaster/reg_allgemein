@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:25:30Z
+updated_utc: 2026-09-05T19:27:40Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D09
@@ -13,7 +13,7 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D09-verified
+current_phase: phase-5-D09-complete-awaiting-owner-actual-local-AV
 last_atomic_action: D09-audited-forced-A-download-of-exact-D0
 last_atomic_result: success
 next_atomic_action: D10-owner-personally-scans-downloaded-D0
@@ -261,11 +261,11 @@ document_phase_preparation:
   fixture_prerequisite: one_new_P2_C2_nachhilfe_jobcenter_draft_QD_and_FD_via_normal_parent_route_Q2_preserved
   synthetic_input: one_locally_generated_PNG_16954_bytes_canonical_upload_validator_passed
   synthetic_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
-  actual_local_av_scan: pending_owner_after_audited_download
+  actual_local_av_scan: pending_owner_actual_scan_of_downloaded_SHA_verified_D0
   metadata_read_method: exact_key_prefix_per_page_2_zero_or_one_result_no_cursor_or_truncation
   head_transport: unsupported_405_not_used
   local_metadata_parser: optional_result_info_corrected_recorded_response_reused_no_write_ambiguity
-  actual_document_lifecycle: one_D0_quarantined_owner_scope_SHA_size_random_key_TTL_intent_object_audit_verified
+  actual_document_lifecycle: D0_quarantined_exact_download_same_A_audit_assertion_verified_no_AV_or_archive
   broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
   protected_evidence: tmp/document-phase-07-owner
   configuration_permission: completed_one_deploy_verified_no_rollback_needed
@@ -301,7 +301,7 @@ document_scenario_execution:
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
-  local_AV: pending_actual_owner_scan_after_audited_D09_download
+  local_AV: pending_owner_product_engine_definitions_freshness_scan_completion_UTC_and_clean_or_detected
   local_encrypted_unsynced_quarantine_workspace: owner_explicit_exact_D0_exception_no_encryption_changes_selected_local_directory_no_registered_sync_root_match
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
@@ -327,6 +327,63 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Exact D09 download complete; owner AV handoff — 2026-09-05T19:27:40Z
+
+The owner explicitly resumed the one synthetic D0 experiment in the selected
+local directory with no encryption changes. Canonical exception/check criterion
+and fresh exact-target/session preflight were committed as 7b64b78. No disk,
+folder or container encryption was enabled, disabled or reconfigured. The
+exception does not apply to production or real client documents.
+
+D09 dispatched once: normal A POST with CSRF and purpose local_av_scan.
+HTTP 200, forced attachment with opaque filename, application/octet-stream,
+private/no-store, nosniff and default-src none/sandbox all passed. The file was
+saved to the exact new destination in the owner-selected local directory.
+Full local SHA-256 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81 and 16954 bytes match D0.
+The path remains in protected `tmp/document-phase-07-owner/D09-download-plan.json`;
+no document contents were rendered, opened for inspection or exported to chat.
+
+Actual D1 postcondition 2026-09-05T19:23:35.640Z: 175 read-only rows,
+zero writes/changes; same A session version 2, one matching quarantine-download
+audit and one immutable quarantine_downloaded assertion with the same A/D0/SHA
+linkage. Prior upload assertion, roles, historical sessions, QD/FD/Q2, provider
+state, quarantine key/TTL/intent and status are preserved. D0 remains quarantined
+with no AV attestation or archive. The local verifier initially classified the
+expected new download assertion as drift; the deployed repository explicitly
+inserts it. The ignored verifier now validates its exact linkage and preserves
+older assertions, reusing the saved authoritative snapshot. No request retry,
+runtime change or unresolved mutation ambiguity occurred.
+
+D09 active-state checkpoint: 9e3edbd. Protected success evidence SHA-256
+20dc7c25ec271f668567a7978ac29875ecd0f2a1f8db0000011c5cdb1f57d5e0. Current count: 9 sessions, 8 revoked and 1 current A; document 1,
+funding authorization 1, requests 2, quarantine intent 1. Browser context is
+retained for the same-admin continuation. Do not refresh, relogin or download
+again merely to prepare the next step.
+
+**One next action:** owner personally scans the downloaded file with current
+approved local antivirus, without opening it first, and reports product/version,
+engine/definitions freshness, completion time with time zone and clean/detected.
+The agent's read-only Defender metadata inquiry was denied by local permissions;
+it ran no scan and provides no AV result. Do not treat that metadata limitation
+as evidence that antivirus is absent or ineffective. Owner scan facts are pending.
+
+After actual clean: continue the already authorized D11 wrong-SHA negative,
+D12 exact hash-bound attestation by the same A, then separate D13 business
+inspection/decision and archive/owner/foreign checks with individual checkpoints.
+If detected or uncertain, stop without inventing clean or approving business
+review. Local copy cleanup follows the owner's procedure; no deletion requested
+or performed. Current A session intentionally remains available for this flow.
+
+Full REQ-11/manual preview and production remain blocked. Rejected/14-day
+nonapproved cleanup outcomes remain separate. Passed: helper syntax, exact
+download response, local checksum/size and linked D1 postconditions, docs:check,
+release:scan and git diff --check. Full runtime/E2E/build/review deliberately
+reused from exact unchanged candidate; this turn changed docs and ignored
+operational helpers only. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: the immediate next action is local
+owner AV/manual inspection without remote mutation. Return to High when the
+reported scan facts permit the planned remote attestation steps.
 
 ## Document scenario D09 verified — 2026-09-05T19:25:30Z
 
