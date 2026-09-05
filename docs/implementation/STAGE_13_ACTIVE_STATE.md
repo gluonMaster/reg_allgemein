@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T20:28:00Z
+updated_utc: 2026-09-05T20:39:16Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D16
@@ -16,7 +16,7 @@ current_review_status: independent_go
 current_phase: phase-5-D17a-owner-login-failed-1102-contained-awaiting-resource-diagnosis
 last_atomic_action: owner-native-POST-auth-login-D17a-1102
 last_atomic_result: failed
-next_atomic_action: prepare-bounded-Workers-Paid-remediation-and-validation-scope
+next_atomic_action: prepare-evidence-based-login-CPU-remediation-options
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: next_action_readonly_diagnostics_no_session_created_no_domain_damage_no_unresolved_write_ambiguity
@@ -322,17 +322,20 @@ document_login_resource_incident:
   working_hypothesis: local_bcrypt12_CPU_cost_confirmed_remote_incident_root_cause_and_effective_limit_unconfirmed
   local_password_profile: synthetic_Node_valid_compare_391_406_438_ms_CPU_wrong_compare_359_391_391_ms_fresh_dummy_734_ms
   local_profile_remote_equivalence: not_claimed_no_actual_credentials_or_network_used
+  previous_project_comparison: local_bcrypt_cost10_vs_current_cost12_approximately_fourfold_core_work
+  comparison_evidence: tmp/login-project-comparison-20260905.json
+  previous_project_remote_metrics_and_stored_hash_cost: not_read_local_source_only_owner_reports_Free_without_failures
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: prepare-bounded-Workers-Paid-remediation-and-validation-scope
+  id: prepare-evidence-based-login-CPU-remediation-options
   permission: read_only_diagnosis_only_no_login_retry_config_deploy_or_plan_change
   target: exact_preview_worker_242c1796e930_version_aba79c9fa0ae
-  mutation: none_prepare_account_plan_change_proposal_preserving_runtime_password_strength_and_preview_scope
+  mutation: none_compare_auth_CPU_remedies_and_Paid_option_preserving_security_requirements_and_preview_scope
   preconditions:
     - failed_owner_login_actual_postcondition_recorded_and_committed
     - no_guess_that_1102_is_daily_request_quota_or_that_bcrypt_is_proven_cause
   postcondition:
-    - distinguish_confirmed_metrics_from_unverified_CPU_memory_subtype_plan_and_function
+    - distinguish_owner_confirmed_Free_and_local_cost_comparison_from_unverified_remote_error_subtype_and_old_deployment
     - prepare_bounded_P1_resolution_with_actual_limits_evidence_before_any_retry
   success_transition: define_exact_resolution_and_resume_D17a_only_after_own_checkpoint
   failed_or_ambiguous_transition: preserve_archive_and_all_revoked_sessions_report_missing_diagnostic_access
@@ -346,6 +349,49 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Read-only comparison with Berufsorientierung — 2026-09-05T20:39:16Z
+
+The owner reports the separate Berufsorientierung application works on Workers
+Free without observed blocks. Its local source and installed bcrypt package were
+read only; no previous-project files, application state or remote resources were
+changed. Both applications use SvelteKit, the Cloudflare adapter and bcryptjs.
+The previous project's auth/index.ts sets SALT_ROUNDS=10; this project's
+auth/password.ts defaults to cost 12. The bcrypt core performs 2^cost iterations,
+so these defaults differ by fourfold computation, not twenty percent.
+
+A same-process synthetic comparison measured five valid checks for each package
+and cost combination. Median process CPU ms: bcryptjs 3.0.2 at cost 10 = 109,
+at cost 12 = 438; bcryptjs 3.0.3 at cost 10 = 110, at cost 12 = 484. All twenty
+comparisons returned the expected result. Evidence:
+`tmp/login-project-comparison-20260905.json`. This is local Node performance,
+not a remote Worker benchmark; no actual user hashes/passwords were accessed.
+The measured package-version difference does not explain the roughly fourfold
+cost effect. Stored hashes carry their own cost: changing a source default alone
+would not accelerate verification of existing cost-12 hashes.
+
+Other observed differences: an unknown account returns before bcrypt in the
+previous login, whereas this project's fresh runtime computes a dummy hash and
+compares it; this path was previously measured at 734 ms local CPU and does not
+establish the failed existing-account path. The previous app issues a JWT and
+checks the user in D1; the current app additionally maintains revocable D1 sessions
+and session versions. Those differences are not measured causes of the 1102.
+Waiting for D1 is not itself Worker CPU time.
+
+Cloudflare documents 10 ms CPU per Free HTTP invocation and flexibility for
+infrequent excess. This can accommodate some successful expensive requests; it
+does not guarantee either bcrypt configuration fits Free. Even the cost-10 local
+result exceeds 10 ms, and local CPU is not a measurement of the deployed previous
+Worker. Why that deployment has avoided blocks remains unverified without its
+actual settings, hash-cost metadata and invocation metrics. Source:
+[Workers limits](https://developers.cloudflare.com/workers/platform/limits/).
+
+This comparison supersedes the Paid-only framing of the immediately preceding
+proposal: Paid is an option, not an established unique remedy or proof of the
+historical error's CPU/memory subtype. One next action is to prepare bounded
+login-CPU remediation options using this evidence and the security requirements.
+No password-policy change, purchase, remote request or login retry occurred.
+D16 and archived-document evidence remain preserved; D17b/D18 remain pending.
 
 ## Owner confirms Workers Free — 2026-09-05T20:28:00Z
 

@@ -4056,3 +4056,32 @@ this does not authorize purchasing Paid. Earlier D16/archive/owner-download evid
 is retained; P1 is open and D17b/D18 remain unexecuted. One next action: prepare or
 review the bounded Paid-plan remedy/validation scope with the owner before any
 purchase or remote change. Current mode remains Medium for local/read-only work.
+
+## Read-only comparison with Berufsorientierung — 2026-09-05T20:39:16Z
+
+The owner reports their separate Berufsorientierung application works on Workers
+Free without observed blocks. Local source comparison found both use SvelteKit,
+the Cloudflare adapter and bcryptjs, but the previous default bcrypt cost is 10
+and the current default is 12 (fourfold core work). Five synthetic valid comparisons
+per combination gave median process CPU ms: bcryptjs 3.0.2 cost 10/12 = 109/438;
+bcryptjs 3.0.3 cost 10/12 = 110/484. All twenty comparisons passed. Evidence:
+`tmp/login-project-comparison-20260905.json`; local Node only, no actual credentials
+or hashes, application imports, network or previous-project writes.
+
+The previous login returns before bcrypt for an unknown account; the current
+fresh runtime hashes a dummy value then compares it. Current D1-revocable sessions
+also differ from the previous JWT/user-check flow, but neither difference proves
+the failed invocation's code path or resource subtype. Stored bcrypt hashes retain
+their own cost even if the source default is changed.
+
+The old deployment's actual hash costs, resource settings and invocation CPU were
+not read. Cloudflare's documented allowance for infrequent CPU excess may explain
+successful expensive requests, but cost 10 is not proven to fit Free's 10 ms.
+The previous Paid-only proposal is superseded by the current active state's one
+next action: prepare evidence-based login CPU remediation options while retaining
+the security requirements. No runtime/configuration/policy change, purchase, login
+retry or remote mutation occurred. D16/archive evidence is preserved, P1 remains
+open and D17b/D18 are pending. Validation is limited to the synthetic comparisons
+and documentation checks; full runtime/E2E/build are not applicable to this
+diagnosis/docs-only diff. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: immediate work is local/read-only.
