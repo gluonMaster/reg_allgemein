@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T18:47:41Z
+updated_utc: 2026-09-05T18:51:25Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D03
-next_gate: phase-5-document-D04
+last_completed_gate: phase-5-document-D04
+next_gate: phase-5-document-D05
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D03-verified
-last_atomic_action: D03-GET-QD-upload-form
+current_phase: phase-5-document-scenario-D04-verified
+last_atomic_action: D04-upload-of-one-exact-synthetic-D0
 last_atomic_result: success
-next_atomic_action: D04-upload-one-D0-to-quarantine
+next_atomic_action: D05-owner-denial-before-approval
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T18:47:41.524Z
-    postcondition_rows_read: 157
-    latest_read_kind: document_scenario_D03_actual_bounded_postcondition
+    latest_bounded_postcondition_utc: 2026-09-05T18:50:30.005Z
+    postcondition_rows_read: 163
+    latest_read_kind: document_scenario_D04_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_authorized_scenario_D03_verified
+    documents: upload_enabled_authorized_scenario_D04_verified
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -265,7 +265,7 @@ document_phase_preparation:
   metadata_read_method: exact_key_prefix_per_page_2_zero_or_one_result_no_cursor_or_truncation
   head_transport: unsupported_405_not_used
   local_metadata_parser: optional_result_info_corrected_recorded_response_reused_no_write_ambiguity
-  actual_document_lifecycle: not_started
+  actual_document_lifecycle: one_D0_quarantined_owner_scope_SHA_size_random_key_TTL_intent_object_audit_verified
   broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
   protected_evidence: tmp/document-phase-07-owner
   configuration_permission: completed_one_deploy_verified_no_rollback_needed
@@ -296,8 +296,8 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D03_success
-  scenario_mutation_attempts: 4
+  result: D04_success
+  scenario_mutation_attempts: 5
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
@@ -306,15 +306,15 @@ document_scenario_execution:
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D04-upload-one-D0-to-quarantine
+  id: D05-owner-denial-before-approval
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_normal_multipart_POST_QD_upload_exact_synthetic_D0
+  mutation: one_P2_GET_D0_download_before_approval
   preconditions:
-    - previous_D03_actual_postcondition_and_docs_only_commit_success
+    - previous_D04_actual_postcondition_and_docs_only_commit_success
     - current_P2_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - one_quarantined_D0_P2_C2_FD_random_key_SHA_size_type_TTL14d_linked_intent_assertion_audit_no_archive
+    - 404_DOCUMENT_NOT_FOUND_no_document_bytes_or_success_audit_only_P2_session_touch
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -327,6 +327,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D04 verified — 2026-09-05T18:51:25Z
+
+Result: **success**. One upload of one exact synthetic D0 under the owner's complete D01a–D18b scope.
+Before: QD and FD preserved, no document or storage intent. After: one quarantined D0 with exact PNG SHA/16954 bytes, random key and immutable 14-day TTL; one linked quarantine intent and assertion, P2/C2/FD scope and upload audit; private EU object metadata matches, no archive link.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-05T18:50:30.005Z: 163 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D04-success-safe.json`,
+SHA-256 `c79cf5d43778b033338b74298e18a3899a482af82a0328a4c53cb8646f95af47`; one-attempt marker, safe response and before/after D1 retained.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Real local AV remains pending. One next action:
+D05-owner-denial-before-approval, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known
+target/postcondition/containment and no unresolved ambiguity.
 
 ## Document scenario D03 verified — 2026-09-05T18:47:41Z
 
