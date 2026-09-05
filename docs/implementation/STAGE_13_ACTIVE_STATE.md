@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T20:26:19Z
+updated_utc: 2026-09-05T20:28:00Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D16
@@ -16,7 +16,7 @@ current_review_status: independent_go
 current_phase: phase-5-D17a-owner-login-failed-1102-contained-awaiting-resource-diagnosis
 last_atomic_action: owner-native-POST-auth-login-D17a-1102
 last_atomic_result: failed
-next_atomic_action: readonly-confirm-effective-Worker-limit-and-error-subtype
+next_atomic_action: prepare-bounded-Workers-Paid-remediation-and-validation-scope
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: next_action_readonly_diagnostics_no_session_created_no_domain_damage_no_unresolved_write_ambiguity
@@ -317,17 +317,17 @@ document_login_resource_incident:
   settings_exact_preserved: true
   persisted_domain_session_provider_delta: none_at_readonly_observation
   remaining_active_sessions: 0
-  actual_worker_plan_and_effective_CPU_cap: unconfirmed_API_403
+  actual_worker_plan_and_effective_CPU_cap: Workers_Free_confirmed_by_owner_10ms_per_request_documented_no_explicit_limits
   detailed_logs_access: API_403_no_logs_or_tail_reconfiguration_attempted
   working_hypothesis: local_bcrypt12_CPU_cost_confirmed_remote_incident_root_cause_and_effective_limit_unconfirmed
   local_password_profile: synthetic_Node_valid_compare_391_406_438_ms_CPU_wrong_compare_359_391_391_ms_fresh_dummy_734_ms
   local_profile_remote_equivalence: not_claimed_no_actual_credentials_or_network_used
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: readonly-confirm-effective-Worker-limit-and-error-subtype
+  id: prepare-bounded-Workers-Paid-remediation-and-validation-scope
   permission: read_only_diagnosis_only_no_login_retry_config_deploy_or_plan_change
   target: exact_preview_worker_242c1796e930_version_aba79c9fa0ae
-  mutation: none_read_only_effective_plan_limits_and_available_invocation_diagnostics
+  mutation: none_prepare_account_plan_change_proposal_preserving_runtime_password_strength_and_preview_scope
   preconditions:
     - failed_owner_login_actual_postcondition_recorded_and_committed
     - no_guess_that_1102_is_daily_request_quota_or_that_bcrypt_is_proven_cause
@@ -346,6 +346,35 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Owner confirms Workers Free — 2026-09-05T20:28:00Z
+
+The owner explicitly answered Workers Free. The actual plan is now owner-confirmed;
+API lookup still returned 403 and no paid subscription is claimed. Cloudflare's
+documented Free CPU allowance is 10 ms per invocation, while the existing bcrypt12
+implementation measured 391–438 ms for a valid synthetic local comparison and the
+failed remote invocation recorded 381.493 ms CPU. Relying on occasional over-limit
+execution is unsuitable for this login flow. The exact CPU/memory subtype of the
+historical 1102 remains unverified, but the CPU budget incompatibility requires
+resolution independently. Several logins did not exhaust a shared daily CPU pool.
+
+Prepared remedy proposal: owner enables the separate Workers Paid subscription on
+the pinned existing account (fingerprint 5dbd04a4763a), currently USD 5/month base;
+retain exact preview Worker/version, schema, secrets, Access, password strength,
+providers and stored evidence. No Worker deploy or runtime rewrite is proposed as
+part of the plan change itself. The effective post-change limit must be read back
+and confirmed, not assumed from a payment receipt. A fresh successful, failed and
+bounded concurrent synthetic login rehearsal needs exact targets, request counts,
+postconditions, cost/containment and prior authorization; no uncontrolled load test.
+If 1102 persists under a confirmed adequate CPU allowance, diagnose the detailed
+invocation and memory/other resource behavior rather than declaring upgrade a fix.
+
+No subscription purchase, billing acceptance, API mutation, new login, configuration
+change or test dispatch occurred. The owner only confirmed the existing Free plan;
+this does not authorize purchasing Paid. Earlier D16/archive/owner-download evidence
+is retained; P1 is open and D17b/D18 remain unexecuted. One next action: prepare or
+review the bounded Paid-plan remedy/validation scope with the owner before any
+purchase or remote change. Current mode remains Medium for local/read-only work.
 
 ## Local login CPU profile and capacity clarification — 2026-09-05T20:26:19Z
 

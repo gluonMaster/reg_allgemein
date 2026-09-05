@@ -4026,3 +4026,33 @@ expected comparison outcomes, profiler inspection, docs:check, release:scan,
 git diff --check. Full runtime/E2E/build not repeated: runtime and configuration
 are unchanged. `rollover_required: no`;
 `recommended_next_session_mode: Medium`: the next work is read-only diagnosis.
+
+
+## Owner confirms Workers Free — 2026-09-05T20:28:00Z
+
+The owner explicitly answered Workers Free. The actual plan is now owner-confirmed;
+API lookup still returned 403 and no paid subscription is claimed. Cloudflare's
+documented Free CPU allowance is 10 ms per invocation, while the existing bcrypt12
+implementation measured 391–438 ms for a valid synthetic local comparison and the
+failed remote invocation recorded 381.493 ms CPU. Relying on occasional over-limit
+execution is unsuitable for this login flow. The exact CPU/memory subtype of the
+historical 1102 remains unverified, but the CPU budget incompatibility requires
+resolution independently. Several logins did not exhaust a shared daily CPU pool.
+
+Prepared remedy proposal: owner enables the separate Workers Paid subscription on
+the pinned existing account (fingerprint 5dbd04a4763a), currently USD 5/month base;
+retain exact preview Worker/version, schema, secrets, Access, password strength,
+providers and stored evidence. No Worker deploy or runtime rewrite is proposed as
+part of the plan change itself. The effective post-change limit must be read back
+and confirmed, not assumed from a payment receipt. A fresh successful, failed and
+bounded concurrent synthetic login rehearsal needs exact targets, request counts,
+postconditions, cost/containment and prior authorization; no uncontrolled load test.
+If 1102 persists under a confirmed adequate CPU allowance, diagnose the detailed
+invocation and memory/other resource behavior rather than declaring upgrade a fix.
+
+No subscription purchase, billing acceptance, API mutation, new login, configuration
+change or test dispatch occurred. The owner only confirmed the existing Free plan;
+this does not authorize purchasing Paid. Earlier D16/archive/owner-download evidence
+is retained; P1 is open and D17b/D18 remain unexecuted. One next action: prepare or
+review the bounded Paid-plan remedy/validation scope with the owner before any
+purchase or remote change. Current mode remains Medium for local/read-only work.
