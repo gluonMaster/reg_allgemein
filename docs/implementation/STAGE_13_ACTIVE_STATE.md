@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T20:18:08Z
+updated_utc: 2026-09-05T20:26:19Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D16
@@ -16,7 +16,7 @@ current_review_status: independent_go
 current_phase: phase-5-D17a-owner-login-failed-1102-contained-awaiting-resource-diagnosis
 last_atomic_action: owner-native-POST-auth-login-D17a-1102
 last_atomic_result: failed
-next_atomic_action: readonly-identify-effective-Worker-limit-and-failing-login-CPU-path
+next_atomic_action: readonly-confirm-effective-Worker-limit-and-error-subtype
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: next_action_readonly_diagnostics_no_session_created_no_domain_damage_no_unresolved_write_ambiguity
@@ -319,13 +319,15 @@ document_login_resource_incident:
   remaining_active_sessions: 0
   actual_worker_plan_and_effective_CPU_cap: unconfirmed_API_403
   detailed_logs_access: API_403_no_logs_or_tail_reconfiguration_attempted
-  working_hypothesis: CPU_cost_of_bcryptjs_round12_authentication_requires_profile_not_confirmed_root_cause
+  working_hypothesis: local_bcrypt12_CPU_cost_confirmed_remote_incident_root_cause_and_effective_limit_unconfirmed
+  local_password_profile: synthetic_Node_valid_compare_391_406_438_ms_CPU_wrong_compare_359_391_391_ms_fresh_dummy_734_ms
+  local_profile_remote_equivalence: not_claimed_no_actual_credentials_or_network_used
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: readonly-identify-effective-Worker-limit-and-failing-login-CPU-path
+  id: readonly-confirm-effective-Worker-limit-and-error-subtype
   permission: read_only_diagnosis_only_no_login_retry_config_deploy_or_plan_change
   target: exact_preview_worker_242c1796e930_version_aba79c9fa0ae
-  mutation: none_read_only_effective_limits_and_available_trace_or_local_profile
+  mutation: none_read_only_effective_plan_limits_and_available_invocation_diagnostics
   preconditions:
     - failed_owner_login_actual_postcondition_recorded_and_committed
     - no_guess_that_1102_is_daily_request_quota_or_that_bcrypt_is_proven_cause
@@ -344,6 +346,52 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Local login CPU profile and capacity clarification — 2026-09-05T20:26:19Z
+
+Read-only/local follow-up to P1 Worker 1102. No login, configuration, plan,
+permission, deployment or other remote mutation occurred. Existing
+BcryptPasswordHasher was measured with synthetic input only under Node's CPU
+profiler: three valid-password comparisons consumed 391, 406 and 438 ms process
+CPU; three wrong-password comparisons 359, 391 and 391 ms; a fresh missing-user
+dummy hash plus comparison 734 ms. Of 1740 profiler samples, 1735 were attributed
+to bcryptjs. Evidence: `tmp/login-resource-local-profile-20260905.json`.
+No actual password/hash was read or exported. This establishes a substantial
+local CPU cost for the deployed algorithm, not a remote Worker profile or proof
+of the failed invocation's exact code path.
+
+The owner's question about several logins exhausting capacity is clarified:
+1102 is a per-invocation CPU/resource failure, not evidence that a handful of
+logins consumed a daily request quota. Actual Workers plan/effective cap and
+CPU-versus-memory subtype remain unconfirmed; the owner was asked only which
+Workers plan is active, not for permission to buy or change anything.
+
+Current official documentation distinguishes Workers Free's 10 ms CPU/request
+from Workers Paid's default 30 seconds CPU/request. Paid's base subscription is
+USD 5/month, including 10 million Worker requests and 30 million CPU ms/month.
+Illustrative arithmetic only: 300 logins/day × 30 days × observed 381.493 ms
+= 3,433,437 CPU ms/month, about 11.45% of that included CPU allowance. This is
+not a measured average, load test or full application cost forecast; Cron,
+other requests, database/storage, browser rendering and providers are separate
+workloads/services. A Paid CPU allowance also does not resolve a memory problem.
+Sources: [Worker limits](https://developers.cloudflare.com/workers/platform/limits/)
+and [Worker pricing](https://developers.cloudflare.com/workers/platform/pricing/),
+retrieved 2026-09-05.
+
+The required resolution is to establish the actual plan/cap and error subtype,
+then prepare an exact configuration or implementation change appropriate to
+that evidence and validate ordinary, failed and concurrent login behavior.
+Do not weaken password hashing simply to fit a Free CPU allowance. No payment,
+plan/config change or remote load test was performed or inferred as authorized.
+Document scenario remains at D16 with failed D17a contained; previous D1
+reconciliation still shows all ten sessions revoked and D0/archive preserved.
+
+One next action: read-only confirmation of effective Worker plan/limit and
+error subtype. Passed: seven synthetic local performance measurements with
+expected comparison outcomes, profiler inspection, docs:check, release:scan,
+git diff --check. Full runtime/E2E/build not repeated: runtime and configuration
+are unchanged. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: the next work is read-only diagnosis.
 
 ## P1: owner native login failed with Worker 1102 — 2026-09-05T20:18:08Z
 

@@ -3979,3 +3979,50 @@ E2E/build were not rerun because this is diagnosis/docs with no runtime diff.
 `rollover_required: no`; `recommended_next_session_mode: Medium`: immediate
 work is read-only and the failed login is contained, with no active session or
 unresolved application-write outcome.
+
+
+## Local login CPU profile and capacity clarification — 2026-09-05T20:26:19Z
+
+Read-only/local follow-up to P1 Worker 1102. No login, configuration, plan,
+permission, deployment or other remote mutation occurred. Existing
+BcryptPasswordHasher was measured with synthetic input only under Node's CPU
+profiler: three valid-password comparisons consumed 391, 406 and 438 ms process
+CPU; three wrong-password comparisons 359, 391 and 391 ms; a fresh missing-user
+dummy hash plus comparison 734 ms. Of 1740 profiler samples, 1735 were attributed
+to bcryptjs. Evidence: `tmp/login-resource-local-profile-20260905.json`.
+No actual password/hash was read or exported. This establishes a substantial
+local CPU cost for the deployed algorithm, not a remote Worker profile or proof
+of the failed invocation's exact code path.
+
+The owner's question about several logins exhausting capacity is clarified:
+1102 is a per-invocation CPU/resource failure, not evidence that a handful of
+logins consumed a daily request quota. Actual Workers plan/effective cap and
+CPU-versus-memory subtype remain unconfirmed; the owner was asked only which
+Workers plan is active, not for permission to buy or change anything.
+
+Current official documentation distinguishes Workers Free's 10 ms CPU/request
+from Workers Paid's default 30 seconds CPU/request. Paid's base subscription is
+USD 5/month, including 10 million Worker requests and 30 million CPU ms/month.
+Illustrative arithmetic only: 300 logins/day × 30 days × observed 381.493 ms
+= 3,433,437 CPU ms/month, about 11.45% of that included CPU allowance. This is
+not a measured average, load test or full application cost forecast; Cron,
+other requests, database/storage, browser rendering and providers are separate
+workloads/services. A Paid CPU allowance also does not resolve a memory problem.
+Sources: [Worker limits](https://developers.cloudflare.com/workers/platform/limits/)
+and [Worker pricing](https://developers.cloudflare.com/workers/platform/pricing/),
+retrieved 2026-09-05.
+
+The required resolution is to establish the actual plan/cap and error subtype,
+then prepare an exact configuration or implementation change appropriate to
+that evidence and validate ordinary, failed and concurrent login behavior.
+Do not weaken password hashing simply to fit a Free CPU allowance. No payment,
+plan/config change or remote load test was performed or inferred as authorized.
+Document scenario remains at D16 with failed D17a contained; previous D1
+reconciliation still shows all ten sessions revoked and D0/archive preserved.
+
+One next action: read-only confirmation of effective Worker plan/limit and
+error subtype. Passed: seven synthetic local performance measurements with
+expected comparison outcomes, profiler inspection, docs:check, release:scan,
+git diff --check. Full runtime/E2E/build not repeated: runtime and configuration
+are unchanged. `rollover_required: no`;
+`recommended_next_session_mode: Medium`: the next work is read-only diagnosis.
