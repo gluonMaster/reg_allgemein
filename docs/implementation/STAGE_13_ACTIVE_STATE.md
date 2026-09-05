@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T18:39:40Z
+updated_utc: 2026-09-05T18:43:50Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D01b
-next_gate: phase-5-document-D02
+last_completed_gate: phase-5-document-D02
+next_gate: phase-5-document-D03
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D01b-verified
-last_atomic_action: D01b-GET-normal-Nachhilfe-draft-form
+current_phase: phase-5-document-scenario-D02-verified
+last_atomic_action: D02-normal-creation-of-one-Nachhilfe-Jobcenter-draft
 last_atomic_result: success
-next_atomic_action: D02-create-one-QD-FD-draft
+next_atomic_action: D03-GET-QD-upload-form
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicitly_approved_entire_manifest_D01a_D18b_no_repeat_scope_approval_required_actual_owner_AV_and_private_login_input_pending
+permission_state: owner_explicitly_approved_entire_manifest_D01a_D18b_execution_in_progress_no_repeat_scope_approval_actual_owner_AV_pending
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T18:39:39.783Z
-    postcondition_rows_read: 148
-    latest_read_kind: document_scenario_D01b_actual_bounded_postcondition
+    latest_bounded_postcondition_utc: 2026-09-05T18:43:26.194Z
+    postcondition_rows_read: 157
+    latest_read_kind: document_scenario_D02_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_document_scenario_authorized_first_P2_login_pending
+    documents: upload_enabled_authorized_scenario_D02_verified
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -296,8 +296,8 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D01b_success
-  scenario_mutation_attempts: 2
+  result: D02_success
+  scenario_mutation_attempts: 3
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
@@ -306,15 +306,15 @@ document_scenario_execution:
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D02-create-one-QD-FD-draft
+  id: D03-GET-QD-upload-form
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_normal_POST_requests_new_create_with_prepared_QD_payload
+  mutation: one_authenticated_GET_QD_detail_upload_form
   preconditions:
-    - previous_D01b_actual_postcondition_and_docs_only_commit_success
+    - previous_D02_actual_postcondition_and_docs_only_commit_success
     - current_P2_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - exactly_one_QD_draft_v1_and_FD_pending_review_v1_with_audit_assertion_Q2_preserved
+    - server_owned_QD_FD_C2_upload_form_command_key_CSRF_only_P2_session_touch
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -327,6 +327,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D02 verified — 2026-09-05T18:43:50Z
+
+Result: **success**. One normal creation of one Nachhilfe Jobcenter draft under the owner's complete D01a–D18b scope.
+Before: one Q2 draft, no QD and no funding authorization. After: one new QD draft v1 and FD pending_review v1 owned by P2/C2; creation audit and assertion linked; Q2, C2, roles and providers preserved.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-05T18:43:26.194Z: 157 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D02-success-safe.json`,
+SHA-256 `728d8512218c698c1c444be5a402d0f684b35a038f76e1b00fa1ab4eec24ec18`; one-attempt marker, safe response and before/after D1 retained.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Real local AV remains pending. One next action:
+D03-GET-QD-upload-form, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known
+target/postcondition/containment and no unresolved ambiguity.
 
 ## Document scenario D01b verified — 2026-09-05T18:39:40Z
 
