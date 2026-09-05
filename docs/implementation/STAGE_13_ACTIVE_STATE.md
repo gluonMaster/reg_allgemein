@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T18:27:48Z
+updated_utc: 2026-09-05T18:34:52Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-config-deploy-verified
-next_gate: phase-5-document-scenario-D01a
+last_completed_gate: phase-5-document-D01a
+next_gate: phase-5-document-D01b
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-authorized-awaiting-private-P2-login-input
-last_atomic_action: deploy-one-document-upload-flag-same-bundle
+current_phase: phase-5-document-scenario-D01a-verified
+last_atomic_action: D01a-normal-P2-login-without-redirect-follow
 last_atomic_result: success
-next_atomic_action: D01a-normal-P2-login-after-private-input
+next_atomic_action: D01b-GET-new-nachhilfe-form
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: authorized_finite_scenario_known_target_routes_postconditions_containment_private_login_and_actual_owner_AV_are_inputs_not_new_permissions
+mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T18:26:33.573Z
-    postcondition_rows_read: 111
-    latest_read_kind: document_scenario_authorized_readonly_preflight
+    latest_bounded_postcondition_utc: 2026-09-05T18:33:29.222Z
+    postcondition_rows_read: 114
+    latest_read_kind: document_scenario_D01a_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -161,13 +161,13 @@ preview:
     users_with_family_id: 3
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
-    auth_sessions: 7
-    nonrevoked_auth_sessions: 0
+    auth_sessions: 8
+    nonrevoked_auth_sessions: 1
     logged_out_auth_sessions: 6
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 0
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
@@ -296,9 +296,9 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: prepared_waiting_private_login_input
-  scenario_mutation_attempts: 0
-  active_sessions: 0
+  result: D01a_success
+  scenario_mutation_attempts: 1
+  active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
   local_AV: pending_actual_owner_scan_after_audited_D09_download
@@ -306,21 +306,19 @@ document_scenario_execution:
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D01a-normal-P2-login-after-private-input
-  permission: granted_by_owner_for_full_manifest_scenario
-  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1
-  mutation: one_normal_P2_login_without_redirect_follow
+  id: D01b-GET-new-nachhilfe-form
+  permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
+  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
+  mutation: one_authenticated_GET_requests_new_kind_nachhilfe
   preconditions:
-    - fresh_scenario_preflight_same_version_aba79c9fa0ae_true_upload_private_R2_Access_and_no_domain_drift
-    - owner_privately_completes_Access_and_P2_credentials_in_normal_form_no_credentials_in_chat
-    - private_identity_hash_matches_P2_before_submit
+    - previous_D01a_actual_postcondition_and_docs_only_commit_success
+    - current_P2_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - exactly_one_new_P2_session_other_sessions_roles_Q2_C2_and_providers_preserved
-    - active_state_docs_only_commit_before_D01b
-  success_transition: D01b_GET_new_nachhilfe_request_form
-  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_no_retry_preserve_Access_and_evidence
+    - server_owned_C2_form_command_key_and_CSRF_only_current_P2_session_touch
+    - readonly_reconciliation_and_active_state_commit_before_next_mutation
+  success_transition: next_manifest_action_after_own_checkpoint
+  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
   forbidden_in_this_action:
-    - automatic_redirect_follow_or_extra_authenticated_request_before_checkpoint
     - provider_send_direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
@@ -329,6 +327,28 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D01a verified — 2026-09-05T18:34:52Z
+
+Result: **success**. One normal P2 login without redirect follow under the owner's complete D01a–D18b scope.
+Before: 7 revoked historical sessions and no active session. After: exactly one new P2 session version 1; all seven historical sessions, roles, C2, Q2, provider/audit/bootstrap/schema state preserved.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-05T18:33:29.222Z: 114 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D01a-success-safe.json`,
+SHA-256 `5f02373c41f9b45120a33d42454311719f4c16e7906e8212ce1a45896d0247ed`; one-attempt marker, safe response and before/after D1 retained.
+Local reconciliation initially referenced the wrong baseline filename; corrected the ignored helper to read the existing D01a-before-db.json. No login retry or additional application request occurred.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Real local AV remains pending. One next action:
+D01b-GET-new-nachhilfe-form, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known
+target/postcondition/containment and no unresolved ambiguity.
 
 ## Document scenario permission and preflight — 2026-09-05T18:27:48Z
 
