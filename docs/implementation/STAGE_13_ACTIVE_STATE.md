@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T18:12:39Z
+updated_utc: 2026-09-05T18:27:48Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-config-deploy-verified
-next_gate: phase-5-document-scenario-permission
+next_gate: phase-5-document-scenario-D01a
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-config-complete-awaiting-scenario-scope
+current_phase: phase-5-document-scenario-authorized-awaiting-private-P2-login-input
 last_atomic_action: deploy-one-document-upload-flag-same-bundle
 last_atomic_result: success
-next_atomic_action: await-owner-bounded-document-scenario-permission
+next_atomic_action: D01a-normal-P2-login-after-private-input
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: next_finite_document_scenario_requires_scope_known_routes_postconditions_containment_and_owner_AV_handoff
+mode_reason_plain: authorized_finite_scenario_known_target_routes_postconditions_containment_private_login_and_actual_owner_AV_are_inputs_not_new_permissions
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: single_document_flag_deploy_completed_scope_consumed_document_scenario_requires_separate_explicit_permission
+permission_state: owner_explicitly_approved_entire_manifest_D01a_D18b_no_repeat_scope_approval_required_actual_owner_AV_and_private_login_input_pending
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_document_upload_flag_enabled_latest_deploy_other_settings_exact
   deployment_postcondition: success_same_module_one_flag_Access_private_R2_health_and_no_business_session_provider_delta
-  latest_readonly_control_utc: 2026-09-05T18:11:55.860Z
+  latest_readonly_control_utc: 2026-09-05T18:26:26.274Z
   latest_anonymous_access_check: 2026_09_05_readonly_manifest_302_cloudflare_access_redirect_no_authenticated_probe
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T18:11:57.165Z
+    latest_bounded_postcondition_utc: 2026-09-05T18:26:33.573Z
     postcondition_rows_read: 111
-    latest_read_kind: document_config_postdeploy_bounded_domain_sessions_providers_schema
+    latest_read_kind: document_scenario_authorized_readonly_preflight
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_after_config_deploy_actual_document_scenario_not_started_separate_scope_required
+    documents: upload_enabled_document_scenario_authorized_first_P2_login_pending
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -269,7 +269,7 @@ document_phase_preparation:
   broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
   protected_evidence: tmp/document-phase-07-owner
   configuration_permission: completed_one_deploy_verified_no_rollback_needed
-  document_scenario_permission: not_granted
+  document_scenario_permission: granted_entire_D01a_D18b_including_normal_sessions_QD_FD_D0_download_real_owner_AV_attestation_review_archive_owner_foreign_checks_retention
 document_config_deployment:
   result: success
   utc: 2026-09-05T18:12:04.158Z
@@ -292,28 +292,82 @@ document_config_deployment:
   rollback_required: false
   scenario_started: false
   protected_evidence: tmp/document-phase-07-owner/deploy-result-safe.json
+document_scenario_execution:
+  scope: entire_manifest_D01a_D18b_explicit_owner_approval
+  scope_reconfirmation_required: false
+  latest_preflight_utc: 2026-09-05T18:26:34.655Z
+  result: prepared_waiting_private_login_input
+  scenario_mutation_attempts: 0
+  active_sessions: 0
+  fixture_bytes: 16954
+  fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
+  local_AV: pending_actual_owner_scan_after_audited_D09_download
+  local_encrypted_unsynced_quarantine_workspace: owner_confirmation_required_before_D09
+  protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
+  containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: await-owner-bounded-document-scenario-permission
-  permission: required_by_prompt_07_config_only_approval_does_not_include_scenario
-  target: existing_exact_Access_protected_preview_and_prepared_D0_manifest
-  mutation: none_until_explicit_finite_document_package_approval
+  id: D01a-normal-P2-login-after-private-input
+  permission: granted_by_owner_for_full_manifest_scenario
+  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1
+  mutation: one_normal_P2_login_without_redirect_follow
   preconditions:
-    - owner_reviews_manifest_D01a_D18b_including_one_QD_FD_synthetic_fixture_and_normal_sessions
-    - owner_local_AV_handoff_and_retention_containment_intent_are_explicit
+    - fresh_scenario_preflight_same_version_aba79c9fa0ae_true_upload_private_R2_Access_and_no_domain_drift
+    - owner_privately_completes_Access_and_P2_credentials_in_normal_form_no_credentials_in_chat
+    - private_identity_hash_matches_P2_before_submit
   postcondition:
-    - explicit_bounded_document_scenario_scope_before_first_session_or_domain_mutation
-  success_transition: fresh_bounded_preflight_then_first_manifest_action_D01a_P2_normal_login
-  failed_or_ambiguous_transition: preserve_Access_current_private_config_and_evidence_no_scenario_write
+    - exactly_one_new_P2_session_other_sessions_roles_Q2_C2_and_providers_preserved
+    - active_state_docs_only_commit_before_D01b
+  success_transition: D01b_GET_new_nachhilfe_request_form
+  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_no_retry_preserve_Access_and_evidence
   forbidden_in_this_action:
-    - unapproved_login_upload_attestation_review_provider_send_or_cleanup
-    - direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
+    - automatic_redirect_follow_or_extra_authenticated_request_before_checkpoint
+    - provider_send_direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
-  - subsequent_finite_document_package_requires_its_own_explicit_owner_scope
+  - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
   - actual_AV_and_business_decision_cannot_be_replaced_with_format_validation
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario permission and preflight — 2026-09-05T18:27:48Z
+
+The owner explicitly approved the entire finite D01a–D18b scenario in the
+[manifest](STAGE_13_DOCUMENT_PHASE_MANIFEST.md): normal P2/A/P1 sessions, one
+QD/FD fixture, one D0 upload, audited admin download, actual owner local AV,
+same-admin hash-bound attestation, separate business review, archive,
+owner/foreign download checks and retention/containment. This authorization
+persists across the human handoffs; do not request the same permission again.
+The completed single-flag deploy scope is consumed and is not reopened.
+
+Fresh read-only preflight 2026-09-05T18:26:34.655Z passed: version fingerprint aba79c9fa0ae
+at 100%, exact module/settings/resources/Cron, upload enabled, Access 302,
+two distinct private EU R2 and health HEAD 204/no-store/noindex. D1 read
+111 rows, wrote 0, changes=0, changed_db=false. Bounded
+business/session/provider/audit data is exactly equal to the config deployment
+postcondition: users 3, historical sessions 7 all revoked, Q2/C2 preserved,
+zero documents/funding/intents; schema 26/pending 0. Local D0 SHA and 16954-byte
+size match the immutable fixture contract. This is not an AV result.
+
+Protected evidence: `tmp/document-phase-07-owner/scenario-preflight-safe.json`,
+SHA-256 `f065a249b6777e78d4f1bd933394b0c754f002f86f406b3a846868927c3b8fca`. The managed browser initially
+contained only about:blank with no credential form. Prepare the ordinary login
+page for private owner input; no D01a login or scenario mutation has occurred.
+
+One next atomic action is D01a, a single normal P2 login without redirect
+follow, after private Access/credential input. Read-only reconcile and a
+docs-only commit must precede D01b. The real local AV handoff and confirmation
+of an approved encrypted unsynced quarantine workspace remain prerequisites
+before D09/D12. They are missing workstation/scan facts, not new scenario scope.
+
+Containment preserves Access, private buckets and exact evidence. No direct
+SQL/R2 repair, fixture duplication, provider send or destructive cleanup is
+authorized. Full REQ-11 rejected/14-day outcomes, full manual preview and
+production remain blocked. For this docs-only change run docs:check,
+release:scan and git diff --check; inherited exact full suite/E2E/build/review
+evidence is reused because no runtime/config/migration/dependency changed.
+`rollover_required: no`; `recommended_next_session_mode: High`: the finite
+flow is authorized with known target and containment; private input is pending.
 
 ## Document upload config deploy verified — 2026-09-05T18:12:39Z
 
