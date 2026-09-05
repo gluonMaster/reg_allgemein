@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:55:46Z
+updated_utc: 2026-09-05T19:57:07Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D15b
-next_gate: phase-5-document-D16
+last_completed_gate: phase-5-document-D16
+next_gate: phase-5-document-D17a
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D15b-verified
-last_atomic_action: D15b-approved-owner-archive-download
+current_phase: phase-5-document-scenario-D16-verified
+last_atomic_action: D16-normal-owner-P2-logout
 last_atomic_result: success
-next_atomic_action: D16-normal-P2-logout
+next_atomic_action: D17a-normal-foreign-P1-login
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-05T19:55:46.471Z
-    postcondition_rows_read: 203
-    latest_read_kind: document_scenario_D15b_actual_bounded_postcondition
+    latest_bounded_postcondition_utc: 2026-09-05T19:57:07.521Z
+    postcondition_rows_read: 207
+    latest_read_kind: document_scenario_D16_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -162,12 +162,12 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 10
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 8
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 9
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_authorized_scenario_D15b_verified
+    documents: upload_enabled_authorized_scenario_D16_verified
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -296,9 +296,9 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D15b_success
-  scenario_mutation_attempts: 17
-  active_sessions: 1
+  result: D16_success
+  scenario_mutation_attempts: 18
+  active_sessions: 0
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
   local_AV: actual_owner_clean_ESET_result_screenshot_and_local_product_version_evidence_recorded
@@ -306,15 +306,15 @@ document_scenario_execution:
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D16-normal-P2-logout
+  id: D17a-normal-foreign-P1-login
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_normal_P2_POST_account_security_logout_with_CSRF
+  mutation: one_normal_P1_login_after_private_input_no_redirect_follow
   preconditions:
-    - previous_D15b_actual_postcondition_and_docs_only_commit_success
+    - previous_D16_actual_postcondition_and_docs_only_commit_success
     - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - exact_P2_session_revoked_one_linked_logout_audit_archive_evidence_preserved
+    - one_new_foreign_P1_session_v1_other_sessions_roles_archive_domain_and_providers_preserved
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -327,6 +327,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D16 verified — 2026-09-05T19:57:07Z
+
+Result: **success**. One normal owner P2 logout under the owner's complete D01a–D18b scope.
+Before: one active owner P2 session after verified archive download. After: exact P2 session revoked with one linked logout audit, no active session; archive and domain/provider state preserved.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-05T19:57:07.521Z: 207 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D16-success-safe.json`,
+SHA-256 `f3c47db9bd9dc61d37d07b1489772a1a4b4779caf697397568c276e4658918ad`; one-attempt marker, safe response and before/after D1 retained.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Actual owner AV clean and separate business inspection are recorded; approved archive is retained. One next action:
+D17a-normal-foreign-P1-login, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known target/postcondition/containment
+and no unresolved ambiguity.
 
 ## Document scenario D15b verified — 2026-09-05T19:55:46Z
 
