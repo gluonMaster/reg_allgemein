@@ -3728,3 +3728,74 @@ cleanup outcomes remain separately required. Full manual preview and production
 remain **blocked**. `rollover_required: no`;
 `recommended_next_session_mode: High`: bounded routes/postconditions/containment
 are known; the human AV handoff is explicit and there is no unresolved ambiguity.
+
+
+## Document scenario D01a–D08 complete; D09 human input cursor — 2026-09-05T19:06:54Z
+
+Completed all ten finite application actions through D08, each with actual
+read-only postcondition, docs:check/release:scan/diff-check and separate active
+state commit. Current reviewed/deployed sources and version aba79c9fa0ae are
+unchanged; the document scenario has full owner authorization across handoffs.
+
+- P2 normal login and new/detail forms passed; one QD draft v1 (fingerprint
+  55dd7612cb70) and FD pending_review v1 (0424d98cd5ed) created for existing C2.
+  Q2, C2, roles, sealed bootstrap and provider state were preserved.
+- One D0 upload passed: document fingerprint a198b7bdf114, random
+  quarantine-key fingerprint 79d98ac3cf1d, PNG 16954 bytes,
+  SHA-256 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81. Immutable expiry 2026-09-19T18:50:10.037Z; one linked quarantine
+  intent, storage/document assertions and upload audit. Actual exact-key R2
+  metadata and private distinct EU buckets passed; archive link is absent.
+- P2 preapproval download returned 404 DOCUMENT_NOT_FOUND without document
+  bytes or success audit; P2 normal logout was reconciled. A normal login then
+  created one version-2 session; D0 appears in its queue with exact attestation
+  version preview-manual-av-2026-08-10. D08 valid-CSRF approve before AV returned
+  expected 409, with no document/intent/attestation/review/audit change.
+- Latest D1 snapshot 2026-09-05T19:02:58.256Z: 170 read-only
+  rows, zero writes/changes; 3 users, 9 sessions (8 revoked, 1 current A),
+  2 requests, 1 funding authorization, 1 quarantined document and 1 quarantine
+  intent. No provider send, AV, admin document-body download or archive occurred.
+
+Checkpoint commits: D01a b7f0f84, D01b 0c59401, D02 cec6df3, D03 8ef2fa3,
+D04 1743f99, D05 1b5379f, D06 738c97a, D07a 5e71996, D07b 46a8713,
+D08 e25746c. Protected evidence directory remains owner-only and Git-ignored.
+D04 success SHA-256 c79cf5d43778b033338b74298e18a3899a482af82a0328a4c53cb8646f95af47; D08 success SHA-256
+7cc60498d1288c0e2e0973b73b80f1fbee55d7a9022324b75e04a2271fd24329; D09 preparation SHA-256
+db22af2cf1d569329dd04233307c26da4363532e1db943c71d2071b3552c66a0. Exact IDs/keys and document bodies are not
+part of tracked evidence. A one-time pre-D01b SELECT-only HTTP 403 was followed
+by successful bounded read-only diagnostic reconciliation; D01b had not been
+dispatched at that point. No uncertain remote write or login retry remains.
+
+The owner specified a local quarantine directory for this experiment. It
+exists, is an ordinary directory, is not EFS-marked; volume encryption inquiry
+was unavailable because the process lacks system permission. This does not
+prove the volume is unencrypted. Encryption and absence of cloud sync still
+await an owner fact confirmation required by operations runbook section 4.
+The private D09 plan pins that directory and a new opaque filename. D09 helper
+is syntax-checked and prepared, with zero attempts and no local downloaded copy;
+its begin mode requires an explicit workspace-fact record. Do not infer these
+facts from scenario authorization or the directory name.
+
+**One next atomic action:** D09 audited admin POST download, once workspace
+facts are confirmed, using the same A session after fresh bounded reconciliation.
+Then checkpoint and hand the exact downloaded file to the owner for an actual
+local AV scan. Product/version/definitions freshness/UTC/result must come from
+that scan; neither fixture validation nor the planned negative SHA probe is an
+AV result. The same full D01a–D18b authorization continues; do not ask again.
+
+P2 follow-up from owner: provide a flexible administrator choice of local
+download directory in future. Record as a UX proposal; the experimental path
+is not a production default and must not be hard-coded into runtime. No proven
+current-flow failure, runtime change or new review loop is justified by this
+wish. Decide its browser/workstation UX separately from this preview gate.
+
+Containment: D0 remains private and quarantined under existing 14-day cleanup;
+Access and provider restrictions remain; A session is intentionally retained
+for the pending same-admin flow. No automatic delete, direct repair, fake scan,
+attestation or approval. Rejected/14-day non-approved cleanup evidence remains
+separate; full REQ-11/manual preview and production remain blocked.
+Status-only validation: docs:check, release:scan, git diff --check. Full runtime
+tests/E2E/build/review were deliberately not rerun: no runtime, migration,
+dependency or deployed-config change occurred; exact inherited evidence applies.
+`rollover_required: no`; `recommended_next_session_mode: High`: D09 has a
+known target, postcondition and containment; only workstation facts are pending,
+with no unresolved mutation ambiguity.

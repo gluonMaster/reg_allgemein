@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:02:58Z
+updated_utc: 2026-09-05T19:06:54Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D08
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D08-verified
+current_phase: phase-5-D08-complete-awaiting-local-workspace-facts
 last_atomic_action: D08-negative-approval-before-AV-probe
 last_atomic_result: success
 next_atomic_action: D09-audited-admin-download-after-workspace-confirmation
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
+mode_reason_plain: authorized_D09_known_target_postcondition_containment_pending_owner_workspace_facts_actual_AV_later_no_write_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -302,23 +302,27 @@ document_scenario_execution:
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
   local_AV: pending_actual_owner_scan_after_audited_D09_download
-  local_encrypted_unsynced_quarantine_workspace: owner_confirmation_required_before_D09
+  local_encrypted_unsynced_quarantine_workspace: owner_selected_directory_exists_encryption_and_no_cloud_sync_confirmation_pending_before_D09
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
   id: D09-audited-admin-download-after-workspace-confirmation
-  permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
+  permission: full_D01a_D18b_scope_already_granted_owner_selected_experiment_directory_no_repeat_scope_approval
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_A_POST_D0_download_local_av_scan_after_confirmed_local_workspace
+  mutation: one_A_POST_D0_download_local_av_scan_to_exact_new_opaque_file_in_owner_selected_directory
   preconditions:
-    - previous_D08_actual_postcondition_and_docs_only_commit_success
-    - current_P2_session_preserved_no_hidden_request_redirect_or_retry
+    - D08_actual_postcondition_and_docs_only_commit_e25746c_success
+    - owner_confirms_encrypted_workspace_and_no_cloud_sync_directory_fact_not_yet_received
+    - same_A_session_v2_current_before_snapshot_CSRF_and_D0_SHA_match_protected_D09_plan
+    - destination_is_new_inside_exact_owner_directory_and_D09_attempt_marker_absent
   postcondition:
-    - forced_attachment_octet_stream_no_store_nosniff_sandbox_exact_SHA_size_same_A_download_audit_then_real_owner_AV_handoff
-    - readonly_reconciliation_and_active_state_commit_before_next_mutation
-  success_transition: next_manifest_action_after_own_checkpoint
-  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
+    - attachment_octet_stream_private_no_store_nosniff_sandbox_and_exact_local_SHA_size
+    - same_A_download_actor_hash_audit_link_D0_quarantined_no_AV_or_business_approval
+    - readonly_reconciliation_and_docs_only_commit_before_actual_owner_AV_handoff
+  success_transition: D10_owner_personally_scans_actual_downloaded_D0_with_current_approved_AV
+  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_object_and_evidence_no_retry
   forbidden_in_this_action:
+    - opening_document_before_scan_simulated_AV_attestation_or_automatic_business_approval
     - provider_send_direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
@@ -327,6 +331,76 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D01a–D08 complete; D09 human input cursor — 2026-09-05T19:06:54Z
+
+Completed all ten finite application actions through D08, each with actual
+read-only postcondition, docs:check/release:scan/diff-check and separate active
+state commit. Current reviewed/deployed sources and version aba79c9fa0ae are
+unchanged; the document scenario has full owner authorization across handoffs.
+
+- P2 normal login and new/detail forms passed; one QD draft v1 (fingerprint
+  55dd7612cb70) and FD pending_review v1 (0424d98cd5ed) created for existing C2.
+  Q2, C2, roles, sealed bootstrap and provider state were preserved.
+- One D0 upload passed: document fingerprint a198b7bdf114, random
+  quarantine-key fingerprint 79d98ac3cf1d, PNG 16954 bytes,
+  SHA-256 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81. Immutable expiry 2026-09-19T18:50:10.037Z; one linked quarantine
+  intent, storage/document assertions and upload audit. Actual exact-key R2
+  metadata and private distinct EU buckets passed; archive link is absent.
+- P2 preapproval download returned 404 DOCUMENT_NOT_FOUND without document
+  bytes or success audit; P2 normal logout was reconciled. A normal login then
+  created one version-2 session; D0 appears in its queue with exact attestation
+  version preview-manual-av-2026-08-10. D08 valid-CSRF approve before AV returned
+  expected 409, with no document/intent/attestation/review/audit change.
+- Latest D1 snapshot 2026-09-05T19:02:58.256Z: 170 read-only
+  rows, zero writes/changes; 3 users, 9 sessions (8 revoked, 1 current A),
+  2 requests, 1 funding authorization, 1 quarantined document and 1 quarantine
+  intent. No provider send, AV, admin document-body download or archive occurred.
+
+Checkpoint commits: D01a b7f0f84, D01b 0c59401, D02 cec6df3, D03 8ef2fa3,
+D04 1743f99, D05 1b5379f, D06 738c97a, D07a 5e71996, D07b 46a8713,
+D08 e25746c. Protected evidence directory remains owner-only and Git-ignored.
+D04 success SHA-256 c79cf5d43778b033338b74298e18a3899a482af82a0328a4c53cb8646f95af47; D08 success SHA-256
+7cc60498d1288c0e2e0973b73b80f1fbee55d7a9022324b75e04a2271fd24329; D09 preparation SHA-256
+db22af2cf1d569329dd04233307c26da4363532e1db943c71d2071b3552c66a0. Exact IDs/keys and document bodies are not
+part of tracked evidence. A one-time pre-D01b SELECT-only HTTP 403 was followed
+by successful bounded read-only diagnostic reconciliation; D01b had not been
+dispatched at that point. No uncertain remote write or login retry remains.
+
+The owner specified a local quarantine directory for this experiment. It
+exists, is an ordinary directory, is not EFS-marked; volume encryption inquiry
+was unavailable because the process lacks system permission. This does not
+prove the volume is unencrypted. Encryption and absence of cloud sync still
+await an owner fact confirmation required by operations runbook section 4.
+The private D09 plan pins that directory and a new opaque filename. D09 helper
+is syntax-checked and prepared, with zero attempts and no local downloaded copy;
+its begin mode requires an explicit workspace-fact record. Do not infer these
+facts from scenario authorization or the directory name.
+
+**One next atomic action:** D09 audited admin POST download, once workspace
+facts are confirmed, using the same A session after fresh bounded reconciliation.
+Then checkpoint and hand the exact downloaded file to the owner for an actual
+local AV scan. Product/version/definitions freshness/UTC/result must come from
+that scan; neither fixture validation nor the planned negative SHA probe is an
+AV result. The same full D01a–D18b authorization continues; do not ask again.
+
+P2 follow-up from owner: provide a flexible administrator choice of local
+download directory in future. Record as a UX proposal; the experimental path
+is not a production default and must not be hard-coded into runtime. No proven
+current-flow failure, runtime change or new review loop is justified by this
+wish. Decide its browser/workstation UX separately from this preview gate.
+
+Containment: D0 remains private and quarantined under existing 14-day cleanup;
+Access and provider restrictions remain; A session is intentionally retained
+for the pending same-admin flow. No automatic delete, direct repair, fake scan,
+attestation or approval. Rejected/14-day non-approved cleanup evidence remains
+separate; full REQ-11/manual preview and production remain blocked.
+Status-only validation: docs:check, release:scan, git diff --check. Full runtime
+tests/E2E/build/review were deliberately not rerun: no runtime, migration,
+dependency or deployed-config change occurred; exact inherited evidence applies.
+`rollover_required: no`; `recommended_next_session_mode: High`: D09 has a
+known target, postcondition and containment; only workstation facts are pending,
+with no unresolved mutation ambiguity.
 
 ## Document scenario D08 verified — 2026-09-05T19:02:58Z
 
