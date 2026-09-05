@@ -548,6 +548,11 @@ MVP готов, когда:
   hash mismatch, direct approve и повтор чужой роли отклоняются. Отдельный
   неутверждённый synthetic object проходит idempotent cleanup по каноническому
   TTL без удаления approved archive. (`REQ-05`, `REQ-07`, `REQ-08`, `REQ-11`)
+- Для одного synthetic D0 по owner decision 2026-09-05 отсутствие шифрования
+  выбранной локальной папки не блокирует эксперимент и не вызывает включение
+  шифрования. Остальные проверки предыдущего критерия сохраняются; исключение
+  не закрывает workstation gate для реальных документов. Scope задан в
+  [storage contract](../operations/STORAGE_AND_UPLOAD_SECURITY.md#обязательный-preview-rehearsal).
 
 ## 8. Договоры и price review
 

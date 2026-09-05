@@ -144,6 +144,16 @@ PII. Оператор сохраняет forced download в выделенную
 UI сверяет SHA-256 и выполняет clean attestation; business review остаётся
 отдельным действием.
 
+**Исключение для текущего эксперимента, решение владельца 2026-09-05:**
+один заранее созданный synthetic D0 без PII в ограниченном Stage 13 document
+scenario можно скачать в указанную владельцем локальную quarantine-папку без
+требования шифрования этого рабочего пространства. Агент не включает и не
+меняет шифрование диска, папки или контейнера. Exact artifact/hash и scope
+фиксируются в [active state](../implementation/STAGE_13_ACTIVE_STATE.md).
+Это исключение не распространяется на реальные клиентские документы или
+production. Forced attachment, запрет cloud sync/public scanner, актуальный
+локальный AV, hash-bound attestation и отдельный business review сохраняются.
+
 Evidence фиксирует только opaque IDs, hash/status/version/timestamps и audit,
 без filename/body, email или иных PII. Минимальный проход включает approved и
 rejected outcomes, hash mismatch/direct-approve negative checks, owner/admin

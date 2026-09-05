@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T19:06:54Z
+updated_utc: 2026-09-05T19:22:03Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D08
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-D08-complete-awaiting-local-workspace-facts
+current_phase: phase-5-D09-authorized-synthetic-local-workspace-exception
 last_atomic_action: D08-negative-approval-before-AV-probe
 last_atomic_result: success
-next_atomic_action: D09-audited-admin-download-after-workspace-confirmation
+next_atomic_action: D09-one-audited-admin-download-to-owner-directory
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: authorized_D09_known_target_postcondition_containment_pending_owner_workspace_facts_actual_AV_later_no_write_ambiguity
+mode_reason_plain: owner_explicit_synthetic_workspace_exception_no_encryption_changes_same_A_D0_target_and_containment_verified
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -302,28 +302,29 @@ document_scenario_execution:
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
   local_AV: pending_actual_owner_scan_after_audited_D09_download
-  local_encrypted_unsynced_quarantine_workspace: owner_selected_directory_exists_encryption_and_no_cloud_sync_confirmation_pending_before_D09
+  local_encrypted_unsynced_quarantine_workspace: owner_explicit_exact_D0_exception_no_encryption_changes_selected_local_directory_no_registered_sync_root_match
   protected_evidence: tmp/document-phase-07-owner/scenario-preflight-safe.json
   containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
 next_atomic_action:
-  id: D09-audited-admin-download-after-workspace-confirmation
-  permission: full_D01a_D18b_scope_already_granted_owner_selected_experiment_directory_no_repeat_scope_approval
+  id: D09-one-audited-admin-download-to-owner-directory
+  permission: full_D01a_D18b_and_explicit_owner_resume_exact_synthetic_D0_without_encryption
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_A_POST_D0_download_local_av_scan_to_exact_new_opaque_file_in_owner_selected_directory
+  mutation: one_A_POST_D0_download_local_av_scan_save_new_opaque_file_in_owner_selected_directory
   preconditions:
-    - D08_actual_postcondition_and_docs_only_commit_e25746c_success
-    - owner_confirms_encrypted_workspace_and_no_cloud_sync_directory_fact_not_yet_received
-    - same_A_session_v2_current_before_snapshot_CSRF_and_D0_SHA_match_protected_D09_plan
-    - destination_is_new_inside_exact_owner_directory_and_D09_attempt_marker_absent
+    - current_same_A_v2_unexpired_session_and_exact_version_settings_D0_state_passed
+    - owner_approved_synthetic_only_storage_exception_recorded_no_encryption_change
+    - no_registered_sync_root_match_selected_directory_ordinary_existing_new_output_path
+    - fresh_D09_before_snapshot_and_one_attempt_marker_only_then_one_download
   postcondition:
-    - attachment_octet_stream_private_no_store_nosniff_sandbox_and_exact_local_SHA_size
-    - same_A_download_actor_hash_audit_link_D0_quarantined_no_AV_or_business_approval
-    - readonly_reconciliation_and_docs_only_commit_before_actual_owner_AV_handoff
-  success_transition: D10_owner_personally_scans_actual_downloaded_D0_with_current_approved_AV
-  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_object_and_evidence_no_retry
+    - forced_attachment_octet_stream_private_no_store_nosniff_sandbox_exact_local_SHA_size
+    - same_A_actor_SHA_download_audit_D0_still_quarantined_no_archive_or_AV_attestation
+    - readonly_reconciliation_docs_only_commit_before_owner_local_AV_handoff
+  success_transition: D10_actual_owner_local_AV_scan_of_exact_downloaded_file
+  failed_or_ambiguous_transition: preserve_Access_and_object_readonly_reconcile_checkpoint_no_blind_retry
   forbidden_in_this_action:
-    - opening_document_before_scan_simulated_AV_attestation_or_automatic_business_approval
-    - provider_send_direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
+    - enabling_or_changing_any_disk_folder_or_container_encryption
+    - document_open_before_AV_fake_scan_attestation_approval_or_public_scanner
+    - provider_send_direct_SQL_R2_repair_production_CMS_or_real_PII
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -331,6 +332,41 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Owner resumes exact synthetic D0 without encryption — 2026-09-05T19:22:03Z
+
+The owner explicitly instructed continuation in the previously selected local
+directory and prohibited any encryption changes. This overrides the former
+encrypted-workspace prerequisite for this one synthetic D0 without PII. The
+limited exception is now recorded in the canonical storage contract, linked
+from runbook section 4 and covered by the corresponding acceptance criterion.
+It does not change the production policy or authorize real client documents.
+No disk/folder/container encryption was enabled, disabled or reconfigured.
+
+Read-only directory inspection: selected directory exists, is not a reparse
+point, and matches zero of six registered Windows/OneDrive sync roots. This
+is a bounded registration check, not a claim to have audited every possible
+third-party sync tool. No public scanner or cloud-copy operation is performed.
+Exact directory and owner-decision record remain in protected ignored evidence.
+
+Fresh preflight 2026-09-05T19:19:53.185Z: version aba79c9fa0ae at 100%, settings exact, D0/domain/
+provider/audit/session state equal to D08. Same A session v2 is unexpired;
+170 scoped rows read, zero writes/changes. D09 has zero attempts
+and its destination does not exist. Browser retains the exact D0 download form,
+CSRF and local_av_scan purpose without refresh or session mutation.
+Evidence: `tmp/document-phase-07-owner/D09-resume-safe.json`, SHA-256
+`a961dd173ae7f0d6ac054f423813b2d7a7cf089c36e4ab5abc96f48752bf893a`; private exact owner decision, target and proposed destination saved.
+
+One next action: D09, one audited admin POST download with the existing A
+session. Verify forced headers, local exact SHA/size and same-admin D1 audit,
+then checkpoint before the owner personally performs AV. No simulated clean,
+business approval, direct repair or retention change. Full manual preview and
+production remain blocked. This local/docs change touches no production path;
+run docs:check, release:scan, git diff --check and helper syntax only. Inherited
+runtime/E2E/build/review evidence is reused; no runtime/config/schema/dependency
+change warrants repetition. `rollover_required: no`;
+`recommended_next_session_mode: High`: exact authorized download, postcondition
+and containment known, no unresolved mutation ambiguity.
 
 ## Document scenario D01a–D08 complete; D09 human input cursor — 2026-09-05T19:06:54Z
 

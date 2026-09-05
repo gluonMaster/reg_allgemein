@@ -580,6 +580,10 @@ Production upload остаётся `feature_disabled`, но по `REQ-11` раб
 `APP_ENV=preview`, Access protection, `DOCUMENT_UPLOAD_ENABLED=true`, verified
 synthetic parent и файл без PII.
 
+Для одного synthetic D0 в текущем эксперименте действует согласованное
+владельцем [исключение из требования encrypted workspace](STORAGE_AND_UPLOAD_SECURITY.md#обязательный-preview-rehearsal).
+Оно не разрешает менять шифрование компьютера и не заменяет AV-проверку.
+
 **Точное UI/команда:** на `<PORTAL_ORIGIN>/admin/requests` использовать forced
 download для одной записи. Сохранить файл в выделенную папку, не открывать его.
 Для Microsoft Defender допустима команда:
