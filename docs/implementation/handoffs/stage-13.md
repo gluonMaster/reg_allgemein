@@ -3678,3 +3678,53 @@ Document execution remains separately gated. Full manual preview and production
 remain **blocked**. `rollover_required: no`;
 `recommended_next_session_mode: High`: planned config deployment has known
 target, postcondition and rollback, without unresolved ambiguity.
+
+
+## Document upload config deploy verified — 2026-09-05T18:12:39Z
+
+Result: **success**. Executed the owner's approved single strict preview deploy
+from exact candidate `0db38842524ebc146eaa56a9d089e3c3484bf0f3` with unchanged
+build/module SHA-256 `eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b`.
+Only DOCUMENT_UPLOAD_ENABLED changed false → true. Before-version fingerprint
+`14841fbf75b2` → `aba79c9fa0ae`; one active version at 100%.
+CLI exit 0, returned version matched the independent remote
+read. The permission is consumed; no retry or rollback was necessary.
+
+Fresh actual postcondition 2026-09-05T18:12:04.158Z: same module, runtime, other vars/bindings,
+script settings/subdomain/Cron; Access anonymous 302; different EU private R2,
+r2.dev disabled and no custom domains. Health HEAD 204/no-store/noindex. Nine
+bounded D1 SELECTs read 111 rows and wrote 0, changes=0,
+changed_db=false. All selected before/after business/session/provider/audit
+state is identical: 3 users, 7 revoked sessions, one existing Q2 draft, zero
+documents/funding authorizations/storage intents/offers/artifacts/Telegram.
+Schema remains through 0026, pending 0. This proves config deployment only;
+no upload, local AV, business review or document ownership flow was executed.
+
+Root and detached-source Git-ignored preview config now match the verified live
+single-flag setting. Full exact target/version/config records remain protected.
+Evidence: `tmp/document-phase-07-owner/deploy-result-safe.json`, SHA-256
+`9a0f9257e56c6fa80cefb8c6ee774bc4dbd493dd84c084be2589096d2292d097`; deploy-attempt, command response, raw logs,
+immediate before and independent after control/D1/R2/health records retained in
+the same owner-only directory. No secrets, IDs or document body were printed.
+
+Containment: Access and provider restrictions preserved; no document commands
+without separate scenario scope. Approved exact prior version remains recorded
+as recovery evidence; no revert is needed for this successful phase. Physical
+object/database repair and destructive cleanup remain excluded.
+
+Validation: inherited exact baseline full 580-pass/1 expected Windows skip,
+23 E2E/build evidence and scoped independent review 8/8; local strict dry-run
+already proved exact module, fresh remote preflight/postconditions passed.
+For this status-only checkpoint run docs:check, release:scan, git diff --check.
+No runtime/migration/dependency change justifies rerunning full test/E2E/build
+or independent review. Production readiness checklist is unchanged.
+
+**One next action:** obtain separate permission for the prepared finite document
+scenario D01a–D18b in the [manifest](../STAGE_13_DOCUMENT_PHASE_MANIFEST.md), including
+normal sessions, one QD/FD, one D0 upload, audited download, real owner local AV,
+same-admin hash attestation, separate business decision, approved owner/foreign
+download checks and retention/containment intent. Full REQ-11 rejected/14-day
+cleanup outcomes remain separately required. Full manual preview and production
+remain **blocked**. `rollover_required: no`;
+`recommended_next_session_mode: High`: bounded routes/postconditions/containment
+are known; the human AV handoff is explicit and there is no unresolved ambiguity.
