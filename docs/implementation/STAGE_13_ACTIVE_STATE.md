@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T18:13:57Z
+updated_utc: 2026-09-06T19:14:44Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-contract-readonly-manifest
-next_gate: phase-5-contract-config-owner-permission
+next_gate: phase-5-contract-config-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-readonly-manifest-config-ready
+current_phase: phase-5-contract-config-authorized
 last_atomic_action: Prompt08-bounded-readonly-inventory-and-local-manifest
 last_atomic_result: success
-next_atomic_action: request-owner-approval-exact-five-value-preview-contract-config
+next_atomic_action: deploy-exact-five-value-preview-contract-config-once
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Exact_config_only_deploy_prepared_known_target_postcondition_containment_owner_permission_required
+mode_reason_plain: Owner_authorized_one_exact_config_deploy_known_target_postcondition_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: Prompt08_readonly_preparation_only_config_Browser_R2_import_sessions_and_provider_writes_not_authorized
+permission_state: owner_granted_one_exact_five_value_preview_config_deploy_Browser_R2_import_sessions_and_provider_writes_not_authorized
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -378,26 +378,29 @@ contract_phase_preparation:
   fixture_prerequisites: Q2_QD_submit_then_Q2_approve_FD_dated_approve_QD_approve_preserve_D0
   group_prerequisite: zero_remote_groups_two_block_synthetic_schedule_parser_passed
   schedule_execution_status: local_source_prepared_remote_driver_rehearsal_and_separate_stage_promote_permissions_pending
-  config_permission: not_granted
+  config_permission: granted_one_exact_five_value_preview_deploy_only
   Browser_R2_permission: not_granted
   four_PDF_email_permission: not_granted
   auxiliary_notification_permission: not_granted
   initial_control_stop: corrected_local_optional_absent_flag_predicate_before_D1_R2_inventory_no_remote_write
 next_atomic_action:
-  id: request-owner-approval-exact-five-value-preview-contract-config
-  permission: none_for_remote_writes_Prompt08_readonly_preparation_only
-  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: none_present_prepared_config_plan_before_one_separately_authorized_deploy
+  id: deploy-exact-five-value-preview-contract-config-once
+  permission: owner_explicit_reply_authorizes_exact_five_values_one_deploy_only
+  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_before_version_aba79c9fa0ae
+  mutation: one_strict_deploy_same_0db3884_module_with_only_five_prepared_values
   preconditions:
-    - manifest_and_exact_same_bundle_strict_dry_run_available
-    - owner_sees_all_five_values_temporary_maintenance_pause_and_health_503
-    - rollback_to_prior_scheduler_enabled_version_only_before_new_email_business_work
+    - exact_clean_detached_source_existing_build_and_reviewed_config_hashes
+    - unchanged_target_version_Access_private_R2_empty_actionable_outbox_no_inflight_Cron
   postcondition:
-    - owner_scope_recorded_only_for_exact_config_deploy_no_implicit_provider_or_scenario_permission
-  success_transition: revalidate_exact_target_empty_actionable_outbox_no_inflight_Cron_then_one_authorized_config_deploy
-  failed_or_ambiguous_transition: retain_current_closed_contract_flags_no_remote_mutation
+    - read_actual_one_version_100_percent_same_module_only_five_values_changed
+    - Access_private_R2_business_sessions_provider_state_preserved_health_503_expected
+    - active_state_docs_only_checkpoint_commit_before_any_next_mutation
+  success_transition: local_synthetic_schedule_driver_rehearsal_without_remote_mutation
+  failed_or_ambiguous_transition: stop_no_blind_retry_or_rollback_reconcile_actual_state_readonly_and_checkpoint
+  rollback: prior_version_recorded_but_not_authorized_requires_empty_queue_no_foreign_drift_and_separate_scope
   forbidden_in_this_action:
-    - config_write_deploy_import_Browser_R2_provider_send_login_logout_business_write_production_or_CMS_change
+    - Browser_R2_import_provider_send_login_logout_business_write_production_or_CMS_change
+
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -405,6 +408,23 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 config permission — 2026-09-06T19:14:44Z
+
+The owner explicitly approved the preceding five-value preview-deploy request.
+Scope is one config-only deploy of the unchanged exact source/build, with
+CONTRACT_SEND_ENABLED=true, CONTRACT_PREVIEW_REVIEW_ENABLED=true,
+CONTRACT_RENDERER=browser_run, SCHEDULED_JOBS_ENABLED=false and
+SCHEDULED_OUTBOX_BATCH_LIMIT=1. Temporary maintenance pause and expected health
+503 were included in the approved request. No provider, Browser, R2, import,
+application session or business operation is authorized by this reply.
+No remote mutation has been attempted in this permission checkpoint.
+Protected evidence: tmp/contract-phase-08-owner/config-owner-approval.json.
+One next action: fresh preconditions, then the single authorized deploy and
+read-only postcondition followed by a separate docs-only checkpoint commit.
+rollover_required: no; recommended_next_session_mode: High, because the target,
+exact configuration delta, verification and stop containment are known.
+
 
 ## Prompt 08 read-only manifest — 2026-09-06T18:13:57Z
 
