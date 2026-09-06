@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T22:38:11Z
+updated_utc: 2026-09-06T22:38:45Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-contract-synthetic-schedule-local-rehearsal
-next_gate: phase-5-contract-schedule-C01a-stage
+last_completed_gate: phase-5-contract-synthetic-schedule-staged
+next_gate: phase-5-contract-schedule-C01b-promotion
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-schedule-authorized-awaiting-C01a
-last_atomic_action: Prompt08-C01-owner-permission-recorded-no-remote-mutation
+current_phase: phase-5-contract-C01a-success-awaiting-authorized-C01b
+last_atomic_action: Prompt08-C01a-canonical-schedule-stage
 last_atomic_result: success
-next_atomic_action: execute-once-C01a-canonical-synthetic-schedule-stage
+next_atomic_action: execute-once-C01b-publish-exact-staged-schedule
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Known_preview_target_rehearsed_stage_and_conditional_promotion_postconditions_and_containment_owner_scope_granted
+mode_reason_plain: Already_authorized_exact_staged_version_promotion_known_target_postcondition_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C01a_stage_once_and_C01b_promote_once_after_successful_committed_stage_checkpoint_granted_config_C00_consumed_other_remote_scope_not_granted
+permission_state: C01a_stage_completed_consumed_C01b_promote_once_granted_after_this_successful_committed_checkpoint_other_remote_scope_not_granted
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -376,8 +376,8 @@ contract_phase_preparation:
   health_during_active_stop: observed_503_expected_until_separate_safe_Cron_restoration
   notification_scope: four_contract_sent_plus_six_auxiliary_rows_ten_total_not_yet_authorized
   fixture_prerequisites: Q2_QD_submit_then_Q2_approve_FD_dated_approve_QD_approve_preserve_D0
-  group_prerequisite: zero_remote_groups_two_block_synthetic_schedule_parser_passed
-  schedule_execution_status: owner_authorized_C01a_once_and_conditional_C01b_once_driver_rehearsal_and_exact_hashes_verified
+  group_prerequisite: two_synthetic_groups_staged_hidden_until_authorized_C01b
+  schedule_execution_status: C01a_success_actual_validated_hidden_two_groups_two_sessions_C01b_pending_committed_checkpoint
   config_permission: consumed_success_one_exact_five_value_preview_deploy
   Browser_R2_permission: not_granted
   four_PDF_email_permission: not_granted
@@ -448,7 +448,7 @@ contract_schedule_preparation:
   first_schedule_publication: true_no_previous_version_for_canonical_rollback
   rollback_scope: none_no_direct_delete_repair_or_database_restore
   containment: hidden_staging_or_two_synthetic_published_groups_behind_Access_Cron_paused_no_downstream_offers_until_reconciled
-  schedule_import_stage_permission: granted_C01a_once
+  schedule_import_stage_permission: consumed_success_C01a_once
   schedule_import_promote_permission: granted_C01b_once
 contract_schedule_owner_scope:
   utc: 2026-09-06T22:38:11Z
@@ -458,21 +458,43 @@ contract_schedule_owner_scope:
   protected_evidence: tmp/contract-phase-08-owner/schedule-owner-approval.json
   plan_sha256: 3502774f25e6ba5b435e11116b1f6fe1b238f87bb64442e43e70ce2fd4c41b8c
   rollback: no_previous_schedule_version_containment_only_no_delete_repair_restore_or_retry
+contract_schedule_stage_postcondition:
+  utc: 2026-09-06T22:38:45Z
+  action: C01a
+  result: success
+  permitted_scope: one_canonical_two_group_synthetic_stage_command
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1
+  deployed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  deployed_version_fingerprint: 7c1bae246b7f
+  operator_commands: 1
+  internal_write_requests: 5
+  run_fingerprint: 1c0c772dbff6
+  schedule_version_fingerprint: 54efc84fcc54
+  schedule_version_sha256: 85d4678dbee86376391a4dd180a8b5117c1e10f587ce9a261c036f12351fb45a
+  before: zero_matching_runs_versions_groups_sessions
+  after: one_validated_run_one_unpublished_version_two_draft_groups_two_noncurrent_sessions_zero_issues
+  actual_postcondition: verified_by_readonly_D1_after_command_not_exit_code
+  schedule_stage_postcondition: success_C01a_validated_hidden_two_groups_two_sessions
+  other_domain_counts: unchanged_users_3_sessions_11_requests_2_authorizations_1_documents_1_offers_0_artifacts_0_emails_6_telegram_0_storage_intents_2
+  active_sessions_offers_actionable_mail: 0_0_0
+  write_error_or_ambiguity: none
+  protected_evidence: tmp/contract-phase-08-owner/C01a-checkpoint-safe.json
+  evidence_sha256: f9987631eda6b180f54ce6db64adaea1437d34a21ed43f33099989f8eb95f401
+  rollback: no_prior_schedule_version_no_delete_repair_restore_authorized
+  containment: keep_Access_Cron_pause_bounded_synthetic_state_stop_no_automatic_retry
 next_atomic_action:
-  id: execute-once-C01a-canonical-synthetic-schedule-stage
-  permission: granted_C01a_once_conditional_C01b_already_granted_after_committed_successful_stage
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f_existing_current_period_only
-  mutation: one_canonical_stage_command_five_internal_write_requests_two_synthetic_groups_two_sessions_one_run_one_version
+  id: execute-once-C01b-publish-exact-staged-schedule
+  permission: already_granted_C01b_once_requires_this_stage_checkpoint_committed
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f_exact_schedule_version_54efc84fcc54
+  mutation: one_canonical_promotion_command_three_internal_write_requests_lease_transaction_release
   preconditions:
-    - clean_worktree_exact_rehearsed_driver_fixture_import_source_live_deployment_and_settings
-    - empty_target_schedule_and_matching_runs_zero_active_sessions_offers_actionable_mail_unchanged_other_domain_counts
+    - clean_worktree_exact_driver_fixture_import_source_deployment_settings_and_C01a_postcondition
   postcondition:
-    - one_validated_run_one_unpublished_version_two_draft_groups_two_noncurrent_sessions_zero_issues
-    - unchanged_other_domain_counts_no_active_sessions_offers_or_actionable_mail
-  success_transition: actual_readonly_postcondition_then_separate_docs_only_checkpoint_before_already_authorized_C01b
-  failed_or_ambiguous_transition: stop_all_writes_reconcile_actual_state_preserve_hidden_staging_Access_Cron_pause_record_checkpoint_no_retry
+    - same_schedule_version_published_two_published_groups_two_current_sessions_one_promotion_event_one_linked_system_audit
+  success_transition: actual_readonly_postcondition_then_separate_docs_only_checkpoint_before_any_further_remote_write
+  failed_or_ambiguous_transition: stop_no_further_remote_write_reconcile_actual_state_preserve_Access_Cron_pause_no_retry_repair_or_restore
   forbidden_in_this_action:
-    - promotion_before_stage_checkpoint_Browser_R2_provider_send_login_logout_business_write_deploy_Access_change_rollback_CMS_or_production_change
+    - Browser_R2_provider_send_login_logout_other_business_write_deploy_Access_change_rollback_CMS_or_production_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -480,6 +502,33 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 C01a actual staging checkpoint — 2026-09-06T22:38:45Z
+
+Result: **success**. One owner-authorized canonical command made exactly
+5 internal write requests, with no error, write-stop latch or unresolved
+response. Read-only D1 reconciliation confirmed one validated run, one unpublished version, two draft groups, two noncurrent sessions and zero issues. Before the command the matching schedule scope was empty.
+Run fingerprint 1c0c772dbff6; schedule version fingerprint
+54efc84fcc54, content SHA-256 85d4678dbee86376391a4dd180a8b5117c1e10f587ce9a261c036f12351fb45a.
+Worker version remains 7c1bae246b7f / source 0db38842524ebc146eaa56a9d089e3c3484bf0f3;
+target fingerprints: Worker 242c1796e930 and D1 ccdeb22bb2a1.
+Other domain counts are unchanged, all 11 sessions remain revoked, no offers or
+actionable mail exist. No Browser render, R2 object or provider send was issued.
+
+Evidence: tmp/contract-phase-08-owner/C01a-checkpoint-safe.json indexes the
+protected before, attempt, transport, actual postcondition and result evidence
+by SHA-256. Full IDs and private values remain only in ignored owner-protected
+evidence. C01a scope is consumed; the existing C01b approval remains valid after this separate checkpoint commit.
+There is no prior schedule version for rollback. Keep Access enforced and Cron
+paused; no deletion, repair, restore or automatic retry is authorized.
+
+Only active-state documentation changes for this checkpoint. Run docs:check,
+release:scan and git diff --check. Full check/test/build/E2E and independent
+review are reused from exact source 0db38842524ebc146eaa56a9d089e3c3484bf0f3;
+the unchanged driver retains its nine focused local checks. One next action:
+execute-once-C01b-publish-exact-staged-schedule. rollover_required: no;
+recommended_next_session_mode: High for the already authorized exact promotion.
+
 
 ## Prompt 08 C01 owner scope — 2026-09-06T22:38:11Z
 
