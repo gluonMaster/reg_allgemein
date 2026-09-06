@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-05T20:39:16Z
+updated_utc: 2026-09-06T17:27:23Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-document-D16
-next_gate: phase-5-D17a-resource-diagnosis
+next_gate: phase-5-document-D17a
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-D17a-owner-login-failed-1102-contained-awaiting-resource-diagnosis
+current_phase: phase-5-paid-plan-confirmed-D17a-ready-for-one-native-login
 last_atomic_action: owner-native-POST-auth-login-D17a-1102
 last_atomic_result: failed
-next_atomic_action: prepare-evidence-based-login-CPU-remediation-options
+next_atomic_action: D17a-one-normal-P1-login-after-private-input
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: next_action_readonly_diagnostics_no_session_created_no_domain_damage_no_unresolved_write_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: owner_enabled_Paid_target_and_state_exact_next_one_authorized_login_with_known_postcondition_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -304,7 +304,19 @@ document_scenario_execution:
   local_AV: actual_owner_clean_ESET_result_screenshot_and_local_product_version_evidence_recorded
   local_encrypted_unsynced_quarantine_workspace: owner_explicit_exact_D0_exception_no_encryption_changes_selected_local_directory_no_registered_sync_root_match
   protected_evidence: tmp/document-phase-07-owner/D17a-owner-1102-incident-safe.json
-  containment: preserve_Access_private_R2_and_evidence_no_blind_retry_direct_repair_or_extra_fixture
+  containment: historical_failed_login_no_persisted_delta_revalidated_Paid_now_owner_enabled_one_controlled_D17a_resume_allowed
+document_cost_observation:
+  observed_utc: 2026-09-06T17:25:48.194Z
+  scope: account_all_workers_2026_09_01_to_observation_adaptive_analytics_not_invoice
+  requests: 8975
+  CPU_ms: 107700.015
+  included_requests_percent: 0.08975
+  included_CPU_percent: 0.35900005
+  observed_worker_overage_estimate_USD: 0
+  observation_policy: before_and_final_bounded_queries_no_background_polling_or_load_test
+  session_stop_budget: at_most_one_login_one_denial_one_security_form_GET_one_logout_no_blind_retry
+  invoice_limit: base_subscription_other_services_and_analytics_lag_are_separate_no_hard_dollar_cap_claimed
+  protected_evidence: tmp/document-phase-07-owner/paid-20260906-before-cost-safe.json
 document_login_resource_incident:
   classification: P1_breaks_required_normal_login_current_manual_preview
   observed_utc: 2026-09-05T20:08:16Z
@@ -317,7 +329,7 @@ document_login_resource_incident:
   settings_exact_preserved: true
   persisted_domain_session_provider_delta: none_at_readonly_observation
   remaining_active_sessions: 0
-  actual_worker_plan_and_effective_CPU_cap: Workers_Free_confirmed_by_owner_10ms_per_request_documented_no_explicit_limits
+  actual_worker_plan_and_effective_CPU_cap: Workers_Paid_confirmed_owner_and_live_same_account_UI_no_explicit_limit_documented_default_30000ms
   detailed_logs_access: API_403_no_logs_or_tail_reconfiguration_attempted
   working_hypothesis: local_bcrypt12_CPU_cost_confirmed_remote_incident_root_cause_and_effective_limit_unconfirmed
   local_password_profile: synthetic_Node_valid_compare_391_406_438_ms_CPU_wrong_compare_359_391_391_ms_fresh_dummy_734_ms
@@ -327,21 +339,22 @@ document_login_resource_incident:
   previous_project_remote_metrics_and_stored_hash_cost: not_read_local_source_only_owner_reports_Free_without_failures
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: prepare-evidence-based-login-CPU-remediation-options
-  permission: read_only_diagnosis_only_no_login_retry_config_deploy_or_plan_change
-  target: exact_preview_worker_242c1796e930_version_aba79c9fa0ae
-  mutation: none_compare_auth_CPU_remedies_and_Paid_option_preserving_security_requirements_and_preview_scope
+  id: D17a-one-normal-P1-login-after-private-input
+  permission: entire_D01a_D18b_previously_authorized_owner_explicitly_requests_resume_after_self_upgrade_to_Paid
+  target: exact_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
+  mutation: one_native_POST_auth_login_and_normal_single_cabinet_redirect_GET
   preconditions:
-    - failed_owner_login_actual_postcondition_recorded_and_committed
-    - no_guess_that_1102_is_daily_request_quota_or_that_bcrypt_is_proven_cause
+    - paid_plan_owner_and_live_UI_confirmed_exact_settings_and_all_revoked_sessions_unchanged
+    - owner_privately_enters_P1_credentials_no_password_or_cookie_export
+    - paid_preflight_docs_checkpoint_committed_before_dispatch
   postcondition:
-    - distinguish_owner_confirmed_Free_and_local_cost_comparison_from_unverified_remote_error_subtype_and_old_deployment
-    - prepare_bounded_P1_resolution_with_actual_limits_evidence_before_any_retry
-  success_transition: define_exact_resolution_and_resume_D17a_only_after_own_checkpoint
-  failed_or_ambiguous_transition: preserve_archive_and_all_revoked_sessions_report_missing_diagnostic_access
+    - one_P1_session_version1_and_bounded_cabinet_touch_old_sessions_document_providers_preserved
+    - actual_readonly_D1_reconcile_and_docs_only_commit_before_next_authenticated_action
+  success_transition: D17b_one_native_existing_D0_foreign_download_navigation
+  failed_or_ambiguous_transition: read_only_reconcile_no_retry_preserve_Access_archive_and_evidence
   forbidden_in_this_action:
-    - blind_login_retry_password_strength_reduction_or_direct_SQL_R2_repair
-    - config_deploy_plan_purchase_provider_send_production_CMS_or_encryption_change
+    - config_deploy_password_policy_change_direct_SQL_R2_repair_or_load_test
+    - production_CMS_provider_send_or_new_fixture
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -349,6 +362,56 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Paid plan confirmed; finite Prompt 07 continuation — 2026-09-06T17:27:23.643Z
+
+The owner reports enabling Workers Paid and explicitly asks to finish Prompt 07.
+The live subscription UI in the exact account (fingerprint 5dbd04a4763a) shows
+Workers Paid Active. A normal Wrangler OAuth login was completed by the owner in
+the current Windows profile. No application role/session/bootstrap or deployment
+change was performed by that CLI login. Fresh API control confirms one unchanged
+version aba79c9fa0ae at 100%, exact settings, Standard usage model and no explicit
+CPU limit. The documented Paid default is 30000 ms per HTTP invocation; the UI
+CPU input is unset. This is a configured-default inference, not a measured hard
+cutoff. Historical 1102 CPU-versus-memory subtype remains unconfirmed.
+
+Bounded SELECT-only preflight at 2026-09-06T17:24:47.633Z: 207 rows read,
+0 writes/changes; all D16 domain/session/detail fields exact, ten revoked sessions,
+approved D0/archive evidence preserved. Protected control and preflight:
+tmp/document-phase-07-owner/20260906-control-private.json and
+tmp/document-phase-07-owner/paid-20260906-preflight-safe.json.
+
+One account-wide calendar-month observation (2026-09-01T00:00:00Z through
+2026-09-06T17:25:48.194Z) reports 8975 requests and 107700.015
+CPU ms: 0.08975% and 0.35900005%
+of the documented monthly included amounts. These adaptive analytics are not an
+invoice and include time before the upgrade. Last 24 hours of this exact Worker:
+1556 invocations, one historical exceededResources event at 381.493 ms CPU.
+D1 today: 33377 rows read, 7458 written. Billing UI currently reports only R2
+usage: 23 Class A, 195 Class B operations, $0 usage cost; Workers billing data
+is not yet shown, so no account-wide invoice conclusion is drawn. There is one
+existing budget alert; its threshold/scope was not yet inspected or modified.
+
+The remaining commands use ordinary browser UI on this computer: D17a one login
+plus its normal cabinet redirect GET; D17b one existing-document navigation;
+one necessary security-form GET followed by D18a normal CSRF-protected logout.
+Each authenticated command, including the additional form GET, receives its own
+actual postcondition and docs-only commit. Final read-only D18b and one cost
+observation complete the phase. No script-based credential/cookie extraction,
+new fixture, load test, provider send, runtime/config/CPU-limit change or deploy.
+Containment after any failure: reconcile once, preserve Access/private archive,
+stop before another command; do not blindly retry the login. The existing P1
+is cleared only after a successful real Paid login is verified.
+
+One next action: D17a after private P1 input and this checkpoint commit.
+Validation: docs:check, release:scan, git diff --check only. Runtime, migrations,
+dependencies and deployment config are unchanged; inherited exact candidate
+release and independent review evidence remains applicable. No full runtime,
+E2E or build rerun. rollover_required: no; recommended_next_session_mode: High,
+because the remaining authorized commands have exact targets and containment.
+Sources: [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)
+and [Workers limits](https://developers.cloudflare.com/workers/platform/limits/).
+
 
 ## Read-only comparison with Berufsorientierung — 2026-09-05T20:39:16Z
 
