@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T17:30:22Z
+updated_utc: 2026-09-06T17:31:25Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D17b
-next_gate: phase-5-document-D18form
+last_completed_gate: phase-5-document-D18form
+next_gate: phase-5-document-D18a
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D17b-verified
-last_atomic_action: D17b-foreign-parent-denial-for-existing-archived-D0
+current_phase: phase-5-document-D18form-verified
+last_atomic_action: D18form-normal-GET-account-security
 last_atomic_result: success
-next_atomic_action: D18form-one-native-GET-account-security
+next_atomic_action: D18a-normal-P1-logout
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-06T17:30:22.299Z
+    latest_bounded_postcondition_utc: 2026-09-06T17:31:25.187Z
     postcondition_rows_read: 210
-    latest_read_kind: document_scenario_D17b_actual_bounded_postcondition
+    latest_read_kind: document_scenario_D18form_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -297,7 +297,7 @@ document_scenario_execution:
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
   result: D17b_success
-  scenario_mutation_attempts: 21
+  scenario_mutation_attempts: 22
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
@@ -340,15 +340,15 @@ document_login_resource_incident:
   previous_project_remote_metrics_and_stored_hash_cost: not_read_local_source_only_owner_reports_Free_without_failures
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: D18form-one-native-GET-account-security
+  id: D18a-normal-P1-logout
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_native_authenticated_GET_account_security_to_obtain_normal_logout_form
+  mutation: one_native_P1_POST_account_security_logout_with_CSRF_and_normal_anonymous_login_redirect
   preconditions:
     - previous_D17b_actual_postcondition_and_docs_only_commit_success
     - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - normal_security_logout_form_visible_only_P1_session_touch_domain_archive_audit_preserved
+    - only_current_P1_session_revoked_linked_logout_audit_archive_domain_preserved
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -361,6 +361,21 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Native logout form D18form verified — 2026-09-06T17:31:25Z
+
+Result: success. Under the finite native-UI continuation scope, one GET of
+/account/security displayed the normal Abmelden form. Before: one P1 session
+after D17b foreign denial. After: only that P1 last_seen timestamp changed;
+all domain, document, archive, provider, audit and historical sessions preserved.
+Read-only postcondition: 210 rows read, zero writes/changes.
+Target Worker/D1/version: 242c1796e930 / ccdeb22bb2a1 / aba79c9fa0ae.
+Protected evidence: tmp/document-phase-07-owner/D18form-success-safe.json.
+Containment: preserve Access/private archive; no request retry. One next action:
+D18a native Abmelden with the normal anonymous login redirect, then its own
+D1 reconciliation and docs-only commit. rollover_required: no;
+recommended_next_session_mode: High, known logout target and postcondition.
+
 
 ## Document scenario D17b verified — 2026-09-06T17:30:22Z
 
