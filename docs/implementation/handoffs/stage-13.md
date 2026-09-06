@@ -4221,3 +4221,18 @@ preflight. Evidence: tmp/contract-phase-08-owner/config-preflight-stop-safe.json
 docs:check, release:scan and diff check only; unchanged full runtime/E2E and
 independent review evidence reused. rollover_required: no;
 recommended_next_session_mode: Medium for read-only health recovery.
+
+
+## Prompt 08 local DPAPI recovery boundary — 2026-09-06T19:39:11Z
+
+The credential file now exists. The owner confirmed it was created on another
+computer; decryption fails in PowerShell 5/7 while a synthetic local DPAPI
+round trip passes. Exact fresh r02 read-only control/R2/domain preflight passed
+before health; deploy was not attempted. The already granted five-value scope
+remains unconsumed. Prepared tmp/repair-preview-access-token.ps1 accepts existing
+credentials with hidden local input, verifies exact health and saves local
+DPAPI/ACL protection; it has not been run with credentials. See
+[active state](../STAGE_13_ACTIVE_STATE.md) and protected
+tmp/contract-phase-08-owner/config-dpapi-context-stop-safe.json for the next
+local recovery action. docs/checker gates only; no runtime revalidation needed.
+rollover_required: no; recommended_next_session_mode: Medium.

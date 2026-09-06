@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T19:21:08Z
+updated_utc: 2026-09-06T19:39:11Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-contract-config-owner-permission
@@ -14,12 +14,12 @@ manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-5-contract-config-health-precondition-blocked
-last_atomic_action: Prompt08-readonly-config-preflight-stopped-before-deploy
+last_atomic_action: Prompt08-readonly-config-preflight-DPAPI-context-stop
 last_atomic_result: failed
-next_atomic_action: restore-existing-Access-health-observation-and-readonly-preflight
+next_atomic_action: locally-reencrypt-existing-Access-credential-then-readonly-preflight
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Next_action_restores_readonly_health_observation_no_remote_mutation_or_ambiguous_write
+mode_reason_plain: Owner_confirmed_credential_created_on_another_computer_local_DPAPI_roundtrip_passes_next_step_local_reencryption
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_document_upload_flag_enabled_latest_deploy_other_settings_exact
   deployment_postcondition: success_same_module_one_flag_Access_private_R2_health_and_no_business_session_provider_delta
-  latest_readonly_control_utc: 2026-09-06T19:13:46.452Z
+  latest_readonly_control_utc: 2026-09-06T19:33:21.215Z
   latest_anonymous_access_check: 2026_09_06_Prompt08_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -384,7 +384,7 @@ contract_phase_preparation:
   auxiliary_notification_permission: not_granted
   initial_control_stop: corrected_local_optional_absent_flag_predicate_before_D1_R2_inventory_no_remote_write
 contract_config_preflight:
-  utc: 2026-09-06T19:21:08Z
+  utc: 2026-09-06T19:39:11Z
   result: failed_readonly_precondition_no_deploy_attempt
   owner_permission: recorded_in_commit_87e0cf3_retained_unconsumed
   remote_mutation_attempts: 0
@@ -392,7 +392,7 @@ contract_config_preflight:
   traffic_percent: 100
   exact_module_settings_bindings_and_private_EU_R2: verified
   anonymous_Access: HEAD_302_Cloudflare_Access
-  authorized_health: unavailable_existing_local_DPAPI_token_file_and_directory_absent
+  authorized_health: file_restored_but_DPAPI_cannot_decrypt_foreign_computer_blob_in_current_context
   browser_fallback: Chrome_ERR_BLOCKED_BY_CLIENT_no_bypass_attempt
   D1_preflight_rows_read: 1025
   D1_final_rows_read: 28
@@ -404,16 +404,21 @@ contract_config_preflight:
   final_inflight_Cron_check: not_reached_health_failed_first_recheck_on_resume
   primary_config_unchanged: true
   contract_flags_and_Cron: unchanged_false_absent_effective_false_disabled_Cron_true_batch_25
-  protected_evidence: tmp/contract-phase-08-owner/config-preflight-stop-safe.json
-  evidence_sha256: d6c67b1167e460873f52bb2a379b1e22688fcd9fcb89906c003cce8942708419
+  protected_evidence: tmp/contract-phase-08-owner/config-dpapi-context-stop-safe.json
+  evidence_sha256: 55fc855f72afb19e3df3991da7fcfd96f82037f154db7dc9934a9bd7bfa686eb
   containment: no_deploy_no_provider_render_or_business_write_preserve_existing_Access_and_configuration
+  owner_confirmed_created_on_another_computer: true
+  local_DPAPI_synthetic_roundtrip: passed
+  PowerShell_5_and_7_same_decrypt_error: true
+  repair_helper: tmp/repair-preview-access-token.ps1_hidden_existing_credential_input_readonly_health_check_encrypted_local_save
+  repair_helper_validation: parse_and_local_constructors_passed_not_executed_with_credentials
 next_atomic_action:
-  id: restore-existing-Access-health-observation-and-readonly-preflight
+  id: locally-reencrypt-existing-Access-credential-then-readonly-preflight
   permission: readonly_observation_existing_exact_five_value_deploy_permission_is_retained
   target: exact_Access_protected_preview_worker_242c1796e930_version_aba79c9fa0ae
-  mutation: none_restore_local_access_to_existing_authorized_health_check
+  mutation: local_DPAPI_credential_save_and_readonly_health_only_no_remote_configuration_change
   preconditions:
-    - owner_restores_existing_protected_Access_credential_or_equivalent_authorized_health_observation
+    - owner_enters_existing_Access_client_values_locally_on_this_computer_into_prepared_hidden_input_helper
     - no_new_Access_policy_token_or_bypass_created_by_agent
   postcondition:
     - actual_authorized_health_HEAD_204_empty_no_store_noindex
@@ -429,6 +434,41 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 DPAPI portability prerequisite — 2026-09-06T19:39:11Z
+
+The owner restored the credential file and then confirmed it was created on
+another computer. Fresh read-only preflight r02 again verified exact version
+aba79c9fa0ae, module, settings, Access perimeter, private R2 and unchanged
+business/provider/session metadata (1025 D1 rows read; zero writes/changes).
+No deploy-attempt marker exists and the five-value deploy permission remains
+valid and unconsumed.
+
+The restored file has the Windows DPAPI format. Both PowerShell 5 and 7 fail
+to decrypt it with HRESULT -2146893813; trimming changes nothing. A synthetic
+encrypt/decrypt round trip in this current Windows context passes. The owner's
+cross-computer origin explains the failed decryption; no credential value was
+exported or included in evidence. The missing-file reason in the previous
+checkpoint is superseded by this precise local portability prerequisite.
+
+Prepared ignored helper tmp/repair-preview-access-token.ps1 prompts locally
+for the existing Client ID and Client Secret with hidden input, performs only
+an exact-origin health HEAD without redirects, and saves the values with DPAPI
+and current-user-only ACL after validating the response. It keeps the prior
+encrypted file as a protected backup. Parsing and local constructor/DPAPI
+checks passed; the helper has not run with credentials. It does not create or
+rotate remote tokens or alter Access policy. No runtime source changed.
+
+Evidence: tmp/contract-phase-08-owner/config-dpapi-context-stop-safe.json and
+deploy-preflight-r02-control/r2/db.json. One next action: the owner re-encrypts
+the existing credential locally with the prepared helper; then resume fresh
+read-only preflight under a new evidence label and the already approved deploy.
+No render, email, application session, remote configuration write or rollback
+occurred. docs:check, release:scan and diff check apply to the status update;
+the unchanged exact runtime/full-suite/E2E/independent review evidence is reused.
+rollover_required: no; recommended_next_session_mode: Medium for local credential
+recovery and read-only verification. Full preview/production remain blocked.
+
 
 ## Prompt 08 authorized config preflight stop — 2026-09-06T19:21:08Z
 
