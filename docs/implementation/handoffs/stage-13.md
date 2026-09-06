@@ -4085,3 +4085,84 @@ open and D17b/D18 are pending. Validation is limited to the synthetic comparison
 and documentation checks; full runtime/E2E/build are not applicable to this
 diagnosis/docs-only diff. `rollover_required: no`;
 `recommended_next_session_mode: Medium`: immediate work is local/read-only.
+
+
+## Prompt 07 completed on Workers Paid — 2026-09-06T17:36:18Z
+
+Result: **success** for the authorized positive D01a–D18b document scenario.
+The earlier upload → quarantine → actual owner ESET clean scan → same-admin
+hash-bound attestation → separate business approval → archive → owner download
+evidence is preserved. The owner enabled Workers Paid, confirmed in the live
+exact-account subscription UI. Fresh remote control proved the same reviewed
+source 0db38842524ebc146eaa56a9d089e3c3484bf0f3, version fingerprint aba79c9fa0ae
+at 100%, unchanged settings and no explicit CPU cap (documented Paid default
+30000 ms). No runtime/hash policy, config, deployment, plan or provider change
+was performed by the agent. CLI OAuth was restored by the owner on this computer.
+
+D17a: one native P1 login and normal cabinet redirect succeeded; D1 verified
+exactly one new version-1 P1 session and preserved historical/domain state.
+D17b: one native existing-D0 URL displayed the 404 not-found error page, matching
+the deployed DOCUMENT_NOT_FOUND branch; no bytes or success download audit.
+D18form: one required native security-form GET changed only P1 last_seen.
+D18a: normal CSRF-protected logout and anonymous login redirect succeeded;
+exactly that session was revoked with one linked logout audit. Each command
+had an actual bounded read-only postcondition and its own docs-only commit.
+The prior failed owner login remains recorded; this was one controlled resume
+after a confirmed plan change, not a blind retry. Totals: 21 successful manifest
+commands, one extra security-form GET, one historical failed login = 23 command
+attempts. Normal redirect GETs are included in the corresponding native command.
+
+D18b final at 2026-09-06T17:33:48.983Z: all 11 sessions revoked, one approved D0, one pending FD,
+two drafts Q2/QD, two storage intents; roles/C2/bootstrap/providers/schema exact.
+Private EU quarantine/archive fingerprints 442dca1871ce / 3996cebdabb0 remain
+distinct, r2.dev disabled, custom domains absent. Exact-key metadata proves
+quarantine absent, archive present; quarantine delete_state=deleted and original
+expiry 2026-09-19T18:50:10.037Z unchanged. Archive and retained local bytes
+are 16954 B, SHA-256 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81. Owner download had verified actual
+archive bytes; final reconciliation reads R2 metadata, not unaudited bodies.
+Anonymous HEAD still redirects to Access. Final D1: 214 reads,
+0 writes/changes. No direct repair, extra fixture, physical archive/local deletion,
+encryption change, provider send, production or official-site operation.
+
+Cost observations bracket this continuation: 17 additional
+account-wide Worker requests and 817.058 CPU ms, zero
+new execution errors; includes Cron and is not a pure login measurement.
+Calendar month through 2026-09-06T17:33:56.680Z: 8992 requests and
+108517.073 CPU ms, 0.08992% and
+0.3617% of included Workers allowances.
+Observed Workers overage estimate is $0; base subscription, other services,
+invoice-period differences and analytics delay are separate. D1 today: 36815
+rows read / 7542 written; continuation deltas 3438 / 84 include checks and Cron.
+No background polling/load test was run. Subsequent preview phases should take
+one bounded usage baseline and one final observation, define finite requests/
+renders/sends in their manifest, and stop on unexpected growth/errors before
+repeating a write. There is no claimed hard dollar cap or newly installed alert.
+Sources: [pricing](https://developers.cloudflare.com/workers/platform/pricing/),
+[limits](https://developers.cloudflare.com/workers/platform/limits/).
+
+Protected evidence: tmp/document-phase-07-owner/D18b-success-safe.json,
+D18b-evidence-index.json, D18form-success-safe.json,
+paid-20260906-closeout-safe.json and paid-20260906-after-cost-safe.json.
+The supplement binds the final and extra-form hashes and corrects total attempts.
+Historical 1102 CPU/memory subtype remains unproven; the current normal Paid
+login and required foreign-owner flow passed, with no new observed resource error.
+
+This completes Prompt 07's one-approved-document scope. Separate rejected and
+actual nonapproved 14-day cleanup outcomes remain mandatory for full REQ-11;
+contract/Browser/email, Telegram and owner acceptance remain subsequent phases.
+Full manual preview and production remain blocked by those respective gates.
+Production training/privacy approval is not inferred from this synthetic test.
+
+Validation: every checkpoint passed docs:check, release:scan, git diff --check;
+ignored helpers were adapted to native UI and their actual postconditions passed.
+One local second-precision UTC checker failure was corrected before commit.
+Full npm test, E2E, build and new independent review intentionally not rerun:
+no runtime/migration/dependency/config change. Inherited exact source evidence:
+580 tests passed / 1 expected Windows skip, 23/23 Chromium, check/build passed;
+CLI-only bootstrap candidate 438a51399ac5f58b428b624c52ca2cbbc059ae9c has 8/8
+scoped independent-review checks. No broader suite is needed for this docs diff.
+
+**One next action:** read-only preparation of the Prompt 08 contract-phase manifest
+with explicit request/CPU/Browser/provider cost bounds; no remote mutation now.
+rollover_required: no; recommended_next_session_mode: Medium, because the next
+preparation is read-only and there is no unresolved mutation ambiguity.

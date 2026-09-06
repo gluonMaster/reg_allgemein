@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T17:32:55Z
+updated_utc: 2026-09-06T17:36:18Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D18a
-next_gate: phase-5-document-D18b
+last_completed_gate: phase-5-document-D18b
+next_gate: phase-5-contract-manifest-readonly
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D18a-verified
-last_atomic_action: D18a-normal-foreign-parent-P1-logout
+current_phase: phase-5-document-D01a-D18b-positive-scenario-complete
+last_atomic_action: D18b-final-bounded-readonly-reconciliation
 last_atomic_result: success
-next_atomic_action: D18b-final-bounded-reconciliation
+next_atomic_action: prepare-Prompt08-contract-phase-manifest-readonly
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: next_action_readonly_docs_evidence_no_remote_write_no_unresolved_ambiguity
+mode_reason_plain: Prompt07_complete_next_contract_manifest_readonly_no_write_or_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicitly_approved_entire_manifest_D01a_D18b_execution_in_progress_no_repeat_scope_approval_actual_owner_AV_clean_recorded
+permission_state: authorized_Prompt07_complete_next_phase_readonly_preparation_only
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,8 +75,8 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_document_upload_flag_enabled_latest_deploy_other_settings_exact
   deployment_postcondition: success_same_module_one_flag_Access_private_R2_health_and_no_business_session_provider_delta
-  latest_readonly_control_utc: 2026-09-05T18:26:26.274Z
-  latest_anonymous_access_check: 2026_09_05_readonly_manifest_302_cloudflare_access_redirect_no_authenticated_probe
+  latest_readonly_control_utc: 2026-09-06T17:33:48.983Z
+  latest_anonymous_access_check: 2026_09_06_D18b_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-06T17:32:55.439Z
+    latest_bounded_postcondition_utc: 2026-09-06T17:33:40.104Z
     postcondition_rows_read: 214
-    latest_read_kind: document_scenario_D18a_actual_bounded_postcondition
+    latest_read_kind: D18b_final_approved_document_archive_owner_foreign_all_sessions_reconciled
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -265,7 +265,7 @@ document_phase_preparation:
   metadata_read_method: exact_key_prefix_per_page_2_zero_or_one_result_no_cursor_or_truncation
   head_transport: unsupported_405_not_used
   local_metadata_parser: optional_result_info_corrected_recorded_response_reused_no_write_ambiguity
-  actual_document_lifecycle: D0_approved_private_archive_same_A_AV_separate_business_review_quarantine_deleted
+  actual_document_lifecycle: D01a_D18b_positive_complete_owner_AV_same_admin_attestation_separate_approve_private_archive_owner_bytes_foreign_404_quarantine_deleted
   broader_req11_rejected_and_14day_cleanup: pending_separate_scenario_not_satisfied_by_one_approved_document
   protected_evidence: tmp/document-phase-07-owner
   configuration_permission: completed_one_deploy_verified_no_rollback_needed
@@ -296,28 +296,29 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D18a_success
+  result: D01a_D18b_complete_success
   scenario_mutation_attempts: 23
   active_sessions: 0
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
   local_AV: actual_owner_clean_ESET_result_screenshot_and_local_product_version_evidence_recorded
   local_encrypted_unsynced_quarantine_workspace: owner_explicit_exact_D0_exception_no_encryption_changes_selected_local_directory_no_registered_sync_root_match
-  protected_evidence: tmp/document-phase-07-owner/D17a-owner-1102-incident-safe.json
-  containment: historical_failed_login_no_persisted_delta_revalidated_Paid_now_owner_enabled_one_controlled_D17a_resume_allowed
+  protected_evidence: tmp/document-phase-07-owner/paid-20260906-closeout-safe.json
+  containment: retain_private_approved_archive_and_local_copy_all_sessions_revoked_no_extra_fixture_repair_or_delete
 document_cost_observation:
-  observed_utc: 2026-09-06T17:25:48.194Z
+  observed_utc: 2026-09-06T17:33:56.680Z
   scope: account_all_workers_2026_09_01_to_observation_adaptive_analytics_not_invoice
-  requests: 8975
-  CPU_ms: 107700.015
-  included_requests_percent: 0.08975
-  included_CPU_percent: 0.35900005
+  requests: 8992
+  CPU_ms: 108517.073
+  included_requests_percent: 0.08992
+  included_CPU_percent: 0.36172357666666666
   observed_worker_overage_estimate_USD: 0
   observation_policy: before_and_final_bounded_queries_no_background_polling_or_load_test
   session_stop_budget: at_most_one_login_one_denial_one_security_form_GET_one_logout_no_blind_retry
   invoice_limit: base_subscription_other_services_and_analytics_lag_are_separate_no_hard_dollar_cap_claimed
-  protected_evidence: tmp/document-phase-07-owner/paid-20260906-before-cost-safe.json
+  protected_evidence: tmp/document-phase-07-owner/paid-20260906-after-cost-safe.json
 document_login_resource_incident:
+  current_status: resolved_for_this_Paid_normal_login_no_new_resource_error_observed
   resolution: one_native_Paid_login_succeeded_normal_cabinet_redirect_and_only_P1_session_created_hashing_unchanged
   classification: historical_P1_resolved_for_current_Paid_login_2026_09_06_D17a_actual_session_verified
   observed_utc: 2026-09-05T20:08:16Z
@@ -332,7 +333,7 @@ document_login_resource_incident:
   remaining_active_sessions: 0
   actual_worker_plan_and_effective_CPU_cap: Workers_Paid_confirmed_owner_and_live_same_account_UI_no_explicit_limit_documented_default_30000ms
   detailed_logs_access: API_403_no_logs_or_tail_reconfiguration_attempted
-  working_hypothesis: local_bcrypt12_CPU_cost_confirmed_remote_incident_root_cause_and_effective_limit_unconfirmed
+  working_hypothesis: historic_CPU_vs_memory_subtype_unproven_Paid_real_login_succeeded_without_runtime_or_hashing_change
   local_password_profile: synthetic_Node_valid_compare_391_406_438_ms_CPU_wrong_compare_359_391_391_ms_fresh_dummy_734_ms
   local_profile_remote_equivalence: not_claimed_no_actual_credentials_or_network_used
   previous_project_comparison: local_bcrypt_cost10_vs_current_cost12_approximately_fourfold_core_work
@@ -340,20 +341,19 @@ document_login_resource_incident:
   previous_project_remote_metrics_and_stored_hash_cost: not_read_local_source_only_owner_reports_Free_without_failures
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: D18b-final-bounded-reconciliation
-  permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
+  id: prepare-Prompt08-contract-phase-manifest-readonly
+  permission: read_only_preparation_only_Prompt07_scenario_permission_consumed
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: none_final_bounded_readonly_control_D1_R2_evidence_reconciliation
+  mutation: none_prepare_reviewable_four_bundle_Browser_R2_email_manifest_with_bounded_cost_budget
   preconditions:
-    - previous_D18a_actual_postcondition_and_docs_only_commit_success
-    - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
+    - Prompt07_D18b_final_evidence_handoff_and_docs_only_commit_complete
+    - preserve_Access_private_archive_all_revoked_sessions_and_current_candidate
   postcondition:
-    - all_new_sessions_revoked_one_approved_D0_archive_preserved_C2_Q2_roles_receipts_intact_handoff_and_remaining_gates_recorded
-    - readonly_reconciliation_and_active_state_commit_before_next_mutation
-  success_transition: next_manifest_action_after_own_checkpoint
-  failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
+    - exact_contract_phase_target_feature_prerequisites_operations_cost_checks_and_containment_written
+  success_transition: present_concrete_bounded_Prompt08_scope_before_any_required_config_or_provider_write
+  failed_or_ambiguous_transition: retain_completed_document_evidence_no_replay_or_remote_write
   forbidden_in_this_action:
-    - provider_send_direct_SQL_R2_repair_bootstrap_replay_production_CMS_or_real_PII
+    - deploy_flag_secret_provider_send_new_session_document_fixture_production_or_CMS_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -361,6 +361,87 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 07 completed on Workers Paid — 2026-09-06T17:36:18Z
+
+Result: **success** for the authorized positive D01a–D18b document scenario.
+The earlier upload → quarantine → actual owner ESET clean scan → same-admin
+hash-bound attestation → separate business approval → archive → owner download
+evidence is preserved. The owner enabled Workers Paid, confirmed in the live
+exact-account subscription UI. Fresh remote control proved the same reviewed
+source 0db38842524ebc146eaa56a9d089e3c3484bf0f3, version fingerprint aba79c9fa0ae
+at 100%, unchanged settings and no explicit CPU cap (documented Paid default
+30000 ms). No runtime/hash policy, config, deployment, plan or provider change
+was performed by the agent. CLI OAuth was restored by the owner on this computer.
+
+D17a: one native P1 login and normal cabinet redirect succeeded; D1 verified
+exactly one new version-1 P1 session and preserved historical/domain state.
+D17b: one native existing-D0 URL displayed the 404 not-found error page, matching
+the deployed DOCUMENT_NOT_FOUND branch; no bytes or success download audit.
+D18form: one required native security-form GET changed only P1 last_seen.
+D18a: normal CSRF-protected logout and anonymous login redirect succeeded;
+exactly that session was revoked with one linked logout audit. Each command
+had an actual bounded read-only postcondition and its own docs-only commit.
+The prior failed owner login remains recorded; this was one controlled resume
+after a confirmed plan change, not a blind retry. Totals: 21 successful manifest
+commands, one extra security-form GET, one historical failed login = 23 command
+attempts. Normal redirect GETs are included in the corresponding native command.
+
+D18b final at 2026-09-06T17:33:48.983Z: all 11 sessions revoked, one approved D0, one pending FD,
+two drafts Q2/QD, two storage intents; roles/C2/bootstrap/providers/schema exact.
+Private EU quarantine/archive fingerprints 442dca1871ce / 3996cebdabb0 remain
+distinct, r2.dev disabled, custom domains absent. Exact-key metadata proves
+quarantine absent, archive present; quarantine delete_state=deleted and original
+expiry 2026-09-19T18:50:10.037Z unchanged. Archive and retained local bytes
+are 16954 B, SHA-256 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81. Owner download had verified actual
+archive bytes; final reconciliation reads R2 metadata, not unaudited bodies.
+Anonymous HEAD still redirects to Access. Final D1: 214 reads,
+0 writes/changes. No direct repair, extra fixture, physical archive/local deletion,
+encryption change, provider send, production or official-site operation.
+
+Cost observations bracket this continuation: 17 additional
+account-wide Worker requests and 817.058 CPU ms, zero
+new execution errors; includes Cron and is not a pure login measurement.
+Calendar month through 2026-09-06T17:33:56.680Z: 8992 requests and
+108517.073 CPU ms, 0.08992% and
+0.3617% of included Workers allowances.
+Observed Workers overage estimate is $0; base subscription, other services,
+invoice-period differences and analytics delay are separate. D1 today: 36815
+rows read / 7542 written; continuation deltas 3438 / 84 include checks and Cron.
+No background polling/load test was run. Subsequent preview phases should take
+one bounded usage baseline and one final observation, define finite requests/
+renders/sends in their manifest, and stop on unexpected growth/errors before
+repeating a write. There is no claimed hard dollar cap or newly installed alert.
+Sources: [pricing](https://developers.cloudflare.com/workers/platform/pricing/),
+[limits](https://developers.cloudflare.com/workers/platform/limits/).
+
+Protected evidence: tmp/document-phase-07-owner/D18b-success-safe.json,
+D18b-evidence-index.json, D18form-success-safe.json,
+paid-20260906-closeout-safe.json and paid-20260906-after-cost-safe.json.
+The supplement binds the final and extra-form hashes and corrects total attempts.
+Historical 1102 CPU/memory subtype remains unproven; the current normal Paid
+login and required foreign-owner flow passed, with no new observed resource error.
+
+This completes Prompt 07's one-approved-document scope. Separate rejected and
+actual nonapproved 14-day cleanup outcomes remain mandatory for full REQ-11;
+contract/Browser/email, Telegram and owner acceptance remain subsequent phases.
+Full manual preview and production remain blocked by those respective gates.
+Production training/privacy approval is not inferred from this synthetic test.
+
+Validation: every checkpoint passed docs:check, release:scan, git diff --check;
+ignored helpers were adapted to native UI and their actual postconditions passed.
+One local second-precision UTC checker failure was corrected before commit.
+Full npm test, E2E, build and new independent review intentionally not rerun:
+no runtime/migration/dependency/config change. Inherited exact source evidence:
+580 tests passed / 1 expected Windows skip, 23/23 Chromium, check/build passed;
+CLI-only bootstrap candidate 438a51399ac5f58b428b624c52ca2cbbc059ae9c has 8/8
+scoped independent-review checks. No broader suite is needed for this docs diff.
+
+**One next action:** read-only preparation of the Prompt 08 contract-phase manifest
+with explicit request/CPU/Browser/provider cost bounds; no remote mutation now.
+rollover_required: no; recommended_next_session_mode: Medium, because the next
+preparation is read-only and there is no unresolved mutation ambiguity.
+
 
 ## Document scenario D18a verified — 2026-09-06T17:32:55Z
 
