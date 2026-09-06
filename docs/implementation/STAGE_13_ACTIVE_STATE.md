@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T19:39:11Z
+updated_utc: 2026-09-06T22:13:11Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-contract-config-owner-permission
-next_gate: phase-5-contract-config-authorized-health-preflight
+last_completed_gate: phase-5-contract-config-deploy
+next_gate: phase-5-contract-synthetic-schedule-local-rehearsal
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-config-health-precondition-blocked
-last_atomic_action: Prompt08-readonly-config-preflight-DPAPI-context-stop
-last_atomic_result: failed
-next_atomic_action: locally-reencrypt-existing-Access-credential-then-readonly-preflight
+current_phase: phase-5-contract-config-deployed-Cron-contained
+last_atomic_action: Prompt08-C00-one-exact-five-value-preview-config-deploy
+last_atomic_result: success
+next_atomic_action: prepare-and-rehearse-bounded-synthetic-schedule-import-locally
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Owner_confirmed_credential_created_on_another_computer_local_DPAPI_roundtrip_passes_next_step_local_reencryption
+mode_reason_plain: Config_deploy_confirmed_next_work_local_schedule_driver_and_evidence_no_remote_write_or_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_granted_one_exact_five_value_preview_deploy_retained_unconsumed_no_Browser_R2_import_sessions_or_provider_scope
+permission_state: one_exact_five_value_config_deploy_completed_consumed_no_Browser_R2_import_sessions_provider_or_rollback_scope
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -69,13 +69,13 @@ review:
 preview:
   access: enforced
   deployed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-  deployed_fingerprint: aba79c9fa0ae
+  deployed_fingerprint: 7c1bae246b7f
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
-  bindings_and_feature_gates_unchanged: false_only_document_upload_flag_enabled_latest_deploy_other_settings_exact
-  deployment_postcondition: success_same_module_one_flag_Access_private_R2_health_and_no_business_session_provider_delta
-  latest_readonly_control_utc: 2026-09-06T19:33:21.215Z
+  bindings_and_feature_gates_unchanged: false_exactly_five_contract_and_Cron_values_changed_other_settings_and_bindings_exact
+  deployment_postcondition: success_same_module_five_values_one_version_100_percent_Access_private_R2_no_domain_session_provider_delta_expected_health_503
+  latest_readonly_control_utc: 2026-09-06T22:13:00.176Z
   latest_anonymous_access_check: 2026_09_06_Prompt08_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -90,10 +90,10 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-06T17:33:40.104Z
-    postcondition_rows_read: 214
-    latest_read_kind: D18b_final_approved_document_archive_owner_foreign_all_sessions_reconciled
-    preceding_preflight_rows_read: 45
+    latest_bounded_postcondition_utc: 2026-09-06T22:13:02.545Z
+    postcondition_rows_read: 1050
+    latest_read_kind: C00_config_deploy_scoped_metadata_and_leases_no_business_session_provider_delta
+    preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
     postcondition_changed_db: false
@@ -143,12 +143,12 @@ preview:
     global_nonrevoked_sessions: 0
     agent_authenticated_requests: 0
   scheduled:
-    fast: running_at_bounded_snapshot_age_under_two_seconds_no_recent_failures
-    maintenance: succeeded_fresh
+    fast: last_run_succeeded_automatic_dispatch_now_paused_by_authorized_config
+    maintenance: last_run_succeeded_automatic_maintenance_now_paused_by_authorized_config
     fixed_cadence_rows: 2
     recent_failures: 0
     automatic_history_growth: stopped
-    health: head_204_empty_no_store_noindex
+    health: head_503_expected_Cron_disabled_empty_no_store_noindex
   synthetic_state:
     users: 3
     parents: 2
@@ -364,69 +364,82 @@ contract_phase_preparation:
   actual_Browser_calls: 0
   planned_Browser_calls: four_offer_PDFs_plus_one_certificate
   planned_private_R2_objects: four_template_JSON_eight_offer_HTML_PDF_one_certificate_PDF
-  current_contract_send: false
-  current_preview_review_flag: absent_effective_false
-  current_contract_renderer: disabled
-  current_scheduled_jobs: true
-  current_scheduled_outbox_batch_limit: 25
+  current_contract_send: true
+  current_preview_review_flag: true
+  current_contract_renderer: browser_run
+  current_scheduled_jobs: false
+  current_scheduled_outbox_batch_limit: 1
   config_proposal: three_contract_values_plus_temporary_Cron_stop_and_batch_one
   config_strict_dry_run: passed_same_module_sha256_eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b
-  source_config_restored_primary_config_unchanged: true
-  no_blind_resend_constraint: existing_email_trigger_max_attempts_5_and_retryable_ambiguity_contained_only_by_proposed_Cron_stop_manual_single_dispatch
-  health_during_proposed_stop: expected_503_until_separate_safe_Cron_restoration
+  config_local_sync: exact_proposed_config_synced_in_primary_and_detached_source_after_verified_deploy
+  no_blind_resend_constraint: existing_email_trigger_max_attempts_5_and_retryable_ambiguity_contained_by_active_Cron_stop_manual_single_dispatch
+  health_during_active_stop: observed_503_expected_until_separate_safe_Cron_restoration
   notification_scope: four_contract_sent_plus_six_auxiliary_rows_ten_total_not_yet_authorized
   fixture_prerequisites: Q2_QD_submit_then_Q2_approve_FD_dated_approve_QD_approve_preserve_D0
   group_prerequisite: zero_remote_groups_two_block_synthetic_schedule_parser_passed
   schedule_execution_status: local_source_prepared_remote_driver_rehearsal_and_separate_stage_promote_permissions_pending
-  config_permission: granted_one_exact_five_value_preview_deploy_only
+  config_permission: consumed_success_one_exact_five_value_preview_deploy
   Browser_R2_permission: not_granted
   four_PDF_email_permission: not_granted
   auxiliary_notification_permission: not_granted
   initial_control_stop: corrected_local_optional_absent_flag_predicate_before_D1_R2_inventory_no_remote_write
-contract_config_preflight:
-  utc: 2026-09-06T19:39:11Z
-  result: failed_readonly_precondition_no_deploy_attempt
-  owner_permission: recorded_in_commit_87e0cf3_retained_unconsumed
-  remote_mutation_attempts: 0
-  deployed_version: aba79c9fa0ae
-  traffic_percent: 100
-  exact_module_settings_bindings_and_private_EU_R2: verified
-  anonymous_Access: HEAD_302_Cloudflare_Access
-  authorized_health: file_restored_but_DPAPI_cannot_decrypt_foreign_computer_blob_in_current_context
-  browser_fallback: Chrome_ERR_BLOCKED_BY_CLIENT_no_bypass_attempt
-  D1_preflight_rows_read: 1025
-  D1_final_rows_read: 28
-  D1_rows_written: 0
-  D1_changes: 0
-  D1_changed_db: false
-  sessions_total_active: 11_0
-  nonsent_email_offers_artifacts: 0_0_0
-  final_inflight_Cron_check: not_reached_health_failed_first_recheck_on_resume
-  primary_config_unchanged: true
-  contract_flags_and_Cron: unchanged_false_absent_effective_false_disabled_Cron_true_batch_25
-  protected_evidence: tmp/contract-phase-08-owner/config-dpapi-context-stop-safe.json
-  evidence_sha256: 55fc855f72afb19e3df3991da7fcfd96f82037f154db7dc9934a9bd7bfa686eb
-  containment: no_deploy_no_provider_render_or_business_write_preserve_existing_Access_and_configuration
-  owner_confirmed_created_on_another_computer: true
-  local_DPAPI_synthetic_roundtrip: passed
-  PowerShell_5_and_7_same_decrypt_error: true
-  repair_helper: tmp/repair-preview-access-token.ps1_hidden_existing_credential_input_readonly_health_check_encrypted_local_save
-  repair_helper_validation: parse_and_local_constructors_passed_not_executed_with_credentials
+contract_config_deploy:
+  action: C00
+  utc: 2026-09-06T22:13:11Z
+  phase: phase_5_contract_configuration
+  result: success
+  allowed_scope: one_exact_five_value_preview_deploy_owner_approval_87e0cf3
+  permission_consumed: true
+  remote_mutation_attempts: 1
+  before_version: aba79c9fa0ae
+  after_version: 7c1bae246b7f
+  deployed_source_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  module_sha256: eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b
+  one_version_at_100_percent: true
+  target_fingerprints: account_5dbd04a4763a_worker_242c1796e930_origin_88ed782ba25a_D1_ccdeb22bb2a1
+  CONTRACT_SEND_ENABLED: false_to_true
+  CONTRACT_PREVIEW_REVIEW_ENABLED: absent_effective_false_to_true
+  CONTRACT_RENDERER: disabled_to_browser_run
+  SCHEDULED_JOBS_ENABLED: true_to_false
+  SCHEDULED_OUTBOX_BATCH_LIMIT: 25_to_1
+  other_settings_resources_runtime_Cron_entries_and_secrets: unchanged
+  Access_anonymous_HEAD: 302
+  archive_quarantine: private_distinct_EU_3996cebdabb0_442dca1871ce
+  health_before_after: 204_to_503_expected_no_store_noindex_empty
+  actual_leases_before_after: zero_active_locks_and_cadence_leases
+  email_before_after: six_certain_historical_sent_zero_nonsent_unchanged
+  domain_and_all_eleven_revoked_sessions: unchanged_exact_scoped_digest
+  Browser_calls_R2_writes_provider_sends_app_sessions_business_commands: 0_0_0_0_0
+  D1_postcondition_rows_read: 1050
+  D1_postcondition_rows_written: 0
+  D1_postcondition_changes: 0
+  D1_postcondition_changed_db: false
+  local_config_sync: success_exact_proposed_config_after_remote_reconciliation
+  rollback_required: false
+  rollback_authorized: false
+  rollback_reference: prior_version_aba79c9fa0ae_only_with_separate_scope_no_foreign_drift_and_no_held_or_uncertain_email
+  containment: preserve_Access_and_Cron_stop_no_automatic_retries_maintenance_or_new_remote_command_without_scope
+  protected_evidence: tmp/contract-phase-08-owner/deploy-evidence-index.json
+  evidence_index_sha256: 451f6c5e55cfff9025d2cd91f39dc07f72805cd402b3bfe1c29b2b739efc6822
+  restored_credential: current_computer_DPAPI_readable_owner_only_ACL_authorized_health_passed_no_agent_Access_mutation
+  nonblocking_backlog:
+    - P2_OPS_HISTORICAL_RUNNING_001_old_scheduled_funding_expiry_record_4681df27717d_from_2026_09_03_no_active_lock_later_fenced_runs_succeeded_left_unchanged
+  local_preflight_correction: exact_historical_record_pinned_and_preserved_new_running_rows_or_any_current_lease_still_block
 next_atomic_action:
-  id: locally-reencrypt-existing-Access-credential-then-readonly-preflight
-  permission: readonly_observation_existing_exact_five_value_deploy_permission_is_retained
-  target: exact_Access_protected_preview_worker_242c1796e930_version_aba79c9fa0ae
-  mutation: local_DPAPI_credential_save_and_readonly_health_only_no_remote_configuration_change
+  id: prepare-and-rehearse-bounded-synthetic-schedule-import-locally
+  permission: local_and_readonly_only_no_remaining_remote_write_permission
+  target: local_synthetic_fixture_for_preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f
+  mutation: none_remote_local_disposable_database_only
   preconditions:
-    - owner_enters_existing_Access_client_values_locally_on_this_computer_into_prepared_hidden_input_helper
-    - no_new_Access_policy_token_or_bypass_created_by_agent
+    - use_existing_canonical_ImportRepository_and_two_prepared_synthetic_schedule_blocks
+    - no_Office_or_live_business_sources_no_remote_import_or_application_session
   postcondition:
-    - actual_authorized_health_HEAD_204_empty_no_store_noindex
-    - fresh_exact_version_config_private_R2_domain_outbox_and_inflight_Cron_preflight
-  success_transition: one_already_authorized_five_value_deploy_then_readonly_postcondition_and_docs_only_commit
-  failed_or_ambiguous_transition: retain_current_configuration_and_permission_no_remote_mutation
+    - reviewable_exact_stage_promote_commands_with_target_bounds_idempotency_postconditions_and_containment
+    - focused_local_transaction_rehearsal_passes_before_separate_import_permission_request
+  success_transition: request_separate_bounded_synthetic_schedule_stage_and_promotion_scope
+  failed_or_ambiguous_transition: keep_Cron_stopped_preserve_preview_and_finish_local_preparation
   forbidden_in_this_action:
-    - Access_bypass_or_change_new_token_deploy_import_Browser_R2_provider_send_login_logout_business_write
+    - remote_import_Browser_R2_provider_send_login_logout_business_write_deploy_Access_change_rollback_CMS_or_production_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -434,6 +447,64 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 C00 config deploy — 2026-09-06T22:13:11Z
+
+Result: **success**. One owner-authorized strict deploy began at 2026-09-06T22:12:21.179Z.
+Actual remote postcondition confirms version fingerprint 7c1bae246b7f at
+100% traffic, replacing aba79c9fa0ae. Source candidate remains
+0db38842524ebc146eaa56a9d089e3c3484bf0f3 and module SHA-256 remains
+eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b.
+The returned version matches the independently read deployment; exit code was
+0. Exactly five values changed: CONTRACT_SEND_ENABLED=true,
+CONTRACT_PREVIEW_REVIEW_ENABLED=true, CONTRACT_RENDERER=browser_run,
+SCHEDULED_JOBS_ENABLED=false and SCHEDULED_OUTBOX_BATCH_LIMIT=1.
+
+All other settings, bindings, runtime, resources, secret bindings and Cron
+schedule entries match the baseline. Anonymous Access HEAD remains 302;
+distinct EU R2 buckets remain private. Authorized health changed from 204 to
+the approved empty 503 with no-store/noindex because automatic Cron and
+maintenance are paused. It is expected containment, not a new runtime incident.
+Scoped D1 domain/provider/session digests are identical before and after:
+all 11 sessions revoked, six historical emails certain sent, no actionable
+mail and zero contract templates/offers/artifacts/renders/certificates.
+Postcondition read 1050 D1 rows, wrote zero, changes=0,
+changed_db=false. No application, Browser, R2-write or provider command ran.
+Both ignored local configs were synced only after actual deploy reconciliation.
+
+The owner restored the existing service credential on this computer; local
+DPAPI decryption and health now pass. Preflight initially stopped on one old
+scheduled-job history row still marked running since 2026-09-03T07:30:45.792Z.
+Exact read-only evidence proves its lock expired and later executions advanced
+the fencing token and completed successfully. P2-OPS-HISTORICAL-RUNNING-001 is
+retained as a nonblocking backlog item, with no repair or runtime refactor.
+The ignored helper now permits only that exact unchanged historical record;
+any new running history, active operation lock or running cadence still stops
+deploy. Final preflight and postcondition had no active leases.
+
+The single config permission is consumed. Containment is Access plus stopped
+Cron and manual batch one; future sends still need separate exact scope and
+one approved actionable row. Do not restore the old scheduler-enabled version
+with held or uncertain mail. Prior-version rollback is recorded but neither
+needed nor authorized; it would require separate scope and exact empty-queue,
+no-foreign-drift preconditions. No next remote mutation may precede this
+checkpoint's separate docs-only commit.
+
+Protected evidence: tmp/contract-phase-08-owner/deploy-evidence-index.json,
+deploy-result-safe.json, deploy-preflight-safe.json, immediate/after control,
+database, R2 and lease snapshots, returned command evidence and historical-job
+reconciliation. Tracked validation is docs:check, release:scan and git diff
+--check only. Runtime check/test/build/E2E and independent review are reused
+from exact source 0db38842524ebc146eaa56a9d089e3c3484bf0f3 (580 pass, one
+expected Windows skip, 23/23 Chromium, check/build passed); no runtime or
+schema source changed and the prompt forbids an unchanged-runtime review loop.
+
+**One next action:** prepare/rehearse the bounded synthetic schedule driver
+locally, using the already parsed two-block fixture and canonical repository,
+before separate stage/promote permission. Full manual preview and production
+remain blocked. rollover_required: no; recommended_next_session_mode: Medium,
+because the next work is local/read-only and this deploy has no ambiguity.
+
 
 ## Prompt 08 DPAPI portability prerequisite — 2026-09-06T19:39:11Z
 
