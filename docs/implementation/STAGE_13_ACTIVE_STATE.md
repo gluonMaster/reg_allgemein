@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T17:29:03Z
+updated_utc: 2026-09-06T17:30:22Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D17a
-next_gate: phase-5-document-D17b
+last_completed_gate: phase-5-document-D17b
+next_gate: phase-5-document-D18form
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-scenario-D17a-verified
-last_atomic_action: D17a-normal-foreign-parent-P1-login-without-redirect-follow
+current_phase: phase-5-document-scenario-D17b-verified
+last_atomic_action: D17b-foreign-parent-denial-for-existing-archived-D0
 last_atomic_result: success
-next_atomic_action: D17b-foreign-parent-existing-D0-denial
+next_atomic_action: D18form-one-native-GET-account-security
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: next_authorized_document_action_known_target_postcondition_containment_no_unresolved_ambiguity
@@ -90,9 +90,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-06T17:29:03.565Z
+    latest_bounded_postcondition_utc: 2026-09-06T17:30:22.299Z
     postcondition_rows_read: 210
-    latest_read_kind: document_scenario_D17a_actual_bounded_postcondition
+    latest_read_kind: document_scenario_D17b_actual_bounded_postcondition
     preceding_preflight_rows_read: 45
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -191,7 +191,7 @@ preview:
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
     telegram: fail_closed_until_separate_manual_preview_phase
-    documents: upload_enabled_authorized_scenario_D17a_verified
+    documents: upload_enabled_authorized_scenario_D17b_verified
     contracts: fail_closed_until_separate_manual_preview_phase
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
@@ -296,8 +296,8 @@ document_scenario_execution:
   scope: entire_manifest_D01a_D18b_explicit_owner_approval
   scope_reconfirmation_required: false
   latest_preflight_utc: 2026-09-05T18:26:34.655Z
-  result: D17a_success
-  scenario_mutation_attempts: 20
+  result: D17b_success
+  scenario_mutation_attempts: 21
   active_sessions: 1
   fixture_bytes: 16954
   fixture_sha256: 827fbc61bdd6ec453cccdbf2a80f1b1aa036069ca246182ebf4e86659afffd81
@@ -340,15 +340,15 @@ document_login_resource_incident:
   previous_project_remote_metrics_and_stored_hash_cost: not_read_local_source_only_owner_reports_Free_without_failures
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
 next_atomic_action:
-  id: D17b-foreign-parent-existing-D0-denial
+  id: D18form-one-native-GET-account-security
   permission: granted_entire_D01a_D18b_no_repeat_scope_confirmation
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: one_P1_GET_existing_foreign_D0_download
+  mutation: one_native_authenticated_GET_account_security_to_obtain_normal_logout_form
   preconditions:
-    - previous_D17a_actual_postcondition_and_docs_only_commit_success
+    - previous_D17b_actual_postcondition_and_docs_only_commit_success
     - current_manifest_actor_session_preserved_no_hidden_request_redirect_or_retry
   postcondition:
-    - 404_DOCUMENT_NOT_FOUND_no_document_bytes_attachment_or_success_audit_no_archive_domain_diff
+    - normal_security_logout_form_visible_only_P1_session_touch_domain_archive_audit_preserved
     - readonly_reconciliation_and_active_state_commit_before_next_mutation
   success_transition: next_manifest_action_after_own_checkpoint
   failed_or_ambiguous_transition: readonly_reconcile_checkpoint_preserve_Access_no_blind_retry
@@ -361,6 +361,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Document scenario D17b verified — 2026-09-06T17:30:22Z
+
+Result: **success**. One foreign parent denial for existing archived D0 under the owner's complete D01a–D18b scope.
+Before: P1 session active and real D0 owned by P2. After: HTTP 404 DOCUMENT_NOT_FOUND without document bytes or attachment; no new success audit, document, archive or domain change; only P1 session touched.
+Version fingerprint aba79c9fa0ae, reviewed source 0db38842524ebc146eaa56a9d089e3c3484bf0f3,
+account/worker/D1 fingerprints 5dbd04a4763a / 242c1796e930 / ccdeb22bb2a1.
+Actual D1 postcondition 2026-09-06T17:30:22.299Z: 210 rows read,
+zero writes/changes, changed_db=false. The application request's write is
+accounted for separately; the SELECT metadata does not claim no application mutation.
+Protected evidence: `tmp/document-phase-07-owner/D17b-success-safe.json`,
+SHA-256 `ef660a2431bcb6110e8ca74e9083614043a1585d4ecf1c1c0c275f5b937afe99`; one-attempt marker, safe response and before/after D1 retained.
+
+Containment: Access/private R2 and existing roles/data retained; no direct repair,
+extra fixture or blind retry. Actual owner AV clean and separate business inspection are recorded; approved archive is retained. One next action:
+D18a-normal-P1-logout, after this docs-only checkpoint. Run docs:check, release:scan and
+git diff --check only; exact inherited runtime/E2E/build/review evidence reused
+because no runtime/config/schema/dependency changed. Full manual preview and
+production remain blocked. `rollover_required: no`;
+`recommended_next_session_mode: High`: the next authorized action has known target/postcondition/containment
+and no unresolved ambiguity.
 
 ## Document scenario D17a verified — 2026-09-06T17:29:03Z
 
