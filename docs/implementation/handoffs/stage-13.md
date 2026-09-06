@@ -4166,3 +4166,40 @@ scoped independent-review checks. No broader suite is needed for this docs diff.
 with explicit request/CPU/Browser/provider cost bounds; no remote mutation now.
 rollover_required: no; recommended_next_session_mode: Medium, because the next
 preparation is read-only and there is no unresolved mutation ambiguity.
+
+
+## Prompt 08 read-only contract manifest boundary — 2026-09-06T18:13:57Z
+
+The owner invoked the local Prompt 08 for four real Browser/private-R2/email
+preview bundles and one full contract lifecycle. Only its read-only preparation
+scope was exercised. [Active state](../STAGE_13_ACTIVE_STATE.md) and
+[contract manifest](../STAGE_13_CONTRACT_PHASE_MANIFEST.md) now hold the current
+next action and the concrete proposed sequence. No remote write or provider
+request was attempted; full-manual-preview and production remain blocked.
+
+Exact-target read-only controls, private EU R2, actor/recipient membership and
+13 bounded SELECTs passed (944 reads, zero writes/changes). Four local v1 source
+bundles/font hashes and a two-block synthetic schedule source passed canonical
+validation. Strict config dry-run retained the deployed module bytes. Protected
+evidence index: tmp/contract-phase-08-owner/evidence-index.json.
+
+The proposed config adds the three contract settings and temporarily stops Cron
+with manual outbox batch one, so unknown email cannot cause automatic resend.
+This also pauses maintenance and changes health to 503 until a separately
+authorized safe restoration. No flag, binding or secret has actually changed.
+The scenario needs five Browser calls, 13 private R2 objects and ten normal
+email rows, including six notifications outside the four PDF-email scope.
+Those sends require separate permission; no silent cancellation is proposed.
+
+Existing Q2/QD and pending FD need normal submission/admin decisions; D0 remains
+approved. Remote courses are absent. Synthetic schedule source is prepared,
+but remote import driver/rehearsal and stage/promote scope remain prerequisites;
+the ordinary local import CLI must not be repointed at preview as a workaround.
+
+Validation: docs:check, release:scan and diff check for this docs-only boundary;
+reuse exact 0db38842524ebc146eaa56a9d089e3c3484bf0f3 full evidence (580 pass,
+one expected Windows skip, 23/23 Chromium, check/build) and scoped independent
+GO for CLI descendant 438a51399ac5f58b428b624c52ca2cbbc059ae9c. No unchanged
+runtime suite or new review.
+rollover_required: no; recommended_next_session_mode: High for the prepared
+separately gated config deploy. See active state for the sole next action.

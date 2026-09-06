@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T17:36:18Z
+updated_utc: 2026-09-06T18:13:57Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-document-D18b
-next_gate: phase-5-contract-manifest-readonly
+last_completed_gate: phase-5-contract-readonly-manifest
+next_gate: phase-5-contract-config-owner-permission
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-document-D01a-D18b-positive-scenario-complete
-last_atomic_action: D18b-final-bounded-readonly-reconciliation
+current_phase: phase-5-contract-readonly-manifest-config-ready
+last_atomic_action: Prompt08-bounded-readonly-inventory-and-local-manifest
 last_atomic_result: success
-next_atomic_action: prepare-Prompt08-contract-phase-manifest-readonly
+next_atomic_action: request-owner-approval-exact-five-value-preview-contract-config
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Prompt07_complete_next_contract_manifest_readonly_no_write_or_unresolved_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: Exact_config_only_deploy_prepared_known_target_postcondition_containment_owner_permission_required
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: authorized_Prompt07_complete_next_phase_readonly_preparation_only
+permission_state: Prompt08_readonly_preparation_only_config_Browser_R2_import_sessions_and_provider_writes_not_authorized
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,8 +75,8 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_document_upload_flag_enabled_latest_deploy_other_settings_exact
   deployment_postcondition: success_same_module_one_flag_Access_private_R2_health_and_no_business_session_provider_delta
-  latest_readonly_control_utc: 2026-09-06T17:33:48.983Z
-  latest_anonymous_access_check: 2026_09_06_D18b_HEAD_302_Cloudflare_Access
+  latest_readonly_control_utc: 2026-09-06T18:01:07.463Z
+  latest_anonymous_access_check: 2026_09_06_Prompt08_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -340,20 +340,64 @@ document_login_resource_incident:
   comparison_evidence: tmp/login-project-comparison-20260905.json
   previous_project_remote_metrics_and_stored_hash_cost: not_read_local_source_only_owner_reports_Free_without_failures
   containment: no_retry_no_new_session_preserve_archive_no_config_plan_runtime_change
+contract_phase_preparation:
+  manifest: docs/implementation/STAGE_13_CONTRACT_PHASE_MANIFEST.md
+  result: readonly_manifest_prepared_config_ready_full_scenario_not_executable_yet
+  utc: 2026-09-06T18:13:57Z
+  remote_mutations: 0
+  authenticated_application_requests: 0
+  protected_evidence: tmp/contract-phase-08-owner
+  evidence_index_sha256: 033e1d64fa23ea8f0c50d7d740d1be2d76375fb73f10df3471d29bc0399e8ff5
+  inventory_utc: 2026-09-06T18:01:07.463Z
+  D1_rows_read_inventory_plus_course_check: 944
+  D1_rows_written: 0
+  D1_changes: 0
+  D1_changed_db: false
+  target_settings_bindings_and_version_exact: true
+  Browser_binding: BROWSER_type_browser_existing
+  R2_archive: private_EU_3996cebdabb0
+  recipient: existing_P2_allowlist_digest_prefix_7c1f9b0ac168_no_pending_email
+  active_sessions: 0
+  existing_templates_offers_artifacts_certificates: 0_0_0_0
+  template_version: preview-review-v1
+  immutable_local_bundles: 4_canonical_hashes_and_embedded_fonts_verified_no_renderer_invoked
+  actual_Browser_calls: 0
+  planned_Browser_calls: four_offer_PDFs_plus_one_certificate
+  planned_private_R2_objects: four_template_JSON_eight_offer_HTML_PDF_one_certificate_PDF
+  current_contract_send: false
+  current_preview_review_flag: absent_effective_false
+  current_contract_renderer: disabled
+  current_scheduled_jobs: true
+  current_scheduled_outbox_batch_limit: 25
+  config_proposal: three_contract_values_plus_temporary_Cron_stop_and_batch_one
+  config_strict_dry_run: passed_same_module_sha256_eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b
+  source_config_restored_primary_config_unchanged: true
+  no_blind_resend_constraint: existing_email_trigger_max_attempts_5_and_retryable_ambiguity_contained_only_by_proposed_Cron_stop_manual_single_dispatch
+  health_during_proposed_stop: expected_503_until_separate_safe_Cron_restoration
+  notification_scope: four_contract_sent_plus_six_auxiliary_rows_ten_total_not_yet_authorized
+  fixture_prerequisites: Q2_QD_submit_then_Q2_approve_FD_dated_approve_QD_approve_preserve_D0
+  group_prerequisite: zero_remote_groups_two_block_synthetic_schedule_parser_passed
+  schedule_execution_status: local_source_prepared_remote_driver_rehearsal_and_separate_stage_promote_permissions_pending
+  config_permission: not_granted
+  Browser_R2_permission: not_granted
+  four_PDF_email_permission: not_granted
+  auxiliary_notification_permission: not_granted
+  initial_control_stop: corrected_local_optional_absent_flag_predicate_before_D1_R2_inventory_no_remote_write
 next_atomic_action:
-  id: prepare-Prompt08-contract-phase-manifest-readonly
-  permission: read_only_preparation_only_Prompt07_scenario_permission_consumed
+  id: request-owner-approval-exact-five-value-preview-contract-config
+  permission: none_for_remote_writes_Prompt08_readonly_preparation_only
   target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_version_aba79c9fa0ae
-  mutation: none_prepare_reviewable_four_bundle_Browser_R2_email_manifest_with_bounded_cost_budget
+  mutation: none_present_prepared_config_plan_before_one_separately_authorized_deploy
   preconditions:
-    - Prompt07_D18b_final_evidence_handoff_and_docs_only_commit_complete
-    - preserve_Access_private_archive_all_revoked_sessions_and_current_candidate
+    - manifest_and_exact_same_bundle_strict_dry_run_available
+    - owner_sees_all_five_values_temporary_maintenance_pause_and_health_503
+    - rollback_to_prior_scheduler_enabled_version_only_before_new_email_business_work
   postcondition:
-    - exact_contract_phase_target_feature_prerequisites_operations_cost_checks_and_containment_written
-  success_transition: present_concrete_bounded_Prompt08_scope_before_any_required_config_or_provider_write
-  failed_or_ambiguous_transition: retain_completed_document_evidence_no_replay_or_remote_write
+    - owner_scope_recorded_only_for_exact_config_deploy_no_implicit_provider_or_scenario_permission
+  success_transition: revalidate_exact_target_empty_actionable_outbox_no_inflight_Cron_then_one_authorized_config_deploy
+  failed_or_ambiguous_transition: retain_current_closed_contract_flags_no_remote_mutation
   forbidden_in_this_action:
-    - deploy_flag_secret_provider_send_new_session_document_fixture_production_or_CMS_change
+    - config_write_deploy_import_Browser_R2_provider_send_login_logout_business_write_production_or_CMS_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -361,6 +405,67 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 read-only manifest — 2026-09-06T18:13:57Z
+
+Result: **success** for read-only inventory, exact local bundle preparation and
+the reviewable config proposal; D2-2 render/email/lifecycle remains unexecuted.
+[Contract manifest](STAGE_13_CONTRACT_PHASE_MANIFEST.md) records the four exact
+v1 bundle hashes, targets, A/P2/P1 actors, existing allowed P2 recipient,
+prerequisites, operation counts, permissions and containment.
+
+Live version fingerprint aba79c9fa0ae remains at 100% on deployed source
+0db38842524ebc146eaa56a9d089e3c3484bf0f3. All settings/bindings/Cron match the
+completed document phase. Access HEAD is 302, BROWSER and Resend secret binding
+exist, distinct EU R2 stays private. Contract objects are zero; all 11 sessions
+revoked; six historical auth emails are certain sent. D1 read 944 rows across
+13 bounded SELECTs, wrote 0 with changes=0/changed_db=false. No remote mutation,
+authenticated route, provider request, render, bucket-body read or Office access.
+
+The local strict dry-run proposes exactly CONTRACT_SEND_ENABLED=true,
+CONTRACT_PREVIEW_REVIEW_ENABLED=true, CONTRACT_RENDERER=browser_run,
+SCHEDULED_JOBS_ENABLED=false and SCHEDULED_OUTBOX_BATCH_LIMIT=1. Module SHA-256
+remains eef5af208fbe323060cda90ef4a949457480e54faaca6c7c1c9efa0295c5c92b;
+both local configurations were preserved/restored. This is not a deploy.
+Cron pause and batch one are explicit containment for the existing email
+trigger's fixed five attempts and retryable network/invalid-response errors.
+The ordinary manual outbox action remains available. While stopped, maintenance
+pauses and health correctly returns 503. Restoring a scheduler-enabled version
+with newly held/uncertain messages is forbidden without exact reconciliation.
+
+Four offer PDFs plus one formation certificate require five Browser calls and
+13 R2 objects including the four source bundles and four HTML artifacts.
+The full normal flow queues ten emails: four contract.sent plus Q2/QD received
+and decision notices, OY accepted and OY formed. The six additional notices
+need separate delivery or explicit hold/cancel scope; none is silently sent,
+cancelled or suppressed. No provider permission has been requested or consumed.
+
+The data prerequisites are concrete: Q2/QD draft, FD pending with no dates,
+approved current D0 retained, and zero course groups across all periods.
+Two synthetic 90-minute schedule blocks and matching HTML passed the canonical
+parser; a bounded remote schedule driver/rehearsal and separate stage/promote
+scope are still required before those groups exist. This is a P1 data
+prerequisite for the group offers, not an unchanged-runtime refactoring task.
+The config-only proposal is independently reviewable; its approval does not
+authorize those later import, session, offer, Browser/R2 or email operations.
+
+One control-only helper attempt stopped on a local predicate that incorrectly
+required an explicit false optional flag; canonical absent=false was confirmed
+and corrected before the successful inventory. No write/uncertain mutation
+occurred. No new runtime P0/P1 review loop was opened. Current review GO and
+previous full release evidence are preserved; no production gate changed.
+
+Evidence: tmp/contract-phase-08-owner/evidence-index.json, inventory-safe.json,
+bundles-safe.json, config-plan-safe.json, schedule-plan-safe.json and protected
+plans/config/bundle sources. Validation for tracked docs: docs:check,
+release:scan and git diff --check only. Full npm test/E2E/check/build/new review
+are intentionally not repeated; dry-run used the existing exact build.
+
+**One next action:** request explicit owner approval for the five-value
+config-only deploy in the manifest. rollover_required: no;
+recommended_next_session_mode: High, because this exact deployment has known
+target, postcondition and containment; no severe unresolved mutation risk exists.
+
 
 ## Prompt 07 completed on Workers Paid — 2026-09-06T17:36:18Z
 
