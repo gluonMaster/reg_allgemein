@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T19:14:44Z
+updated_utc: 2026-09-06T19:21:08Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-contract-readonly-manifest
-next_gate: phase-5-contract-config-deploy
+last_completed_gate: phase-5-contract-config-owner-permission
+next_gate: phase-5-contract-config-authorized-health-preflight
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-config-authorized
-last_atomic_action: Prompt08-bounded-readonly-inventory-and-local-manifest
-last_atomic_result: success
-next_atomic_action: deploy-exact-five-value-preview-contract-config-once
+current_phase: phase-5-contract-config-health-precondition-blocked
+last_atomic_action: Prompt08-readonly-config-preflight-stopped-before-deploy
+last_atomic_result: failed
+next_atomic_action: restore-existing-Access-health-observation-and-readonly-preflight
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Owner_authorized_one_exact_config_deploy_known_target_postcondition_and_containment
+recommended_next_session_mode: Medium
+mode_reason_plain: Next_action_restores_readonly_health_observation_no_remote_mutation_or_ambiguous_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_granted_one_exact_five_value_preview_config_deploy_Browser_R2_import_sessions_and_provider_writes_not_authorized
+permission_state: owner_granted_one_exact_five_value_preview_deploy_retained_unconsumed_no_Browser_R2_import_sessions_or_provider_scope
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -75,7 +75,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: false_only_document_upload_flag_enabled_latest_deploy_other_settings_exact
   deployment_postcondition: success_same_module_one_flag_Access_private_R2_health_and_no_business_session_provider_delta
-  latest_readonly_control_utc: 2026-09-06T18:01:07.463Z
+  latest_readonly_control_utc: 2026-09-06T19:13:46.452Z
   latest_anonymous_access_check: 2026_09_06_Prompt08_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -383,24 +383,45 @@ contract_phase_preparation:
   four_PDF_email_permission: not_granted
   auxiliary_notification_permission: not_granted
   initial_control_stop: corrected_local_optional_absent_flag_predicate_before_D1_R2_inventory_no_remote_write
+contract_config_preflight:
+  utc: 2026-09-06T19:21:08Z
+  result: failed_readonly_precondition_no_deploy_attempt
+  owner_permission: recorded_in_commit_87e0cf3_retained_unconsumed
+  remote_mutation_attempts: 0
+  deployed_version: aba79c9fa0ae
+  traffic_percent: 100
+  exact_module_settings_bindings_and_private_EU_R2: verified
+  anonymous_Access: HEAD_302_Cloudflare_Access
+  authorized_health: unavailable_existing_local_DPAPI_token_file_and_directory_absent
+  browser_fallback: Chrome_ERR_BLOCKED_BY_CLIENT_no_bypass_attempt
+  D1_preflight_rows_read: 1025
+  D1_final_rows_read: 28
+  D1_rows_written: 0
+  D1_changes: 0
+  D1_changed_db: false
+  sessions_total_active: 11_0
+  nonsent_email_offers_artifacts: 0_0_0
+  final_inflight_Cron_check: not_reached_health_failed_first_recheck_on_resume
+  primary_config_unchanged: true
+  contract_flags_and_Cron: unchanged_false_absent_effective_false_disabled_Cron_true_batch_25
+  protected_evidence: tmp/contract-phase-08-owner/config-preflight-stop-safe.json
+  evidence_sha256: d6c67b1167e460873f52bb2a379b1e22688fcd9fcb89906c003cce8942708419
+  containment: no_deploy_no_provider_render_or_business_write_preserve_existing_Access_and_configuration
 next_atomic_action:
-  id: deploy-exact-five-value-preview-contract-config-once
-  permission: owner_explicit_reply_authorizes_exact_five_values_one_deploy_only
-  target: exact_Access_protected_preview_worker_242c1796e930_d1_ccdeb22bb2a1_before_version_aba79c9fa0ae
-  mutation: one_strict_deploy_same_0db3884_module_with_only_five_prepared_values
+  id: restore-existing-Access-health-observation-and-readonly-preflight
+  permission: readonly_observation_existing_exact_five_value_deploy_permission_is_retained
+  target: exact_Access_protected_preview_worker_242c1796e930_version_aba79c9fa0ae
+  mutation: none_restore_local_access_to_existing_authorized_health_check
   preconditions:
-    - exact_clean_detached_source_existing_build_and_reviewed_config_hashes
-    - unchanged_target_version_Access_private_R2_empty_actionable_outbox_no_inflight_Cron
+    - owner_restores_existing_protected_Access_credential_or_equivalent_authorized_health_observation
+    - no_new_Access_policy_token_or_bypass_created_by_agent
   postcondition:
-    - read_actual_one_version_100_percent_same_module_only_five_values_changed
-    - Access_private_R2_business_sessions_provider_state_preserved_health_503_expected
-    - active_state_docs_only_checkpoint_commit_before_any_next_mutation
-  success_transition: local_synthetic_schedule_driver_rehearsal_without_remote_mutation
-  failed_or_ambiguous_transition: stop_no_blind_retry_or_rollback_reconcile_actual_state_readonly_and_checkpoint
-  rollback: prior_version_recorded_but_not_authorized_requires_empty_queue_no_foreign_drift_and_separate_scope
+    - actual_authorized_health_HEAD_204_empty_no_store_noindex
+    - fresh_exact_version_config_private_R2_domain_outbox_and_inflight_Cron_preflight
+  success_transition: one_already_authorized_five_value_deploy_then_readonly_postcondition_and_docs_only_commit
+  failed_or_ambiguous_transition: retain_current_configuration_and_permission_no_remote_mutation
   forbidden_in_this_action:
-    - Browser_R2_import_provider_send_login_logout_business_write_production_or_CMS_change
-
+    - Access_bypass_or_change_new_token_deploy_import_Browser_R2_provider_send_login_logout_business_write
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -408,6 +429,49 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 authorized config preflight stop — 2026-09-06T19:21:08Z
+
+Result: **failed read-only prerequisite; deploy was not attempted**. The owner's
+explicit five-value permission is recorded in commit 87e0cf3 and remains valid
+and unconsumed. Fresh controls confirm version fingerprint aba79c9fa0ae at 100%,
+the exact existing module, unchanged settings/bindings/Cron, anonymous Access
+302 and private distinct EU R2. Business/session/provider metadata matched the
+manifest baseline; final bounded SELECT still has 11 revoked sessions, zero
+non-sent email rows, offers and artifacts. Preflight read 1025 D1 rows;
+final read 28; writes=0, changes=0, changed_db=false throughout.
+
+The existing local DPAPI Access service-token file and its containing directory
+are absent. Therefore the authenticated health HEAD could not run. An ordinary
+Chrome navigation to the exact health endpoint was blocked by the client
+(ERR_BLOCKED_BY_CLIENT); the block was not bypassed. The separate Playwright
+and DevTools browser contexts have only blank pages. This is an observation
+prerequisite, not evidence of an Access bypass or runtime failure. The final
+in-flight Cron check was not reached and must be fresh before deploy.
+
+No remote mutation, new application session, provider send, Browser render,
+R2 write, Access change or rollback occurred. The primary ignored config is
+unchanged: contract flags remain closed, renderer disabled, Cron enabled and
+batch limit 25. Permission is not widened to repair Access or create a token.
+Containment is to preserve this state until authorized health observation is
+available; no blind deploy or repeated permission request for the same scope.
+
+Protected evidence: tmp/contract-phase-08-owner/config-preflight-stop-safe.json,
+deploy-preflight-control.json, deploy-preflight-r2.json, deploy-preflight-db.json
+and config-owner-approval.json. The helper accepts a fresh preflight evidence
+label for recovery; prior failed-read evidence is retained and no deploy-attempt
+marker exists. Tracked changes are status/handoff only. docs:check,
+release:scan and git diff --check apply; the existing full check/test/build/E2E
+evidence for 0db38842524ebc146eaa56a9d089e3c3484bf0f3 and scoped independent
+review are reused, with no runtime suite or review rerun.
+
+**One next action:** restore access to the existing authorized health check
+and rerun the read-only preflight. The same already approved deploy follows
+only after it passes. rollover_required: no; recommended_next_session_mode:
+Medium, because the immediate work is read-only access/health verification
+and no remote write has an ambiguous outcome. Full manual preview and
+production remain blocked.
+
 
 ## Prompt 08 config permission — 2026-09-06T19:14:44Z
 
