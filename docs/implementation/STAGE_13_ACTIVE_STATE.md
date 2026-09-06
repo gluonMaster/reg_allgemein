@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T22:41:17Z
+updated_utc: 2026-09-06T22:45:50Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-contract-synthetic-schedule-published
-next_gate: phase-5-contract-lifecycle-local-preparation
+next_gate: phase-5-contract-template-install-owner-scope
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C01-complete-two-synthetic-groups-published
+current_phase: phase-5-contract-C01-complete-template-install-plan-ready
 last_atomic_action: Prompt08-C01b-canonical-schedule-promotion
 last_atomic_result: success
-next_atomic_action: prepare-bounded-contract-lifecycle-commands-and-local-checks
+next_atomic_action: request-bounded-admin-login-four-template-install-and-logout-scope
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Next_work_is_local_readonly_contract_command_preparation_without_ambiguity_or_authorized_remote_write
+mode_reason_plain: Next_action_is_reviewable_permission_request_no_unresolved_ambiguity_or_remote_write_authorized
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -506,17 +506,37 @@ contract_schedule_promotion_postcondition:
   evidence_sha256: 3949af103e94ff2f19ecc14e6be3bc8489852a609d1834127e2b589b87b0cf9e
   rollback: no_prior_schedule_version_no_delete_repair_restore_authorized
   containment: keep_Access_Cron_pause_bounded_synthetic_state_stop_no_automatic_retry
+contract_template_install_preparation:
+  utc: 2026-09-06T22:45:50Z
+  result: success_local_and_readonly_only
+  remote_mutations: 0
+  protected_plan: tmp/contract-phase-08-owner/template-install-plan.json
+  protected_safe_evidence: tmp/contract-phase-08-owner/template-install-plan-safe.json
+  plan_sha256: 3851ad7dca9071b00dc58414ff1297517ddbdab77a2868e28fc972ab862e9c4f
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_version_7c1bae246b7f
+  exact_source: login_and_contract_install_match_deployed_0db3884_known_role_transition_guard_matches_reviewed_438a513_and_is_outside_this_flow
+  latest_readonly_access: HEAD_302_Access
+  latest_readonly_R2: distinct_private_EU_archive_and_quarantine
+  latest_readonly_D1_rows_read: 68
+  latest_readonly_D1_writes: 0
+  observed_template_rows_intents_assertions_audits: 0_0_0_0
+  expected: four_v1_preview_review_bundle_JSON_objects_500443_bytes_total_four_linked_intents_four_passing_assertions_one_admin_audit_one_provider_one_media_row
+  sessions: proposed_one_normal_A_login_and_one_logout_old_11_sessions_preserved_revoked
+  browser_PDF_email_calls: 0_0_0
+  permission: not_granted_C02a_C03_C02z
+  containment: stop_after_one_install_attempt_preserve_zero_to_four_private_JSON_objects_intents_Cron_pause_readonly_reconcile_all_four_families_no_delete_repair_restore_or_retry
 next_atomic_action:
-  id: prepare-bounded-contract-lifecycle-commands-and-local-checks
-  permission: local_and_readonly_only_all_previous_mutation_scopes_consumed
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f_exact_schedule_version_54efc84fcc54
-  mutation: none_prepare_exact_contract_scenario_commands_and_local_checks
+  id: request-bounded-admin-login-four-template-install-and-logout-scope
+  permission: local_readonly_plan_complete_new_remote_scope_pending
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_admin_e2b29269d4e8
+  mutation: none_present_C02a_normal_admin_login_C03_four_template_JSON_install_C02z_logout_plan
   preconditions:
-    - preserve_successful_C00_C01_checkpoints_and_exact_deployed_runtime
+    - successful_C01a_checkpoint_e09962a_and_C01b_checkpoint_26482b3_remain_closed
+    - exact_native_UI_action_template_hashes_bounded_postconditions_and_failure_containment_prepared
   postcondition:
-    - reviewable_bounded_next_scope_with_exact_targets_counts_postconditions_and_containment
-  success_transition: present_concrete_next_scope_only_after_preparation_complete
-  failed_or_ambiguous_transition: stop_no_further_remote_write_reconcile_actual_state_preserve_Access_Cron_pause_no_retry_repair_or_restore
+    - owner_records_bounded_C02a_C03_C02z_scope_without_Browser_PDF_or_provider_permission
+  success_transition: record_scope_then_fresh_preflight_and_owner_entered_normal_admin_login_once
+  failed_or_ambiguous_transition: no_remote_write_keep_published_synthetic_schedule_Access_and_Cron_pause
   forbidden_in_this_action:
     - all_remote_mutations
 following_route_permission_boundaries:
@@ -526,6 +546,44 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 template installation plan / C01 phase boundary — 2026-09-06T22:45:50Z
+
+C01a and C01b are complete and consumed, with separate successful actual-state
+checkpoint commits e09962a and 26482b3. Their results are not reopened. The next
+local/read-only preparation is complete: C02a normal A login, one C03 native
+installPreviewReview command, then C02z normal logout. Exact proposed scope is
+four preview-review-v1 JSON bundles (500443 bytes total), four linked archive
+intents/assertions, one provider/media pair and one admin install audit.
+No Browser/PDF/provider call is included. Password stays owner-entered in the
+normal browser login form. Checkpoint each logical command before the next.
+
+Fresh read-only checks confirmed the same deployed version/settings, Access
+302, both private EU buckets, two published groups/current sessions, zero
+contract templates/offers/artifacts/renders, all 11 sessions revoked and no
+actionable email. Seven scoped SELECTs read 68 rows and wrote zero. Protected
+evidence: template-install-plan-baseline.json, template-install-plan.json and
+template-install-plan-safe.json under tmp/contract-phase-08-owner.
+Plan SHA-256: 3851ad7dca9071b00dc58414ff1297517ddbdab77a2868e28fc972ab862e9c4f.
+
+The initial local source predicate stopped before network access because it
+included the already reviewed admin role-transition helper. Inspection confirmed
+only that known 438a513 helper differs from deployed 0db3884; login and contract
+installation are unchanged. The read-only predicate now pins that exact reviewed
+exception. No runtime correction, new failure/review loop or remote retry occurred.
+The existing installer uses concurrent internal object creation, so failure may
+leave zero to four private objects/intents. Reconcile all four exact families
+after settling, preserve them, keep Cron paused and do not retry/delete/repair.
+Proposed logout scope applies only after the failed/successful install checkpoint.
+
+Tracked changes are state, manifest and phase-boundary handoff. Run docs:check,
+release:scan and git diff --check; reuse unchanged runtime check/test/build/E2E
+and the existing exact-source template-install regression evidence. No new
+mutation driver or runtime test is needed for this existing native UI action.
+One next action: request the concrete C02a/C03/C02z permission.
+rollover_required: no; recommended_next_session_mode: Medium while presenting
+the ready scope; High is appropriate after authorization for execution.
+
 
 ## Prompt 08 C01b actual promotion checkpoint — 2026-09-06T22:41:17Z
 

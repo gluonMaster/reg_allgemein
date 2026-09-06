@@ -1,6 +1,6 @@
 # Stage 13 — Prompt 08 contract phase manifest
 
-Prepared: 2026-09-06. Status: **read-only preparation; execution not authorized**.
+Prepared: 2026-09-06. This document records prospective scopes and dated preparation evidence; current execution/permission status is in active state.
 Current operational facts and the one next action remain in
 [active state](STAGE_13_ACTIVE_STATE.md). This manifest specifies the prospective
 scope; it is not permission, a passed Browser spike, or production/legal approval.
@@ -117,7 +117,7 @@ pending-authorization document predicate. Proposed FD and ON interval:
 (2026-08-17 through 2027-07-09). These are proposed test inputs, not an
 unrecorded rule or a real funding decision. Revalidate dates when execution starts.
 
-No course groups exist anywhere in this preview. The ordinary admin catalog
+At the initial inventory, no course groups existed in this preview. The ordinary admin catalog
 can update existing groups but cannot create them. Two synthetic 90-minute
 groups GY/GM are prepared in `synthetic-schedule.json` and its matching HTML;
 the canonical parser compared 2/2 blocks and passed. Proposed prices use
@@ -315,3 +315,38 @@ before any contract prerequisites, Browser render or provider command.
 The owner is asked only for C01a and conditional C01b. This scope creates no
 account/session, document, offer, PDF, R2 object or email. All later permission
 boundaries in the prospective operations table remain intact.
+
+
+## C02a / C03 / C02z bounded native UI plan — 2026-09-06T22:45:50Z
+
+The C01 schedule prerequisite is complete; its actual evidence and permissions
+are recorded only in [active state](STAGE_13_ACTIVE_STATE.md), checkpoints
+e09962a and 26482b3. This next plan is fully prepared and still needs owner scope.
+
+| Command | Scope and actual postcondition |
+| --- | --- |
+| C02a | One normal owner-entered A login at /auth/login. Exactly one new admin session at session_version 2; all 11 old sessions remain revoked, roles and business/provider state preserved. Read-only checkpoint and docs-only commit. |
+| C03 | Once at /admin/contracts: press “Vier Preview-Prüfvorlagen bereitstellen” using its normal CSRF form. Exactly the four IDs/versions/bytes/hashes in the template table; four private archive JSON objects, four linked generation-bound intents and four passing assertions, one provider/media pair and one A audit. Compare bounded R2 body hashes with D1 and prepared bundles, then checkpoint and commit. |
+| C02z | One normal logout of only the new A session after the C03 checkpoint, also permitted following a failed/ambiguous install checkpoint. Confirm zero active sessions and otherwise preserved state, then checkpoint and stop. |
+
+The four template IDs are group_yearly, group_monthly, individual_hourly and
+nachhilfe_hourly. Total expected bundle size is 500443 bytes. There are zero
+Browser calls, PDFs, offers and email sends in this scope. P2/P1 login, draft
+creation, requests/funding decisions, all renders and all provider sends remain
+separate. Passwords are entered by the owner in the normal form, never in chat.
+
+Exact protected plan: tmp/contract-phase-08-owner/template-install-plan.json,
+SHA-256 3851ad7dca9071b00dc58414ff1297517ddbdab77a2868e28fc972ab862e9c4f. Read-only plan evidence confirms
+live version/settings/Access/private EU buckets and the empty template scope;
+seven SELECTs read 68 rows with zero writes. Source matches deployed login and
+contract installation; only the previously reviewed role-transition guard is a
+known local difference and is not invoked here. Existing exact-source template
+installation transaction/immutability regression evidence is reused.
+
+The installer may create its four objects concurrently inside one logical
+command. On failure, wait for the command's internal work to settle and reconcile
+all four exact intent families and object keys before classifying the result.
+Preserve bounded private artifacts, keep Cron paused, record the actual failure
+checkpoint; no retry, deletion, repair, restore, provider send or redeploy is
+included. Logout is a separate already-enumerated containment command and must
+follow that checkpoint. No production/legal approval is granted by installation.

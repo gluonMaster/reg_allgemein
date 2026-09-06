@@ -4262,3 +4262,28 @@ schedule-rehearsal-safe.json and schedule-empty-baseline-safe.json. Tracked
 validation: docs:check, release:scan, diff check; full runtime/E2E/review evidence
 reused. Next action is the concrete C01a/C01b permission request.
 rollover_required: no; recommended_next_session_mode: High for the planned import.
+
+
+## Prompt 08 C01 completion / template-install scope boundary — 2026-09-06T22:45:50Z
+
+Owner-authorized C01a staging and C01b publication both succeeded and were
+reconciled read-only. Mandatory separate active-state commits: e09962a and
+26482b3. Exactly two synthetic groups and current sessions are published in one
+schedule version (fingerprint 54efc84fcc54), one promotion event and linked audit;
+zero active import-promotion locks. Other domain/session/provider counts stayed
+unchanged; no Browser, R2-write or email operation occurred in C01. Scope consumed.
+
+C02a/C03/C02z is now a concrete local/read-only plan: normal A login, one native
+four-template installation (four private JSON bundles, 500443 bytes; no render
+or send), then normal logout, with checkpoint commits between each command.
+No permission has yet been granted for it. Fresh plan evidence confirms exact
+version 7c1bae246b7f/settings/Access/private R2 and an empty template scope.
+Failure containment retains 0-4 private objects/intents, pauses Cron, stops
+retries/repair, reconciles all exact families, then permits only separately
+scoped logout after its checkpoint. See [active state](../STAGE_13_ACTIVE_STATE.md)
+and [manifest](../STAGE_13_CONTRACT_PHASE_MANIFEST.md); protected evidence is
+under tmp/contract-phase-08-owner in C01a/C01b-checkpoint-safe.json and
+template-install-plan-safe.json. Full runtime/E2E/review evidence is reused;
+docs:check, release:scan and diff check apply to the boundary documentation.
+One next action: request bounded C02a/C03/C02z scope. rollover_required: no;
+recommended_next_session_mode: Medium until authorization, then High for execution.
