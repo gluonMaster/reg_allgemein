@@ -4236,3 +4236,29 @@ DPAPI/ACL protection; it has not been run with credentials. See
 tmp/contract-phase-08-owner/config-dpapi-context-stop-safe.json for the next
 local recovery action. docs/checker gates only; no runtime revalidation needed.
 rollover_required: no; recommended_next_session_mode: Medium.
+
+
+## Prompt 08 C00 complete / C01 permission-ready boundary — 2026-09-06T22:25:35Z
+
+C00 succeeded: version 7c1bae246b7f at 100%, exact unchanged 0db3884 module,
+only the five approved values changed. Access/private R2/domain/sessions/provider
+state passed actual postconditions; health 503 is expected while Cron/maintenance
+are paused. Separate mandatory active-state commit: 3ea61a9. Config scope is
+consumed; no application, Browser, R2-write or email operation occurred.
+
+The ignored C01 driver and plan are prepared, with final nine-check local D1
+transaction rehearsal and remote empty schedule confirmation. C01a stages two
+synthetic groups/sessions; C01b publishes that exact version only after a
+successful actual stage checkpoint and docs-only commit. There is no previous
+schedule rollback target: explicit Access/Cron/no-downstream-work containment
+replaces any assumed rollback. Permissions for both import transitions and all
+later contract/provider operations remain ungranted. The one old running job
+record is P2 history with no live lease and was left unchanged.
+
+See [active state](../STAGE_13_ACTIVE_STATE.md) and
+[manifest](../STAGE_13_CONTRACT_PHASE_MANIFEST.md). Protected evidence:
+tmp/contract-phase-08-owner/deploy-evidence-index.json, schedule-driver-plan.json,
+schedule-rehearsal-safe.json and schedule-empty-baseline-safe.json. Tracked
+validation: docs:check, release:scan, diff check; full runtime/E2E/review evidence
+reused. Next action is the concrete C01a/C01b permission request.
+rollover_required: no; recommended_next_session_mode: High for the planned import.

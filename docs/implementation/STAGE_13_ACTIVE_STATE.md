@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T22:13:11Z
+updated_utc: 2026-09-06T22:25:35Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-last_completed_gate: phase-5-contract-config-deploy
-next_gate: phase-5-contract-synthetic-schedule-local-rehearsal
+last_completed_gate: phase-5-contract-synthetic-schedule-local-rehearsal
+next_gate: phase-5-contract-schedule-owner-scope
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-config-deployed-Cron-contained
-last_atomic_action: Prompt08-C00-one-exact-five-value-preview-config-deploy
+current_phase: phase-5-contract-schedule-driver-ready-config-C00-complete
+last_atomic_action: Prompt08-C01-local-driver-rehearsal-and-readonly-empty-target-check
 last_atomic_result: success
-next_atomic_action: prepare-and-rehearse-bounded-synthetic-schedule-import-locally
+next_atomic_action: request-bounded-C01a-stage-and-conditional-C01b-promotion-scope
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Config_deploy_confirmed_next_work_local_schedule_driver_and_evidence_no_remote_write_or_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: Next_planned_import_has_exact_preview_target_rehearsed_commands_postconditions_and_containment_separate_permission_pending
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -377,7 +377,7 @@ contract_phase_preparation:
   notification_scope: four_contract_sent_plus_six_auxiliary_rows_ten_total_not_yet_authorized
   fixture_prerequisites: Q2_QD_submit_then_Q2_approve_FD_dated_approve_QD_approve_preserve_D0
   group_prerequisite: zero_remote_groups_two_block_synthetic_schedule_parser_passed
-  schedule_execution_status: local_source_prepared_remote_driver_rehearsal_and_separate_stage_promote_permissions_pending
+  schedule_execution_status: bounded_driver_and_local_transaction_rehearsal_passed_remote_empty_target_confirmed_stage_promote_permission_pending
   config_permission: consumed_success_one_exact_five_value_preview_deploy
   Browser_R2_permission: not_granted
   four_PDF_email_permission: not_granted
@@ -425,19 +425,43 @@ contract_config_deploy:
   nonblocking_backlog:
     - P2_OPS_HISTORICAL_RUNNING_001_old_scheduled_funding_expiry_record_4681df27717d_from_2026_09_03_no_active_lock_later_fenced_runs_succeeded_left_unchanged
   local_preflight_correction: exact_historical_record_pinned_and_preserved_new_running_rows_or_any_current_lease_still_block
+contract_schedule_preparation:
+  utc: 2026-09-06T22:25:35Z
+  result: success_local_rehearsal_and_readonly_empty_target
+  remote_mutation_attempts: 0
+  driver: tmp/contract-phase-08-schedule.mjs
+  driver_sha256: 7cf38b447e6cfcf9e5c19642bdc504a22cba3aaf65f19ec5d0428fce4a1923bc
+  protected_plan: tmp/contract-phase-08-owner/schedule-driver-plan.json
+  protected_plan_sha256: 3502774f25e6ba5b435e11116b1f6fe1b238f87bb64442e43e70ce2fd4c41b8c
+  protected_rehearsal: tmp/contract-phase-08-owner/schedule-rehearsal-safe.json
+  protected_empty_target: tmp/contract-phase-08-owner/schedule-empty-baseline-safe.json
+  exact_source_guard: canonical_import_foundation_redaction_remote_boundary_migrations_match_0db38842524ebc146eaa56a9d089e3c3484bf0f3_clean_worktree_required
+  fixture: two_synthetic_90_minute_groups_GY_90886bf5bcc5_GM_58cb630926ac_no_Office
+  remote_groups_sessions_schedule_versions_matching_runs: 0_0_0_0
+  local_rehearsal: nine_checks_passed_against_real_local_D1_with_all_26_migrations_and_existing_RemoteD1Boundary_transport
+  stage_expected: one_validated_run_one_unpublished_version_two_draft_groups_two_noncurrent_sessions_zero_issues
+  stage_internal_write_requests: 5
+  promote_expected: same_version_published_two_published_groups_two_current_sessions_one_promotion_event_one_linked_system_audit
+  promote_internal_write_requests: 3
+  failure_containment: first_error_latches_write_stop_blocks_cleanup_retry_and_release_writes_readonly_actual_postcondition_then_checkpoint
+  idempotency: pinned_run_and_fixture_stage_repeat_no_write_promote_repeat_readonly_noop
+  first_schedule_publication: true_no_previous_version_for_canonical_rollback
+  rollback_scope: none_no_direct_delete_repair_or_database_restore
+  containment: hidden_staging_or_two_synthetic_published_groups_behind_Access_Cron_paused_no_downstream_offers_until_reconciled
+  schedule_import_stage_permission: not_granted
+  schedule_import_promote_permission: not_granted
 next_atomic_action:
-  id: prepare-and-rehearse-bounded-synthetic-schedule-import-locally
-  permission: local_and_readonly_only_no_remaining_remote_write_permission
-  target: local_synthetic_fixture_for_preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f
-  mutation: none_remote_local_disposable_database_only
+  id: request-bounded-C01a-stage-and-conditional-C01b-promotion-scope
+  permission: none_for_remote_import_until_owner_approves_concrete_two_step_plan
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f_existing_current_period_only
+  mutation: none_present_reviewable_stage_then_conditional_promotion_plan
   preconditions:
-    - use_existing_canonical_ImportRepository_and_two_prepared_synthetic_schedule_blocks
-    - no_Office_or_live_business_sources_no_remote_import_or_application_session
+    - owner_sees_two_synthetic_groups_exact_two_transitions_and_checkpoint_between
+    - no_previous_schedule_rollback_target_containment_is_explicit
   postcondition:
-    - reviewable_exact_stage_promote_commands_with_target_bounds_idempotency_postconditions_and_containment
-    - focused_local_transaction_rehearsal_passes_before_separate_import_permission_request
-  success_transition: request_separate_bounded_synthetic_schedule_stage_and_promotion_scope
-  failed_or_ambiguous_transition: keep_Cron_stopped_preserve_preview_and_finish_local_preparation
+    - bounded_scope_recorded_for_C01a_once_and_C01b_once_only_after_successful_committed_stage_postcondition
+  success_transition: execute_one_authorized_C01a_stage_then_actual_readonly_postcondition_and_docs_only_commit
+  failed_or_ambiguous_transition: preserve_deployed_C00_configuration_no_import_write
   forbidden_in_this_action:
     - remote_import_Browser_R2_provider_send_login_logout_business_write_deploy_Access_change_rollback_CMS_or_production_change
 following_route_permission_boundaries:
@@ -447,6 +471,64 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 C01 local schedule preparation — 2026-09-06T22:25:35Z
+
+Result: **success**, local/read-only only. C00 deploy remains successful and
+checkpointed in commit 3ea61a9; version 7c1bae246b7f, exact five values and
+temporary Cron/maintenance stop are not reopened. The new ignored driver
+tmp/contract-phase-08-schedule.mjs uses the existing canonical ImportRepository
+and RemoteD1Boundary, pinned source/fixture hashes, current preview selectors,
+clean worktree and separate stage/promote permission guards.
+
+The final exact driver passed nine focused checks against disposable local D1
+with migrations 0001-0026 and the real remote-boundary serialization path:
+source/parser/hash agreement; hidden two-group staging; no writes on duplicate
+stage; injected ambiguous promotion transport failure stopping subsequent
+cleanup writes and preserving unpublished data; exact successful publication
+and audit; read-only promotion noop; wrong-environment rejection; zero foreign
+keys, together with the migrated-D1 boundary check. Early local helper/schema
+assumptions were corrected before success (period columns, issue columns and
+diff.retired); no production code or remote write was involved. The final
+source-integrity guard was followed by a fresh focused rehearsal.
+
+Read-only remote evidence confirms zero groups, sessions, schedule versions
+and matching fixture runs; a period lookup was the only additional row read
+per rehearsal. Thus C01a is exactly one canonical createRun/stageSchedule
+command with five internal write requests, yielding a validated run, one
+unpublished version, two draft groups and two noncurrent sessions, zero issues.
+C01b is a separately checkpointed promote command with three internal write
+requests (lease, transactional promotion, release), yielding the same published
+version, two published groups/current sessions, one promotion event and one
+linked system audit. No users, documents, contracts, R2 objects, PDFs, email
+or application sessions are requested by this plan.
+
+This first publication has no prior schedule version for canonical rollback.
+The earlier prospective reference to rollback is corrected: containment is to
+retain hidden staging or the two synthetic published groups behind Access,
+with Cron stopped and no downstream offers, while reconciling exact recorded
+IDs/hashes. No deletion, direct repair, database restore or automatic retry is
+authorized. The driver freezes all later writes after a transport/storage
+failure, including repository cleanup paths; the operator must verify actual
+state and commit the next checkpoint before any further remote command.
+
+Evidence: schedule-driver-plan.json (hash 3502774f25e6ba5b435e11116b1f6fe1b238f87bb64442e43e70ce2fd4c41b8c),
+schedule-rehearsal-safe.json, schedule-rehearsal-detail.json and
+schedule-empty-baseline-safe.json under tmp/contract-phase-08-owner. Driver
+SHA-256: 7cf38b447e6cfcf9e5c19642bdc504a22cba3aaf65f19ec5d0428fce4a1923bc. Permission remains ungranted
+for both C01 transitions, Browser/R2, application sessions and provider sends.
+Tracked updates are manifest/status/handoff only: docs:check, release:scan and
+git diff --check apply. Full npm test, runtime check/build, E2E and independent
+review are reused from the exact reviewed/deployed source; the new ignored
+driver received its own focused transaction rehearsal.
+
+**One next action:** request bounded C01a staging and conditional C01b promotion
+permission, with actual read-only checks and a docs-only commit between them.
+rollover_required: no; recommended_next_session_mode: High, because the planned
+preview import has known target, finite commands, postconditions and explicit
+containment, with no ambiguous remote result. Full preview and production stay
+blocked until the remaining real contract/provider lifecycle gates pass.
+
 
 ## Prompt 08 C00 config deploy — 2026-09-06T22:13:11Z
 

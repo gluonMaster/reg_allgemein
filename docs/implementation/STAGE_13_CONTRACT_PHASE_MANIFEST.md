@@ -192,7 +192,7 @@ next operator command. Never parallelize the four render/send actions.
 | Phase/action | Expected bounded result / gate |
 | --- | --- |
 | C00 config | One separately authorized deploy and checkpoint; no session/render/send |
-| C01 schedule preparation/import | Finish the driver/rehearsal; separate stage and promotion permissions/checkpoints; 2 GY/GM groups and 2 sessions, no real source |
+| C01 schedule preparation/import | Driver/rehearsal passed; C01a stage and C01b promotion need separate bounded scope/checkpoints; 2 GY/GM groups and 2 sessions, no real source |
 | C02 normal sessions | A and P2 enter their own credentials; distinct user IDs, correct server roles |
 | C03 template install | One normal `installPreviewReview` command; 4 generation-bound private R2 JSON objects, matching template/provider/media rows, terminal install assertion and audit; zero Browser calls |
 | C04 prerequisites | Q2 submit, QD submit, Q2 approve, FD approve, QD approve: 5 individually checkpointed commands; D0 preserved |
@@ -274,3 +274,44 @@ documentation only; use `npm run docs:check`, `npm run release:scan`,
 `git diff --check`. Reuse full runtime/E2E/build and independent-review evidence
 from active state; do not rerun it for this manifest. A later new import driver
 requires its own focused transaction checks before it can execute.
+
+
+## C01 executable plan after C00 — 2026-09-06T22:25:35Z
+
+C00 completed with an actual same-module five-value deploy; current state is
+recorded only in [active state](STAGE_13_ACTIVE_STATE.md), checkpoint 3ea61a9.
+The local/read-only C01 preparation is now complete. Runtime source, schema and
+dependencies are unchanged. No schedule import permission has been consumed.
+
+The ignored driver tmp/contract-phase-08-schedule.mjs and protected
+tmp/contract-phase-08-owner/schedule-driver-plan.json pin the current preview,
+period, one run ID, source/HTML/version/run hashes and the two synthetic group
+IDs already listed above. Before remote execution it requires clean reviewed
+canonical import source, exact driver hash and live deployment/settings, empty
+initial schedule scope, zero active sessions/offers/actionable email, plus the
+explicit per-command permission marker. The local-only import-references CLI
+is not repointed at remote. The canonical RemoteD1Boundary is used directly.
+
+| Command | Finite expected result | Required boundary |
+| --- | --- | --- |
+| C01a: node --import tsx tmp/contract-phase-08-schedule.mjs stage | 1 validated run, 1 unpublished version, 2 draft groups, 2 noncurrent sessions, 0 issues; 5 internal write requests | Actual scoped postcondition; active state and docs-only commit before C01b |
+| C01b: node --import tsx tmp/contract-phase-08-schedule.mjs promote | Same version published, 2 published groups and 2 current sessions, 1 promotion event and linked system audit; 3 internal write requests | Only after exact C01a success and committed checkpoint; actual postcondition and next docs-only commit |
+
+The final driver passed nine focused local transaction/guard checks, including
+no-write duplicate staging, read-only idempotent promotion, wrong environment,
+ambiguous promotion transport with all subsequent cleanup writes blocked, and
+zero FK violations. Tests use disposable local D1 with all 26 migrations and
+the existing RemoteD1Boundary request/response serialization; no live write.
+Separate read-only evidence confirms the real schedule scope is empty.
+
+This is the first schedule publication, so canonical rollback has no previous
+schedule version to restore. Failure containment is explicit: preserve hidden
+staging or the two synthetic published groups behind Access, keep Cron paused,
+start no offers, reconcile recorded exact IDs/hashes and stop. Do not delete,
+directly repair, restore the database, retry, or run a repository cleanup write
+after failure. A successful publication still requires the normal checkpoint
+before any contract prerequisites, Browser render or provider command.
+
+The owner is asked only for C01a and conditional C01b. This scope creates no
+account/session, document, offer, PDF, R2 object or email. All later permission
+boundaries in the prospective operations table remain intact.
