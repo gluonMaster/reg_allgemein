@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T14:34:13Z
+updated_utc: 2026-09-07T14:41:12Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-R-A-logout-success
-next_gate: phase-5-contract-prepare-next-lifecycle-scope-readonly
+next_gate: phase-5-contract-L-lifecycle-permission
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-R-A-logout-checkpoint
+current_phase: phase-5-contract-L-exact-plan-ready
 last_atomic_action: R-A-logout
 last_atomic_result: success
-next_atomic_action: prepare-next-lifecycle-scope-readonly
+next_atomic_action: request-L-twenty-three-command-lifecycle-permission
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: R_session_closed_next_work_read_only
+mode_reason_plain: R_packet_closed_exact_next_lifecycle_plan_prepared_no_new_mutation_permission
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: R_all_ten_commands_consumed_no_further_mutations_granted
+permission_state: R_all_ten_commands_consumed_L_twenty_three_command_plan_prepared_not_granted
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -763,21 +763,42 @@ contract_R_progress:
   pending_email_count: 0
   evidence: tmp/contract-phase-08-owner/R-A-logout-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
-next_atomic_action:
-  id: prepare-next-lifecycle-scope-readonly
-  permission: read_only_only
+contract_L_prepared_scope:
+  prepared_utc: 2026-09-07T14:41:12.851Z
+  permission: not_granted
+  protected_plan: tmp/contract-phase-08-owner/L-lifecycle-exact-plan.json
+  plan_sha256: 94312d79cef9bf65eb788217d8555f1e85946703b905ad89ecf18d44f1fe1957
+  evidence: tmp/contract-phase-08-owner/L-lifecycle-exact-plan-safe.json_and_L-lifecycle-plan-baseline_and_L-P1-plan-verification
+  superseded_local_draft: L-lifecycle-plan.json_never_granted_or_executed
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
+  actors: A_e2b29269d4e8_P2_699b2f82b987_P1_f7ad8dc355aa
+  offer: OY_4042215b8d6c_sent_ready_parent_payable
+  exact_contract_hash: 0bffff25474835261eb869abe0aee24c3a1f55330ef4c2dc3f529463c26f5ef6
+  exact_offer_pdf_sha256: 8fc80075148eb3105affd9ed2a0b5b1b01c22fc276fe9018693b9a2d8cc47f76
+  action_count: 23
+  logins_logouts_owner_downloads_admin_downloads_negative_gets: 3_3_5_5_3
+  acceptances_formations_Browser_calls_new_objects_email_sends: 1_1_1_1_2
+  telegram_induced_rows_held_provider_sends_cancels: 1_1_0_0
+  certificate_pdf_max_bytes: 10485760
+  canonical_payload_schemas_valid: 2
+  actual_offer_pdf_bindings: 4
+  readonly_rows_query_writes: 764_0
+  config_deploy_Cron_Telegram_activation_operations: 0_0_0_0
+  containment: one_attempt_per_action_preserve_partial_formation_or_certificate_no_retry_delete_repair_cancel_rollback_only_conditional_new_session_logouts_after_checkpoint
+next_atomic_action:
+  id: request-L-twenty-three-command-lifecycle-permission
+  permission: owner_decision_required_for_new_lifecycle_scope
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_OY_4042215b8d6c
   mutation: none
   preconditions:
-    - actual_checkpoint_saved_as_separate_docs_only_commit
-    - exact_current_target_actor_sources_recipient_queue_and_budget
-    - all_pages_of_actual_PDF_verified_before_corresponding_email
+    - R_ten_command_closeout_and_four_owner_confirmed_PDF_emails_committed_1fc75d8
+    - exact_L_plan_schemas_artifacts_actor_scope_and_Telegram_hold_prepared
   postcondition:
-    - exact_planned_single_delta_and_preserved_unrelated_state
-  success_transition: actual_checkpoint_and_docs_only_commit_before_next_mutation
-  failed_or_ambiguous_transition: stop_no_repeat_then_only_conditional_new_A_logout_after_checkpoint
+    - explicit_owner_decision_recorded_for_exact_23_action_packet
+  success_transition: fresh_execution_preflight_then_only_L_A_login_if_granted
+  failed_or_ambiguous_transition: remain_read_only_no_new_scope
   forbidden_in_this_action:
-    - all_unlisted_business_provider_storage_config_deploy_cleanup_operations
+    - all_remote_mutations
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -1183,6 +1204,26 @@ change or Cron restoration was attempted. The single P2 marker-placement
 finding preserves readability and does not reopen the green runtime gate.
 Full manual preview still requires the exact next lifecycle and safe Cron
 restoration. Next is read-only preparation, with no remaining R mutation grant.
+rollover_required: no; recommended_next_session_mode: Medium.
+
+## Exact next lifecycle packet prepared — 2026-09-07T14:41:12Z
+
+R is closed; the next 23-action packet is prepared but not granted. Exact plan
+SHA-256 94312d79cef9bf65eb788217d8555f1e85946703b905ad89ecf18d44f1fe1957; private plan and safe
+evidence are indexed above. Current OY contract/PDF/source hashes and all four
+actual PDF artifacts are pinned. A, P2 and P1 are distinct verified current
+principals. Two native payload schemas validate; 764 read-only rows, zero query
+writes. One local draft omitted P1's full ID and was superseded before approval;
+the exact plan binds P1 from actual D1 and does not infer an identity.
+One native P2 acceptance, one A formation/fifth Browser certificate, two P2
+auxiliary emails, ten audited downloads, three negative-owner GETs and three
+normal logins/logouts are proposed. Acceptance also projects one exact
+bureau.contract_signal Telegram row; explicit hold is proposed while its
+provider and Cron stay disabled. No Telegram send/cancel/config change is
+included. Formation can commit the contract before certificate rendering; a
+failed/ambiguous result stops the packet with exact evidence and only conditional
+new-session logouts, without retry, deletion, repair or rollback.
+No remote mutation occurred in this preparation. Next: owner decision only.
 rollover_required: no; recommended_next_session_mode: Medium.
 
 ## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z

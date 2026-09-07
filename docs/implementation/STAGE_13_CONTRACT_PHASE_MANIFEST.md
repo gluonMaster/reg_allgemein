@@ -501,3 +501,79 @@ use inherited exact 4a8c028 full-suite evidence plus current source reconstructi
 and docs:check/release:scan/git diff --check. Future execution needs its own
 bounded observer with capacity for 16 sessions, 14 intents and 14 emails;
 do not replay consumed C04/C05 helpers or their smaller historical query limits.
+
+
+## Exact owner acceptance, formation and artifact-access packet — 2026-09-07T14:41:12Z
+
+R completed all ten commands, four real PDFs/20 inspected pages, four actual
+provider receipts and four owner-confirmed PDF emails. All 16 sessions are
+revoked. See active state for current control/evidence; the following **new**
+packet is prepared, not granted. Protected plan:
+tmp/contract-phase-08-owner/L-lifecycle-exact-plan.json; SHA-256
+94312d79cef9bf65eb788217d8555f1e85946703b905ad89ecf18d44f1fe1957.
+
+Target is unchanged Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0,
+candidate 4a8c028/version a255463d5707. Exact OY fingerprint 4042215b8d6c,
+contract hash 0bffff25474835261eb869abe0aee24c3a1f55330ef4c2dc3f529463c26f5ef6,
+offer PDF SHA-256 8fc80075148eb3105affd9ed2a0b5b1b01c22fc276fe9018693b9a2d8cc47f76.
+A e2b29269d4e8, owner P2 699b2f82b987 and foreign parent P1 f7ad8dc355aa
+are pinned distinct current users. Existing four source/PDF artifacts remain
+immutable. Local canonical acceptance/formation payload checks pass; dates,
+certificate IDs and its source/PDF hashes bind only to actual formation evidence.
+
+| Order | Exact bounded action |
+| --- | --- |
+| 1–2 | L-A-login, L-P2-login: one normal owner-entered login each, isolated contexts |
+| 3–6 | L-P2-DY, DM, DI, DN: owner downloads each existing offer PDF once |
+| 7 | L-accept: P2 accepts only current OY hash, native payable text contract-acceptance-de-v1 |
+| 8 | L-email-accepted: one exact contract.accepted email to existing P2 |
+| 9 | L-form: A forms/activates OY once, creates one certificate with one real Browser call |
+| 10 | L-email-formed: one exact contract.formed email to P2 after certificate QA |
+| 11 | L-P2-DC: P2 downloads the actual certificate once |
+| 12–16 | L-A-DY, DM, DI, DN, DC: A downloads four PDFs and certificate via purpose-bound CSRF forms |
+| 17–18 | L-P2-logout, L-P1-login: revoke only new P2 session, then normal isolated P1 login |
+| 19–21 | L-P1-deny-detail, deny-offer, deny-certificate: three known-existing foreign-object GETs must return 404 without document bytes or successful read audit |
+| 22–23 | L-P1-logout, L-A-logout: close only this packet's new sessions; all 19 revoked |
+
+Each successful owner/admin download requires exact bytes/hash and one read
+audit plus its passing owner/admin assertion. Admin offer purpose is
+contract_administration; certificate purpose legal_evidence_review. No HTML or
+other sensitive artifact download is included. Repeat/idempotency checks reuse
+reviewed automated evidence; this packet authorizes no duplicate native action.
+
+Both additional emails are to the single existing P2 current/allowlisted address.
+Before each native manual batch1 email_outbox run require exactly one actionable
+row with the expected source/dedupe/template. Afterward require one receipt,
+attempts1 and zero actionable email; mailbox receipt is separately confirmed.
+These auxiliary templates have no PDF attachment and do not inherit the
+contract.sent preview marking; do not claim otherwise.
+
+The deployed transport trigger also projects one bureau.contract_signal
+Telegram row at acceptance, dedupe telegram:parent-accept:<exact OY ID> and
+ID telegram:contract:<actual acceptance domain-event ID>. The proposed scope
+explicitly holds that one induced row pending/not_started/attempts0, with no
+Telegram request or cancellation. Current TELEGRAM_PROVIDER=disabled and
+stopped Cron are preserved. Activating Telegram, disposing of this row and
+restoring Cron/batch are separate future scopes, not implicit in acceptance.
+
+Certificate maximum 10 MiB, inline HTML maximum 2 MiB, one new private R2 PDF object
+only. Use the existing restricted Browser adapter; verify actual source/hash,
+R2 body and every rendered page before email or application downloads. Four
+offer calls recorded 1484.705810546875ms; require a fresh daily observation,
+at least 30000 ms headroom and 10 seconds spacing. Certificate time is not stored
+in the offer-attempt table; preserve actual call/result/timing evidence and do
+not claim a complete account usage or invoice. No later Browser call is allowed
+without a separate usage reconciliation and scope.
+
+Formation commits the contract before certificate rendering. Failure may leave
+an active contract, failed/pending certificate, staged intent/object and queued
+email. Preserve and reconcile those exact facts; no repeat formation/render,
+repair, delete, cancellation or rollback. After each attempt commit an actual
+checkpoint before any next mutation. Failure permits only conditional normal
+logout of this packet's new sessions after that checkpoint. Access, configuration,
+roles, current offer PDFs, stopped Cron and disabled Telegram remain unchanged.
+Fresh execution preflight includes one bounded Worker/D1/Browser usage baseline;
+observer counts must prevent truncation at 19 sessions, 32 contract assertions,
+9 artifacts,15 intents,16 emails and 1 held Telegram row. No runtime/config
+change; full checks reuse reviewed 4a8c028 evidence. Preparation uses local
+payload/source checks, docs:check, release:scan and git diff --check.
