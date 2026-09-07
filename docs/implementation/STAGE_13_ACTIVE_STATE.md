@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T14:06:41Z
+updated_utc: 2026-09-07T14:11:06Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C08-A-logout-success
-next_gate: phase-5-contract-R-A-login
+last_completed_gate: phase-5-contract-R-A-login-success
+next_gate: phase-5-contract-RY
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-R-authorized
-last_atomic_action: C08-A-logout
+current_phase: phase-5-contract-R-A-login-checkpoint
+last_atomic_action: R-A-login
 last_atomic_result: success
-next_atomic_action: R-A-login
+next_atomic_action: RY
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Owner_granted_exact_ten_command_packet_known_target_postconditions_and_containment
+mode_reason_plain: Actual_checkpoint_preserves_exact_remaining_scope_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: R_ten_commands_granted_once_each_C05_C08_closed
+permission_state: R_granted_only_remaining_unconsumed_exact_actions_no_repeat
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T13:51:21.127Z
+  latest_readonly_control_utc: 2026-09-07T14:11:10.963Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T13:51:16.800Z
-    postcondition_rows_read: 440
-    latest_read_kind: C08-A-logout_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T14:11:06.357Z
+    postcondition_rows_read: 500
+    latest_read_kind: R-A-login_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -147,13 +147,13 @@ preview:
     users_with_family_id: 3
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
-    auth_sessions: 15
-    nonrevoked_auth_sessions: 0
+    auth_sessions: 16
+    nonrevoked_auth_sessions: 1
     logged_out_auth_sessions: 14
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 0
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
@@ -747,20 +747,31 @@ contract_R_authorization:
   evidence: tmp/contract-phase-08-owner/R-owner-approval.json
   scope: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN_R-A-logout
   conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
+contract_R_progress:
+  latest_utc: 2026-09-07T14:11:06.357Z
+  latest_action_result: R-A-login_success
+  successful_commands: R-A-login
+  successful_count_of_ten: 1
+  total_active_sessions: 16_1
+  render_attempts_artifacts_deliveries: 0_0_0
+  pending_email_count: 0
+  evidence: tmp/contract-phase-08-owner/R-A-login-checkpoint-safe.json_and_before_after
+  containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: R-A-login
-  permission: explicit_owner_ten_command_grant
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: one_normal_owner_entered_admin_login
+  id: RY
+  permission: prior_exact_R_packet_only_unconsumed_command_after_preflight
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
+  mutation: one_native_command_only_if_all_exact_preconditions_pass
   preconditions:
-    - permission_checkpoint_committed_and_fresh_exact_control_and_D1_preflight
-    - fifteen_prior_sessions_revoked_four_exact_drafts_zero_actionable_email
+    - actual_checkpoint_saved_as_separate_docs_only_commit
+    - exact_current_target_actor_sources_recipient_queue_and_budget
+    - all_pages_of_actual_PDF_verified_before_corresponding_email
   postcondition:
-    - one_new_A_v2_session_and_prior_sessions_business_provider_state_preserved
-  success_transition: actual_checkpoint_and_separate_docs_only_commit_then_RY
-  failed_or_ambiguous_transition: stop_reconcile_no_repeat_then_only_conditional_new_A_logout_after_checkpoint
+    - exact_planned_single_delta_and_preserved_unrelated_state
+  success_transition: actual_checkpoint_and_docs_only_commit_before_next_mutation
+  failed_or_ambiguous_transition: stop_no_repeat_then_only_conditional_new_A_logout_after_checkpoint
   forbidden_in_this_action:
-    - all_commands_outside_exact_R_packet_and_all_config_deploy_cleanup_changes
+    - all_unlisted_business_provider_storage_config_deploy_cleanup_operations
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -919,6 +930,29 @@ No remote mutation occurred in this authorization recording. Next: R-A-login.
 rollover_required: no; recommended_next_session_mode: High; known finite
 procedure, target, postconditions and containment. Runtime unchanged; reuse
 reviewed 4a8c028 full checks. Only docs:check, release:scan and diff check run.
+
+## R R-A-login actual checkpoint — 2026-09-07T14:11:06Z
+
+Authorized operation reconciled as success. Candidate 4a8c028, version
+a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0.
+Checks: controlPreserved=true, oneExpectedSession=true, oldSessionsPreserved=true, sessionCounts=true, businessProvidersPreserved=true, counters=true, normalOwnerUi=true.
+Normal owner login, protected admin DOM and exact new D1 session verified. No password read or repeated login POST.
+Before/after evidence: tmp/contract-phase-08-owner/R-A-login-before.json and
+R-A-login-after.json; safe result R-A-login-checkpoint-safe.json. D1 postcondition
+read 500 rows, zero query writes. Cumulative 1/10
+successful commands; 16 sessions/1 active,
+0 render attempts, 0 artifacts,
+0 non-sent emails. Actual operation counts:
+Browser 0, new R2 objects 0, provider sends
+0. Next action: RY.
+Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
+queue; no repeated render/send, operator deletion, repair, rollback or config
+change. Conditional logout only the new A session after its checkpoint.
+
+Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
+runtime full validation reuses exact reviewed candidate 4a8c028.
+rollover_required: no; recommended_next_session_mode: High;
+exact remaining scope, target and containment are retained.
 
 ## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z
 
