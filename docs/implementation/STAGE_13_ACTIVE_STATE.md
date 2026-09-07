@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:46:35Z
+updated_utc: 2026-09-07T13:47:43Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C05-success
-next_gate: phase-5-contract-C06
+last_completed_gate: phase-5-contract-C06-success
+next_gate: phase-5-contract-C07
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C05-checkpoint
-last_atomic_action: C05
+current_phase: phase-5-contract-C06-checkpoint
+last_atomic_action: C06
 last_atomic_result: success
-next_atomic_action: C06
+next_atomic_action: C07
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_checkpoint_complete_next_granted_command_has_known_target_and_containment
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T13:46:39.328Z
+  latest_readonly_control_utc: 2026-09-07T13:47:47.148Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T13:46:35.251Z
-    postcondition_rows_read: 393
-    latest_read_kind: C05_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T13:47:43.090Z
+    postcondition_rows_read: 407
+    latest_read_kind: C06_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -706,21 +706,21 @@ contract_C05_C08_authorization:
   scope: C05-A-login_C05_C06_C07_C08_C08-A-logout_once_each
   conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
 contract_C05_C08_progress:
-  latest_utc: 2026-09-07T13:46:35.251Z
-  latest_action: C05
+  latest_utc: 2026-09-07T13:47:43.090Z
+  latest_action: C06
   latest_result: success
-  successful_commands: C05-A-login_C05
-  successful_count_of_six: 2
-  actual_offers: 1
+  successful_commands: C05-A-login_C05_C06
+  successful_count_of_six: 3
+  actual_offers: 2
   active_sessions: 1
   total_sessions: 15
   draft_status_and_source_checks: actual_current_input_bundle_source_and_HTML_hashes_verified
-  protected_evidence: tmp/contract-phase-08-owner/C05-checkpoint-safe.json_and_before_after
-  rows_read_query_writes: 393_0
+  protected_evidence: tmp/contract-phase-08-owner/C06-checkpoint-safe.json_and_before_after
+  rows_read_query_writes: 407_0
   Browser_PDF_R2_email_config_operations: 0_0_0_0_0
   containment: Access_Cron_pause_batch1_no_repeat_cancel_delete_repair_number_reuse_or_rollback_conditional_new_A_logout_only_after_checkpoint
 next_atomic_action:
-  id: C06
+  id: C07
   permission: prior_owner_six_action_grant_only_unconsumed_exact_command
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
   mutation: one_normal_native_command_only_after_exact_preflight
@@ -776,6 +776,29 @@ Cumulative successful operations 2/6, offers 1, sessions
 or configuration operation. Postcondition read 393 rows, zero query
 writes. Evidence: tmp/contract-phase-08-owner/C05-checkpoint-safe.json and
 indexed before/after records. One next action: C06.
+Containment: preserve Access, paused Cron and batch1; no repeat, cancel, repair,
+delete, number reuse or rollback. Conditional logout only for this new A session
+after failed/ambiguous checkpoint. Full-manual-preview and production blocked.
+
+Docs-only checks: docs:check, release:scan, git diff --check. Unchanged runtime
+check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
+rollover_required: no; recommended_next_session_mode: High;
+next granted command has known target, postcondition and containment.
+
+## C05–C08 C06 actual checkpoint — 2026-09-07T13:47:43Z
+
+One authorized A operation reconciled as success. Candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0,
+version a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1.
+Checks: controlPreserved=true, unrelatedDataPreserved=true, nativeResponse=true, oldPhaseAuditsPreserved=true, oneActorAudit=true, sessionScope=true, counters=true, auditCounts=true, exactOneDraft=true, noRenderOrDelivery=true, numberReservation=true, actionChain=true, linkedDraftService=true, serviceBinding=true, cumulativeCounts=true, actualRenderInput=true, sourceHashes=true, priceSnapshots=true.
+One exact version-1 draft, one consumed contract number, one linked draft service, one create action/assertion/audit and actual immutable input/source/HTML hashes are verified.
+
+Actual offer fingerprint f23f9e13e081, alias OM; input SHA-256 b410256d432608581a63a969552debe0bbae91193f61d1b55b5b59a4b648fd43; source manifest SHA-256 4ca0c277d3ceb575439f7079260336f79107990bb8484e6b0babc45107dee23a; HTML SHA-256 73e8ade45e898cbe8b26a4e4b4fb295ac5ec829c6348087e4787feb6fdef6192.
+
+Cumulative successful operations 3/6, offers 2, sessions
+15 total/1 active. No Browser/PDF/R2 write/provider send
+or configuration operation. Postcondition read 407 rows, zero query
+writes. Evidence: tmp/contract-phase-08-owner/C06-checkpoint-safe.json and
+indexed before/after records. One next action: C07.
 Containment: preserve Access, paused Cron and batch1; no repeat, cancel, repair,
 delete, number reuse or rollback. Conditional logout only for this new A session
 after failed/ambiguous checkpoint. Full-manual-preview and production blocked.
