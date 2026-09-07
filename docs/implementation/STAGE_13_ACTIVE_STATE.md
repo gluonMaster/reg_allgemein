@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:08:38Z
+updated_utc: 2026-09-07T13:17:45Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-C04-A-logout-success
-next_gate: phase-5-contract-prepare-contract-draft-render-scope-readonly
+next_gate: phase-5-contract-C05-C08-draft-permission
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C04-A-logout-checkpoint
+current_phase: phase-5-contract-C05-C08-draft-plan-ready
 last_atomic_action: C04-A-logout
 last_atomic_result: success
-next_atomic_action: prepare-contract-draft-render-scope-readonly
+next_atomic_action: request-C05-C08-six-action-draft-permission
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Granted_C04_commands_complete_next_preparation_read_only
+mode_reason_plain: Prepared_six_action_draft_scope_awaits_new_permission_no_remote_write_authorized
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C04_all_thirteen_commands_consumed_no_further_write_send_scope
+permission_state: C04_all_thirteen_commands_consumed_C05_C08_six_action_plan_ready_not_granted
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -678,19 +678,39 @@ contract_C04_progress:
   protected_evidence: tmp/contract-phase-08-owner/C04-A-logout-checkpoint-safe.json_and_before_after
   latest_D1_postcondition_rows_query_writes: 370_0
   containment: Access_Cron_pause_batch1_retained_no_repeat_resend_cancel_repair_or_rollback_conditional_normal_logout_after_failed_checkpoint
+contract_C05_C08_prepared_scope:
+  prepared_utc: 2026-09-07T13:17:45.609Z
+  permission: not_granted
+  protected_plan: tmp/contract-phase-08-owner/C05-draft-plan.json
+  plan_sha256: d6db09a96f141f0522a89d0d5093b6c74372961e2d30a6c3444d2a6f772268a0
+  protected_evidence: tmp/contract-phase-08-owner/C05-draft-plan-safe.json_and_baseline_and_validation
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1
+  commands: C05-A-login_C05-OY_C06-OM_C07-OI_C08-ON_C08-A-logout
+  command_count: 6
+  new_offers_reserved_numbers_draft_enrollments_draft_engagements: 4_4_2_2
+  new_Browser_PDF_R2_email_config_operations: 0_0_0_0_0
+  service_effective_from: 2026-09-07
+  offer_expiry_utc: 2026-09-14T21:59:59.000Z
+  funded_ON_interval_inclusive: 2026-09-07_to_2026-09-30
+  preflight_queries_rows_writes: 15_94_0
+  current_version_settings_equal: true
+  local_canonical_createDraft_validation: four_of_four_reached_intercepted_persistence_no_remote_write
+  local_HTML_bundle_source_validation: four_of_four_passed_no_PDF_adapter
+  actual_offer_ids_numbers_and_render_hashes: allocate_and_verify_only_after_authorized_native_drafts
+  containment: stop_on_failure_ambiguity_no_repeat_cancel_delete_repair_number_reuse_or_rollback_then_conditional_new_A_session_logout_after_checkpoint
 next_atomic_action:
-  id: prepare-contract-draft-render-scope-readonly
-  permission: local_read_only_next_phase_preparation_only
-  target: next_contract_draft_plan_existing_preview_resources
+  id: request-C05-C08-six-action-draft-permission
+  permission: owner_answer_required_for_new_scope_prior_C04_consumed
+  target: prepared_six_command_plan_preview_worker_242c1796e930_D1_ccdeb22bb2a1
   mutation: none
   preconditions:
-    - this_actual_checkpoint_saved_as_separate_docs_only_commit
+    - final_C04_actual_checkpoint_saved_as_docs_only_commit_faef2e9
     - all_C04_commands_complete_zero_active_sessions
     - no_further_remote_write_or_provider_send_permission
   postcondition:
-    - concrete_next_draft_render_delivery_scope_prepared_for_review
-  success_transition: request_only_new_prepared_scope
-  failed_or_ambiguous_transition: stop_no_repeat_record_actual_state_then_only_granted_conditional_normal_logout
+    - explicit_owner_decision_recorded_for_exact_plan
+  success_transition: fresh_preflight_then_only_C05_A_login_if_granted
+  failed_or_ambiguous_transition: remain_read_only_without_new_scope
   forbidden_in_this_action:
     - all_remote_mutations
 following_route_permission_boundaries:

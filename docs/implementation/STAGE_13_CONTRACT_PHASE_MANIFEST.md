@@ -350,3 +350,62 @@ Preserve bounded private artifacts, keep Cron paused, record the actual failure
 checkpoint; no retry, deletion, repair, restore, provider send or redeploy is
 included. Logout is a separate already-enumerated containment command and must
 follow that checkpoint. No production/legal approval is granted by installation.
+
+## C05–C08 six-command draft scope prepared — 2026-09-07T13:17:45Z
+
+This dated proposal follows C04 closeout and does not grant execution. Current
+permission and the next action remain solely in active state. Protected plan:
+`tmp/contract-phase-08-owner/C05-draft-plan.json`, SHA-256
+`d6db09a96f141f0522a89d0d5093b6c74372961e2d30a6c3444d2a6f772268a0`.
+Exact form payloads, full targets and synthetic party fields stay private.
+
+| Command | Proposed normal operation and actual postcondition |
+| --- | --- |
+| C05-A-login | One owner-entered A login; one new version-2 session, all 14 historical sessions remain revoked |
+| C05 / OY | One createDraft for GY and P2/C2; group_yearly, fallback_90, 4600 cents base monthly; one reserved number and one draft enrollment |
+| C06 / OM | One createDraft for GM and P2/C2; group_monthly, fallback_90, 6000 cents base monthly; one reserved number and one draft enrollment |
+| C07 / OI | One createDraft for approved Q2 and P2/C2; configured_individual_hourly, 3000 cents per 45 minutes; one reserved number and one draft service engagement |
+| C08 / ON | One createDraft for approved QD/FD and P2/C2; fixed_nachhilfe_hourly, 3000 cents per 45 minutes, parent not payer; one reserved number and one draft service engagement |
+| C08-A-logout | One normal logout of only this new A session; matching revocation audit, zero active sessions; also permitted after a failed checkpoint if the packet is granted |
+
+All four offers use the exact installed v1 templates, synthetic marker and
+explicitly artificial party text with Unicode/long names. Proposed service start
+is 2026-09-07; ON ends 2026-09-30 inclusive, matching approved FD. Other service
+end dates are null. Offers expire at 2026-09-14T21:59:59.000Z. Self-pay inputs use
+manual payment, due day 7; ON uses not_applicable and no due day. These are
+proposed synthetic inputs, not a change to business rules. Group quotes/version/
+rule IDs and manual override are absent, as supported for preview_review;
+no imported price quote is claimed. Canonical template provider/term/legal
+overrides are retained.
+
+Each draft must be version 1/status draft, linked to its exact service and
+owner/child, with one linked create action, passing assertion and A audit.
+Four distinct server-issued contract numbers are consumed; they must never be
+reused after failure or expiry. Each native form uses its fresh CSRF and
+idempotency key. This packet has zero Browser/PDF/R2 writes, email sends,
+acceptances, formations or configuration changes. Native draft creation reads
+the installed template bundle and generates source/HTML hashes internally.
+After each draft, verify its actual server ID/number/input and calculate the
+corresponding source/input/HTML hashes for the future render scope. Provisional
+local validation IDs/hashes are not actual offer evidence.
+
+Read-only preparation used 15 bounded SELECTs, 94 rows read and zero writes;
+live version/settings matched. Four canonical createDraft validations reached
+an intercepted persistence boundary locally; no remote write implementation or
+PDF adapter was called. Exact local bundle/source and HTML validation passed
+4/4. The first local probe rejected an undefined weekday label in this ignored
+planner; mapping the existing MO/TU source codes resolved it before the immutable
+plan was saved. No deployed defect or remote mutation resulted.
+
+Before execution recheck plan hash, exact target/version/settings, roles,
+owner/family/number state, service/template eligibility and zero actionable
+outbox. After every attempted command reconcile its actual delta and preserved
+state, save active state and a separate checked docs-only commit. On failed or
+ambiguous result stop, preserve Access/Cron pause/batch1, record containment and
+only then perform the packet's conditional new-session logout. No repeat,
+cancel, repair, deletion, number reuse or rollback is included. Browser/R2/PDF
+and recipient-specific email actions require their separately prepared scope.
+
+Validation: canonical local draft/source checks above, docs:check, release:scan
+and git diff --check. Unchanged runtime retains exact reviewed 4a8c028 full
+Vitest/E2E/check/build evidence; no new runtime or general regression run.

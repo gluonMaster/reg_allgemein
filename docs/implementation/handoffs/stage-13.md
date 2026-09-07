@@ -19,6 +19,14 @@
 
 ## Append-only evidence history
 
+### Four-offer draft packet prepared read-only — 2026-09-07T13:17:45Z
+
+Protected C05-draft-plan and canonical local validation cover one A login,
+four native drafts and one logout. Fifteen SELECTs read 94 rows with zero writes;
+all four payloads/bundles passed before intercepted local persistence. No
+Browser/PDF/provider/session mutation occurred. Proposal and containment are in
+the contract phase manifest; current permission/next action only in active state.
+
 ### C04 prerequisites, notifications and sessions closed — 2026-09-07T13:08:38Z
 
 Five request/funding transitions and four exact P2 notification deliveries
