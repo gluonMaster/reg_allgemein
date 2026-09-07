@@ -409,3 +409,92 @@ and recipient-specific email actions require their separately prepared scope.
 Validation: canonical local draft/source checks above, docs:check, release:scan
 and git diff --check. Unchanged runtime retains exact reviewed 4a8c028 full
 Vitest/E2E/check/build evidence; no new runtime or general regression run.
+
+## Four actual offers: render/email packet prepared — 2026-09-07T13:58:19Z
+
+This is the next finite proposal after the six-command draft packet. Current
+permission is solely in active state. Protected exact plan:
+`tmp/contract-phase-08-owner/R-four-render-email-plan.json`, SHA-256
+`6e56609245c1aa44dfafc453647dcbec33a5790cd31e6646294601d8750a1898`.
+Full offer IDs, native keys, numbers and recipient identity remain private.
+
+| Offer | Actual offer fingerprint | Exact HTML bytes | Render / email commands |
+| --- | --- | ---: | --- |
+| OY / group_yearly | 4042215b8d6c | 123656 | RY / EY |
+| OM / group_monthly | f23f9e13e081 | 123386 | RM / EM |
+| OI / individual_hourly | e48881cd91a0 | 123189 | RI / EI |
+| ON / nachhilfe_hourly | 7a4efe22f43d | 123187 | RN / EN |
+
+Sequence: R-A-login, RY, EY, RM, EM, RI, EI, RN, EN, R-A-logout. This grants,
+only if approved, one new ordinary A session and logout, four separately
+enumerated Browser/R2 operations and four separately enumerated PDF-email
+operations to the existing allowlisted P2 recipient. All 15 historical
+sessions must remain revoked; only the packet's new session may be touched.
+Each operator command is attempted once, followed by its own actual
+postcondition and checked docs-only checkpoint commit before the next command.
+
+Each native renderSend uses its exact current offer form and unchanged source
+hashes, calls the real existing BROWSER binding once, stores one HTML and one
+PDF in private EU archive, and links exactly two intents/artifacts and their
+assertions. It sets the exact offer sent/ready, its linked service
+contract_offered, creates one available portal delivery, one render attempt,
+one render action/assertion/audit chain, one offer_available event and one
+pending contract.sent email. The source event's generated ID binds the actual
+email ID; its dedupe key must be email:offer-available:<exact offer ID>.
+The pending domain event itself is not an additional actionable email.
+
+Rendering immediately queues email; the paused Cron/batch1 settings are
+preserved. Before every email dispatch require exactly one actionable row,
+bound to the just-checked offer, P2, current address, locale de and contract.sent.
+Resolve its exact current PDF attachment read-only and compare bytes/SHA/size
+with the verified R2 PDF. Require TEST-ENTWURF filename, [TEST/ENTWURF] subject
+and marked body. One native manual email_outbox run must yield one terminal
+receipt, attempts 1, no error/lease and zero actionable rows. Provider acceptance
+and owner mailbox confirmation are separate evidence; no resend on uncertainty.
+
+PDF inspection uses bounded operator R2 reads of only the two new keys for
+the exact offer, preserving bodies in owner-only ignored evidence. Verify
+PDF magic, size and actual SHA, reconstruct the contract hash, render every
+actual PDF page to PNG with Poppler and inspect watermark, Unicode, long names,
+wrapping, page breaks, provider, terms, price and Widerruf information/form.
+pypdf/pdfplumber are available for text/page checks. This operator inspection
+does not claim the later required owner/admin audited application downloads.
+No render adapter or PDF was invoked during preparation, and no PDF hash is
+invented. Current input/source/HTML and external-resource guards passed 4/4.
+
+The unchanged native options match the documented
+[Cloudflare PDF binding](https://developers.cloudflare.com/browser-run/quick-actions/pdf-endpoint/):
+inline self-contained HTML, JavaScript false, HTTP(S)/protocol-relative request
+rejection, print/A4/tagged/outline, action timeout 30000 ms and cacheTTL zero.
+The internal daily budget stays 60000 ms. Require 30000 ms available before
+each call and reconcile actual observed usage; missing usage never means zero.
+Keep at least 10 seconds between calls, satisfying the stricter published
+[Quick Actions rate limit](https://developers.cloudflare.com/browser-run/limits/).
+The four-call packet excludes the fifth certificate call; later budget planning
+must include it. Six preparation SELECTs read 950 rows with zero writes and
+observed no application render attempts/recorded usage. This is application
+evidence, not account-wide usage or an invoice. No limit increase is authorized.
+
+Bounded successful writes: four Browser calls, eight new R2 objects, at most
+42436458 bytes (exact combined HTML plus four PDFs capped at 10 MiB each), four
+email provider requests and one recipient. Keep the four templates, D0 and all
+prior business/provider records. No new template, offer, number, acceptance,
+formation, certificate, configuration, Cron restoration or audited app download
+is included.
+
+Stop after any failed/ambiguous attempt, hash/owner/target mismatch, malformed or
+unmarked PDF, provider uncertainty, lost lease or insufficient/unknown budget.
+Record actual bounded D1/R2/provider state and containment, commit checkpoint,
+then only the already-enumerated conditional logout of this new A session.
+No operator retry/resend/cancel/delete/repair/rollback is included. The unchanged
+runtime may compensate a failure writing the PDF by deleting only that attempt's
+just-written HTML and marking its two intents delete_pending; reconcile those
+internal effects. Do not hide them or treat them as permission for operator
+cleanup. Other partial/ambiguous objects stay private for reconciliation.
+
+Read-only control verified the reviewed version/settings, Access redirect,
+both private EU buckets and P2 recipient binding. Runtime remains unchanged;
+use inherited exact 4a8c028 full-suite evidence plus current source reconstruction
+and docs:check/release:scan/git diff --check. Future execution needs its own
+bounded observer with capacity for 16 sessions, 14 intents and 14 emails;
+do not replay consumed C04/C05 helpers or their smaller historical query limits.

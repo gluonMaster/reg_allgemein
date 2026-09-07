@@ -19,6 +19,15 @@
 
 ## Append-only evidence history
 
+### Four actual-offer render/email packet prepared — 2026-09-07T13:58:19Z
+
+Protected R-four-render-email-plan pins all four actual drafts and their
+input/source/HTML hashes. Proposed ten commands cover one A session pair, four
+real Browser renders/eight objects and four P2 PDF email sends. Six read-only
+queries read 950 rows; Access/private buckets/current source matched. No render,
+PDF, provider send or new session attempted. Current permission and next action
+are solely in active state; the contract manifest records the finite proposal.
+
 ### Four native drafts and normal session closed — 2026-09-07T13:51:16Z
 
 C05–C08 packet completed with six individual actual checkpoints: four version-1

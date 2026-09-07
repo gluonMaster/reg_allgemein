@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:51:16Z
+updated_utc: 2026-09-07T13:58:19Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-C08-A-logout-success
-next_gate: phase-5-contract-prepare-four-render-email-scope-readonly
+next_gate: phase-5-contract-R-four-render-email-permission
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C08-A-logout-checkpoint
+current_phase: phase-5-contract-R-four-render-email-plan-ready
 last_atomic_action: C08-A-logout
 last_atomic_result: success
-next_atomic_action: prepare-four-render-email-scope-readonly
+next_atomic_action: request-R-ten-command-render-email-permission
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Granted_draft_packet_closed_next_render_scope_preparation_read_only
+mode_reason_plain: Exact_four_offer_render_delivery_plan_ready_awaits_new_permission
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C05_C08_all_six_commands_consumed_no_render_send_scope
+permission_state: C05_C08_all_six_commands_consumed_R_ten_command_packet_prepared_not_granted
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -719,18 +719,39 @@ contract_C05_C08_progress:
   rows_read_query_writes: 440_0
   Browser_PDF_R2_email_config_operations: 0_0_0_0_0
   containment: Access_Cron_pause_batch1_no_repeat_cancel_delete_repair_number_reuse_or_rollback_conditional_new_A_logout_only_after_checkpoint
+contract_R_prepared_scope:
+  prepared_utc: 2026-09-07T13:58:19.169Z
+  permission: not_granted
+  protected_plan: tmp/contract-phase-08-owner/R-four-render-email-plan.json
+  plan_sha256: 6e56609245c1aa44dfafc453647dcbec33a5790cd31e6646294601d8750a1898
+  protected_evidence: tmp/contract-phase-08-owner/R-four-render-email-plan-safe.json_and_baseline
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
+  sequence: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN_R-A-logout
+  commands_Browser_calls_email_requests_new_objects_recipients: 10_4_4_8_1
+  exact_offer_fingerprints: OY_4042215b8d6c_OM_f23f9e13e081_OI_e48881cd91a0_ON_7a4efe22f43d
+  exact_current_source_input_HTML_checks: four_of_four_passed
+  actual_pdf_hashes: not_yet_created
+  local_PDF_inspection_tools: Poppler_pypdf_pdfplumber_available
+  D1_preparation_queries_rows_writes: 6_950_0
+  current_version_settings_Access_private_EU_R2: matched
+  application_Browser_attempts_recorded_ms: 0_0
+  Browser_budget_and_headroom_ms: 60000_30000
+  new_object_byte_ceiling: 42436458
+  conditional_logout: only_new_A_session_after_failure_checkpoint
+  failure_containment: no_repeat_resend_operator_delete_repair_rollback_or_Cron_restore_reconcile_bounded_native_compensation
+  further_lifecycle_scope: acceptance_formation_certificate_audited_downloads_negative_owner_and_two_auxiliary_emails_not_granted
 next_atomic_action:
-  id: prepare-four-render-email-scope-readonly
-  permission: read_only_preparation_new_scope_required
+  id: request-R-ten-command-render-email-permission
+  permission: owner_answer_required_for_new_provider_storage_scope
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
   mutation: none
   preconditions:
-    - this_actual_checkpoint_saved_as_separate_docs_only_commit
+    - six_command_draft_closeout_saved_in_docs_only_commit_9d94c43
     - all_six_actions_closed_zero_active_sessions
   postcondition:
-    - concrete_four_render_and_four_email_scope_prepared_for_review
-  success_transition: request_only_new_prepared_scope
-  failed_or_ambiguous_transition: stop_no_repeat_record_actual_state_then_only_granted_conditional_new_A_logout
+    - explicit_owner_decision_recorded_for_exact_ten_command_packet
+  success_transition: fresh_exact_preflight_then_only_R_A_login_if_granted
+  failed_or_ambiguous_transition: remain_read_only_without_new_permission
   forbidden_in_this_action:
     - all_remote_mutations
 following_route_permission_boundaries:
