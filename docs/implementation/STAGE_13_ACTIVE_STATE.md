@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T14:28:28Z
+updated_utc: 2026-09-07T14:30:31Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-EI-success
-next_gate: phase-5-contract-RN
+last_completed_gate: phase-5-contract-RN-success
+next_gate: phase-5-contract-EN
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-EI-checkpoint
-last_atomic_action: EI
+current_phase: phase-5-contract-RN-checkpoint
+last_atomic_action: RN
 last_atomic_result: success
-next_atomic_action: RN
+next_atomic_action: EN
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_checkpoint_preserves_exact_remaining_scope_and_containment
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T14:28:32.716Z
+  latest_readonly_control_utc: 2026-09-07T14:30:36.205Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T14:28:28.197Z
-    postcondition_rows_read: 648
-    latest_read_kind: EI_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T14:30:31.080Z
+    postcondition_rows_read: 693
+    latest_read_kind: RN_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -749,17 +749,17 @@ contract_R_authorization:
   scope: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN_R-A-logout
   conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
 contract_R_progress:
-  latest_utc: 2026-09-07T14:28:28.197Z
-  latest_action_result: EI_success
-  successful_commands: R-A-login_RY_EY_RM_EM_RI_EI
-  successful_count_of_ten: 7
+  latest_utc: 2026-09-07T14:30:31.080Z
+  latest_action_result: RN_success
+  successful_commands: R-A-login_RY_EY_RM_EM_RI_EI_RN
+  successful_count_of_ten: 8
   total_active_sessions: 16_1
-  render_attempts_artifacts_deliveries: 3_6_3
-  pending_email_count: 0
-  evidence: tmp/contract-phase-08-owner/EI-checkpoint-safe.json_and_before_after
+  render_attempts_artifacts_deliveries: 4_8_4
+  pending_email_count: 1
+  evidence: tmp/contract-phase-08-owner/RN-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: RN
+  id: EN
   permission: prior_exact_R_packet_only_unconsumed_command_after_preflight
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
   mutation: one_native_command_only_if_all_exact_preconditions_pass
@@ -1088,6 +1088,29 @@ Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
 queue; no repeated render/send, operator deletion, repair, rollback or config
 change. Conditional logout only the new A session after its checkpoint.
 
+Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
+runtime full validation reuses exact reviewed candidate 4a8c028.
+rollover_required: no; recommended_next_session_mode: High;
+exact remaining scope, target and containment are retained.
+
+## R RN actual checkpoint — 2026-09-07T14:30:31Z
+
+Authorized operation reconciled as success. Candidate 4a8c028, version
+a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0.
+Checks: controlPreserved=true, nativeResponse=true, sessionScope=true, unrelatedDataPreserved=true, oldAuditsPreserved=true, oneActorAudit=true, auditCounts=true, counters=true, exactOfferTransition=true, twoArtifacts=true, sourceContractHash=true, twoLinkedIntents=true, singleRealRender=true, linkedServiceTransition=true, portalDeliveryAndEvent=true, singleExactPendingEmail=true, actionAssertionChain=true, cumulativeCounts=true, actualR2=true, actualAllPagePdfQa=true.
+One native render attempt reconciled; actual PDF inspection required before any email.
+Before/after evidence: tmp/contract-phase-08-owner/RN-before.json and
+RN-after.json; safe result RN-checkpoint-safe.json. D1 postcondition
+read 693 rows, zero query writes. Cumulative 8/10
+successful commands; 16 sessions/1 active,
+4 render attempts, 8 artifacts,
+1 non-sent emails. Actual operation counts:
+Browser 1, new R2 objects 2, provider sends
+0. Next action: EN.
+Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
+queue; no repeated render/send, operator deletion, repair, rollback or config
+change. Conditional logout only the new A session after its checkpoint.
+Actual PDF SHA-256 847ea712ec4ef2c832cbf22091cb916154d7264ca968ec3e7782cd59a916b8ac. All 5 actual PDF pages visually inspected; source/SHA/size verified. P2_CONTRACT_PREVIEW_MARKER_OVERLAP_001 recorded, readable content and mandatory marks preserved.
 Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
 runtime full validation reuses exact reviewed candidate 4a8c028.
 rollover_required: no; recommended_next_session_mode: High;
