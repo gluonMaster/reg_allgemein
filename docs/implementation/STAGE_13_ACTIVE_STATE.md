@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T12:31:56Z
+updated_utc: 2026-09-07T12:38:56Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-C02z-success
-next_gate: phase-5-contract-C04-prerequisite-permission
+next_gate: phase-5-contract-C04-normal-A-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C04-readonly-plan-ready
+current_phase: phase-5-contract-C04-authorized
 last_atomic_action: C02z
 last_atomic_result: success
-next_atomic_action: request-C04-five-transitions-four-notifications-two-session-scope
+next_atomic_action: C04-A-login
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Concrete_read_only_plan_complete_waiting_new_scope_before_remote_write_or_provider_send
+recommended_next_session_mode: High
+mode_reason_plain: Owner_granted_finite_C04_plan_known_target_postconditions_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00fix_C02a_C03_C02z_consumed_no_further_remote_permission
+permission_state: C04_thirteen_commands_granted_once_each_four_P2_notifications_two_login_logout_pairs_no_Browser_PDF_R2_config
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -634,7 +634,7 @@ contract_C02z_actual_checkpoint:
 contract_C04_prerequisite_preparation:
   utc: 2026-09-07T12:31:56.093Z
   result: ready_readonly_plan
-  permission: not_granted
+  permission: granted_exact_prepared_plan_once_each
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   version: a255463d5707
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1
@@ -653,20 +653,29 @@ contract_C04_prerequisite_preparation:
   plan_sha256: b15108c6041f58554bbc09732c10fc9f20b3b0add325196776c96df85066e1b2
   protected_safe_evidence: tmp/contract-phase-08-owner/C04-prerequisite-plan-safe.json_and_C04-prerequisite-validation-safe.json
   containment: preserve_Cron_pause_Access_private_R2_pending_rows_no_repeat_resend_cancel_repair_rollback_conditional_logout_after_checkpoint
+contract_C04_owner_scope:
+  utc: 2026-09-07T12:38:56Z
+  permission: granted_once_each_all_thirteen_prepared_commands
+  plan_sha256: b15108c6041f58554bbc09732c10fc9f20b3b0add325196776c96df85066e1b2
+  interval: jobcenter_2026_09_07_through_2026_09_30_inclusive_synthetic_only
+  provider_scope: four_exact_notification_rows_only_to_existing_P2
+  sessions: one_A_and_one_P2_login_in_separate_contexts_one_logout_each_also_conditional_after_failed_checkpoint
+  protected_evidence: tmp/contract-phase-08-owner/C04-owner-approval.json
+  forbidden: repeat_resend_cancel_repair_rollback_Browser_PDF_R2_write_or_config_change
 next_atomic_action:
-  id: request-C04-five-transitions-four-notifications-two-session-scope
-  permission: none_remote_current_three_action_scope_consumed
-  target: concrete_C04_plan_preview_worker_242c1796e930_parent_P2_admin_A
-  mutation: none_request_concrete_owner_scope_only
+  id: C04-A-login
+  permission: owner_granted_once_in_C04_package
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
+  mutation: one_normal_existing_credential_admin_login
   preconditions:
-    - existing_template_phase_C02a_C03_C02z_complete_checkpointed_and_committed
-    - exact_C04_prerequisite_recipient_dates_payloads_sequence_and_containment_prepared
+    - exact_version_settings_zero_active_sessions_and_approved_scope
+    - owner_enters_password_only_in_native_portal_form
   postcondition:
-    - owner_grants_or_declines_finite_C04_plan_and_test_interval
-  success_transition: record_explicit_approval_then_one_normal_A_login_in_existing_context
-  failed_or_ambiguous_transition: preserve_zero_active_sessions_and_do_not_mutate
+    - one_new_A_version2_session_twelve_prior_revoked_sessions_and_business_provider_state_preserved
+  success_transition: separate_checkpoint_commit_then_C04_P2_login_in_isolated_context
+  failed_or_ambiguous_transition: read_only_reconcile_no_repeat_then_checkpoint_and_conditional_logout_if_needed
   forbidden_in_this_action:
-    - login_submit_approve_provider_send_Browser_render_deploy_or_config_change
+    - request_transition_provider_send_Browser_PDF_R2_write_or_config_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -719,6 +728,23 @@ Runtime/check/build/full Vitest/E2E are reused from exact reviewed 4a8c028;
 no executable application change requires a rerun. Full-manual-preview and
 production remain blocked. rollover_required: no;
 recommended_next_session_mode: High; the next approved operation has known target, postcondition and containment.
+
+## C04 exact owner authorization — 2026-09-07T12:38:56Z
+
+The owner explicitly replied Разрешаю to the prepared finite C04 package:
+five request/funding transitions, four exact ordinary notifications only to P2,
+and one normal login/logout pair each for A and P2 in separate browser contexts.
+Synthetic FD dates 2026-09-07 through 2026-09-30 are included. Conditional
+normal logout of newly opened sessions after a failed/ambiguous checkpoint is
+included; no repeat/resend/cancel/repair/rollback or expanded provider scope.
+
+Immutable plan SHA-256 b15108c6041f58554bbc09732c10fc9f20b3b0add325196776c96df85066e1b2; protected approval at
+tmp/contract-phase-08-owner/C04-owner-approval.json. No remote mutation occurred
+while recording this approval. One next action is C04-A-login after fresh
+read-only preflight and owner private input. Each following operation retains
+its own actual checkpoint and docs-only commit. No repeated permission question
+is needed for this granted sequence. rollover_required: no;
+recommended_next_session_mode: High; target, procedure and containment are known.
 
 ## Prompt 08A next C04 package ready for owner scope — 2026-09-07T12:31:56Z
 
