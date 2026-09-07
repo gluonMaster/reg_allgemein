@@ -768,6 +768,12 @@ MVP готов, когда:
 - Sent price review item immutable; acceptance фиксирует item version/hash и
   ещё не применяет цену без второго admin confirmation.
   Измененное условие создает superseding item и требует нового согласия.
+- При временной остановке Cron в разрешённой конфигурации supervised contract
+  preview из `OPERATIONS_RUNBOOK.md`, раздел 7, обычные login/admin routes не
+  возвращают 500 из-за остановки. Scheduled jobs не выполняются, health остаётся
+  503, manual batch равен 1. Production, отсутствующий explicit stop, другой
+  batch и preview без contract scope по-прежнему отклоняются; provider/recipient
+  guards сохраняются. (`SYS-04`, `CONTRACT-21`)
 - Для каждого `group_yearly|group_monthly|individual_hourly|nachhilfe_hourly`
   real Browser Run создаёт из `preview_review` bundle читаемый PDF с корректной
   Unicode/pagination/signature layout и заметным на каждой странице

@@ -5,6 +5,8 @@ import {
 	loadRuntimeConfig,
 	RuntimeConfigError,
 } from '$lib/server/config/runtime';
+import { createOperationsHealthResponse } from '$lib/server/operations/monitoring';
+import { runScheduledEvent } from '$lib/server/operations/scheduler';
 
 const fakeDb = { prepare() {} } as unknown as D1Database;
 const fakeArchive = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
@@ -37,6 +39,74 @@ function expectRuntimeIssue(env: Partial<App.Platform['env']>, expectedIssue: st
 }
 
 describe('runtime configuration', () => {
+	it('keeps the supervised contract preview usable with Cron explicitly paused and batch one', async () => {
+		const prepare = vi.fn(() => {
+			throw new Error('Paused Cron must not access D1.');
+		});
+		const env: Partial<App.Platform['env']> = {
+			APP_ENV: 'preview',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
+			DB: { prepare } as unknown as D1Database,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			...previewTurnstile,
+			...officialLinks,
+			SCHEDULED_JOBS_ENABLED: 'false',
+			SCHEDULED_OUTBOX_BATCH_LIMIT: '1',
+			EMAIL_PROVIDER: 'resend',
+			RESEND_API_KEY: 're_' + 'x'.repeat(32),
+			EMAIL_FROM: APPROVED_EMAIL_FROM,
+			EMAIL_REPLY_TO: APPROVED_EMAIL_REPLY_TO,
+			PREVIEW_EMAIL_RECIPIENT_HASHES: 'a'.repeat(64),
+			CONTRACT_SEND_ENABLED: 'true',
+			CONTRACT_PREVIEW_REVIEW_ENABLED: 'true',
+			CONTRACT_RENDERER: 'browser_run',
+		};
+		const paused = loadRuntimeConfig(env);
+		expect(paused.operations).toMatchObject({
+			scheduledJobsEnabled: false,
+			outboxBatchLimit: 1,
+		});
+		for (const cron of ['* * * * *', '*/15 * * * *']) {
+			const results = await runScheduledEvent(paused, {
+				cron,
+				scheduledTime: Date.parse('2026-09-07T10:00:00.000Z'),
+			});
+			expect(results).toHaveLength(cron === '* * * * *' ? 2 : 7);
+			expect(results.every((result) => result.status === 'feature_disabled')).toBe(true);
+		}
+		const health = await createOperationsHealthResponse({
+			database: paused.db,
+			now: '2026-09-07T10:00:00.000Z',
+			production: false,
+			scheduledJobsEnabled: paused.operations.scheduledJobsEnabled,
+		});
+		expect(health.status).toBe(503);
+		expect(prepare).not.toHaveBeenCalled();
+		for (const unsupported of [
+			{ APP_ENV: 'production' },
+			{ SCHEDULED_JOBS_ENABLED: undefined },
+			{ SCHEDULED_OUTBOX_BATCH_LIMIT: '2' },
+			{ SCHEDULED_OUTBOX_BATCH_LIMIT: undefined },
+			{ CONTRACT_PREVIEW_REVIEW_ENABLED: 'false' },
+			{ CONTRACT_SEND_ENABLED: 'false' },
+			{ CONTRACT_RENDERER: 'disabled' },
+		] satisfies Partial<App.Platform['env']>[]) {
+			expectRuntimeIssue({ ...env, ...unsupported }, 'SCHEDULED_JOBS_ENABLED:required');
+		}
+		expectRuntimeIssue(
+			{ ...env, EMAIL_PROVIDER: 'disabled' },
+			'CONTRACT_PREVIEW_REVIEW_ENABLED:resend_required'
+		);
+		expectRuntimeIssue(
+			{ ...env, PREVIEW_EMAIL_RECIPIENT_HASHES: undefined },
+			'PREVIEW_EMAIL_RECIPIENT_HASHES:required_for_preview_resend'
+		);
+	});
+
 	it('rejects one R2 binding object reused for archive and quarantine', () => {
 		expect(() =>
 			loadRuntimeConfig({

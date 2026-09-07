@@ -677,6 +677,18 @@ atomic R2 create-if-absent, exact D1 install assertion and populated-upgrade
 regression должны быть частью inherited candidate evidence. Реальные клиенты и
 Office/PII запрещены.
 
+Для согласованного supervised contract preview допускается временный
+`SCHEDULED_JOBS_ENABLED=false` только вместе с `APP_ENV=preview`,
+`CONTRACT_PREVIEW_REVIEW_ENABLED=true`, `CONTRACT_SEND_ENABLED=true`,
+`CONTRACT_RENDERER=browser_run` и `SCHEDULED_OUTBOX_BATCH_LIMIT=1`. Обычные
+login/admin routes остаются доступны; остальные проверки provider, allowlist,
+bindings и secrets обязательны. Пропущенный флаг остановки, обычный preview без
+этого contract scope и production такого исключения не получают. Cron не
+выполняет jobs, health остаётся 503; normal audited manual run требует отдельного
+разрешения на exact actionable row и получает фактический checkpoint до
+следующей отправки. Возврат Cron требует отдельного scope и проверки здоровья;
+остановка не закрывает итоговый full-manual-preview cadence/health gate.
+
 **Точное UI:** `/admin/contracts`. Сначала один active admin нажимает «Vier
 Preview-Prüfvorlagen bereitstellen»; создаются четыре immutable
 `preview-review-v1` bundle в private R2 и D1. Затем для synthetic owner/child

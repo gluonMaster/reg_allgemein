@@ -961,7 +961,20 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('SCHEDULED_MAINTENANCE_BATCH_LIMIT:risk_ceiling_exceeded');
 	if (operations.leaseSeconds > 3_600)
 		issues.push('SCHEDULED_LEASE_SECONDS:risk_ceiling_exceeded');
-	if (productionLike && operations.scheduledJobsEnabled === false) {
+	// Supervised preview dispatch pauses Cron while keeping the ordinary UI usable.
+	// Existing contract/provider validation still applies; production cannot opt in.
+	const supervisedContractPreviewPause =
+		parsed.data.APP_ENV === 'preview' &&
+		parsed.data.SCHEDULED_JOBS_ENABLED === 'false' &&
+		contractPreviewReviewEnabled &&
+		contractSendEnabled &&
+		contractRenderer === 'browser_run' &&
+		operations.outboxBatchLimit === 1;
+	if (
+		productionLike &&
+		operations.scheduledJobsEnabled === false &&
+		!supervisedContractPreviewPause
+	) {
 		issues.push('SCHEDULED_JOBS_ENABLED:required');
 	}
 
