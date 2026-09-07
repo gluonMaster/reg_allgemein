@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T12:23:39Z
+updated_utc: 2026-09-07T12:26:32Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C02a-success
-next_gate: phase-5-contract-template-install
+last_completed_gate: phase-5-contract-C03-success
+next_gate: phase-5-contract-normal-admin-logout
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C02a-checkpoint
-last_atomic_action: C02a
+current_phase: phase-5-contract-C03-checkpoint
+last_atomic_action: C03
 last_atomic_result: success
-next_atomic_action: C03-one-native-four-template-install
+next_atomic_action: C02z-one-normal-admin-logout
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Approved_next_normal_action_exact_target_postcondition_and_containment_known
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00fix_C02a_consumed_C03_C02z_granted_once_no_Browser_PDF_provider_or_other_scope
+permission_state: C00fix_C02a_C03_consumed_C02z_granted_once_no_Browser_PDF_provider_or_other_scope
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T12:23:39.763Z
-    postcondition_rows_read: 150
-    latest_read_kind: C02a_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T12:26:32.116Z
+    postcondition_rows_read: 231
+    latest_read_kind: C03_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -603,16 +603,30 @@ contract_C02a_actual_checkpoint:
   permission_consumed: C02a_once
   protected_evidence: tmp/contract-phase-08-owner/C02a-checkpoint-safe.json_and_before_after_records
   containment: preserve_Access_private_R2_Cron_pause_no_repeat_delete_repair_restore
+contract_C03_actual_checkpoint:
+  utc: 2026-09-07T12:26:32.116Z
+  result: success
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  version: a255463d5707
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_admin_e2b29269d4e8
+  actual: four_exact_template_rows_four_linked_generation1_intents_four_assertions_one_A_audit_one_provider_one_media_four_private_JSON_500443_bytes
+  sessions_total_active: 12_1
+  actor: agent_one_normal_CSRF_form_operation
+  D1_postcondition_rows_query_writes: 231_0
+  Browser_PDF_provider_sends: 0_0_0
+  permission_consumed: C03_once
+  protected_evidence: tmp/contract-phase-08-owner/C03-checkpoint-safe.json_and_before_after_records
+  containment: preserve_Access_private_R2_Cron_pause_no_repeat_delete_repair_restore
 next_atomic_action:
-  id: C03-one-native-four-template-install
-  permission: prior_owner_grant_one_C03_native_install
+  id: C02z-one-normal-admin-logout
+  permission: prior_owner_grant_one_C02z_logout_including_failed_or_ambiguous_C03
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: one_native_installPreviewReview_four_private_JSON_bundles
+  mutation: one_normal_logout_only_new_A_session
   preconditions:
     - this_actual_checkpoint_committed_before_any_next_remote_mutation
-    - exact_live_settings_current_admin_session_empty_template_scope_and_four_absent_R2_keys
+    - C03_actual_state_recorded_no_new_install_or_provider_operation
   postcondition:
-    - four_exact_template_rows_bundles_generation1_intents_assertions_one_A_audit_provider_media
+    - only_new_A_session_revoked_zero_active_other_business_R2_provider_state_preserved
   success_transition: separate_docs_only_checkpoint_commit_before_next_action
   failed_or_ambiguous_transition: record_actual_state_and_containment_no_blind_repeat
   forbidden_in_this_action:
@@ -640,6 +654,28 @@ version a255463d5707. Result: success. Postcondition SELECTs read 150
 rows and wrote zero. Protected evidence:
 tmp/contract-phase-08-owner/C02a-checkpoint-safe.json and indexed before/after.
 One next action: C03-one-native-four-template-install. Preserve Access, private R2 and paused Cron;
+no repeat, repair, delete or automatic rollback.
+
+This docs-only checkpoint uses docs:check, release:scan and git diff --check.
+Runtime/check/build/full Vitest/E2E are reused from exact reviewed 4a8c028;
+no executable application change requires a rerun. Full-manual-preview and
+production remain blocked. rollover_required: no;
+recommended_next_session_mode: High; the next approved operation has known target, postcondition and containment.
+
+## Prompt 08A C03 actual checkpoint — 2026-09-07T12:26:32Z
+
+One normal CSRF-protected installPreviewReview operation reconciled as success.
+Actual checks: controlExact=true, usersBusinessProvidersPreserved=true, unrelatedIntentsLeasesMonitoringPreserved=true, sessionScope=true, templateRows=true, intentsLinked=true, assertions=true, adminAudit=true, approvals=true, providerMediaRows=true, countDelta=true, exactPrivateObjects=true, nativeResponse=true.
+Observed 4 templates, 4 linked template intents,
+4 assertions, 1 install audit and 500443 private JSON bytes.
+Exact R2 SHA/bytes are compared with D1 and the immutable prepared bundles.
+No Browser render, PDF or provider send was performed.
+
+Target Worker 242c1796e930, D1 ccdeb22bb2a1; candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0,
+version a255463d5707. Result: success. Postcondition SELECTs read 231
+rows and wrote zero. Protected evidence:
+tmp/contract-phase-08-owner/C03-checkpoint-safe.json and indexed before/after.
+One next action: C02z-one-normal-admin-logout. Preserve Access, private R2 and paused Cron;
 no repeat, repair, delete or automatic rollback.
 
 This docs-only checkpoint uses docs:check, release:scan and git diff --check.
