@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:58:19Z
+updated_utc: 2026-09-07T14:06:41Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-C08-A-logout-success
-next_gate: phase-5-contract-R-four-render-email-permission
+next_gate: phase-5-contract-R-A-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-R-four-render-email-plan-ready
+current_phase: phase-5-contract-R-authorized
 last_atomic_action: C08-A-logout
 last_atomic_result: success
-next_atomic_action: request-R-ten-command-render-email-permission
+next_atomic_action: R-A-login
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Exact_four_offer_render_delivery_plan_ready_awaits_new_permission
+recommended_next_session_mode: High
+mode_reason_plain: Owner_granted_exact_ten_command_packet_known_target_postconditions_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C05_C08_all_six_commands_consumed_R_ten_command_packet_prepared_not_granted
+permission_state: R_ten_commands_granted_once_each_C05_C08_closed
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -721,7 +721,7 @@ contract_C05_C08_progress:
   containment: Access_Cron_pause_batch1_no_repeat_cancel_delete_repair_number_reuse_or_rollback_conditional_new_A_logout_only_after_checkpoint
 contract_R_prepared_scope:
   prepared_utc: 2026-09-07T13:58:19.169Z
-  permission: not_granted
+  permission: granted_once_each
   protected_plan: tmp/contract-phase-08-owner/R-four-render-email-plan.json
   plan_sha256: 6e56609245c1aa44dfafc453647dcbec33a5790cd31e6646294601d8750a1898
   protected_evidence: tmp/contract-phase-08-owner/R-four-render-email-plan-safe.json_and_baseline
@@ -740,20 +740,27 @@ contract_R_prepared_scope:
   conditional_logout: only_new_A_session_after_failure_checkpoint
   failure_containment: no_repeat_resend_operator_delete_repair_rollback_or_Cron_restore_reconcile_bounded_native_compensation
   further_lifecycle_scope: acceptance_formation_certificate_audited_downloads_negative_owner_and_two_auxiliary_emails_not_granted
+contract_R_authorization:
+  granted_utc: 2026-09-07T14:06:41.179Z
+  permission: granted_once_each_exact_ten_prepared_commands
+  plan_sha256: 6e56609245c1aa44dfafc453647dcbec33a5790cd31e6646294601d8750a1898
+  evidence: tmp/contract-phase-08-owner/R-owner-approval.json
+  scope: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN_R-A-logout
+  conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
 next_atomic_action:
-  id: request-R-ten-command-render-email-permission
-  permission: owner_answer_required_for_new_provider_storage_scope
+  id: R-A-login
+  permission: explicit_owner_ten_command_grant
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: none
+  mutation: one_normal_owner_entered_admin_login
   preconditions:
-    - six_command_draft_closeout_saved_in_docs_only_commit_9d94c43
-    - all_six_actions_closed_zero_active_sessions
+    - permission_checkpoint_committed_and_fresh_exact_control_and_D1_preflight
+    - fifteen_prior_sessions_revoked_four_exact_drafts_zero_actionable_email
   postcondition:
-    - explicit_owner_decision_recorded_for_exact_ten_command_packet
-  success_transition: fresh_exact_preflight_then_only_R_A_login_if_granted
-  failed_or_ambiguous_transition: remain_read_only_without_new_permission
+    - one_new_A_v2_session_and_prior_sessions_business_provider_state_preserved
+  success_transition: actual_checkpoint_and_separate_docs_only_commit_then_RY
+  failed_or_ambiguous_transition: stop_reconcile_no_repeat_then_only_conditional_new_A_logout_after_checkpoint
   forbidden_in_this_action:
-    - all_remote_mutations
+    - all_commands_outside_exact_R_packet_and_all_config_deploy_cleanup_changes
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -895,6 +902,23 @@ Docs-only checks: docs:check, release:scan, git diff --check. Unchanged runtime
 check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
 rollover_required: no; recommended_next_session_mode: Medium;
 next preparation is read-only.
+
+## R packet owner authorization — 2026-09-07T14:06:41Z
+
+Owner explicitly granted the prepared ten-command sequence once each. Protected
+approval binds plan SHA-256 6e56609245c1aa44dfafc453647dcbec33a5790cd31e6646294601d8750a1898.
+Candidate 4a8c028, version a255463d5707; target Worker 242c1796e930, D1
+ccdeb22bb2a1, archive 3996cebdabb0. One new A login, four alternating single
+real renders and exact P2 email sends, and normal A logout are authorized.
+Each actual PDF must pass bounded R2/hash and all-page visual inspection before
+its email. Four Browser calls, four provider requests, eight objects maximum.
+Every attempt requires an actual checkpoint and separate docs-only commit.
+No retry, resend, operator deletion, repair, rollback, config change or Cron
+restoration. Conditional logout applies only to this packet's new A session.
+No remote mutation occurred in this authorization recording. Next: R-A-login.
+rollover_required: no; recommended_next_session_mode: High; known finite
+procedure, target, postconditions and containment. Runtime unchanged; reuse
+reviewed 4a8c028 full checks. Only docs:check, release:scan and diff check run.
 
 ## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z
 
