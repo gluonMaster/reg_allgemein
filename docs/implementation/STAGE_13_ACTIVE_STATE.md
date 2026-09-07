@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T16:15:58Z
+updated_utc: 2026-09-07T16:18:44Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-L-P2-logout-success
-next_gate: phase-5-contract-L-P1-login
+last_completed_gate: phase-5-contract-L-P1-login-success
+next_gate: phase-5-contract-L-P1-deny-detail
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-L-P2-logout-checkpoint
-last_atomic_action: L-P2-logout
+current_phase: phase-5-contract-L-P1-login-checkpoint
+last_atomic_action: L-P1-login
 last_atomic_result: success
-next_atomic_action: L-P1-login
+next_atomic_action: L-P1-deny-detail
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_checkpoint_preserves_exact_remaining_scope_and_containment
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T16:16:03.320Z
+  latest_readonly_control_utc: 2026-09-07T16:18:48.830Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T16:15:58.775Z
-    postcondition_rows_read: 938
-    latest_read_kind: L-P2-logout_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T16:18:44.857Z
+    postcondition_rows_read: 942
+    latest_read_kind: L-P1-login_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -147,13 +147,13 @@ preview:
     users_with_family_id: 3
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
-    auth_sessions: 18
-    nonrevoked_auth_sessions: 1
+    auth_sessions: 19
+    nonrevoked_auth_sessions: 2
     logged_out_auth_sessions: 16
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 2
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
@@ -793,18 +793,18 @@ contract_L_authorization:
   telegram_scope: one_induced_row_held_no_send_no_cancel_provider_disabled_Cron_paused
   conditional_logout: only_new_L_sessions_after_failed_or_ambiguous_checkpoint
 contract_L_progress:
-  latest_utc: 2026-09-07T16:15:58.775Z
-  latest_action_result: L-P2-logout_success
-  successful_commands: L-A-login_L-P2-login_L-P2-DY_L-P2-DM_L-P2-DI_L-P2-DN_L-accept_L-email-accepted_L-form_L-email-formed_L-P2-DC_L-A-DY_L-A-DM_L-A-DI_L-A-DN_L-A-DC_L-P2-logout
-  successful_count_of_twenty_three: 17
-  total_active_sessions: 18_1
+  latest_utc: 2026-09-07T16:18:44.857Z
+  latest_action_result: L-P1-login_success
+  successful_commands: L-A-login_L-P2-login_L-P2-DY_L-P2-DM_L-P2-DI_L-P2-DN_L-accept_L-email-accepted_L-form_L-email-formed_L-P2-DC_L-A-DY_L-A-DM_L-A-DI_L-A-DN_L-A-DC_L-P2-logout_L-P1-login
+  successful_count_of_twenty_three: 18
+  total_active_sessions: 19_2
   render_attempts_artifacts_deliveries: 4_9_6
   pending_email_count: 0
   acceptances_contracts_certificates_held_Telegram: 1_1_1_1
-  evidence: tmp/contract-phase-08-owner/L-P2-logout-checkpoint-safe.json_and_before_after
+  evidence: tmp/contract-phase-08-owner/L-P1-login-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: L-P1-login
+  id: L-P1-deny-detail
   permission: prior_exact_L_packet_only_unconsumed_command_after_preflight
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
   mutation: one_native_command_only_if_all_exact_preconditions_pass
@@ -1637,6 +1637,29 @@ successful commands; 18 sessions/1 active,
 0 non-sent emails. Actual operation counts:
 Browser 0, new R2 objects 0, provider sends
 0. Next action: L-P1-login.
+Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
+queue; no repeated render/send, operator deletion, repair, rollback or config
+change. Conditional logout only the new L session after its checkpoint.
+
+Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
+runtime full validation reuses exact reviewed candidate 4a8c028.
+rollover_required: no; recommended_next_session_mode: High;
+exact remaining scope, target and containment are retained.
+
+## L L-P1-login actual checkpoint — 2026-09-07T16:18:44Z
+
+Authorized operation reconciled as success. Candidate 4a8c028, version
+a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0.
+Checks: controlPreserved=true, oneExpectedSession=true, oldSessionsPreserved=true, businessProvidersPreserved=true, sessionCounts=true, ownerNormalUi=true.
+Normal owner login, protected role DOM and exact new D1 session verified. No password read or repeated login POST.
+Before/after evidence: tmp/contract-phase-08-owner/L-P1-login-before.json and
+L-P1-login-after.json; safe result L-P1-login-checkpoint-safe.json. D1 postcondition
+read 942 rows, zero query writes. Cumulative 18/23
+successful commands; 19 sessions/2 active,
+4 render attempts, 9 artifacts,
+0 non-sent emails. Actual operation counts:
+Browser 0, new R2 objects 0, provider sends
+0. Next action: L-P1-deny-detail.
 Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
 queue; no repeated render/send, operator deletion, repair, rollback or config
 change. Conditional logout only the new L session after its checkpoint.
