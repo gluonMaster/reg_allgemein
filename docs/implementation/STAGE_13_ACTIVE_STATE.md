@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T12:27:51Z
+updated_utc: 2026-09-07T12:31:56Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-C02z-success
-next_gate: phase-5-contract-next-scope-preparation
+next_gate: phase-5-contract-C04-prerequisite-permission
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C02z-checkpoint
+current_phase: phase-5-contract-C04-readonly-plan-ready
 last_atomic_action: C02z
 last_atomic_result: success
-next_atomic_action: prepare-next-contract-flow-scope-readonly
+next_atomic_action: request-C04-five-transitions-four-notifications-two-session-scope
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Only_read_only_next_phase_plan_remains_no_remote_permission
+mode_reason_plain: Concrete_read_only_plan_complete_waiting_new_scope_before_remote_write_or_provider_send
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -631,20 +631,42 @@ contract_C02z_actual_checkpoint:
   permission_consumed: C02z_once
   protected_evidence: tmp/contract-phase-08-owner/C02z-checkpoint-safe.json_and_before_after_records
   containment: preserve_Access_private_R2_Cron_pause_no_repeat_delete_repair_restore
+contract_C04_prerequisite_preparation:
+  utc: 2026-09-07T12:31:56.093Z
+  result: ready_readonly_plan
+  permission: not_granted
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  version: a255463d5707
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1
+  requests: Q2_b219e7909276_QD_55dd7612cb70_both_draft_v1_owned_by_P2
+  authorization: FD_0424d98cd5ed_pending_review_v1_no_dates_no_superseded_version
+  preserved_document: D0_a198b7bdf114_approved_current_private_16954_bytes_exact_prior_sha
+  proposed_test_interval: jobcenter_2026_09_07_through_2026_09_30_inclusive
+  recipient: sole_existing_P2_699b2f82b987_digest_prefix_7c1f9b0ac168_allowlist_match_no_pending_email
+  commands_business_transitions_provider_requests_sessions: 13_5_4_two_logins_two_logouts
+  session_transport: two_isolated_visible_browser_contexts_owner_enters_existing_credentials_no_cookie_export
+  provider_queue_rule: exactly_one_current_authorized_actionable_row_before_each_manual_email_outbox_batch1_then_terminal_receipt_and_zero_actionable_before_next_queueing
+  Browser_PDF_R2_writes_config_changes: 0_0_0_0
+  local_payload_schema_checks: five_canonical_request_and_admin_payloads_valid_four_unique_email_row_ids_match_trigger_source
+  D1_readonly_rows_query_writes: 915_0
+  protected_plan: tmp/contract-phase-08-owner/C04-prerequisite-plan.json
+  plan_sha256: b15108c6041f58554bbc09732c10fc9f20b3b0add325196776c96df85066e1b2
+  protected_safe_evidence: tmp/contract-phase-08-owner/C04-prerequisite-plan-safe.json_and_C04-prerequisite-validation-safe.json
+  containment: preserve_Cron_pause_Access_private_R2_pending_rows_no_repeat_resend_cancel_repair_rollback_conditional_logout_after_checkpoint
 next_atomic_action:
-  id: prepare-next-contract-flow-scope-readonly
-  permission: local_read_only_preparation_only
-  target: prepared_contract_prerequisites_plan_same_preview_resources
-  mutation: none
+  id: request-C04-five-transitions-four-notifications-two-session-scope
+  permission: none_remote_current_three_action_scope_consumed
+  target: concrete_C04_plan_preview_worker_242c1796e930_parent_P2_admin_A
+  mutation: none_request_concrete_owner_scope_only
   preconditions:
-    - this_actual_checkpoint_committed_before_any_next_remote_mutation
-    - C02a_C03_C02z_scope_consumed_no_further_write_or_send
+    - existing_template_phase_C02a_C03_C02z_complete_checkpointed_and_committed
+    - exact_C04_prerequisite_recipient_dates_payloads_sequence_and_containment_prepared
   postcondition:
-    - concrete_next_scope_dates_recipients_commands_and_containment_prepared
-  success_transition: request_only_missing_concrete_next_scope
-  failed_or_ambiguous_transition: record_actual_state_and_containment_no_blind_repeat
+    - owner_grants_or_declines_finite_C04_plan_and_test_interval
+  success_transition: record_explicit_approval_then_one_normal_A_login_in_existing_context
+  failed_or_ambiguous_transition: preserve_zero_active_sessions_and_do_not_mutate
   forbidden_in_this_action:
-    - any_remote_write_login_provider_send_or_Browser_call
+    - login_submit_approve_provider_send_Browser_render_deploy_or_config_change
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -697,6 +719,56 @@ Runtime/check/build/full Vitest/E2E are reused from exact reviewed 4a8c028;
 no executable application change requires a rerun. Full-manual-preview and
 production remain blocked. rollover_required: no;
 recommended_next_session_mode: High; the next approved operation has known target, postcondition and containment.
+
+## Prompt 08A next C04 package ready for owner scope — 2026-09-07T12:31:56Z
+
+C02a/C03/C02z are complete, each separately checkpointed. The following new
+scope is only prepared, not authorized. Read-only evidence confirms Q2/QD
+draft v1, FD pending without dates, exact approved/current D0, four installed
+templates, no offers/renders/artifacts, six historical sent emails, zero active
+sessions/actionable email/Telegram/active operation locks. Recipient P2 matches
+the unchanged allowlist, with no pending email change. No PII was logged.
+
+| Step | Proposed normal command | Required actual result |
+| --- | --- | --- |
+| A login, P2 login | One existing-credential login each, in separate browser contexts | Two distinct role-correct sessions; twelve prior sessions preserved |
+| C04a, E04a | P2 submit Q2; after checkpoint A manually sends its one request.received | Q2 pending_admin_review v2, one certain delivery to P2 |
+| C04b, E04b | P2 submit QD while FD pending; after checkpoint A sends its one request.received | QD pending_admin_review v2, D0 preserved, one certain delivery to P2 |
+| C04c, E04c | A approves Q2; after checkpoint sends its one request.decision | Q2 approved v3, one certain decision delivery to P2 |
+| C04d | A approves only synthetic FD as Jobcenter, inclusive 2026-09-07 to 2026-09-30 | FD approved v1 with exact dates, one A audit, no notification, D0 unchanged |
+| C04e, E04e | A approves QD; after checkpoint sends its one request.decision | QD approved v3, one certain decision delivery to P2 |
+| P2 logout, A logout | One normal logout each, also conditional after a failure checkpoint | Only those two new sessions revoked; zero active sessions |
+
+This is exactly 13 logical commands: five business transitions, four separate
+provider requests and two normal login/logout pairs. No offer, Browser/PDF,
+R2 write or settings change. Native CSRF/idempotency forms remain in use;
+each single command gets an actual postcondition and separate docs-only commit
+before the next mutation. Normal authenticated GET/session touches belong to
+their command. Dates are proposed synthetic inputs and fit the current academic
+period; they do not represent a real funding decision.
+
+Two notifications have subject Unterrichtsanfrage eingegangen and confirm the
+saved request with its protected portal link; two have subject Entscheidung zur
+Unterrichtsanfrage and report status approved with the corresponding link.
+They are ordinary German notifications with no attachment; no TEST watermark
+is claimed for these auxiliary templates. All four go only to the existing P2
+recipient. Owner mailbox confirmation remains distinct from a provider receipt.
+
+Before each normal manual email_outbox run, the actionable queue must contain
+exactly its enumerated authorized row; Cron stays paused and batch stays one.
+Require terminal sent/receipt and zero actionable rows before the next queueing
+command. Any failed/ambiguous action or delivery stops progression: retain
+current state and pending row, no repeat/resend/cancel/repair/rollback. Only
+conditional normal logout of the newly opened sessions follows its checkpoint.
+
+Protected immutable plan: tmp/contract-phase-08-owner/C04-prerequisite-plan.json,
+SHA-256 b15108c6041f58554bbc09732c10fc9f20b3b0add325196776c96df85066e1b2. Read-only D1 rows 915, query writes zero;
+five canonical payload schemas and four unique projected notification IDs passed
+local validation. Browser supports isolated contexts; none was created/logged in
+during this preparation. Docs/checkpoint checks only; unchanged runtime's full
+release gate is reused. One next action: request this complete owner scope.
+rollover_required: no; recommended_next_session_mode: Medium while awaiting
+scope without remote work; after approval the planned deploy-session mode is High.
 
 ## Prompt 08A C02z actual checkpoint — 2026-09-07T12:27:51Z
 

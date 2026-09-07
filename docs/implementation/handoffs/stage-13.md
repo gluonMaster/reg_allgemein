@@ -19,6 +19,14 @@
 
 ## Append-only evidence history
 
+### C04 finite prerequisite and notification scope prepared — 2026-09-07T12:31:56Z
+
+Read-only plan after template/logout closeout covers five transitions, four
+P2 notifications and two separate normal login/logout pairs; synthetic FD
+interval proposed 2026-09-07 through 2026-09-30. No further remote scope granted.
+Protected C04-prerequisite-plan and schema validation evidence are indexed in
+active state, which alone gives the next action. No new writes/sends occurred.
+
 ### Four preview templates installed and admin session closed — 2026-09-07T12:27:51Z
 
 C02a was submitted by the owner and verified without a repeated login; C03
