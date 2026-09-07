@@ -441,7 +441,10 @@ contract_offered, creates one available portal delivery, one render attempt,
 one render action/assertion/audit chain, one offer_available event and one
 pending contract.sent email. The source event's generated ID binds the actual
 email ID; its dedupe key must be email:offer-available:<exact offer ID>.
-The pending domain event itself is not an additional actionable email.
+The transport trigger marks the domain event consumed after projecting its
+email row. The domain event is not an additional actionable email. This status
+was confirmed against the deployed trigger and actual RY event; the initial
+local pending expectation was corrected read-only without another render.
 
 Rendering immediately queues email; the paused Cron/batch1 settings are
 preserved. Before every email dispatch require exactly one actionable row,
