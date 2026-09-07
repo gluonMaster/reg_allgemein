@@ -4424,3 +4424,40 @@ installation and C02z logout scope. It is still ungranted; continuation alone
 does not grant it. Preserve Access, Cron pause and bounded synthetic state.
 rollover_required: no; recommended_next_session_mode: Medium until scope, then
 High for the already specified execution and checkpoint procedure.
+
+## Prompt 08 real Browser, email and contract lifecycle complete — 2026-09-07T16:28:07Z
+
+The real synthetic contract phase is complete. Four preview-review bundles and
+four marked offer PDFs were followed by P2 exact-hash acceptance and distinct
+A formation/activation with one separate marked certificate. Five real Browser
+calls, 13 private objects/1273554 bytes and all 21 pages
+were verified. Four PDF emails plus six auxiliary scenario emails are
+owner-confirmed received. L completed 23/23 commands with separate actual
+checkpoints; final logout commit 3a26aef leaves all 19 sessions revoked.
+
+Ten owner/admin downloads match immutable bytes and have correct read audits
+and purpose/owner assertions. P1 receives 404 for the known-existing foreign
+detail, offer PDF and certificate. Two local observer expectation mismatches
+were reconciled from canonical source and fresh read-only evidence, with
+original records retained and no repeat, repair, new render or deploy.
+Offer-template marker overlap remains documented nonblocking P2; the actual
+certificate page passes visual QA. Current candidate/version/next action are
+only in [active state](../STAGE_13_ACTIVE_STATE.md).
+
+Containment: Access/private R2 unchanged; all 16 email rows sent, email queue
+empty; one Telegram row pending/attempts0 and one price activation trigger held;
+Cron stopped, batch1, Telegram disabled. All contract permissions are consumed.
+No send/cancel/delete/config/Cron restoration is authorized by this closeout.
+Protected evidence: tmp/contract-phase-08-owner/L-closeout-safe.json, per-command
+before/after/checkpoint files, both reconciliation-correction records, actual
+PDF/download/QA files, mailbox confirmations and bounded L-before/L-after usage.
+Certificate billed Browser time is not persisted; no invoice or complete
+account-wide Browser total is claimed.
+
+Docs:check, release:scan and diff checks apply; unchanged runtime full gates
+reuse exact 4a8c028 (586 tests pass, one expected skip, 23 Chromium scenarios,
+check/build and independent GO). Production ledger is unchanged. Full manual
+preview still needs separate Telegram, owner matrix/cadence and other required
+flow evidence. One next action: prepare Telegram target/config/send scope
+read-only. rollover_required: no; recommended_next_session_mode: Medium, because
+no unresolved ambiguity or further contract mutation remains.

@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T16:27:03Z
+updated_utc: 2026-09-07T16:28:07Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-L-A-logout-success
-next_gate: phase-5-contract-L-closeout-readonly
+last_completed_gate: phase-5-contract-08-complete
+next_gate: phase-5-telegram-readonly-preparation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-L-A-logout-checkpoint
+current_phase: phase-5-contract-closeout
 last_atomic_action: L-A-logout
 last_atomic_result: success
-next_atomic_action: L-closeout-readonly
+next_atomic_action: prepare-telegram-phase-readonly
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: L_session_closed_next_work_read_only
+mode_reason_plain: Contract_phase_complete_next_Telegram_preparation_read_only
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: L_session_closed_no_remaining_mutation_without_preflight_scope_decision
+permission_state: all_C_R_L_contract_scopes_consumed_no_remaining_remote_mutation
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -792,6 +792,38 @@ contract_L_authorization:
   evidence: tmp/contract-phase-08-owner/L-owner-approval.json
   telegram_scope: one_induced_row_held_no_send_no_cancel_provider_disabled_Cron_paused
   conditional_logout: only_new_L_sessions_after_failed_or_ambiguous_checkpoint
+contract_phase_completed:
+  utc: 2026-09-07T16:28:07.600Z
+  result: success_real_contract_Browser_R2_email_owner_admin_negative_lifecycle
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  version_fingerprint: a255463d5707
+  L_commands_completed: 23_of_23
+  owner_downloads_admin_downloads_foreign_denials: 5_5_3
+  offers_acceptances_formed_contracts_ready_certificates: 4_1_1_1
+  real_Browser_calls: 5
+  private_contract_objects: 13
+  private_contract_object_bytes: 1273554
+  PDF_pages_inspected: 21
+  certificate_pdf_bytes: 39992
+  certificate_pdf_sha256: 1be65328eeaa99a7e0b9764afe64b44e6a38044355469cc670b583a8fde95122
+  offer_Browser_ms_recorded: 1484.705810546875
+  certificate_Browser_ms_billed: unavailable_not_persisted_do_not_infer_from_HTTP_elapsed
+  formation_HTTP_elapsed_ms: 1633
+  ten_scenario_emails_owner_confirmed: true
+  all_email_rows_terminal_sent: 16
+  actionable_email: 0
+  sessions_total_active: 19_0
+  held_Telegram_pending_attempts: 1_0
+  held_price_activation_triggers: 1
+  Cron_enabled: false
+  outbox_batch: 1
+  operator_repeats_repairs_rollbacks_or_additional_deploys: 0
+  local_observer_mismatches: two_resolved_by_canonical_source_and_readonly_evidence_no_runtime_failure
+  known_nonblocking_pdf_issue: P2_CONTRACT_PREVIEW_MARKER_OVERLAP_001_offer_templates_only
+  protected_evidence: tmp/contract-phase-08-owner/L-closeout-safe.json
+  usage_evidence: tmp/contract-phase-08-owner/L-before-usage-safe.json_and_L-after-usage-safe.json
+  full_manual_preview: blocked_remaining_Telegram_owner_matrix_cadence_and_other_required_flows
+  production: blocked_separate_production_gates
 contract_L_progress:
   latest_utc: 2026-09-07T16:27:03.121Z
   latest_action_result: L-A-logout_success
@@ -804,20 +836,18 @@ contract_L_progress:
   evidence: tmp/contract-phase-08-owner/L-A-logout-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: L-closeout-readonly
-  permission: read_only_only
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
+  id: prepare-telegram-phase-readonly
+  permission: read_only_preparation_only_all_contract_mutation_permissions_consumed
+  target: existing_preview_only_exact_Telegram_target_must_be_bound_before_any_write
   mutation: none
   preconditions:
-    - actual_checkpoint_saved_as_separate_docs_only_commit
-    - exact_current_target_actor_sources_recipient_queue_and_budget
-    - all_pages_of_actual_PDF_verified_before_corresponding_email
+    - final_L_logout_checkpoint_and_contract_closeout_committed
+    - canonical_MSG07_target_preflight_and_exact_dedicated_preview_destination
   postcondition:
-    - exact_planned_single_delta_and_preserved_unrelated_state
-  success_transition: actual_checkpoint_and_docs_only_commit_before_next_mutation
-  failed_or_ambiguous_transition: stop_no_repeat_then_only_conditional_new_L_session_logout_after_checkpoint
+    - concrete_minimal_plan_or_exact_missing_prerequisite_recorded_without_secret_values
+  containment: preserve_Access_private_artifacts_disabled_Telegram_Cron_pause_batch1_and_exact_held_rows
   forbidden_in_this_action:
-    - all_unlisted_business_provider_storage_config_deploy_cleanup_operations
+    - deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -825,6 +855,66 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08 completed contract lifecycle — 2026-09-07T16:28:07Z
+
+Actual closeout succeeds at candidate 4a8c028/version a255463d5707, Worker
+242c1796e930, D1 ccdeb22bb2a1 and archive 3996cebdabb0. The 23-action L packet
+completed once per action; each attempted command has its own verified
+active-state docs-only checkpoint. Final logout checkpoint: 3a26aef.
+
+The complete contract phase has four immutable preview template bundles,
+four real offer PDFs plus one separate formation certificate, 13 private
+objects/1273554 bytes and 21 inspected PDF pages.
+P2 accepted the exact OY hash; different administrator A formed one active
+contract. Five owner and five purpose-bound admin downloads matched actual
+bytes/SHA with ten read audits/assertions. P1 was denied the known-existing
+foreign detail, offer PDF and certificate with 404/no document bytes/no read
+audit. All 19 sessions are revoked. All ten scenario emails were confirmed in
+P2 mailbox, including four PDF attachments and the two auxiliary lifecycle
+emails. All 16 global email rows are terminal sent; no actionable email remains.
+
+One acceptance Telegram row remains pending/attempts0 with no dispatch attempt
+or provider send. One price activation trigger remains pending; existing OY
+effective_to is null, so canonical formation creates no expiry trigger. Cron
+remains disabled, batch1 and Telegram provider disabled. Do not restore Cron,
+send/cancel either held item, change configuration or repeat any C/R/L command
+under these consumed permissions. Production and full-manual-preview remain
+blocked by their separate outstanding gates; this closes the contract phase.
+
+Two local observer expectation errors were resolved without remote repeats:
+the conditional expiry-trigger count and SvelteKit static HTML endpoint error
+serialization. Original observations and corrections are preserved as
+L-form-initial-checkpoint-safe.json, L-form-reconciliation-correction-safe.json,
+L-P1-deny-offer-initial-checkpoint-safe.json and
+L-P1-deny-offer-reconciliation-correction-safe.json. The internal artifact error
+code is source-inferred; HTML visibly supplies 404 and the canonical message.
+No unresolved runtime P0/P1 was found. The already recorded P2 offer-template
+marker overlap remains a nonblocking backlog item; certificate layout passes.
+
+Protected closeout: tmp/contract-phase-08-owner/L-closeout-safe.json and its
+actual D1/control evidence; mailbox and every downloaded PDF are separately
+bound in the same protected directory. Final bounded observation read
+953 rows, zero query writes. Before/after account-month adaptive
+analytics show 10499 → 10588
+requests and 1409 → 1409 errors;
+analytics may lag and are not an invoice. Four offer calls recorded
+1484.705810546875 ms. The fifth certificate call does not persist
+Browser milliseconds; 1633 ms is whole HTTP operation
+elapsed, not billed Browser usage. No further Browser call is authorized.
+
+Checks performed: per-action native UI and exact D1/control checks; actual R2,
+PDF hash/page QA, mailbox confirmation and cross-owner checks; local ignored
+helper syntax/source checks; docs:check, release:scan and git diff --check for
+every checkpoint. Full runtime suites were intentionally reused from exact
+4a8c028 (check 0 errors/warnings, 79 Vitest files/586 pass/1 expected Windows
+skip, build, 23/23 Chromium and independent GO); no runtime/config diff here.
+Readiness production ledger is unchanged because no production gate changed.
+
+One next action: prepare the dedicated Telegram phase read-only, including
+exact target and handling of the existing held row before any new permission.
+rollover_required: no; recommended_next_session_mode: Medium — next work is
+read-only preparation, with no unresolved ambiguity or remaining contract write.
 
 ## C05–C08 C05-A-login actual checkpoint — 2026-09-07T13:40:57Z
 

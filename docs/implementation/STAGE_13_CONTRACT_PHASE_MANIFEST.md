@@ -577,3 +577,21 @@ observer counts must prevent truncation at 19 sessions, 32 contract assertions,
 9 artifacts,15 intents,16 emails and 1 held Telegram row. No runtime/config
 change; full checks reuse reviewed 4a8c028 evidence. Preparation uses local
 payload/source checks, docs:check, release:scan and git diff --check.
+
+## Actual contract phase closeout — 2026-09-07T16:28:07Z
+
+The preceding L packet was subsequently granted and completed 23/23 once per
+action. Four offer PDFs plus one separate certificate were created by five
+real Browser calls; 13 private objects/1273554 bytes,
+21 inspected pages, ten byte-exact owner/admin downloads and three P1 denials
+are recorded. All ten scenario emails were confirmed received, all 19 sessions
+are revoked, and no actionable email remains. One pending Telegram row and
+one price activation trigger are held by stopped Cron; Telegram is disabled
+and batch remains one. All C/R/L mutation permissions are consumed.
+
+Actual current control, complete scope/evidence and the one next action are
+in [active state](STAGE_13_ACTIVE_STATE.md), with phase history in
+[handoff](handoffs/stage-13.md). Protected closeout is
+tmp/contract-phase-08-owner/L-closeout-safe.json. No production gate is granted
+by these synthetic results; no extra Browser, provider or config action is
+authorized. Known offer-marker overlap is nonblocking P2; certificate QA passes.
