@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:17:45Z
+updated_utc: 2026-09-07T13:37:40Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-C04-A-logout-success
-next_gate: phase-5-contract-C05-C08-draft-permission
+next_gate: phase-5-contract-C05-A-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C05-C08-draft-plan-ready
+current_phase: phase-5-contract-C05-C08-scope-granted
 last_atomic_action: C04-A-logout
 last_atomic_result: success
-next_atomic_action: request-C05-C08-six-action-draft-permission
+next_atomic_action: C05-A-login
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Prepared_six_action_draft_scope_awaits_new_permission_no_remote_write_authorized
+recommended_next_session_mode: High
+mode_reason_plain: Known_target_native_six_action_plan_postconditions_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C04_all_thirteen_commands_consumed_C05_C08_six_action_plan_ready_not_granted
+permission_state: C05_C08_six_commands_granted_once_each_no_provider_or_storage_write_scope
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -680,7 +680,7 @@ contract_C04_progress:
   containment: Access_Cron_pause_batch1_retained_no_repeat_resend_cancel_repair_or_rollback_conditional_normal_logout_after_failed_checkpoint
 contract_C05_C08_prepared_scope:
   prepared_utc: 2026-09-07T13:17:45.609Z
-  permission: not_granted
+  permission: granted_once_each
   protected_plan: tmp/contract-phase-08-owner/C05-draft-plan.json
   plan_sha256: d6db09a96f141f0522a89d0d5093b6c74372961e2d30a6c3444d2a6f772268a0
   protected_evidence: tmp/contract-phase-08-owner/C05-draft-plan-safe.json_and_baseline_and_validation
@@ -698,21 +698,29 @@ contract_C05_C08_prepared_scope:
   local_HTML_bundle_source_validation: four_of_four_passed_no_PDF_adapter
   actual_offer_ids_numbers_and_render_hashes: allocate_and_verify_only_after_authorized_native_drafts
   containment: stop_on_failure_ambiguity_no_repeat_cancel_delete_repair_number_reuse_or_rollback_then_conditional_new_A_session_logout_after_checkpoint
+contract_C05_C08_authorization:
+  granted_utc: 2026-09-07T13:37:40.400Z
+  owner_answer: explicit_permission_for_prepared_six_command_packet
+  plan_sha256: d6db09a96f141f0522a89d0d5093b6c74372961e2d30a6c3444d2a6f772268a0
+  evidence: tmp/contract-phase-08-owner/C05-owner-approval.json
+  scope: C05-A-login_C05_C06_C07_C08_C08-A-logout_once_each
+  conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
 next_atomic_action:
-  id: request-C05-C08-six-action-draft-permission
-  permission: owner_answer_required_for_new_scope_prior_C04_consumed
-  target: prepared_six_command_plan_preview_worker_242c1796e930_D1_ccdeb22bb2a1
-  mutation: none
+  id: C05-A-login
+  permission: prior_explicit_owner_six_action_grant
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
+  mutation: one_normal_owner_entered_A_login
   preconditions:
-    - final_C04_actual_checkpoint_saved_as_docs_only_commit_faef2e9
-    - all_C04_commands_complete_zero_active_sessions
-    - no_further_remote_write_or_provider_send_permission
+    - clean_committed_active_state_and_exact_plan_sha
+    - live_version_settings_roles_and_zero_active_sessions_match
+    - existing_four_template_and_approved_service_prerequisites_preserved
   postcondition:
-    - explicit_owner_decision_recorded_for_exact_plan
-  success_transition: fresh_preflight_then_only_C05_A_login_if_granted
-  failed_or_ambiguous_transition: remain_read_only_without_new_scope
+    - exactly_one_new_A_version2_session_fourteen_historical_sessions_preserved
+    - unrelated_business_and_provider_state_preserved
+  success_transition: actual_checkpoint_and_docs_only_commit_before_C05
+  failed_or_ambiguous_transition: stop_no_repeat_actual_checkpoint_then_only_conditional_new_A_session_logout
   forbidden_in_this_action:
-    - all_remote_mutations
+    - provider_send_Browser_PDF_R2_write_config_change_or_other_business_command
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
