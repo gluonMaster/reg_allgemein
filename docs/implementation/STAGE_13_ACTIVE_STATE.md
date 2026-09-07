@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T14:41:12Z
+updated_utc: 2026-09-07T15:35:01Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-R-A-logout-success
-next_gate: phase-5-contract-L-lifecycle-permission
+next_gate: phase-5-contract-L-A-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-L-exact-plan-ready
+current_phase: phase-5-contract-L-authorized
 last_atomic_action: R-A-logout
 last_atomic_result: success
-next_atomic_action: request-L-twenty-three-command-lifecycle-permission
+next_atomic_action: L-A-login
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: R_packet_closed_exact_next_lifecycle_plan_prepared_no_new_mutation_permission
+recommended_next_session_mode: High
+mode_reason_plain: Exact_23_action_L_packet_granted_known_target_postconditions_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: R_all_ten_commands_consumed_L_twenty_three_command_plan_prepared_not_granted
+permission_state: L_twenty_three_commands_granted_once_each_R_closed
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -765,7 +765,7 @@ contract_R_progress:
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 contract_L_prepared_scope:
   prepared_utc: 2026-09-07T14:41:12.851Z
-  permission: not_granted
+  permission: granted_once_each
   protected_plan: tmp/contract-phase-08-owner/L-lifecycle-exact-plan.json
   plan_sha256: 94312d79cef9bf65eb788217d8555f1e85946703b905ad89ecf18d44f1fe1957
   evidence: tmp/contract-phase-08-owner/L-lifecycle-exact-plan-safe.json_and_L-lifecycle-plan-baseline_and_L-P1-plan-verification
@@ -785,20 +785,27 @@ contract_L_prepared_scope:
   readonly_rows_query_writes: 764_0
   config_deploy_Cron_Telegram_activation_operations: 0_0_0_0
   containment: one_attempt_per_action_preserve_partial_formation_or_certificate_no_retry_delete_repair_cancel_rollback_only_conditional_new_session_logouts_after_checkpoint
+contract_L_authorization:
+  granted_utc: 2026-09-07T15:35:01.399Z
+  permission: granted_once_each_exact_23_commands
+  plan_sha256: 94312d79cef9bf65eb788217d8555f1e85946703b905ad89ecf18d44f1fe1957
+  evidence: tmp/contract-phase-08-owner/L-owner-approval.json
+  telegram_scope: one_induced_row_held_no_send_no_cancel_provider_disabled_Cron_paused
+  conditional_logout: only_new_L_sessions_after_failed_or_ambiguous_checkpoint
 next_atomic_action:
-  id: request-L-twenty-three-command-lifecycle-permission
-  permission: owner_decision_required_for_new_lifecycle_scope
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_OY_4042215b8d6c
-  mutation: none
+  id: L-A-login
+  permission: explicit_owner_23_action_grant
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
+  mutation: one_normal_owner_entered_A_login
   preconditions:
-    - R_ten_command_closeout_and_four_owner_confirmed_PDF_emails_committed_1fc75d8
-    - exact_L_plan_schemas_artifacts_actor_scope_and_Telegram_hold_prepared
+    - approval_docs_checkpoint_committed_fresh_control_D1_and_usage_preflight
+    - all_prior_16_sessions_revoked_exact_four_PDFs_preserved_empty_outboxes
   postcondition:
-    - explicit_owner_decision_recorded_for_exact_23_action_packet
-  success_transition: fresh_execution_preflight_then_only_L_A_login_if_granted
-  failed_or_ambiguous_transition: remain_read_only_no_new_scope
+    - one_new_A_v2_session_prior_sessions_and_business_provider_state_preserved
+  success_transition: actual_checkpoint_and_docs_only_commit_then_L_P2_login
+  failed_or_ambiguous_transition: stop_no_repeat_then_only_conditional_new_L_logout_after_checkpoint
   forbidden_in_this_action:
-    - all_remote_mutations
+    - all_actions_outside_exact_L_packet_and_all_deploy_config_Cron_Telegram_activation_changes
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -1225,6 +1232,16 @@ failed/ambiguous result stops the packet with exact evidence and only conditiona
 new-session logouts, without retry, deletion, repair or rollback.
 No remote mutation occurred in this preparation. Next: owner decision only.
 rollover_required: no; recommended_next_session_mode: Medium.
+
+## L exact packet owner authorization — 2026-09-07T15:35:01Z
+
+Owner granted all23 prepared actions once each, including only the induced
+Telegram row hold (zero sends/cancels). Exact plan SHA-256 94312d79cef9bf65eb788217d8555f1e85946703b905ad89ecf18d44f1fe1957.
+No remote mutation in this permission recording. One next action L-A-login;
+fresh preflight and actual checkpoints precede each subsequent command.
+Runtime remains reviewed4a8c028/a255463d5707. Docs-only checks apply.
+rollover_required: no; recommended_next_session_mode: High; known finite
+procedure, exact targets, postconditions and partial-formation containment.
 
 ## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z
 
