@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T10:11:05Z
+updated_utc: 2026-09-07T10:44:50Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-contract-synthetic-schedule-published
-next_gate: phase-5-contract-template-install-owner-scope
+next_gate: phase-5-contract-admin-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C01-complete-template-install-plan-ready
+current_phase: phase-5-contract-template-install-authorized-awaiting-admin-login
 last_atomic_action: Prompt08-C01b-canonical-schedule-promotion
 last_atomic_result: success
-next_atomic_action: request-bounded-admin-login-four-template-install-and-logout-scope
+next_atomic_action: C02a-owner-entered-normal-admin-login-once
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Next_action_is_reviewable_permission_request_no_unresolved_ambiguity_or_remote_write_authorized
+recommended_next_session_mode: High
+mode_reason_plain: Owner_authorized_finite_login_install_logout_known_target_postcondition_containment_private_browser_input_pending
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00_C01a_C01b_completed_consumed_no_further_contract_Browser_R2_provider_sessions_or_remote_scope_granted
+permission_state: C00_C01_consumed_C02a_C03_C02z_granted_once_each_no_Browser_PDF_provider_or_other_scope
 review:
   status: independent_go
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
@@ -523,7 +523,7 @@ contract_template_install_preparation:
   expected: four_v1_preview_review_bundle_JSON_objects_500443_bytes_total_four_linked_intents_four_passing_assertions_one_admin_audit_one_provider_one_media_row
   sessions: proposed_one_normal_A_login_and_one_logout_old_11_sessions_preserved_revoked
   browser_PDF_email_calls: 0_0_0
-  permission: not_granted_C02a_C03_C02z
+  permission: granted_C02a_C03_C02z_once_each
   containment: stop_after_one_install_attempt_preserve_zero_to_four_private_JSON_objects_intents_Cron_pause_readonly_reconcile_all_four_families_no_delete_repair_restore_or_retry
 contract_template_install_continuation:
   utc: 2026-09-07T10:11:05Z
@@ -540,23 +540,36 @@ contract_template_install_continuation:
   D1_SELECTs_rows_read_writes: 7_68_0
   D1_changes_changed_db: 0_false
   remote_mutations_Browser_calls_provider_sends: 0_0_0
-  permission: pending_C02a_C03_C02z_continuation_request_does_not_grant_scope
+  permission: owner_now_explicitly_granted_C02a_C03_C02z
   protected_evidence: tmp/contract-phase-08-owner/continue-08a-20260907101049474-safe.json
   containment: preserve_Access_Cron_pause_published_synthetic_schedule_no_remote_write
+contract_template_install_owner_scope:
+  utc: 2026-09-07T10:44:50Z
+  permission: granted_C02a_C03_C02z_once_each
+  protected_evidence: tmp/contract-phase-08-owner/template-install-owner-approval.json
+  plan_sha256: 3851ad7dca9071b00dc58414ff1297517ddbdab77a2868e28fc972ab862e9c4f
+  exact_target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_admin_e2b29269d4e8
+  sequence: C02a_success_checkpoint_commit_then_C03_actual_checkpoint_commit_then_C02z
+  conditional_logout: included_after_failed_or_ambiguous_C03_checkpoint
+  Browser_PDF_email_permissions: none
+  latest_preflight_utc: 2026-09-07T10:43:26Z
+  latest_preflight: exact_version_settings_Access_private_R2_local_credential_and_D1_baseline_7_SELECTs_68_rows_zero_writes
+  protected_preflight: tmp/contract-phase-08-owner/continue-08a-20260907104311897-safe.json
 next_atomic_action:
-  id: request-bounded-admin-login-four-template-install-and-logout-scope
-  permission: local_readonly_plan_complete_new_remote_scope_pending
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_admin_e2b29269d4e8
-  mutation: none_present_C02a_normal_admin_login_C03_four_template_JSON_install_C02z_logout_plan
+  id: C02a-owner-entered-normal-admin-login-once
+  permission: explicitly_granted_once_private_password_entered_by_owner_in_browser
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
+  mutation: one_normal_login_new_A_session_version_2
   preconditions:
-    - successful_C01a_checkpoint_e09962a_and_C01b_checkpoint_26482b3_remain_closed
-    - exact_native_UI_action_template_hashes_bounded_postconditions_and_failure_containment_prepared
+    - exact_target_and_unchanged_baseline_eleven_revoked_sessions
+    - private_owner_entered_admin_credentials_on_normal_login_form
   postcondition:
-    - owner_records_bounded_C02a_C03_C02z_scope_without_Browser_PDF_or_provider_permission
-  success_transition: record_scope_then_fresh_preflight_and_owner_entered_normal_admin_login_once
-  failed_or_ambiguous_transition: no_remote_write_keep_published_synthetic_schedule_Access_and_Cron_pause
+    - exactly_one_new_active_A_session_version_2_old_eleven_sessions_roles_business_and_providers_preserved
+  success_transition: checkpoint_commit_before_C03_four_template_install
+  failed_or_ambiguous_transition: read_only_reconcile_no_blind_retry_preserve_Access_and_Cron_pause
   forbidden_in_this_action:
-    - all_remote_mutations
+    - template_install_before_login_checkpoint
+    - Browser_PDF_provider_send_or_any_other_ungranted_operation
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -564,6 +577,24 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08A bounded owner authorization — 2026-09-07T10:44:50Z
+
+The owner explicitly approved the already presented C02a normal A login, C03
+one native four-template installation and C02z normal logout. Scope includes
+logout after a failed/ambiguous C03 checkpoint; it does not include retries,
+repair, deletion, deploy, Browser/PDF or provider sends. Existing plan remains
+immutable. Actual postcondition and separate docs-only commit are mandatory
+between all three operations. Password remains owner-entered in the browser.
+
+Fresh preflight at 10:43:26Z confirmed exact version/settings/Access/private R2,
+locally readable existing credential, expected paused-Cron health and exact D1
+baseline (7 SELECTs, 68 rows, zero writes). No remote mutation has occurred.
+Permission and preflight evidence are indexed in the machine-readable state.
+One next action: one normal C02a login after private owner input. Preserve
+Access and Cron pause. rollover_required: no; recommended_next_session_mode:
+High because the finite authorized route and containment are known.
+
 
 ## Prompt 08A continuation read-only checkpoint — 2026-09-07T10:11:05Z
 
