@@ -19,6 +19,19 @@
 
 ## Append-only evidence history
 
+### Four real Browser PDFs and four mailbox deliveries closed — 2026-09-07T14:35:37Z
+
+R packet completed all ten once-only commands and individual docs checkpoints.
+Four real PDFs, 20 pages inspected, eight exact private objects (733119
+bytes), four single provider receipts and owner-confirmed four PDF emails.
+All 16 sessions revoked, no actionable email or Telegram rows. Exact deployed
+4a8c028/a255463d5707 and paused Cron/batch1 preserved. One nonblocking P2 marker
+placement issue is recorded in active state; no runtime/template edit or retry.
+Acceptance, formation/certificate, owner/admin downloads, foreign-owner checks
+and safe Cron restoration remain. Scope and next action are only in active state.
+Protected closeout: tmp/contract-phase-08-owner/R-closeout-safe.json.
+
+
 ### Four actual-offer render/email packet prepared — 2026-09-07T13:58:19Z
 
 Protected R-four-render-email-plan pins all four actual drafts and their

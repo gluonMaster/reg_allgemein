@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T14:32:32Z
+updated_utc: 2026-09-07T14:34:13Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-EN-success
-next_gate: phase-5-contract-R-A-logout
+last_completed_gate: phase-5-contract-R-A-logout-success
+next_gate: phase-5-contract-prepare-next-lifecycle-scope-readonly
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-EN-checkpoint
-last_atomic_action: EN
+current_phase: phase-5-contract-R-A-logout-checkpoint
+last_atomic_action: R-A-logout
 last_atomic_result: success
-next_atomic_action: R-A-logout
+next_atomic_action: prepare-next-lifecycle-scope-readonly
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Actual_checkpoint_preserves_exact_remaining_scope_and_containment
+recommended_next_session_mode: Medium
+mode_reason_plain: R_session_closed_next_work_read_only
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: R_granted_only_remaining_unconsumed_exact_actions_no_repeat
+permission_state: R_all_ten_commands_consumed_no_further_mutations_granted
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T14:32:36.940Z
+  latest_readonly_control_utc: 2026-09-07T14:34:18.108Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T14:32:32.504Z
-    postcondition_rows_read: 699
-    latest_read_kind: EN_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T14:34:13.600Z
+    postcondition_rows_read: 703
+    latest_read_kind: R-A-logout_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -148,16 +148,16 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 16
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 14
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 15
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 8_0_0
+    first_admin_sessions_total_nonrevoked_valid: 9_0_0
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 4_0_0
     second_parent_session_version: 1
@@ -749,20 +749,25 @@ contract_R_authorization:
   scope: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN_R-A-logout
   conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
 contract_R_progress:
-  latest_utc: 2026-09-07T14:32:32.504Z
-  latest_action_result: EN_success
-  successful_commands: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN
-  successful_count_of_ten: 9
-  total_active_sessions: 16_1
+  latest_utc: 2026-09-07T14:34:13.600Z
+  latest_action_result: R-A-logout_success
+  successful_commands: R-A-login_RY_EY_RM_EM_RI_EI_RN_EN_R-A-logout
+  successful_count_of_ten: 10
+  owner_mailbox_arrival: four_of_four_with_PDF_attachments_confirmed
+  mailbox_evidence: tmp/contract-phase-08-owner/R-mailbox-confirmation-safe.json
+  actual_PDFs_pages_new_R2_objects_bytes: 4_20_8_733119
+  recorded_Browser_ms_not_account_invoice: 1484.705810546875
+  closeout_evidence: tmp/contract-phase-08-owner/R-closeout-safe.json
+  total_active_sessions: 16_0
   render_attempts_artifacts_deliveries: 4_8_4
   pending_email_count: 0
-  evidence: tmp/contract-phase-08-owner/EN-checkpoint-safe.json_and_before_after
+  evidence: tmp/contract-phase-08-owner/R-A-logout-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: R-A-logout
-  permission: prior_exact_R_packet_only_unconsumed_command_after_preflight
+  id: prepare-next-lifecycle-scope-readonly
+  permission: read_only_only
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
-  mutation: one_native_command_only_if_all_exact_preconditions_pass
+  mutation: none
   preconditions:
     - actual_checkpoint_saved_as_separate_docs_only_commit
     - exact_current_target_actor_sources_recipient_queue_and_budget
@@ -1138,6 +1143,47 @@ Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
 runtime full validation reuses exact reviewed candidate 4a8c028.
 rollover_required: no; recommended_next_session_mode: High;
 exact remaining scope, target and containment are retained.
+
+## R R-A-logout actual checkpoint — 2026-09-07T14:34:13Z
+
+Authorized operation reconciled as success. Candidate 4a8c028, version
+a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0.
+Checks: controlPreserved=true, nativeResponse=true, sessionScope=true, unrelatedDataPreserved=true, oldAuditsPreserved=true, oneActorAudit=true, auditCounts=true, counters=true, onlyNewSessionLoggedOut=true.
+Normal logout reconciled.
+Before/after evidence: tmp/contract-phase-08-owner/R-A-logout-before.json and
+R-A-logout-after.json; safe result R-A-logout-checkpoint-safe.json. D1 postcondition
+read 703 rows, zero query writes. Cumulative 10/10
+successful commands; 16 sessions/0 active,
+4 render attempts, 8 artifacts,
+0 non-sent emails. Actual operation counts:
+Browser 0, new R2 objects 0, provider sends
+0. Next action: prepare-next-lifecycle-scope-readonly.
+Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
+queue; no repeated render/send, operator deletion, repair, rollback or config
+change. Conditional logout only the new A session after its checkpoint.
+
+Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
+runtime full validation reuses exact reviewed candidate 4a8c028.
+rollover_required: no; recommended_next_session_mode: Medium;
+next work is read-only.
+
+## R four-PDF and mailbox closeout — 2026-09-07T14:35:37Z
+
+All ten authorized commands completed with separate actual checkpoints. Four
+real Browser PDFs, 20 inspected pages and eight exact private R2 objects total
+733119 new bytes. All four exact attachments were verified by
+the canonical resolver; all four provider requests succeeded once and the owner
+confirmed receiving all four emails with PDF attachments. Evidence:
+tmp/contract-phase-08-owner/R-closeout-safe.json and
+R-mailbox-confirmation-safe.json. Application-recorded Browser time is
+1484.705810546875 ms; this is not account-wide usage or billing.
+All 16 sessions are revoked; actionable email and Telegram rows are zero.
+No acceptance, formation, certificate, audited owner/admin download, config
+change or Cron restoration was attempted. The single P2 marker-placement
+finding preserves readability and does not reopen the green runtime gate.
+Full manual preview still requires the exact next lifecycle and safe Cron
+restoration. Next is read-only preparation, with no remaining R mutation grant.
+rollover_required: no; recommended_next_session_mode: Medium.
 
 ## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z
 
