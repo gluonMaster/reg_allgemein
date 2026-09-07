@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:50:10Z
+updated_utc: 2026-09-07T13:51:16Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C08-success
-next_gate: phase-5-contract-C08-A-logout
+last_completed_gate: phase-5-contract-C08-A-logout-success
+next_gate: phase-5-contract-prepare-four-render-email-scope-readonly
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C08-checkpoint
-last_atomic_action: C08
+current_phase: phase-5-contract-C08-A-logout-checkpoint
+last_atomic_action: C08-A-logout
 last_atomic_result: success
-next_atomic_action: C08-A-logout
+next_atomic_action: prepare-four-render-email-scope-readonly
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Actual_checkpoint_complete_next_granted_command_has_known_target_and_containment
+recommended_next_session_mode: Medium
+mode_reason_plain: Granted_draft_packet_closed_next_render_scope_preparation_read_only
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C05_C08_granted_only_remaining_unconsumed_actions_no_repeat_or_expansion
+permission_state: C05_C08_all_six_commands_consumed_no_render_send_scope
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T13:50:14.622Z
+  latest_readonly_control_utc: 2026-09-07T13:51:21.127Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T13:50:10.550Z
-    postcondition_rows_read: 436
-    latest_read_kind: C08_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T13:51:16.800Z
+    postcondition_rows_read: 440
+    latest_read_kind: C08-A-logout_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -148,16 +148,16 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 15
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 13
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 14
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 8_1_1
+    first_admin_sessions_total_nonrevoked_valid: 8_0_0
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 4_0_0
     second_parent_session_version: 1
@@ -706,33 +706,33 @@ contract_C05_C08_authorization:
   scope: C05-A-login_C05_C06_C07_C08_C08-A-logout_once_each
   conditional_logout: only_new_A_session_after_failed_or_ambiguous_checkpoint
 contract_C05_C08_progress:
-  latest_utc: 2026-09-07T13:50:10.550Z
-  latest_action: C08
+  latest_utc: 2026-09-07T13:51:16.800Z
+  latest_action: C08-A-logout
   latest_result: success
-  successful_commands: C05-A-login_C05_C06_C07_C08
-  successful_count_of_six: 5
+  successful_commands: C05-A-login_C05_C06_C07_C08_C08-A-logout
+  successful_count_of_six: 6
   actual_offers: 4
-  active_sessions: 1
+  active_sessions: 0
   total_sessions: 15
-  draft_status_and_source_checks: actual_current_input_bundle_source_and_HTML_hashes_verified
-  protected_evidence: tmp/contract-phase-08-owner/C08-checkpoint-safe.json_and_before_after
-  rows_read_query_writes: 436_0
+  draft_status_and_source_checks: all_created_drafts_preserved
+  protected_evidence: tmp/contract-phase-08-owner/C08-A-logout-checkpoint-safe.json_and_before_after
+  rows_read_query_writes: 440_0
   Browser_PDF_R2_email_config_operations: 0_0_0_0_0
   containment: Access_Cron_pause_batch1_no_repeat_cancel_delete_repair_number_reuse_or_rollback_conditional_new_A_logout_only_after_checkpoint
 next_atomic_action:
-  id: C08-A-logout
-  permission: prior_owner_six_action_grant_only_unconsumed_exact_command
+  id: prepare-four-render-email-scope-readonly
+  permission: read_only_preparation_new_scope_required
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: one_normal_native_command_only_after_exact_preflight
+  mutation: none
   preconditions:
     - this_actual_checkpoint_saved_as_separate_docs_only_commit
-    - exact_prior_state_plan_target_actor_service_number_and_template_bindings
+    - all_six_actions_closed_zero_active_sessions
   postcondition:
-    - planned_single_delta_and_preserved_unrelated_state
-  success_transition: actual_checkpoint_and_docs_only_commit_before_next_mutation
+    - concrete_four_render_and_four_email_scope_prepared_for_review
+  success_transition: request_only_new_prepared_scope
   failed_or_ambiguous_transition: stop_no_repeat_record_actual_state_then_only_granted_conditional_new_A_logout
   forbidden_in_this_action:
-    - Browser_PDF_R2_write_provider_send_config_change_or_unlisted_business_command
+    - all_remote_mutations
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -853,6 +853,27 @@ Docs-only checks: docs:check, release:scan, git diff --check. Unchanged runtime
 check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
 rollover_required: no; recommended_next_session_mode: High;
 next granted command has known target, postcondition and containment.
+
+## C05–C08 C08-A-logout actual checkpoint — 2026-09-07T13:51:16Z
+
+One authorized A operation reconciled as success. Candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0,
+version a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1.
+Checks: controlPreserved=true, unrelatedDataPreserved=true, nativeResponse=true, oldPhaseAuditsPreserved=true, oneActorAudit=true, sessionScope=true, counters=true, auditCounts=true, onlyNewSessionRevoked=true.
+Native response and actual D1 state verify normal logout of only the new A session.
+
+Cumulative successful operations 6/6, offers 4, sessions
+15 total/0 active. No Browser/PDF/R2 write/provider send
+or configuration operation. Postcondition read 440 rows, zero query
+writes. Evidence: tmp/contract-phase-08-owner/C08-A-logout-checkpoint-safe.json and
+indexed before/after records. One next action: prepare-four-render-email-scope-readonly.
+Containment: preserve Access, paused Cron and batch1; no repeat, cancel, repair,
+delete, number reuse or rollback. Conditional logout only for this new A session
+after failed/ambiguous checkpoint. Full-manual-preview and production blocked.
+
+Docs-only checks: docs:check, release:scan, git diff --check. Unchanged runtime
+check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
+rollover_required: no; recommended_next_session_mode: Medium;
+next preparation is read-only.
 
 ## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z
 

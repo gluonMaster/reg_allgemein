@@ -19,6 +19,14 @@
 
 ## Append-only evidence history
 
+### Four native drafts and normal session closed — 2026-09-07T13:51:16Z
+
+C05–C08 packet completed with six individual actual checkpoints: four version-1
+drafts, four consumed numbers, two draft enrollments and two draft engagements;
+actual source/input/HTML hashes verified. New A session normally revoked.
+No PDF/Browser/R2 write/email/config operation. Permission consumed; next scope
+and evidence are indexed only in active state.
+
 ### Four-offer draft packet prepared read-only — 2026-09-07T13:17:45Z
 
 Protected C05-draft-plan and canonical local validation cover one A login,
