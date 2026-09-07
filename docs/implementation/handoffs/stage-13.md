@@ -19,6 +19,14 @@
 
 ## Append-only evidence history
 
+### Preview login restored after one code deploy — 2026-09-07T11:14:38Z
+
+Exact candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 deployment reconciled as success;
+version a255463d5707. Login form 200, unchanged settings and domain/session/provider/monitoring baselines.
+All details, remaining permissions and the sole next action are in active state.
+Evidence: tmp/contract-phase-08-owner/paused-fix-checkpoint-safe.json.
+Production and full-manual-preview remain blocked.
+
 ### Paused-contract preview config remediation — 2026-09-07T11:12:02Z
 
 Candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 received independent GO after check/build,

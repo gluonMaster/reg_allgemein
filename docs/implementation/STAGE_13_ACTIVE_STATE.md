@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T11:12:02Z
+updated_utc: 2026-09-07T11:14:38Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-synthetic-schedule-published
-next_gate: phase-5-contract-paused-config-one-deploy
+last_completed_gate: phase-5-contract-paused-config-deployed-login-restored
+next_gate: phase-5-contract-C02a-admin-login
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-paused-config-ready-GO
-last_atomic_action: C02a-login-form-load
-last_atomic_result: failed
-next_atomic_action: C00fix-one-reviewed-runtime-deploy
+current_phase: phase-5-contract-C00fix-checkpoint
+last_atomic_action: C00fix-one-reviewed-runtime-deploy
+last_atomic_result: success
+next_atomic_action: C02a-owner-entered-normal-admin-login-once
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Exact_candidate_GO_tests_pass_target_postcondition_and_containment_known
+mode_reason_plain: Expected_version_login_and_data_verified_next_authorized_normal_admin_login
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,14 +34,14 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00fix_one_deploy_granted_C02a_C03_C02z_granted_once_each_no_Browser_PDF_provider_or_other_scope
+permission_state: C00fix_consumed_C02a_C03_C02z_granted_once_each_no_Browser_PDF_provider_or_other_scope
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   last_independently_reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
-  deployed_open_p1: P1-CONTRACT-PREVIEW-PAUSED-CONFIG-001_until_live_login_postcondition
+  deployed_open_p1: none_paused_config_login_P1_resolved_by_actual_200
   verdict_scope: one_code_only_preview_deploy_config_bindings_secrets_schema_preserved
   independent_reviewer: review_preview_pause
   local_validation:
@@ -54,15 +54,15 @@ review:
   previous_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 preview:
   access: enforced
-  deployed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-  deployed_fingerprint: 7c1bae246b7f
+  deployed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  deployed_fingerprint: a255463d5707
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
-  bindings_and_feature_gates_unchanged: false_exactly_five_contract_and_Cron_values_changed_other_settings_and_bindings_exact
-  deployment_postcondition: success_same_module_five_values_one_version_100_percent_Access_private_R2_no_domain_session_provider_delta_expected_health_503
-  latest_readonly_control_utc: 2026-09-06T22:13:00.176Z
-  latest_anonymous_access_check: 2026_09_06_Prompt08_HEAD_302_Cloudflare_Access
+  bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
+  deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
+  latest_readonly_control_utc: 2026-09-07T11:14:38.228Z
+  latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -572,22 +572,37 @@ contract_paused_config_remediation:
   scope: one_code_deploy_no_config_bindings_secrets_schema_change
   protected_evidence: tmp/contract-phase-08-owner/paused-config-deploy-owner-approval.json_and_paused-config-review-safe.json_and_paused-config-release-safe.json
   containment: preserve_Access_Cron_pause_batch1_private_R2_no_automatic_repeat_or_rollback
+contract_paused_config_deployment:
+  utc: 2026-09-07T11:14:38.228Z
+  result: success
+  action: C00fix-one-reviewed-runtime-deploy
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_quarantine_442dca1871ce
+  before_version: 7c1bae246b7f
+  after_version: a255463d5707
+  traffic_percent: 100
+  code_sha256: 9ee23a7509999d31516f5dc063c79f7ccfbc449ac735952cc6b4318cfc81d309
+  actual_postcondition: all_checks_true_exact_settings_bindings_private_R2_and_annotation_login_200_health_503_Access_302_domain_sessions_providers_cadences_monitoring_preserved
+  D1_rows_read_query_writes: 198_0
+  new_sessions_templates_provider_sends: 0_0_0
+  remote_mutation_attempts: 1
+  permission: one_deploy_consumed_no_repeat_or_automatic_rollback
+  protected_evidence: tmp/contract-phase-08-owner/paused-fix-checkpoint-safe.json_and_before_after_evidence
+  containment: Access_Cron_pause_batch1_private_R2_preserved
 next_atomic_action:
-  id: C00fix-one-reviewed-runtime-deploy
-  permission: owner_explicitly_granted_once_after_successful_checks_and_independent_GO
-  target: preview_worker_242c1796e930_same_resources_D1_ccdeb22bb2a1
-  mutation: one_strict_deploy_exact_reviewed_code_all_existing_settings_preserved
+  id: C02a-owner-entered-normal-admin-login-once
+  permission: prior_owner_C02a_C03_C02z_once_each_grant_unconsumed
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
+  mutation: one_normal_admin_login_after_private_owner_form_input
   preconditions:
-    - clean_docs_only_descendant_of_reviewed_candidate_exact_bundle_config_and_live_target
-    - read_only_preflight_single_prior_version_100_percent_private_R2_Access_exact_D1_baseline
+    - actual_deploy_checkpoint_committed_exact_live_control_and_zero_active_sessions
+    - owner_enters_existing_admin_password_in_browser_without_chat_or_export
   postcondition:
-    - new_single_version_100_percent_exact_module_settings_and_annotation
-    - cookie_free_login_200_with_form_health_503_Access_enforced
-    - domain_sessions_providers_cadences_and_error_counters_preserved
-  success_transition: separate_docs_only_checkpoint_commit_before_C02a_owner_entered_normal_login
-  failed_or_ambiguous_transition: read_only_reconcile_record_containment_no_repeat_or_automatic_rollback
+    - one_new_A_session_version2_old_eleven_revoked_sessions_and_business_provider_state_preserved
+  success_transition: C02a_docs_only_checkpoint_commit_before_C03_one_native_install
+  failed_or_ambiguous_transition: stop_and_reconcile_no_repeat
   forbidden_in_this_action:
-    - config_schema_secret_binding_change_provider_send_template_install_or_new_session
+    - config_deploy_provider_send_or_template_install
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -595,6 +610,26 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08A code-only deploy actual checkpoint — 2026-09-07T11:14:38Z
+
+One approved C00fix deploy attempt reconciled as success. Candidate
+4a8c02816ef12947d6bd748dc690dcb2f46cdbd0; preview Worker fingerprint 242c1796e930, D1 ccdeb22bb2a1;
+version 7c1bae246b7f → a255463d5707, one version at 100 percent.
+Actual remote module matches the reviewed 3428899-byte bundle. All prepared settings, bindings, secrets, Cron schedules, private EU buckets and Access were preserved. Cookie-free service-authenticated login GET returned 200 with both credential inputs; health remains expected 503/no-store/noindex. The login P1 is resolved.
+
+Bounded postcondition read 198 D1 rows with zero query writes/changes.
+Business, sessions, provider history, cadence/lease and monitoring baselines
+are exact. No new session, template or provider send occurred.
+Protected evidence: tmp/contract-phase-08-owner/paused-fix-checkpoint-safe.json.
+One next action: C02a-owner-entered-normal-admin-login-once. No automatic retry or rollback.
+The already approved C02a/C03/C02z scope is retained; Browser/PDF/email scope
+remains ungranted. Full-manual-preview and production stay blocked.
+
+Checkpoint checks: docs:check, release:scan, git diff --check; full runtime/E2E
+not repeated because this commit only records actual state and reuses the exact
+reviewed candidate's successful release gate. rollover_required: no;
+recommended_next_session_mode: High; the next normal login has a known target, postcondition and containment.
 
 ## Prompt 08A paused-config candidate / review and deploy authorization — 2026-09-07T11:12:02Z
 
