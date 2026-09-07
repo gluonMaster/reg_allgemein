@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T12:26:32Z
+updated_utc: 2026-09-07T12:27:51Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C03-success
-next_gate: phase-5-contract-normal-admin-logout
+last_completed_gate: phase-5-contract-C02z-success
+next_gate: phase-5-contract-next-scope-preparation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C03-checkpoint
-last_atomic_action: C03
+current_phase: phase-5-contract-C02z-checkpoint
+last_atomic_action: C02z
 last_atomic_result: success
-next_atomic_action: C02z-one-normal-admin-logout
+next_atomic_action: prepare-next-contract-flow-scope-readonly
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Approved_next_normal_action_exact_target_postcondition_and_containment_known
+recommended_next_session_mode: Medium
+mode_reason_plain: Only_read_only_next_phase_plan_remains_no_remote_permission
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00fix_C02a_C03_consumed_C02z_granted_once_no_Browser_PDF_provider_or_other_scope
+permission_state: C00fix_C02a_C03_C02z_consumed_no_further_remote_permission
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T12:26:32.116Z
-    postcondition_rows_read: 231
-    latest_read_kind: C03_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T12:27:51.455Z
+    postcondition_rows_read: 235
+    latest_read_kind: C02z_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -148,16 +148,16 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 12
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 10
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 11
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 5_1_1
+    first_admin_sessions_total_nonrevoked_valid: 5_0_0
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 2_0_0
     second_parent_session_version: 1
@@ -617,20 +617,34 @@ contract_C03_actual_checkpoint:
   permission_consumed: C03_once
   protected_evidence: tmp/contract-phase-08-owner/C03-checkpoint-safe.json_and_before_after_records
   containment: preserve_Access_private_R2_Cron_pause_no_repeat_delete_repair_restore
+contract_C02z_actual_checkpoint:
+  utc: 2026-09-07T12:27:51.455Z
+  result: success
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  version: a255463d5707
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_admin_e2b29269d4e8
+  actual: only_new_A_session_revoked_with_one_matching_logout_audit_zero_active_sessions_all_templates_R2_business_providers_preserved
+  sessions_total_active: 12_0
+  actor: agent_one_normal_CSRF_form_operation
+  D1_postcondition_rows_query_writes: 235_0
+  Browser_PDF_provider_sends: 0_0_0
+  permission_consumed: C02z_once
+  protected_evidence: tmp/contract-phase-08-owner/C02z-checkpoint-safe.json_and_before_after_records
+  containment: preserve_Access_private_R2_Cron_pause_no_repeat_delete_repair_restore
 next_atomic_action:
-  id: C02z-one-normal-admin-logout
-  permission: prior_owner_grant_one_C02z_logout_including_failed_or_ambiguous_C03
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: one_normal_logout_only_new_A_session
+  id: prepare-next-contract-flow-scope-readonly
+  permission: local_read_only_preparation_only
+  target: prepared_contract_prerequisites_plan_same_preview_resources
+  mutation: none
   preconditions:
     - this_actual_checkpoint_committed_before_any_next_remote_mutation
-    - C03_actual_state_recorded_no_new_install_or_provider_operation
+    - C02a_C03_C02z_scope_consumed_no_further_write_or_send
   postcondition:
-    - only_new_A_session_revoked_zero_active_other_business_R2_provider_state_preserved
-  success_transition: separate_docs_only_checkpoint_commit_before_next_action
+    - concrete_next_scope_dates_recipients_commands_and_containment_prepared
+  success_transition: request_only_missing_concrete_next_scope
   failed_or_ambiguous_transition: record_actual_state_and_containment_no_blind_repeat
   forbidden_in_this_action:
-    - provider_send_Browser_PDF_deploy_config_change_repair_or_delete
+    - any_remote_write_login_provider_send_or_Browser_call
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -683,6 +697,27 @@ Runtime/check/build/full Vitest/E2E are reused from exact reviewed 4a8c028;
 no executable application change requires a rerun. Full-manual-preview and
 production remain blocked. rollover_required: no;
 recommended_next_session_mode: High; the next approved operation has known target, postcondition and containment.
+
+## Prompt 08A C02z actual checkpoint — 2026-09-07T12:27:51Z
+
+One normal logout reconciled as success: 0 active sessions.
+Only this phase's A session was revoked with the matching logout audit; existing
+template/D1/R2/provider state was checked against the C03 checkpoint. No repeat
+installer, Browser render, PDF or provider send. The granted three-action scope
+is consumed; further contract prerequisites/render/delivery scope is not granted.
+
+Target Worker 242c1796e930, D1 ccdeb22bb2a1; candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0,
+version a255463d5707. Result: success. Postcondition SELECTs read 235
+rows and wrote zero. Protected evidence:
+tmp/contract-phase-08-owner/C02z-checkpoint-safe.json and indexed before/after.
+One next action: prepare-next-contract-flow-scope-readonly. Preserve Access, private R2 and paused Cron;
+no repeat, repair, delete or automatic rollback.
+
+This docs-only checkpoint uses docs:check, release:scan and git diff --check.
+Runtime/check/build/full Vitest/E2E are reused from exact reviewed 4a8c028;
+no executable application change requires a rerun. Full-manual-preview and
+production remain blocked. rollover_required: no;
+recommended_next_session_mode: Medium; the remaining preparation is read-only.
 
 ## Prompt 08A code-only deploy actual checkpoint — 2026-09-07T11:14:38Z
 

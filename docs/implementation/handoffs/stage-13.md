@@ -19,6 +19,15 @@
 
 ## Append-only evidence history
 
+### Four preview templates installed and admin session closed — 2026-09-07T12:27:51Z
+
+C02a was submitted by the owner and verified without a repeated login; C03
+installed four exact bundles; C02z actual result success, active sessions 0.
+Each operation has separate protected evidence and active-state checkpoint.
+Total JSON size 500443 bytes; Browser/PDF/email calls zero.
+The three-action permission is consumed. Further prerequisite/draft/render/
+delivery work needs a concrete scope; current truth is solely active state.
+
 ### Preview login restored after one code deploy — 2026-09-07T11:14:38Z
 
 Exact candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 deployment reconciled as success;
