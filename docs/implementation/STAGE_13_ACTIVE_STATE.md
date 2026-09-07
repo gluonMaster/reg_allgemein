@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T16:28:07Z
+updated_utc: 2026-09-07T17:06:49Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
-next_gate: phase-5-telegram-readonly-preparation
+next_gate: phase-5-telegram-owner-bot-prerequisite
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-closeout
-last_atomic_action: L-A-logout
+current_phase: phase-5-telegram-readonly-preparation
+last_atomic_action: prepare-telegram-phase-readonly
 last_atomic_result: success
-next_atomic_action: prepare-telegram-phase-readonly
+next_atomic_action: owner-create-dedicated-preview-bot
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Contract_phase_complete_next_Telegram_preparation_read_only
+mode_reason_plain: Await_owner_bot_creation_then_protected_readonly_target_preparation_no_portal_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: all_C_R_L_contract_scopes_consumed_no_remaining_remote_mutation
+permission_state: prompt09_readonly_preparation_only_no_Telegram_enablement_prepare_send_or_held_row_cancel
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -835,19 +835,44 @@ contract_L_progress:
   acceptances_contracts_certificates_held_Telegram: 1_1_1_1
   evidence: tmp/contract-phase-08-owner/L-A-logout-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
+telegram_phase_preparation:
+  observed_utc: 2026-09-07T17:05:42.117Z
+  result: success_readonly_preparation_send_blocked_by_external_prerequisites
+  owner_input: prepared_channel_exists_bot_not_created_step_by_step_guidance_requested
+  channel_privacy_ownership_exact_identity: not_yet_verified_do_not_infer_from_prepared_channel
+  candidate_and_version: unchanged_exact_reviewed_runtime_and_single_version_100_percent
+  Access: anonymous_HEAD_302_Cloudflare_Access
+  settings_bindings_source: exact_match
+  migrations_applied_pending: 26_0
+  deployed_Telegram_token_chat_secrets: absent_absent
+  protected_target_manifest_and_deployment_evidence: absent_absent
+  local_Telegram_secret_environment: absent
+  held_contract_signal_fingerprint: d906ae9c7f6c
+  held_contract_signal_status_attempts_receipt: pending_0_false
+  Telegram_total_active_dead_attempts_unknown_unresolved: 1_1_0_0_0_0
+  active_sessions_nonsent_email_active_locks: 0_0_0
+  held_price_activation_triggers: 1
+  SELECT_queries_rows_read_writes: 5_954_0
+  remote_mutations_provider_calls_authenticated_app_requests: 0_0_0
+  runtime_P0_P1_found: none
+  milestone_P1_prerequisites: dedicated_bot_exact_private_target_restricted_config_and_audited_held_backlog_disposition
+  current_business_window: Mo_Fr_09_17_Europe_Berlin_observation_outside_window
+  first_local_observer_stop: filename_extension_error_before_network_corrected_no_remote_retry
+  protected_evidence: tmp/telegram-phase-09-owner/preflight-safe.json_and_control.json_and_database.json
+  protected_plan: tmp/telegram-phase-09-owner/preparation-plan.md
+  containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_all_held_rows_preserved
 next_atomic_action:
-  id: prepare-telegram-phase-readonly
-  permission: read_only_preparation_only_all_contract_mutation_permissions_consumed
-  target: existing_preview_only_exact_Telegram_target_must_be_bound_before_any_write
-  mutation: none
+  id: owner-create-dedicated-preview-bot
+  permission: owner_guidance_only_no_agent_remote_mutation
+  target: new_dedicated_preview_bot_for_owner_prepared_channel_exact_identity_pending
+  mutation: no_agent_mutation_owner_creates_bot_in_official_BotFather
   preconditions:
-    - final_L_logout_checkpoint_and_contract_closeout_committed
-    - canonical_MSG07_target_preflight_and_exact_dedicated_preview_destination
+    - owner_requested_step_by_step_instruction_and_reports_no_existing_bot
   postcondition:
-    - concrete_minimal_plan_or_exact_missing_prerequisite_recorded_without_secret_values
+    - owner_confirms_bot_created_token_kept_private_no_token_or_chat_ID_in_conversation
   containment: preserve_Access_private_artifacts_disabled_Telegram_Cron_pause_batch1_and_exact_held_rows
   forbidden_in_this_action:
-    - deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
+    - portal_deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -855,6 +880,41 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 read-only preparation and owner bot prerequisite — 2026-09-07T17:06:49Z
+
+Read-only preparation succeeded against the unchanged reviewed preview. Actual
+control confirmed version a255463d5707 at 100%, exact settings/bindings, Access
+302 and all 26 migrations. Five SELECTs read 954 rows with zero writes, changes
+or changed_db. No provider call, authenticated application request or remote
+mutation occurred. The first helper invocation stopped before network because
+of a local filename-extension error; its evidence is retained.
+
+Owner reports only a prepared channel and requests step-by-step instructions;
+the bot has not been created. Private/dedicated channel identity and ownership
+are not yet evidenced. Telegram token/chat secrets and standard target/evidence
+artifacts are absent. No guessed destination or fabricated reviewer is allowed.
+
+Existing contract signal d906ae9c7f6c is still pending/attempts0, with no dispatch
+or receipt; all dead/unknown/unresolved counts are zero. The official smoke
+rejects this active backlog even if it predates the future activation cutoff.
+Its supported audited cancellation requires a separately approved exact scope,
+including any necessary normal admin login/logout. No cancel occurred.
+
+Protected preparation-plan.md records the minimal restricted config proposal,
+postconditions and disable containment, exact-candidate clean CLI checkout,
+observer/reviewer evidence, fixed synthetic renderer, business-window gate and
+separate prepare/send permissions. It is not execution-ready without bot/target.
+Runtime remains unchanged; existing 4a8c028 full test/build/E2E and independent GO
+are inherited. Only docs:check, release:scan and diff check apply to this status
+change. Full preview and production gates stay blocked; readiness is unchanged.
+
+One next action: guide the owner through creating a dedicated preview bot in
+official BotFather, keeping its token private. The prepared channel is retained.
+Containment: Access, Telegram disabled, Cron pause, batch1 and both held items.
+rollover_required: no; recommended_next_session_mode: Medium — next agent work
+is owner guidance and protected read-only preparation, without unresolved
+mutation ambiguity or any permission to enable or send.
 
 ## Prompt 08 completed contract lifecycle — 2026-09-07T16:28:07Z
 

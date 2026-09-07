@@ -4461,3 +4461,31 @@ preview still needs separate Telegram, owner matrix/cadence and other required
 flow evidence. One next action: prepare Telegram target/config/send scope
 read-only. rollover_required: no; recommended_next_session_mode: Medium, because
 no unresolved ambiguity or further contract mutation remains.
+
+## Prompt 09 Telegram preparation; owner bot not yet created — 2026-09-07T17:06:49Z
+
+Bounded preview control/SELECT observation passed without remote mutation or
+provider call: unchanged deployed candidate/settings/bindings, Access 302,
+26 applied migrations, five SELECTs/954 rows/zero writes. Exact current state
+and next action are in [active state](../STAGE_13_ACTIVE_STATE.md).
+
+Owner reports a prepared channel, no bot, and requests step-by-step guidance.
+Dedicated private target identity and ownership remain unverified; token/chat
+secrets and target manifest/deployment observation are absent. One exact held
+contract-signal row remains pending/attempts0; delivery attempts and unresolved
+unknowns are zero. Official smoke rejects this active backlog; its disposition
+requires separately authorized audited admin action. None was attempted.
+
+Protected tmp/telegram-phase-09-owner contains preflight-safe.json, control.json,
+database.json and preparation-plan.md. The plan records the restricted config
+delta, postconditions, disable containment, command/clean-candidate boundaries,
+fresh real observer/reviewer evidence and one-send discipline. A local observer
+filename error stopped before network and was corrected; stop evidence retained.
+
+No code/config/migration/dependency change or new review. Runtime full gates are
+reused from exact 4a8c028; docs:check, release:scan and git diff --check apply.
+Full manual preview and production remain blocked. Next owner step is creating
+a dedicated preview bot, with token kept private. No enabling/prepare/send/cancel
+permission is implied. Preserve Access, Telegram disabled, paused Cron, batch1
+and both held items. rollover_required: no; recommended_next_session_mode: Medium
+for guidance and protected read-only preparation without mutation ambiguity.
