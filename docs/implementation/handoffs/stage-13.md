@@ -4287,3 +4287,26 @@ template-install-plan-safe.json. Full runtime/E2E/review evidence is reused;
 docs:check, release:scan and diff check apply to the boundary documentation.
 One next action: request bounded C02a/C03/C02z scope. rollover_required: no;
 recommended_next_session_mode: Medium until authorization, then High for execution.
+
+
+## Prompt 08 owner-requested session transfer — 2026-09-07T10:01:09Z
+
+The owner requested a continuation prompt because the previous chat is long.
+Prepared the local Prompt 08 continuation at
+out/codex-two-day-preview-prompts-2026-09-03/08A_CONTINUE_CONTRACT_BROWSER_EMAIL.md
+with completed C00/C01 checkpoints, exact next C02a/C03/C02z plan, private evidence
+locations, remaining Browser/R2/email lifecycle and no-repeat/no-blind-retry rules.
+This documentation task performed no remote operation and granted no new scope.
+The pending C02a/C03/C02z permission question was not answered: the session-transfer
+request is not authorization for login, template installation or logout.
+
+[Active state](../STAGE_13_ACTIVE_STATE.md) remains the current operational truth;
+its next action and permissions are unchanged. This handoff is portable with Git;
+the one-off prompt follows repository ignore rules. The prompt, ignored private
+evidence and machine-bound DPAPI credentials are not transferred by Git.
+Only docs:check, release:scan and diff check apply; runtime checks are reused.
+One next action in the new session: verify local handoff/plan, then obtain the
+already prepared C02a/C03/C02z scope unless the owner explicitly supplies it there.
+rollover_required: no as a risk assessment; the owner chooses a new session for
+readability. recommended_next_session_mode: Medium for read-only/scope, High after
+authorization for planned execution.
