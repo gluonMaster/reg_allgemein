@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T15:58:34Z
+updated_utc: 2026-09-07T16:02:32Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-L-email-accepted-success
-next_gate: phase-5-contract-L-form
+last_completed_gate: phase-5-contract-L-form-success
+next_gate: phase-5-contract-L-email-formed
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-L-email-accepted-checkpoint
-last_atomic_action: L-email-accepted
+current_phase: phase-5-contract-L-form-checkpoint
+last_atomic_action: L-form
 last_atomic_result: success
-next_atomic_action: L-form
+next_atomic_action: L-email-formed
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_checkpoint_preserves_exact_remaining_scope_and_containment
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T15:58:39.219Z
+  latest_readonly_control_utc: 2026-09-07T16:02:37.608Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T15:58:34.991Z
-    postcondition_rows_read: 836
-    latest_read_kind: L-email-accepted_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T16:02:32.722Z
+    postcondition_rows_read: 880
+    latest_read_kind: L-form_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -793,18 +793,18 @@ contract_L_authorization:
   telegram_scope: one_induced_row_held_no_send_no_cancel_provider_disabled_Cron_paused
   conditional_logout: only_new_L_sessions_after_failed_or_ambiguous_checkpoint
 contract_L_progress:
-  latest_utc: 2026-09-07T15:58:34.991Z
-  latest_action_result: L-email-accepted_success
-  successful_commands: L-A-login_L-P2-login_L-P2-DY_L-P2-DM_L-P2-DI_L-P2-DN_L-accept_L-email-accepted
-  successful_count_of_twenty_three: 8
+  latest_utc: 2026-09-07T16:02:32.722Z
+  latest_action_result: L-form_success
+  successful_commands: L-A-login_L-P2-login_L-P2-DY_L-P2-DM_L-P2-DI_L-P2-DN_L-accept_L-email-accepted_L-form
+  successful_count_of_twenty_three: 9
   total_active_sessions: 18_2
-  render_attempts_artifacts_deliveries: 4_8_4
-  pending_email_count: 0
-  acceptances_contracts_certificates_held_Telegram: 1_0_0_1
-  evidence: tmp/contract-phase-08-owner/L-email-accepted-checkpoint-safe.json_and_before_after
+  render_attempts_artifacts_deliveries: 4_9_6
+  pending_email_count: 1
+  acceptances_contracts_certificates_held_Telegram: 1_1_1_1
+  evidence: tmp/contract-phase-08-owner/L-form-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: L-form
+  id: L-email-formed
   permission: prior_exact_L_packet_only_unconsumed_command_after_preflight
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
   mutation: one_native_command_only_if_all_exact_preconditions_pass
@@ -1434,6 +1434,29 @@ Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
 queue; no repeated render/send, operator deletion, repair, rollback or config
 change. Conditional logout only the new L session after its checkpoint.
 
+Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
+runtime full validation reuses exact reviewed candidate 4a8c028.
+rollover_required: no; recommended_next_session_mode: High;
+exact remaining scope, target and containment are retained.
+
+## L L-form actual checkpoint — 2026-09-07T16:02:32Z
+
+Authorized operation reconciled as success. Candidate 4a8c028, version
+a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0.
+Checks: controlPreserved=true, nativeResponse=true, exactAdminSessionScope=true, unrelatedDataPreserved=true, exactOfferAndActivation=true, oneExactContract=true, actualCertificateSource=true, singleCertificateArtifactAndIntent=true, singleFormationAuditActionAssertion=true, twoLifecycleEvents=true, twoPortalCertificateDeliveries=true, onePendingFormationEmail=true, auditCounts=true, exactCumulativeCounts=true, actualPrivateR2Bytes=true, sourceConditionalPriceTriggers=true, freshPostconditionPreserved=true, actualCertificateVisualQa=true.
+Actual formation succeeded. Initial local observer incorrectly expected an expiry trigger despite existing null effective_to. Canonical conditional and fresh read-only evidence prove one activation trigger is correct. Initial result and correction retained; no remote repeat or repair. Contract, certificate, one private PDF and actual visual QA pass; Telegram and one price trigger remain held.
+Before/after evidence: tmp/contract-phase-08-owner/L-form-before.json and
+L-form-after.json; safe result L-form-checkpoint-safe.json. D1 postcondition
+read 880 rows, zero query writes. Cumulative 9/23
+successful commands; 18 sessions/2 active,
+4 render attempts, 9 artifacts,
+1 non-sent emails. Actual operation counts:
+Browser 1, new R2 objects 1, provider sends
+0. Next action: L-email-formed.
+Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
+queue; no repeated render/send, operator deletion, repair, rollback or config
+change. Conditional logout only the new L session after its checkpoint.
+Actual PDF SHA-256 1be65328eeaa99a7e0b9764afe64b44e6a38044355469cc670b583a8fde95122. One actual certificate page inspected: source fields, roles, timestamps, both evidence hashes and TEST/ENTWURF marking pass; no clipping or overlap.
 Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
 runtime full validation reuses exact reviewed candidate 4a8c028.
 rollover_required: no; recommended_next_session_mode: High;
