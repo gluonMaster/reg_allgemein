@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:01:07Z
+updated_utc: 2026-09-07T13:02:24Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C04c-success
-next_gate: phase-5-contract-E04c
+last_completed_gate: phase-5-contract-E04c-success
+next_gate: phase-5-contract-C04d
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C04c-checkpoint
-last_atomic_action: C04c
+current_phase: phase-5-contract-E04c-checkpoint
+last_atomic_action: E04c
 last_atomic_result: success
-next_atomic_action: E04c
+next_atomic_action: C04d
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_postcondition_recorded_next_granted_atomic_step_has_known_target_and_containment
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T13:01:07.652Z
-    postcondition_rows_read: 330
-    latest_read_kind: C04c_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T13:02:24.274Z
+    postcondition_rows_read: 336
+    latest_read_kind: E04c_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -663,23 +663,23 @@ contract_C04_owner_scope:
   protected_evidence: tmp/contract-phase-08-owner/C04-owner-approval.json
   forbidden: repeat_resend_cancel_repair_rollback_Browser_PDF_R2_write_or_config_change
 contract_C04_progress:
-  latest_utc: 2026-09-07T13:01:07.652Z
-  latest_action: C04c
+  latest_utc: 2026-09-07T13:02:24.274Z
+  latest_action: E04c
   latest_result: success
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   version: a255463d5707
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_parent_699b2f82b987_admin_e2b29269d4e8
-  successful_commands: C04-A-login_C04-P2-login_C04a_E04a_C04b_E04b_C04c
-  successful_count_of_thirteen: 7
-  provider_accepted_count_of_four: 2
+  successful_commands: C04-A-login_C04-P2-login_C04a_E04a_C04b_E04b_C04c_E04c
+  successful_count_of_thirteen: 8
+  provider_accepted_count_of_four: 3
   mailbox_arrival_confirmation: pending_owner_confirmation_separate_from_provider_receipts
   active_sessions: 2
   total_sessions: 14
-  protected_evidence: tmp/contract-phase-08-owner/C04c-checkpoint-safe.json_and_before_after
-  latest_D1_postcondition_rows_query_writes: 330_0
+  protected_evidence: tmp/contract-phase-08-owner/E04c-checkpoint-safe.json_and_before_after
+  latest_D1_postcondition_rows_query_writes: 336_0
   containment: Access_Cron_pause_batch1_retained_no_repeat_resend_cancel_repair_or_rollback_conditional_normal_logout_after_failed_checkpoint
 next_atomic_action:
-  id: E04c
+  id: C04d
   permission: prior_owner_C04_grant_only_unconsumed_exact_action
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_exact_C04_actor_and_object
   mutation: one_planned_normal_command_only_after_exact_preflight
@@ -885,6 +885,27 @@ commands 7/13, provider-accepted notifications 2/4.
 Read-only postcondition read 330 D1 rows, zero query writes. Evidence:
 tmp/contract-phase-08-owner/C04c-checkpoint-safe.json and indexed records.
 One next action: E04c. Access and Cron pause/batch1 preserved;
+no repeat/resend/cancel/repair/rollback. Conditional logout remains limited to
+this package's new sessions after a failed/ambiguous checkpoint.
+
+Docs-only validation: docs:check, release:scan, git diff --check. Unchanged
+runtime check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
+Full-manual-preview and production remain blocked. rollover_required: no;
+recommended_next_session_mode: High; the next granted action has known target, postcondition and containment.
+
+## C04 E04c actual checkpoint — 2026-09-07T13:02:24Z
+
+One A normal operation reconciled as success. Candidate
+4a8c02816ef12947d6bd748dc690dcb2f46cdbd0, version a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1.
+Expected user result: only exact Q2 approval row sent with terminal provider receipt; pending/unknown/dead zero.
+Actual checks: controlPreserved=true, unrelatedDataPreserved=true, sessionScope=true, auditCount=true, oldPhaseAuditsPreserved=true, nativeResponse=true, oneActorAudit=true, counters=true, emailSent=true, manualJob=true, baseEmailDelta=true.
+Exactly one authorized notification has a terminal sent row and provider receipt. Mailbox arrival is still a separate owner confirmation.
+
+Sessions total 14, active 2; cumulative C04 successful
+commands 8/13, provider-accepted notifications 3/4.
+Read-only postcondition read 336 D1 rows, zero query writes. Evidence:
+tmp/contract-phase-08-owner/E04c-checkpoint-safe.json and indexed records.
+One next action: C04d. Access and Cron pause/batch1 preserved;
 no repeat/resend/cancel/repair/rollback. Conditional logout remains limited to
 this package's new sessions after a failed/ambiguous checkpoint.
 
