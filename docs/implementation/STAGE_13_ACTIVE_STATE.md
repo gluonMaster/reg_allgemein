@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T15:48:26Z
+updated_utc: 2026-09-07T15:49:42Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-L-P2-login-success
-next_gate: phase-5-contract-L-P2-DY
+last_completed_gate: phase-5-contract-L-P2-DY-success
+next_gate: phase-5-contract-L-P2-DM
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-L-P2-login-checkpoint
-last_atomic_action: L-P2-login
+current_phase: phase-5-contract-L-P2-DY-checkpoint
+last_atomic_action: L-P2-DY
 last_atomic_result: success
-next_atomic_action: L-P2-DY
+next_atomic_action: L-P2-DM
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_checkpoint_preserves_exact_remaining_scope_and_containment
@@ -61,7 +61,7 @@ preview:
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
   deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T15:48:30.448Z
+  latest_readonly_control_utc: 2026-09-07T15:49:48.800Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T15:48:26.039Z
-    postcondition_rows_read: 776
-    latest_read_kind: L-P2-login_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T15:49:42.338Z
+    postcondition_rows_read: 784
+    latest_read_kind: L-P2-DY_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -793,18 +793,18 @@ contract_L_authorization:
   telegram_scope: one_induced_row_held_no_send_no_cancel_provider_disabled_Cron_paused
   conditional_logout: only_new_L_sessions_after_failed_or_ambiguous_checkpoint
 contract_L_progress:
-  latest_utc: 2026-09-07T15:48:26.039Z
-  latest_action_result: L-P2-login_success
-  successful_commands: L-A-login_L-P2-login
-  successful_count_of_twenty_three: 2
+  latest_utc: 2026-09-07T15:49:42.338Z
+  latest_action_result: L-P2-DY_success
+  successful_commands: L-A-login_L-P2-login_L-P2-DY
+  successful_count_of_twenty_three: 3
   total_active_sessions: 18_2
   render_attempts_artifacts_deliveries: 4_8_4
   pending_email_count: 0
   acceptances_contracts_certificates_held_Telegram: 0_0_0_0
-  evidence: tmp/contract-phase-08-owner/L-P2-login-checkpoint-safe.json_and_before_after
+  evidence: tmp/contract-phase-08-owner/L-P2-DY-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 next_atomic_action:
-  id: L-P2-DY
+  id: L-P2-DM
   permission: prior_exact_L_packet_only_unconsumed_command_after_preflight
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0
   mutation: one_native_command_only_if_all_exact_preconditions_pass
@@ -1296,6 +1296,29 @@ Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
 queue; no repeated render/send, operator deletion, repair, rollback or config
 change. Conditional logout only the new L session after its checkpoint.
 
+Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
+runtime full validation reuses exact reviewed candidate 4a8c028.
+rollover_required: no; recommended_next_session_mode: High;
+exact remaining scope, target and containment are retained.
+
+## L L-P2-DY actual checkpoint — 2026-09-07T15:49:42Z
+
+Authorized operation reconciled as success. Candidate 4a8c028, version
+a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1, archive 3996cebdabb0.
+Checks: controlPreserved=true, nativeResponse=true, exactSessionScope=true, unrelatedDataPreserved=true, oldAuditsPreserved=true, exactAuditDelta=true, auditCounts=true, actualDownloadedBytes=true, linkedReadAuditAssertion=true, assertionCounters=true.
+One native PDF download; exact bytes, response headers, owner/admin audit and passing assertion reconciled.
+Before/after evidence: tmp/contract-phase-08-owner/L-P2-DY-before.json and
+L-P2-DY-after.json; safe result L-P2-DY-checkpoint-safe.json. D1 postcondition
+read 784 rows, zero query writes. Cumulative 3/23
+successful commands; 18 sessions/2 active,
+4 render attempts, 8 artifacts,
+0 non-sent emails. Actual operation counts:
+Browser 0, new R2 objects 0, provider sends
+0. Next action: L-P2-DM.
+Containment: preserve Access, stopped Cron, batch1, private artifacts and exact
+queue; no repeated render/send, operator deletion, repair, rollback or config
+change. Conditional logout only the new L session after its checkpoint.
+Actual PDF SHA-256 8fc80075148eb3105affd9ed2a0b5b1b01c22fc276fe9018693b9a2d8cc47f76. Previously inspected artifact; actual UI download byte-for-byte verified.
 Docs-only checks: docs:check, release:scan and git diff --check. Unchanged
 runtime full validation reuses exact reviewed candidate 4a8c028.
 rollover_required: no; recommended_next_session_mode: High;
