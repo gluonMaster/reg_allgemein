@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T10:44:50Z
+updated_utc: 2026-09-07T10:51:42Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-contract-synthetic-schedule-published
-next_gate: phase-5-contract-admin-login
+next_gate: phase-5-contract-paused-config-remediation
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-template-install-authorized-awaiting-admin-login
-last_atomic_action: Prompt08-C01b-canonical-schedule-promotion
-last_atomic_result: success
-next_atomic_action: C02a-owner-entered-normal-admin-login-once
+current_phase: phase-5-contract-C02a-form-failed-contained
+last_atomic_action: C02a-login-form-load
+last_atomic_result: failed
+next_atomic_action: local-fix-and-regression-for-supervised-preview-config
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Owner_authorized_finite_login_install_logout_known_target_postcondition_containment_private_browser_input_pending
+mode_reason_plain: Confirmed_bounded_config_P1_no_authorization_bypass_or_data_loss_local_remediation_needed
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -40,7 +40,7 @@ review:
   candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
   last_independently_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
   unresolved_candidate_p0: 0
-  unresolved_candidate_p1: 0
+  unresolved_candidate_p1: 1
   local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
   deployed_source_guard: baseline_predicate_unchanged_not_used_by_reviewed_out_of_band_cli
   verdict_scope: prior_scoped_review_preserved_live_Paid_P1_login_now_successful_no_open_milestone_P1_from_incident
@@ -555,21 +555,38 @@ contract_template_install_owner_scope:
   latest_preflight_utc: 2026-09-07T10:43:26Z
   latest_preflight: exact_version_settings_Access_private_R2_local_credential_and_D1_baseline_7_SELECTs_68_rows_zero_writes
   protected_preflight: tmp/contract-phase-08-owner/continue-08a-20260907104311897-safe.json
+contract_template_login_form_failure:
+  utc: 2026-09-07T10:51:42Z
+  result: failed
+  severity: P1
+  finding: P1-CONTRACT-PREVIEW-PAUSED-CONFIG-001
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_version_7c1bae246b7f
+  observed: Access_passed_GET_login_500_before_password_form
+  root_cause: loadRuntimeConfig_rejects_approved_preview_Cron_pause_with_SCHEDULED_JOBS_ENABLED_required
+  local_exact_config_reproduction: same_single_RuntimeConfigError_issue
+  login_POST_attempts: 0
+  sessions: eleven_revoked_zero_active
+  business_provider_scope: exact_prepared_baseline_preserved
+  monitoring_side_effect: one_minute_bucket_two_errors_observed_before_counter_not_captured
+  automatic_error_recording: recordWorkerError_on_500_in_src_worker_ts
+  permission: C02a_login_POST_C03_install_C02z_logout_remain_granted_and_unconsumed
+  new_deploy_permission: not_granted
+  protected_evidence: tmp/contract-phase-08-owner/C02a-form-failed-checkpoint-safe.json
+  containment: preserve_Access_Cron_pause_private_R2_no_reload_login_install_send_or_blind_retry
 next_atomic_action:
-  id: C02a-owner-entered-normal-admin-login-once
-  permission: explicitly_granted_once_private_password_entered_by_owner_in_browser
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: one_normal_login_new_A_session_version_2
+  id: local-fix-and-regression-for-supervised-preview-config
+  permission: local_remediation_and_readonly_evidence_only_existing_C02a_C03_C02z_scope_retained
+  target: local_runtime_config_and_direct_consumers_preview_target_unchanged
+  mutation: none_remote
   preconditions:
-    - exact_target_and_unchanged_baseline_eleven_revoked_sessions
-    - private_owner_entered_admin_credentials_on_normal_login_form
+    - reproducible_P1_blocks_mandatory_contract_preview_flow
+    - current_deployed_config_and_schema_preserved
   postcondition:
-    - exactly_one_new_active_A_session_version_2_old_eleven_sessions_roles_business_and_providers_preserved
-  success_transition: checkpoint_commit_before_C03_four_template_install
-  failed_or_ambiguous_transition: read_only_reconcile_no_blind_retry_preserve_Access_and_Cron_pause
+    - bounded_local_fix_and_relevant_regression_evidence_prepared_for_reviewable_deploy_scope
+  success_transition: exact_candidate_review_and_separate_deploy_scope_before_remote_write
+  failed_or_ambiguous_transition: continue_local_diagnosis_keep_remote_containment
   forbidden_in_this_action:
-    - template_install_before_login_checkpoint
-    - Browser_PDF_provider_send_or_any_other_ungranted_operation
+    - remote_deploy_config_change_login_install_or_provider_send
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -577,6 +594,36 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08A login-form P1 / actual failed checkpoint — 2026-09-07T10:51:42Z
+
+Cloudflare Access accepted the owner's OTP. The subsequent ordinary GET of
+/auth/login returned the application 500 page before password input; no login
+POST was submitted. Local reproduction using exact deployed plain-text config
+and synthetic secret/binding substitutes produces only RuntimeConfigError issue
+SCHEDULED_JOBS_ENABLED:required. The shared validator requires enabled scheduling
+for preview, contradicting the already authorized five-value contract/Cron pause.
+This is P1-CONTRACT-PREVIEW-PAUSED-CONFIG-001 for full-manual-preview.
+
+Actual bounded D1 reconciliation preserves the complete prepared business,
+provider, role and eleven-revoked-session scope (149 reads, zero query writes).
+The Worker separately records 500 responses: one 10:46Z monitoring minute bucket
+with two errors was observed (one additional SELECT/read, zero query writes).
+No counter baseline was captured, so no exact error-counter delta is claimed.
+The error path is therefore not described as globally write-free. There are no
+new sessions, templates, offers, Browser calls or provider deliveries. Evidence:
+tmp/contract-phase-08-owner/C02a-form-failed-checkpoint-safe.json and indexed
+reproduction/domain/monitoring observations.
+
+Preserve Access, private R2 and paused Cron; do not reload, retry login, install
+or resume any provider path. C02a login POST/C03/C02z permissions remain unconsumed.
+One next action: local bounded config remediation and regression, then prepare
+the exact candidate and separate deploy scope. No new deploy is authorized.
+Docs-only checkpoint checks are docs:check, release:scan and diff check.
+rollover_required: no; recommended_next_session_mode: High for a localized
+confirmed P1 with known containment; no wrong-target, data-loss or auth-bypass
+evidence warrants Max.
+
 
 ## Prompt 08A bounded owner authorization — 2026-09-07T10:44:50Z
 
