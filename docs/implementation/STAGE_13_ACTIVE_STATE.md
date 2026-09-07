@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:06:17Z
+updated_utc: 2026-09-07T13:07:41Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-E04e-success
-next_gate: phase-5-contract-C04-P2-logout
+last_completed_gate: phase-5-contract-C04-P2-logout-success
+next_gate: phase-5-contract-C04-A-logout
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-E04e-checkpoint
-last_atomic_action: E04e
+current_phase: phase-5-contract-C04-P2-logout-checkpoint
+last_atomic_action: C04-P2-logout
 last_atomic_result: success
-next_atomic_action: C04-P2-logout
+next_atomic_action: C04-A-logout
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Actual_postcondition_recorded_next_granted_atomic_step_has_known_target_and_containment
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T13:06:17.646Z
-    postcondition_rows_read: 362
-    latest_read_kind: E04e_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T13:07:41.457Z
+    postcondition_rows_read: 366
+    latest_read_kind: C04-P2-logout_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -148,18 +148,18 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 14
-    nonrevoked_auth_sessions: 2
-    logged_out_auth_sessions: 11
+    nonrevoked_auth_sessions: 1
+    logged_out_auth_sessions: 12
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 2
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
     first_admin_sessions_total_nonrevoked_valid: 7_1_1
     first_admin_session_version: 2
-    second_parent_sessions_total_nonrevoked_valid: 4_1_1
+    second_parent_sessions_total_nonrevoked_valid: 4_0_0
     second_parent_session_version: 1
     second_parent_session_drift: logout_observed_after_prompt_05_not_performed_by_this_session
     owned_children_per_parent: P1_0_P2_1
@@ -663,23 +663,23 @@ contract_C04_owner_scope:
   protected_evidence: tmp/contract-phase-08-owner/C04-owner-approval.json
   forbidden: repeat_resend_cancel_repair_rollback_Browser_PDF_R2_write_or_config_change
 contract_C04_progress:
-  latest_utc: 2026-09-07T13:06:17.646Z
-  latest_action: E04e
+  latest_utc: 2026-09-07T13:07:41.457Z
+  latest_action: C04-P2-logout
   latest_result: success
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   version: a255463d5707
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_parent_699b2f82b987_admin_e2b29269d4e8
-  successful_commands: C04-A-login_C04-P2-login_C04a_E04a_C04b_E04b_C04c_E04c_C04d_C04e_E04e
-  successful_count_of_thirteen: 11
+  successful_commands: C04-A-login_C04-P2-login_C04a_E04a_C04b_E04b_C04c_E04c_C04d_C04e_E04e_C04-P2-logout
+  successful_count_of_thirteen: 12
   provider_accepted_count_of_four: 4
   mailbox_arrival_confirmation: pending_owner_confirmation_separate_from_provider_receipts
-  active_sessions: 2
+  active_sessions: 1
   total_sessions: 14
-  protected_evidence: tmp/contract-phase-08-owner/E04e-checkpoint-safe.json_and_before_after
-  latest_D1_postcondition_rows_query_writes: 362_0
+  protected_evidence: tmp/contract-phase-08-owner/C04-P2-logout-checkpoint-safe.json_and_before_after
+  latest_D1_postcondition_rows_query_writes: 366_0
   containment: Access_Cron_pause_batch1_retained_no_repeat_resend_cancel_repair_or_rollback_conditional_normal_logout_after_failed_checkpoint
 next_atomic_action:
-  id: C04-P2-logout
+  id: C04-A-logout
   permission: prior_owner_C04_grant_only_unconsumed_exact_action
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_exact_C04_actor_and_object
   mutation: one_planned_normal_command_only_after_exact_preflight
@@ -969,6 +969,27 @@ commands 11/13, provider-accepted notifications 4/4.
 Read-only postcondition read 362 D1 rows, zero query writes. Evidence:
 tmp/contract-phase-08-owner/E04e-checkpoint-safe.json and indexed records.
 One next action: C04-P2-logout. Access and Cron pause/batch1 preserved;
+no repeat/resend/cancel/repair/rollback. Conditional logout remains limited to
+this package's new sessions after a failed/ambiguous checkpoint.
+
+Docs-only validation: docs:check, release:scan, git diff --check. Unchanged
+runtime check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
+Full-manual-preview and production remain blocked. rollover_required: no;
+recommended_next_session_mode: High; the next granted action has known target, postcondition and containment.
+
+## C04 C04-P2-logout actual checkpoint — 2026-09-07T13:07:41Z
+
+One P2 normal operation reconciled as success. Candidate
+4a8c02816ef12947d6bd748dc690dcb2f46cdbd0, version a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1.
+Expected user result: matching revoked logout session/audit; A session and all domain/provider state preserved.
+Actual checks: controlPreserved=true, unrelatedDataPreserved=true, sessionScope=true, auditCount=true, oldPhaseAuditsPreserved=true, nativeResponse=true, oneActorAudit=true, counters=true, onlyExpectedLogout=true.
+Native form/response and actual D1 evidence are stored privately; no repeated operation.
+
+Sessions total 14, active 1; cumulative C04 successful
+commands 12/13, provider-accepted notifications 4/4.
+Read-only postcondition read 366 D1 rows, zero query writes. Evidence:
+tmp/contract-phase-08-owner/C04-P2-logout-checkpoint-safe.json and indexed records.
+One next action: C04-A-logout. Access and Cron pause/batch1 preserved;
 no repeat/resend/cancel/repair/rollback. Conditional logout remains limited to
 this package's new sessions after a failed/ambiguous checkpoint.
 
