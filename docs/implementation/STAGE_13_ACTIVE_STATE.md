@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T11:14:38Z
+updated_utc: 2026-09-07T12:23:39Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-paused-config-deployed-login-restored
-next_gate: phase-5-contract-C02a-admin-login
+last_completed_gate: phase-5-contract-C02a-success
+next_gate: phase-5-contract-template-install
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C00fix-checkpoint
-last_atomic_action: C00fix-one-reviewed-runtime-deploy
+current_phase: phase-5-contract-C02a-checkpoint
+last_atomic_action: C02a
 last_atomic_result: success
-next_atomic_action: C02a-owner-entered-normal-admin-login-once
+next_atomic_action: C03-one-native-four-template-install
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Expected_version_login_and_data_verified_next_authorized_normal_admin_login
+mode_reason_plain: Approved_next_normal_action_exact_target_postcondition_and_containment_known
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00fix_consumed_C02a_C03_C02z_granted_once_each_no_Browser_PDF_provider_or_other_scope
+permission_state: C00fix_C02a_consumed_C03_C02z_granted_once_no_Browser_PDF_provider_or_other_scope
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-06T22:13:02.545Z
-    postcondition_rows_read: 1050
-    latest_read_kind: C00_config_deploy_scoped_metadata_and_leases_no_business_session_provider_delta
+    latest_bounded_postcondition_utc: 2026-09-07T12:23:39.763Z
+    postcondition_rows_read: 150
+    latest_read_kind: C02a_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -147,17 +147,17 @@ preview:
     users_with_family_id: 3
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
-    auth_sessions: 11
-    nonrevoked_auth_sessions: 0
+    auth_sessions: 12
+    nonrevoked_auth_sessions: 1
     logged_out_auth_sessions: 10
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 0
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 4_0_0
+    first_admin_sessions_total_nonrevoked_valid: 5_1_1
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 2_0_0
     second_parent_session_version: 1
@@ -589,20 +589,34 @@ contract_paused_config_deployment:
   permission: one_deploy_consumed_no_repeat_or_automatic_rollback
   protected_evidence: tmp/contract-phase-08-owner/paused-fix-checkpoint-safe.json_and_before_after_evidence
   containment: Access_Cron_pause_batch1_private_R2_preserved
+contract_C02a_actual_checkpoint:
+  utc: 2026-09-07T12:23:39.763Z
+  result: success
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  version: a255463d5707
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_admin_e2b29269d4e8
+  actual: owner_normal_login_created_one_A_version2_session_old_eleven_revoked_and_business_provider_state_preserved
+  sessions_total_active: 12_1
+  actor: owner_submitted_normal_form_report_and_admin_DOM_plus_D1_verified_no_agent_login_POST
+  D1_postcondition_rows_query_writes: 150_0
+  Browser_PDF_provider_sends: 0_0_0
+  permission_consumed: C02a_once
+  protected_evidence: tmp/contract-phase-08-owner/C02a-checkpoint-safe.json_and_before_after_records
+  containment: preserve_Access_private_R2_Cron_pause_no_repeat_delete_repair_restore
 next_atomic_action:
-  id: C02a-owner-entered-normal-admin-login-once
-  permission: prior_owner_C02a_C03_C02z_once_each_grant_unconsumed
+  id: C03-one-native-four-template-install
+  permission: prior_owner_grant_one_C03_native_install
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_admin_e2b29269d4e8
-  mutation: one_normal_admin_login_after_private_owner_form_input
+  mutation: one_native_installPreviewReview_four_private_JSON_bundles
   preconditions:
-    - actual_deploy_checkpoint_committed_exact_live_control_and_zero_active_sessions
-    - owner_enters_existing_admin_password_in_browser_without_chat_or_export
+    - this_actual_checkpoint_committed_before_any_next_remote_mutation
+    - exact_live_settings_current_admin_session_empty_template_scope_and_four_absent_R2_keys
   postcondition:
-    - one_new_A_session_version2_old_eleven_revoked_sessions_and_business_provider_state_preserved
-  success_transition: C02a_docs_only_checkpoint_commit_before_C03_one_native_install
-  failed_or_ambiguous_transition: stop_and_reconcile_no_repeat
+    - four_exact_template_rows_bundles_generation1_intents_assertions_one_A_audit_provider_media
+  success_transition: separate_docs_only_checkpoint_commit_before_next_action
+  failed_or_ambiguous_transition: record_actual_state_and_containment_no_blind_repeat
   forbidden_in_this_action:
-    - config_deploy_provider_send_or_template_install
+    - provider_send_Browser_PDF_deploy_config_change_repair_or_delete
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -610,6 +624,29 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08A C02a actual checkpoint — 2026-09-07T12:23:39Z
+
+The owner filled the ordinary form and clicked login before agent submission.
+No second login was attempted. Existing post-deploy baseline at 2026-09-07T11:14:37.657Z
+and actual D1 show exactly one new A session, version 2, with all eleven old
+sessions still revoked and otherwise exact role/business/provider state.
+DOM-only inspection observed the protected admin dashboard and contracts link;
+no request or password read. Raw POST response was not captured and its status
+is not invented. The owner report, protected UI and actual D1 establish success.
+
+Target Worker 242c1796e930, D1 ccdeb22bb2a1; candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0,
+version a255463d5707. Result: success. Postcondition SELECTs read 150
+rows and wrote zero. Protected evidence:
+tmp/contract-phase-08-owner/C02a-checkpoint-safe.json and indexed before/after.
+One next action: C03-one-native-four-template-install. Preserve Access, private R2 and paused Cron;
+no repeat, repair, delete or automatic rollback.
+
+This docs-only checkpoint uses docs:check, release:scan and git diff --check.
+Runtime/check/build/full Vitest/E2E are reused from exact reviewed 4a8c028;
+no executable application change requires a rerun. Full-manual-preview and
+production remain blocked. rollover_required: no;
+recommended_next_session_mode: High; the next approved operation has known target, postcondition and containment.
 
 ## Prompt 08A code-only deploy actual checkpoint — 2026-09-07T11:14:38Z
 
