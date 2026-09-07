@@ -19,6 +19,17 @@
 
 ## Append-only evidence history
 
+### C04 prerequisites, notifications and sessions closed — 2026-09-07T13:08:38Z
+
+Five request/funding transitions and four exact P2 notification deliveries
+completed with individual actual checkpoints; both new sessions normally
+closed, active sessions zero. FD synthetic dates are 2026-09-07 to 2026-09-30.
+All four notifications have provider receipts; the owner separately confirmed
+arrival of two request.received and two request.decision messages. Protected
+evidence: tmp/contract-phase-08-owner/C04-mailbox-confirmation-safe.json.
+No offer/Browser/PDF/R2/config mutation occurred in C04. Permission consumed;
+current next preparation is solely in active state.
+
 ### C04 finite prerequisite and notification scope prepared — 2026-09-07T12:31:56Z
 
 Read-only plan after template/logout closeout covers five transitions, four

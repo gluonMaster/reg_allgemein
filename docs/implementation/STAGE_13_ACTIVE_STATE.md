@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T13:07:41Z
+updated_utc: 2026-09-07T13:08:38Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-C04-P2-logout-success
-next_gate: phase-5-contract-C04-A-logout
+last_completed_gate: phase-5-contract-C04-A-logout-success
+next_gate: phase-5-contract-prepare-contract-draft-render-scope-readonly
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C04-P2-logout-checkpoint
-last_atomic_action: C04-P2-logout
+current_phase: phase-5-contract-C04-A-logout-checkpoint
+last_atomic_action: C04-A-logout
 last_atomic_result: success
-next_atomic_action: C04-A-logout
+next_atomic_action: prepare-contract-draft-render-scope-readonly
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Actual_postcondition_recorded_next_granted_atomic_step_has_known_target_and_containment
+recommended_next_session_mode: Medium
+mode_reason_plain: Granted_C04_commands_complete_next_preparation_read_only
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C04_granted_sequence_remaining_only_unconsumed_actions_no_repeat_or_scope_expansion
+permission_state: C04_all_thirteen_commands_consumed_no_further_write_send_scope
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T13:07:41.457Z
-    postcondition_rows_read: 366
-    latest_read_kind: C04-P2-logout_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-07T13:08:38.020Z
+    postcondition_rows_read: 370
+    latest_read_kind: C04-A-logout_bounded_actual_postcondition
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -148,16 +148,16 @@ preview:
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
     auth_sessions: 14
-    nonrevoked_auth_sessions: 1
-    logged_out_auth_sessions: 12
+    nonrevoked_auth_sessions: 0
+    logged_out_auth_sessions: 13
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 1
+    nonrevoked_session_owners: 0
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 7_1_1
+    first_admin_sessions_total_nonrevoked_valid: 7_0_0
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 4_0_0
     second_parent_session_version: 1
@@ -663,36 +663,36 @@ contract_C04_owner_scope:
   protected_evidence: tmp/contract-phase-08-owner/C04-owner-approval.json
   forbidden: repeat_resend_cancel_repair_rollback_Browser_PDF_R2_write_or_config_change
 contract_C04_progress:
-  latest_utc: 2026-09-07T13:07:41.457Z
-  latest_action: C04-P2-logout
+  latest_utc: 2026-09-07T13:08:38.020Z
+  latest_action: C04-A-logout
   latest_result: success
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   version: a255463d5707
   target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_parent_699b2f82b987_admin_e2b29269d4e8
-  successful_commands: C04-A-login_C04-P2-login_C04a_E04a_C04b_E04b_C04c_E04c_C04d_C04e_E04e_C04-P2-logout
-  successful_count_of_thirteen: 12
+  successful_commands: C04-A-login_C04-P2-login_C04a_E04a_C04b_E04b_C04c_E04c_C04d_C04e_E04e_C04-P2-logout_C04-A-logout
+  successful_count_of_thirteen: 13
   provider_accepted_count_of_four: 4
-  mailbox_arrival_confirmation: pending_owner_confirmation_separate_from_provider_receipts
-  active_sessions: 1
+  mailbox_arrival_confirmation: owner_confirmed_four_of_four_separate_from_provider_receipts
+  active_sessions: 0
   total_sessions: 14
-  protected_evidence: tmp/contract-phase-08-owner/C04-P2-logout-checkpoint-safe.json_and_before_after
-  latest_D1_postcondition_rows_query_writes: 366_0
+  protected_evidence: tmp/contract-phase-08-owner/C04-A-logout-checkpoint-safe.json_and_before_after
+  latest_D1_postcondition_rows_query_writes: 370_0
   containment: Access_Cron_pause_batch1_retained_no_repeat_resend_cancel_repair_or_rollback_conditional_normal_logout_after_failed_checkpoint
 next_atomic_action:
-  id: C04-A-logout
-  permission: prior_owner_C04_grant_only_unconsumed_exact_action
-  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_exact_C04_actor_and_object
-  mutation: one_planned_normal_command_only_after_exact_preflight
+  id: prepare-contract-draft-render-scope-readonly
+  permission: local_read_only_next_phase_preparation_only
+  target: next_contract_draft_plan_existing_preview_resources
+  mutation: none
   preconditions:
     - this_actual_checkpoint_saved_as_separate_docs_only_commit
-    - exact_prior_postcondition_target_actor_and_recipient_or_session_scope
-    - for_send_exactly_one_authorized_actionable_email_for_queueing_prior_actionable_rows_zero
+    - all_C04_commands_complete_zero_active_sessions
+    - no_further_remote_write_or_provider_send_permission
   postcondition:
-    - planned_single_delta_and_unrelated_domain_provider_session_state_preserved
-  success_transition: separate_actual_checkpoint_and_docs_only_commit_before_next_mutation
+    - concrete_next_draft_render_delivery_scope_prepared_for_review
+  success_transition: request_only_new_prepared_scope
   failed_or_ambiguous_transition: stop_no_repeat_record_actual_state_then_only_granted_conditional_normal_logout
   forbidden_in_this_action:
-    - Browser_PDF_R2_write_deploy_config_change_or_unlisted_provider_operation
+    - all_remote_mutations
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -997,6 +997,28 @@ Docs-only validation: docs:check, release:scan, git diff --check. Unchanged
 runtime check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
 Full-manual-preview and production remain blocked. rollover_required: no;
 recommended_next_session_mode: High; the next granted action has known target, postcondition and containment.
+
+## C04 C04-A-logout actual checkpoint — 2026-09-07T13:08:38Z
+
+One A normal operation reconciled as success. Candidate
+4a8c02816ef12947d6bd748dc690dcb2f46cdbd0, version a255463d5707; Worker 242c1796e930, D1 ccdeb22bb2a1.
+Expected user result: zero active sessions; twelve prior sessions and all domain/provider state preserved.
+Actual checks: controlPreserved=true, unrelatedDataPreserved=true, sessionScope=true, auditCount=true, oldPhaseAuditsPreserved=true, nativeResponse=true, oneActorAudit=true, counters=true, onlyExpectedLogout=true.
+Native form/response and actual D1 evidence are stored privately; no repeated operation.
+
+Sessions total 14, active 0; cumulative C04 successful
+commands 13/13, provider-accepted notifications 4/4.
+Owner separately confirmed mailbox arrival of all four C04 notifications: two request.received and two request.decision. Evidence: tmp/contract-phase-08-owner/C04-mailbox-confirmation-safe.json.
+Read-only postcondition read 370 D1 rows, zero query writes. Evidence:
+tmp/contract-phase-08-owner/C04-A-logout-checkpoint-safe.json and indexed records.
+One next action: prepare-contract-draft-render-scope-readonly. Access and Cron pause/batch1 preserved;
+no repeat/resend/cancel/repair/rollback. Conditional logout remains limited to
+this package's new sessions after a failed/ambiguous checkpoint.
+
+Docs-only validation: docs:check, release:scan, git diff --check. Unchanged
+runtime check/build/full Vitest/E2E reuse exact reviewed 4a8c028 evidence.
+Full-manual-preview and production remain blocked. rollover_required: no;
+recommended_next_session_mode: Medium; only new-scope read-only preparation remains.
 
 ## C04 exact owner authorization — 2026-09-07T12:38:56Z
 
