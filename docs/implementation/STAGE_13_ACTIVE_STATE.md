@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T10:51:42Z
-reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
+updated_utc: 2026-09-07T11:12:02Z
+reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-synthetic-schedule-published
-next_gate: phase-5-contract-paused-config-remediation
+next_gate: phase-5-contract-paused-config-one-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-contract-C02a-form-failed-contained
+current_phase: phase-5-contract-paused-config-ready-GO
 last_atomic_action: C02a-login-form-load
 last_atomic_result: failed
-next_atomic_action: local-fix-and-regression-for-supervised-preview-config
+next_atomic_action: C00fix-one-reviewed-runtime-deploy
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Confirmed_bounded_config_P1_no_authorization_bypass_or_data_loss_local_remediation_needed
+mode_reason_plain: Exact_candidate_GO_tests_pass_target_postcondition_and_containment_known
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,38 +34,24 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: C00_C01_consumed_C02a_C03_C02z_granted_once_each_no_Browser_PDF_provider_or_other_scope
+permission_state: C00fix_one_deploy_granted_C02a_C03_C02z_granted_once_each_no_Browser_PDF_provider_or_other_scope
 review:
   status: independent_go
-  candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
-  last_independently_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  last_independently_reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   unresolved_candidate_p0: 0
-  unresolved_candidate_p1: 1
-  local_fix: P1-BOOTSTRAP-REGISTRATION-FINALIZATION-001_resolved_by_focused_regression
-  deployed_source_guard: baseline_predicate_unchanged_not_used_by_reviewed_out_of_band_cli
-  verdict_scope: prior_scoped_review_preserved_live_Paid_P1_login_now_successful_no_open_milestone_P1_from_incident
-  validation_policy: owner_requested_candidate_specific_scoped_gate_2026_09_04
-  mandatory_reviewer_tests: 8_tests_3_files_one_run
-  reviewer_validation: passed_8_of_8_in_one_run_at_2026_09_04T12_12_34Z
-  inspected_head: 3c386c3977b67faac42d33f15df09438e7350cd5
-  scope_verified: baseline_ancestor_one_executable_guard_one_new_test_file_other_paths_docs_only_clean_worktree
-  worker_deploy_required_for_cli_bootstrap: false_local_cli_renders_guard_and_executes_directly_against_pinned_d1
-  full_suite_expansion: only_if_pinned_scope_fails_or_concrete_unbounded_impact_is_demonstrated
+  unresolved_candidate_p1: 0
+  deployed_open_p1: P1-CONTRACT-PREVIEW-PAUSED-CONFIG-001_until_live_login_postcondition
+  verdict_scope: one_code_only_preview_deploy_config_bindings_secrets_schema_preserved
+  independent_reviewer: review_preview_pause
   local_validation:
     check: passed_0_errors_0_warnings
-    focused_unit_integration: 52_pass_across_9_files_including_one_repaired_test_harness_rerun
-    chromium_e2e: 2_of_2_affected_role_owner_csrf_scenarios
-    build: passed
-    full_release_gate: not_required_for_this_pinned_bounded_diff_previous_blanket_requirement_superseded
-    independent_review: passed_scoped_gate_2026_09_04
-  previous_candidate_release_evidence:
-    candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
-    check: passed
-    vitest: 78_files_580_pass_1_expected_windows_skip
+    full_vitest: 79_files_586_pass_0_fail_1_expected_Windows_skip
     chromium_e2e: 23_of_23
     build: passed
-    production_dependency_audit: 0_advisories
-    docs_continuity_release_scan_diff: passed
+    compiled_worker_smoke: login_200_inputs_present_anonymous_admin_401_health_503_outbound_0
+    independent_review: GO_no_new_P0_P1
+  previous_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 preview:
   access: enforced
   deployed_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
@@ -570,23 +556,38 @@ contract_template_login_form_failure:
   monitoring_side_effect: one_minute_bucket_two_errors_observed_before_counter_not_captured
   automatic_error_recording: recordWorkerError_on_500_in_src_worker_ts
   permission: C02a_login_POST_C03_install_C02z_logout_remain_granted_and_unconsumed
-  new_deploy_permission: not_granted
+  new_deploy_permission: granted_one_exact_reviewed_C00fix_after_tests_GO
   protected_evidence: tmp/contract-phase-08-owner/C02a-form-failed-checkpoint-safe.json
   containment: preserve_Access_Cron_pause_private_R2_no_reload_login_install_send_or_blind_retry
+contract_paused_config_remediation:
+  utc: 2026-09-07T11:12:02Z
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  result: local_fix_full_release_gate_and_independent_GO_complete
+  runtime_diff: constrained_supervised_preview_config_exception_production_and_provider_guards_retained
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_prior_version_7c1bae246b7f
+  code_sha256: 9ee23a7509999d31516f5dc063c79f7ccfbc449ac735952cc6b4318cfc81d309
+  code_bytes: 3428899
+  config_sha256: b2805d2b39115220482ade660cf4de7a93d6db8f42c3383b51d824eda18fe9c6
+  plan_sha256: 444f24ea0c8f23a967b90ee1bf88594fd2673fe1cd0cd54bdb089355b6d4d49d
+  scope: one_code_deploy_no_config_bindings_secrets_schema_change
+  protected_evidence: tmp/contract-phase-08-owner/paused-config-deploy-owner-approval.json_and_paused-config-review-safe.json_and_paused-config-release-safe.json
+  containment: preserve_Access_Cron_pause_batch1_private_R2_no_automatic_repeat_or_rollback
 next_atomic_action:
-  id: local-fix-and-regression-for-supervised-preview-config
-  permission: local_remediation_and_readonly_evidence_only_existing_C02a_C03_C02z_scope_retained
-  target: local_runtime_config_and_direct_consumers_preview_target_unchanged
-  mutation: none_remote
+  id: C00fix-one-reviewed-runtime-deploy
+  permission: owner_explicitly_granted_once_after_successful_checks_and_independent_GO
+  target: preview_worker_242c1796e930_same_resources_D1_ccdeb22bb2a1
+  mutation: one_strict_deploy_exact_reviewed_code_all_existing_settings_preserved
   preconditions:
-    - reproducible_P1_blocks_mandatory_contract_preview_flow
-    - current_deployed_config_and_schema_preserved
+    - clean_docs_only_descendant_of_reviewed_candidate_exact_bundle_config_and_live_target
+    - read_only_preflight_single_prior_version_100_percent_private_R2_Access_exact_D1_baseline
   postcondition:
-    - bounded_local_fix_and_relevant_regression_evidence_prepared_for_reviewable_deploy_scope
-  success_transition: exact_candidate_review_and_separate_deploy_scope_before_remote_write
-  failed_or_ambiguous_transition: continue_local_diagnosis_keep_remote_containment
+    - new_single_version_100_percent_exact_module_settings_and_annotation
+    - cookie_free_login_200_with_form_health_503_Access_enforced
+    - domain_sessions_providers_cadences_and_error_counters_preserved
+  success_transition: separate_docs_only_checkpoint_commit_before_C02a_owner_entered_normal_login
+  failed_or_ambiguous_transition: read_only_reconcile_record_containment_no_repeat_or_automatic_rollback
   forbidden_in_this_action:
-    - remote_deploy_config_change_login_install_or_provider_send
+    - config_schema_secret_binding_change_provider_send_template_install_or_new_session
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -594,6 +595,33 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08A paused-config candidate / review and deploy authorization — 2026-09-07T11:12:02Z
+
+Candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 fixes the reproduced login P1 with one constrained runtime
+config exception. Full release checks passed: check 0/0, build, 79 Vitest files
+(586 passed, one expected Windows skip), and all 23 Chromium E2E. The initial
+regression assertion named the wrong existing allowlist error and was corrected;
+the initial E2E run failed at browser launch, then matching Chromium was installed
+locally and the full run passed. Compiled Worker smoke with exact plain-text
+preview config returns login 200, anonymous admin 401 and paused health 503;
+outbound calls zero. This local smoke does not claim real Browser/provider flow.
+
+Independent read-only reviewer review_preview_pause returned GO, new P0/P1 zero.
+The owner explicitly approved one exact code-only preview deploy after these
+gates, actual postcondition and checkpoint before the already approved
+C02a/C03/C02z. Config, bindings, secrets, schema, Cron pause and batch1 remain
+unchanged. Strict dry-run module is 3428899 bytes, SHA-256
+9ee23a7509999d31516f5dc063c79f7ccfbc449ac735952cc6b4318cfc81d309.
+Protected plan, approval, review and release evidence are indexed above.
+
+One next action is C00fix exact deploy after read-only immediate preflight.
+No remote mutation occurred during local remediation/review. If the deploy fails
+or is ambiguous, preserve Access and Cron pause, reconcile and checkpoint;
+no repeat or automatic rollback. Prior version is containment only and would
+restore the known login defect. Full-manual-preview and production remain blocked.
+rollover_required: no; recommended_next_session_mode: High because target,
+procedure, postcondition and containment are known.
 
 ## Prompt 08A login-form P1 / actual failed checkpoint — 2026-09-07T10:51:42Z
 

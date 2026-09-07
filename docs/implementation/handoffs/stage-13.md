@@ -10,7 +10,7 @@
 > status/SHA/next-action ниже являются историческими снимками и никогда не
 > переопределяют active state. Обновлять его только на границе фазы/сессии.
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 438a51399ac5f58b428b624c52ca2cbbc059ae9c -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 -->
 
 Последний сохранённый phase-boundary record: exact D1-cost remediation candidate
 получил independent GO с `P0/P1 = 0`; production остаётся **NO-GO**. Текущее
@@ -18,6 +18,15 @@
 повторяются.
 
 ## Append-only evidence history
+
+### Paused-contract preview config remediation — 2026-09-07T11:12:02Z
+
+Candidate 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 received independent GO after check/build,
+586 passing tests (one expected Windows skip), 23 Chromium E2E and compiled
+Worker login smoke. Owner granted one exact preview deploy with unchanged
+config/bindings/schema and checkpoint before prior C02a/C03/C02z. Deployment
+not yet attempted at this boundary; actual status is solely in active state.
+Production and full-manual-preview gates remain blocked.
 
 ### Finite Prompt 06B prepared — 2026-09-04
 
