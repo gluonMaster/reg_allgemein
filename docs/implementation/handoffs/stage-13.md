@@ -4310,3 +4310,25 @@ already prepared C02a/C03/C02z scope unless the owner explicitly supplies it the
 rollover_required: no as a risk assessment; the owner chooses a new session for
 readability. recommended_next_session_mode: Medium for read-only/scope, High after
 authorization for planned execution.
+
+## Prompt 08A continuation / scope handoff — 2026-09-07T10:11:05Z
+
+Fresh read-only reconciliation at HEAD 5270b78 confirmed the existing plan hash,
+four exact v1 bundles (500443 bytes), unchanged deployed version 7c1bae246b7f
+and settings, enforced Access and distinct private EU R2. Seven SELECTs read
+68 rows and wrote zero; exact scoped D1 data matches the previous plan baseline,
+including eleven revoked sessions and empty template/actionable-email scope.
+Existing machine-local DPAPI access is usable; expected paused-Cron health 503
+was confirmed. No remote mutation, application session, render or send occurred.
+
+Evidence: tmp/contract-phase-08-owner/continue-08a-20260907101049474-safe.json and
+matching observation/health files. No old generator or consumed phase was rerun.
+The ignored read-only helper passed node --check; documentation validation is
+docs:check, release:scan and diff check. Full runtime/E2E/review evidence remains
+inherited from the exact candidates in [active state](../STAGE_13_ACTIVE_STATE.md).
+
+One next action: request the prepared C02a normal A login, C03 four-template
+installation and C02z logout scope. It is still ungranted; continuation alone
+does not grant it. Preserve Access, Cron pause and bounded synthetic state.
+rollover_required: no; recommended_next_session_mode: Medium until scope, then
+High for the already specified execution and checkpoint procedure.

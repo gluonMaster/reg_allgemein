@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-06T22:45:50Z
+updated_utc: 2026-09-07T10:11:05Z
 reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 local_remediation_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 last_completed_gate: phase-5-contract-synthetic-schedule-published
@@ -525,6 +525,24 @@ contract_template_install_preparation:
   browser_PDF_email_calls: 0_0_0
   permission: not_granted_C02a_C03_C02z
   containment: stop_after_one_install_attempt_preserve_zero_to_four_private_JSON_objects_intents_Cron_pause_readonly_reconcile_all_four_families_no_delete_repair_restore_or_retry
+contract_template_install_continuation:
+  utc: 2026-09-07T10:11:05Z
+  result: success_readonly
+  inspected_head: 5270b78a2f64365989811e5c9e46b6cd88b61a96
+  source_candidate: 0db38842524ebc146eaa56a9d089e3c3484bf0f3
+  target: preview_worker_242c1796e930_D1_ccdeb22bb2a1_archive_3996cebdabb0_version_7c1bae246b7f
+  plan_sha256: 3851ad7dca9071b00dc58414ff1297517ddbdab77a2868e28fc972ab862e9c4f
+  plan_and_four_prepared_bundles: exact_hashes_and_500443_bytes_preserved_no_regeneration
+  settings_source_Access_private_R2: exact_no_drift
+  sessions: eleven_revoked_zero_active
+  template_scope_and_actionable_email: empty_exact_prior_baseline
+  local_Access_credential: readable_existing_DPAPI_health_HEAD_503_expected_Cron_paused
+  D1_SELECTs_rows_read_writes: 7_68_0
+  D1_changes_changed_db: 0_false
+  remote_mutations_Browser_calls_provider_sends: 0_0_0
+  permission: pending_C02a_C03_C02z_continuation_request_does_not_grant_scope
+  protected_evidence: tmp/contract-phase-08-owner/continue-08a-20260907101049474-safe.json
+  containment: preserve_Access_Cron_pause_published_synthetic_schedule_no_remote_write
 next_atomic_action:
   id: request-bounded-admin-login-four-template-install-and-logout-scope
   permission: local_readonly_plan_complete_new_remote_scope_pending
@@ -546,6 +564,35 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 08A continuation read-only checkpoint — 2026-09-07T10:11:05Z
+
+Resumed at clean HEAD 5270b78a2f64365989811e5c9e46b6cd88b61a96. The existing
+template-install plan SHA-256 and all four prepared v1 bundle hashes/sizes
+matched (500443 bytes total); no plan or bundle was regenerated. Fresh live
+control confirmed one version 7c1bae246b7f at 100%, exact settings, Access HEAD
+302 and both distinct private EU buckets. Login/install source still matches
+deployed 0db3884 with the already reviewed 438a513 role-guard exception.
+
+Seven bounded SELECTs read 68 rows with zero writes/changes and changed_db=false.
+Their exact scoped result equals the previous plan baseline: eleven revoked
+sessions, two published groups/current sessions, empty template/install scope,
+zero offers/artifacts/renders/contracts and no actionable email. The existing
+local DPAPI credential is readable; authorized operations-health HEAD returned
+the expected 503/no-store/noindex while Cron remains paused. No application
+session, mutation, Browser render, R2 write or provider send was attempted.
+
+Protected evidence: tmp/contract-phase-08-owner/continue-08a-20260907101049474-safe.json,
+with matching observation and health files. The new ignored read-only helper
+passed node --check; old generators and consumed C00/C01 operations were not run.
+Tracked changes are documentation only: docs:check, release:scan and diff check
+apply. Full check/test/build/Chromium and independent review remain inherited
+from the exact candidates recorded above; no runtime/config/migration changed.
+
+One next action remains the prepared C02a/C03/C02z permission request. Preserve
+Access, paused Cron and the published synthetic schedule until scope is granted.
+rollover_required: no; recommended_next_session_mode: Medium for scope/read-only,
+then High for the known execution procedure after authorization.
 
 ## Prompt 08 template installation plan / C01 phase boundary — 2026-09-06T22:45:50Z
 
