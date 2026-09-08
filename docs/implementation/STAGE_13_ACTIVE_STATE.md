@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:25:20Z
+updated_utc: 2026-09-08T15:28:34Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -16,10 +16,10 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-held-backlog-disposition-complete
 last_atomic_action: TG09-A-logout
 last_atomic_result: success
-next_atomic_action: prepare-restricted-Telegram-enablement-readonly
+next_atomic_action: obtain-restricted-Telegram-enablement-authorization
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Held_row_cancelled_and_session_revoked_next_local_readonly_restricted_enablement_plan
+mode_reason_plain: Restricted_enablement_and_disable_containment_locally_prepared_next_owner_authorization_no_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -901,17 +901,34 @@ telegram_held_disposition:
   all_postcondition_checks_passed: true
   evidence: tmp/telegram-phase-09-owner/TG09-A-logout-checkpoint-safe.json_and_before_after_response_control
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_preserved_history_exact_session_logout
+telegram_enablement_proposal:
+  prepared_utc: 2026-09-08T15:28:34Z
+  authorized: false
+  source_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  exact_module_sha256: 9ee23a7509999d31516f5dc063c79f7ccfbc449ac735952cc6b4318cfc81d309
+  target: Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
+  protected_plan: tmp/telegram-phase-09-owner/enable-plan-private.json_and_enable-plan-safe.json
+  prepared_configs: tmp/telegram-phase-09-owner/enable-proposed.toml_and_enable-contained.toml
+  strict_local_dry_runs: 2_both_exact_deployed_module_hash
+  root_config_restored: true
+  credentials_loaded_remote_mutations_provider_sends: 0_0_0
+  proposed_secret_operations: separate_exact_existing_Worker_PUTs_for_TELEGRAM_BOT_TOKEN_then_TELEGRAM_CHAT_ID
+  proposed_config_operation: one_same_module_deploy_eight_restricted_vars_only
+  postcondition: exact_returned_version100percent_module_target_secret_presence_expected_flags_and_preserved_D1_sessions_provider_state
+  disable_containment: same_module_only_TELEGRAM_PROVIDER_disabled_other_restrictive_flags_kept_history_and_secrets_preserved
+  future_send_gate: real_independent_deployment_observer_and_different_human_reviewer_official_target_preflight_separate_prepare_and_ONE_send_permissions_business_window
+  local_finalization_correction: numeric_bot_fingerprint_input_converted_to_string_after_both_green_dry_runs_no_bundle_rerun_or_remote_attempt
 next_atomic_action:
-  id: prepare-restricted-Telegram-enablement-readonly
+  id: obtain-restricted-Telegram-enablement-authorization
   permission: local_readonly_preparation_only_remote_enablement_not_yet_authorized
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_held_row_d906ae9c7f6c
-  mutation: none_local_readonly_plan_only
+  mutation: none_owner_approval_step_only_proposed_E1_token_E2_chat_E3_config_each_separately_checkpointed
   preconditions:
     - preceding_actual_postcondition_success_and_docs_only_checkpoint_committed
     - exact_candidate_Access_and_disabled_provider_Cron_pause_preserved
   postcondition:
-    - exact_minimal_restricted_config_delta_postcondition_and_disable_containment_prepared
-    - no_enablement_prepare_provider_send_without_separate_owner_permission
+    - owner_approves_only_two_exact_secret_writes_one_restricted_config_deploy_and_narrow_disable_containment
+    - no_synthetic_prepare_or_provider_send_permission_implied
   containment: preserve_Access_disabled_Telegram_Cron_pause_batch1_all_history_and_no_blind_retry
   forbidden_in_this_action:
     - provider_send_secret_config_deploy_delete_direct_SQL_write_or_Cron_restore
@@ -922,6 +939,50 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 restricted enablement proposal prepared — 2026-09-08T15:28:34Z
+
+After successful held-row cancellation/logout, two strict local Wrangler dry
+runs produced the exact deployed module hash for both proposed enabling config
+and narrow disable containment. The root ignored config was restored byte for
+byte. No secret values were loaded, no remote mutation or send occurred. A local
+plan-finalization type error occurred after both successful dry runs; numeric bot
+ID fingerprint input was corrected to string, saved bundles were hash-verified,
+and only local plan finalization was resumed. Original stop evidence is retained.
+
+The exact existing preview Worker and verified dedicated private supergroup are
+bound in protected enable-plan-private.json. E1 adds only TELEGRAM_BOT_TOKEN,
+E2 adds only TELEGRAM_CHAT_ID through separate existing-Worker secret PUTs;
+Telegram remains disabled during both. Each attempt needs an actual read-back
+and docs-only commit before the next operation. No CLI auto-create fallback,
+bulk write or blind retry is proposed. E3 deploys the same module with this delta:
+
+| Variable | Before | Proposed |
+| --- | --- | --- |
+| AUTH_PUBLIC_ENABLED | true | false |
+| CONTRACT_SEND_ENABLED | true | false |
+| EMAIL_PROVIDER | resend | disabled |
+| TELEGRAM_PROVIDER | disabled | bot_api |
+| TELEGRAM_CHAT_TYPE | absent | supergroup |
+| TELEGRAM_BOT_API_TIMEOUT_MS | absent | 10000 |
+| TELEGRAM_MAX_ATTEMPTS | 5 | 1 |
+| TELEGRAM_ACTIVATION_AT | absent | 2026-09-08T15:28:34Z |
+
+Postcondition: one returned version at 100 percent, exact reviewed module,
+expected secret names and only approved flag delta, same target/bindings/Access,
+Cron=false and batch1, no session/domain/provider delta. Narrow containment is
+the prevalidated same-module config with only Telegram returned to disabled,
+keeping the restrictive auth/email/contract flags and all history/secrets.
+Rollback to an older broader configuration is not proposed.
+
+Next action is separate owner authorization for E1/E2/E3 and this narrow disable
+containment. No synthetic row or provider send is included. Real independent
+observer/reviewer evidence, official clean-candidate target/preflight, separate
+prepare and ONE-send permissions, and the unchanged Berlin business window
+remain later gates. Runtime code and full test/review evidence are unchanged;
+only docs:check, release:scan and git diff --check apply to this local plan note.
+rollover_required: no; recommended_next_session_mode: Medium while awaiting
+authorization; use High for the known authorized enabling operations.
 
 ## Prompt 09 TG09-A-logout: success — 2026-09-08T15:25:20.239Z
 
