@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:43:05Z
+updated_utc: 2026-09-08T15:45:39Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -14,9 +14,9 @@ manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-5-telegram-enablement-authorized-with-functional-return
-last_atomic_action: TG09-A-logout
+last_atomic_action: TG09-E1-token
 last_atomic_result: success
-next_atomic_action: TG09-E1-token
+next_atomic_action: TG09-E2-chat
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Known_authorized_exact_secret_add_preserves_existing_features_with_readback_and_containment
@@ -55,13 +55,13 @@ review:
 preview:
   access: enforced
   deployed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-  deployed_fingerprint: a255463d5707
+  deployed_fingerprint: bb62de3bbf30
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
-  bindings_and_feature_gates_unchanged: true_exact_C00_settings_preserved_by_code_only_fix
-  deployment_postcondition: success_exact_new_module_single_version_100_percent_login_200_health_503_no_domain_session_provider_monitoring_delta
-  latest_readonly_control_utc: 2026-09-07T16:27:07.404Z
+  bindings_and_feature_gates_unchanged: original_feature_gates_preserved_only_expected_Telegram_secret_additions
+  deployment_postcondition: TG09-E1-token_success_exact_module_single100percent_secret_presence_and_preserved_domain_sessions_provider_state
+  latest_readonly_control_utc: 2026-09-08T15:45:39.729Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
@@ -919,9 +919,9 @@ telegram_enablement_proposal:
   future_send_gate: real_independent_deployment_observer_and_different_human_reviewer_official_target_preflight_separate_prepare_and_ONE_send_permissions_business_window
   local_finalization_correction: numeric_bot_fingerprint_input_converted_to_string_after_both_green_dry_runs_no_bundle_rerun_or_remote_attempt
 telegram_enablement_progress:
-  latest_utc: 2026-09-08T15:43:05.588Z
-  result: authorized_local_preflight_passed
-  action: enablement-approval-readonly-preflight
+  latest_utc: 2026-09-08T15:45:39.729Z
+  result: success
+  action: TG09-E1-token
   owner_approval: tmp/telegram-phase-09-owner/enable-owner-approval.json
   owner_condition: temporary_isolation_must_return_to_working_full_manual_preview_not_disabled_handoff
   functional_return_configs: restore-after-smoke_restore-if-held_full-manual-preview_in_protected_Telegram_evidence
@@ -930,19 +930,19 @@ telegram_enablement_progress:
   provider_send_and_prepare_authorization: not_granted
   scheduler_return: required_after_terminal_send_and_bounded_review_of_due_jobs_holds_recipients_and_cleanup_targets
   timing: enter_E3_only_when_send_prerequisites_and_business_window_allow_prompt_completion
-  actual_Telegram_secret_presence: absent_absent
+  actual_Telegram_secret_presence: true_false
   actual_existing_functions: AUTH_PUBLIC_true_CONTRACT_SEND_true_EMAIL_PROVIDER_resend
   actual_Telegram_Cron: disabled_false
   actual_sessions_active_Telegram_attempts_unknown: 0_0_0
-  evidence: tmp/telegram-phase-09-owner/enable-ready-safe.json_and_enable-owner-approval-safe.json
-  query_reads_writes: 405_0
+  evidence: tmp/telegram-phase-09-owner/TG09-E1-token-checkpoint-safe.json_and_before_after_control_database_response
+  query_reads_writes: 379_0
   provider_sends: 0
   containment: preserve_existing_functions_Access_Cron_pause_Telegram_disabled_and_all_evidence_no_blind_retry
 next_atomic_action:
-  id: TG09-E1-token
+  id: TG09-E2-chat
   permission: clarified_enablement_and_functional_return_authorized_no_synthetic_prepare_or_provider_send
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: one_exact_existing_preview_Worker_secret_PUT_TELEGRAM_BOT_TOKEN
+  mutation: one_exact_existing_preview_Worker_secret_PUT_TELEGRAM_CHAT_ID
   preconditions:
     - committed_preceding_checkpoint_exact_target_candidate_and_provider_identity
     - existing_auth_email_contract_features_preserved_Cron_paused_no_active_or_unknown_Telegram_rows
@@ -959,6 +959,14 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 TG09-E1-token checkpoint — 2026-09-08T15:45:39Z
+
+One exact existing-Worker secret PUT was attempted for TELEGRAM_BOT_TOKEN. Actual postcondition result: success. Returned secret name/type, deployed secret presence, exact module, single-version100percent traffic, preserved other settings/bindings/Access and unchanged bounded domain/session/provider state were checked. Protected before/after control/database and safe response are in tmp/telegram-phase-09-owner/TG09-E1-token records. Version fingerprint a255463d5707 -> bb62de3bbf30; 379 SELECT reads, zero query writes, no provider sends. Public auth, contract sending and email provider remain at their original enabled values; Telegram and Cron remain disabled. No secret value is printed or tracked. 
+
+One next action: TG09-E2-chat. Checks: local helper syntax, actual bounded postcondition, docs:check, release:scan and git diff --check. Unchanged runtime full gates are inherited from exact 4a8c028; no full suite/build/review repeated. No full-manual-preview or production completion is claimed.
+rollover_required: no; recommended_next_session_mode: High — known approved next secret operation.
+
 
 ## Prompt 09 clarified enablement approval — 2026-09-08T15:43:05Z
 
