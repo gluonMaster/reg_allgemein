@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:28:34Z
+updated_utc: 2026-09-08T15:43:05Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-telegram-held-backlog-disposition-complete
+current_phase: phase-5-telegram-enablement-authorized-with-functional-return
 last_atomic_action: TG09-A-logout
 last_atomic_result: success
-next_atomic_action: obtain-restricted-Telegram-enablement-authorization
+next_atomic_action: TG09-E1-token
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Restricted_enablement_and_disable_containment_locally_prepared_next_owner_authorization_no_remote_write
+recommended_next_session_mode: High
+mode_reason_plain: Known_authorized_exact_secret_add_preserves_existing_features_with_readback_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: TG09_login_exact_held_cancel_logout_consumed_no_Telegram_enablement_prepare_send_permission
+permission_state: TG09_E1_E2_E3_and_narrow_containment_authorized_with_required_functional_return_no_synthetic_prepare_or_provider_send_permission
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -903,7 +903,7 @@ telegram_held_disposition:
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_preserved_history_exact_session_logout
 telegram_enablement_proposal:
   prepared_utc: 2026-09-08T15:28:34Z
-  authorized: false
+  authorized: true
   source_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   exact_module_sha256: 9ee23a7509999d31516f5dc063c79f7ccfbc449ac735952cc6b4318cfc81d309
   target: Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
@@ -918,20 +918,40 @@ telegram_enablement_proposal:
   disable_containment: same_module_only_TELEGRAM_PROVIDER_disabled_other_restrictive_flags_kept_history_and_secrets_preserved
   future_send_gate: real_independent_deployment_observer_and_different_human_reviewer_official_target_preflight_separate_prepare_and_ONE_send_permissions_business_window
   local_finalization_correction: numeric_bot_fingerprint_input_converted_to_string_after_both_green_dry_runs_no_bundle_rerun_or_remote_attempt
+telegram_enablement_progress:
+  latest_utc: 2026-09-08T15:43:05.588Z
+  result: authorized_local_preflight_passed
+  action: enablement-approval-readonly-preflight
+  owner_approval: tmp/telegram-phase-09-owner/enable-owner-approval.json
+  owner_condition: temporary_isolation_must_return_to_working_full_manual_preview_not_disabled_handoff
+  functional_return_configs: restore-after-smoke_restore-if-held_full-manual-preview_in_protected_Telegram_evidence
+  return_strict_dry_runs: 3_all_exact_deployed_module_hash
+  authorization: E1_token_E2_chat_E3_restricted_config_narrow_containment_and_required_previously_working_functions_return
+  provider_send_and_prepare_authorization: not_granted
+  scheduler_return: required_after_terminal_send_and_bounded_review_of_due_jobs_holds_recipients_and_cleanup_targets
+  timing: enter_E3_only_when_send_prerequisites_and_business_window_allow_prompt_completion
+  actual_Telegram_secret_presence: absent_absent
+  actual_existing_functions: AUTH_PUBLIC_true_CONTRACT_SEND_true_EMAIL_PROVIDER_resend
+  actual_Telegram_Cron: disabled_false
+  actual_sessions_active_Telegram_attempts_unknown: 0_0_0
+  evidence: tmp/telegram-phase-09-owner/enable-ready-safe.json_and_enable-owner-approval-safe.json
+  query_reads_writes: 405_0
+  provider_sends: 0
+  containment: preserve_existing_functions_Access_Cron_pause_Telegram_disabled_and_all_evidence_no_blind_retry
 next_atomic_action:
-  id: obtain-restricted-Telegram-enablement-authorization
-  permission: local_readonly_preparation_only_remote_enablement_not_yet_authorized
-  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_held_row_d906ae9c7f6c
-  mutation: none_owner_approval_step_only_proposed_E1_token_E2_chat_E3_config_each_separately_checkpointed
+  id: TG09-E1-token
+  permission: clarified_enablement_and_functional_return_authorized_no_synthetic_prepare_or_provider_send
+  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
+  mutation: one_exact_existing_preview_Worker_secret_PUT_TELEGRAM_BOT_TOKEN
   preconditions:
-    - preceding_actual_postcondition_success_and_docs_only_checkpoint_committed
-    - exact_candidate_Access_and_disabled_provider_Cron_pause_preserved
+    - committed_preceding_checkpoint_exact_target_candidate_and_provider_identity
+    - existing_auth_email_contract_features_preserved_Cron_paused_no_active_or_unknown_Telegram_rows
   postcondition:
-    - owner_approves_only_two_exact_secret_writes_one_restricted_config_deploy_and_narrow_disable_containment
-    - no_synthetic_prepare_or_provider_send_permission_implied
-  containment: preserve_Access_disabled_Telegram_Cron_pause_batch1_all_history_and_no_blind_retry
+    - only_one_expected_secret_name_added_same_module_and_other_settings_no_D1_session_provider_delta
+    - readback_and_docs_only_checkpoint_before_next_remote_operation
+  containment: preserve_Access_original_working_features_Cron_pause_Telegram_disabled_secrets_and_history
   forbidden_in_this_action:
-    - provider_send_secret_config_deploy_delete_direct_SQL_write_or_Cron_restore
+    - provider_send_synthetic_prepare_delete_direct_SQL_write_or_unreviewed_Cron_catchup
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -939,6 +959,16 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 clarified enablement approval — 2026-09-08T15:43:05Z
+
+Owner explicitly approved the enabling plan after clarification that temporary isolation must end in a working manual preview. Protected enable-owner-approval.json records this condition and three exact same-module return configs: restore original auth/email/contract flags after successful smoke; restore them with Telegram disabled if smoke is deferred/failed; final automatic preview config after review of every due job/hold/recipient/cleanup target. All three strict local dry runs match the deployed module; root config was restored. This does not authorize synthetic prepare or a provider send.
+
+Fresh four-method Telegram reads bind the expected bot/private supergroup/posting right/no webhook. Full bounded control confirms the exact candidate/module/version/Access, 26 migrations, no active sessions or Telegram backlog/attempts/unknowns; 405 D1 reads, zero writes. E1 and E2 can now save secrets while all existing functions remain enabled. E3 stays authorized but is entered only when the one-message prerequisites and unchanged Berlin Mo-Fr09-17 window permit prompt completion; do not leave unrelated functions disabled while awaiting external input.
+
+One next action: TG09-E1-token. Checks: local helper syntax, actual bounded postcondition, docs:check, release:scan and git diff --check. Unchanged runtime full gates are inherited from exact 4a8c028; no full suite/build/review repeated. No full-manual-preview or production completion is claimed.
+rollover_required: no; recommended_next_session_mode: High — known approved next secret operation.
+
 
 ## Prompt 09 restricted enablement proposal prepared — 2026-09-08T15:28:34Z
 
