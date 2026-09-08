@@ -902,7 +902,7 @@ full-suite exact ancestor можно использовать как inherited e
   используют только fake fetch/provider;
 - только после отдельного разрешения — один real Telegram `bot_api` preview smoke
   в dedicated preview channel с синтетическим минимизированным payload:
-  ignored target manifest, independent ≤24h deployment observation, clean exact
+  ignored target manifest, separate actual ≤24h deployment observation, clean exact
   Git SHA и deployed Worker version; keyed bot/chat binding; read-only
   identity/chat/rights/no-webhook preflight; disarmed `max_attempts=1` normal-
   outbox row; exact-cohort atomic claim, concurrent run/ordinary-cron exclusion,
@@ -911,6 +911,12 @@ full-suite exact ancestor можно использовать как inherited e
   retry. Если send не разрешён/не начался, D1-only abort доказывает `cancelled`,
   zero attempts и no provider ID. Local suites используют fake provider/D1 и не
   являются external smoke;
+- для preview одного владельца по разделу 3.1
+  [runbook](../operations/OPERATIONS_RUNBOOK.md) evidence различает технического
+  observer и owner reviewer, связывает фактическую API-сверку с подтверждённым
+  владельцем адресатом/scope и не приписывает проверку второму человеку.
+  Совпадающие роли/вымышленные подтверждения или один локальный config не
+  закрывают target gate; действующие exact-target/provider проверки сохраняются;
 - если authorized `run` завершился после `dispatch_started` без terminal
   evidence, не повторять его: после exact lease expiry D1-only reconcile без
   Telegram secrets/provider path должен доказать `delivery_unknown`, one attempt

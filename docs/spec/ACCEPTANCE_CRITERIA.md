@@ -846,6 +846,13 @@ MVP готов, когда:
   provider reference либо `delivery_unknown` без retry; local fake success или
   ambiguity не являются внешним evidence и не доказывают оба исхода.
   (`MSG-05`, `MSG-06`, `REL-02`)
+- Для Access-protected synthetic preview одного владельца не требуется второй
+  человек: подтверждение владельцем dedicated bot/private destination и scope
+  связывается с фактической read-only технической сверкой deployment/target по
+  разделу 3.1 [runbook](../operations/OPERATIONS_RUNBOOK.md). Observer и owner
+  reviewer имеют разные правдивые идентификаторы; автоматическая проверка не
+  выдаётся за независимую человеческую. Ни разрешение на send, ни реальные
+  provider postconditions этим не заменяются. (`SYS-04`, `MSG-07`)
 - Если provider dispatch не начинался, D1-only smoke abort без Telegram secret/
   preflight/provider call атомарно отменяет только exact prepared `pending` или
   partial `processing` cohort с нулём delivery attempts, записывает append-only

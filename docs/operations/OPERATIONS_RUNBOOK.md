@@ -415,10 +415,32 @@ any unresolved unknown/dead row or eligible historical backlog is a stop.
 preview Worker/account/D1/origin, fail-closed flags, `bot_api` settings,
 `TELEGRAM_ACTIVATION_AT`, resulting clean Git SHA и observed deployed Worker
 version. Deployment observer и manifest reviewer обязаны различаться; observation
-не старше 24 часов. Оба JSON остаются ignored, не могут быть symlink и должны
+не старше 24 часов. Для изолированного synthetic preview одного владельца
+допускается порядок «владелец + технический observer», описанный ниже; второй
+человек для него не требуется. Оба JSON остаются ignored, не могут быть symlink и должны
 иметь owner-only POSIX mode либо Windows ACL без Everyone/Authenticated Users/
 Users allow. Manifest хранит только HMAC-SHA-256 chat/bot bindings; ключ
 `TELEGRAM_TARGET_BINDING_KEY`, bot token и exact chat остаются environment-only.
+
+**Preview одного владельца (`SYS-04`/`OQ-036`).** Владелец выбирает dedicated
+preview bot/private destination, подтверждает отсутствие реальных клиентов и
+разрешённый scope. Технический observer (агент или автоматизированный verifier)
+отдельным read-only запросом сверяет фактическую deployed version, candidate,
+bindings и конфигурацию, затем сопоставляет Bot API identity/type/rights с
+выбранным владельцем адресатом. Вывод deploy-команды или локальный config не
+заменяют это наблюдение. Protected evidence сохраняет время, источники проверки
+и ссылку на фактическое подтверждение владельца; результат не объявляется
+независимой проверкой второго человека.
+
+`observedBy` обозначает реального технического observer, `reviewedBy` —
+владельца, подтвердившего адресата и scope. Это разные участники с честно
+указанными ролями, а не два вымышленных имени одного человека. Технические поля
+manifest проверяет observer; запись не приписывает владельцу выполненную им
+проверку кода или инфраструктуры. Агент может выполнить local writers от имени
+этих участников на основании уже полученных evidence/подтверждений. Изменение
+бота, адресата или scope требует новой соответствующей сверки. Этот порядок
+ограничен Access-protected preview на синтетических данных и не меняет
+production approvals, отдельное разрешение на ONE send или запрет blind retry.
 
 Read-only target/preflight sequence после отдельных разрешений:
 
@@ -426,7 +448,8 @@ Independent deployment observer получает exact deployed Worker version �
 read-only Cloudflare dashboard/API evidence после отдельно разрешённого deploy и
 создаёт `imports/telegram-preview-deployment-evidence.json` с exact keys
 `schemaVersion,purpose,accountId,workerName,workerVersionId,candidateGitCommitSha,observedAt,observedBy`.
-Внешнее наблюдение остаётся независимой ручной сверкой, а local writer только
+Внешнее наблюдение выполняется отдельной ручной сверкой либо техническим
+observer по порядку preview одного владельца выше; local writer только
 валидирует и записывает уже наблюдённые значения: observer через утверждённый
 protected environment injection задаёт `APP_ENV=preview`,
 `TELEGRAM_DEPLOYMENT_ACCOUNT_ID`, `TELEGRAM_DEPLOYMENT_WORKER_NAME`,
@@ -440,8 +463,9 @@ npm run telegram:deployment-evidence:create -- --environment preview --confirmat
 
 Writer не обращается к Cloudflare и не превращает operator input в доказательство
 remote truth: source остаётся read-only Cloudflare dashboard/API, а реальный
-external evidence gate закрывается только независимым наблюдением. Reviewer
-(другой человек) через protected environment injection задаёт `APP_ENV=preview`,
+external evidence gate закрывается только фактическим наблюдением по указанному
+выше порядку. Reviewer (другой человек при ручной сверке либо владелец при
+техническом observer) через protected environment injection задаёт `APP_ENV=preview`,
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_CHAT_TYPE`,
 `TELEGRAM_TARGET_BINDING_KEY`, `TELEGRAM_TARGET_REVIEWED_AT` и
 `TELEGRAM_TARGET_REVIEWED_BY`, затем создаёт manifest без identifiers/secrets в

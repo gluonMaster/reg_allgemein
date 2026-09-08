@@ -4578,3 +4578,21 @@ rollover_required: no; recommended_next_session_mode: Medium.
 Owner approved enabling after clarification that temporary isolation must end in a fully functional manual preview. Return-after-success, return-if-held and operational configs were prepared; all strict local dry runs match the exact deployed module. E1 token and E2 chat secret PUTs passed separate actual control/D1 checks and docs checkpoints. Both protected secrets are present; public auth/email/contracts retain their previously enabled values. Telegram and Cron remain disabled, all sessions revoked, cancelled historical row preserved, zero Telegram attempts/unknowns.
 
 Protected evidence: tmp/telegram-phase-09-owner/enable-owner-approval.json, enable-ready-safe.json and TG09-E1-token/TG09-E2-chat before/after/control/response/checkpoint-safe records. E3 remains authorized but is timed to the actual one-message procedure so unrelated features are not left disabled awaiting input or a closed business window. Synthetic prepare/provider send remain separately gated; return to functioning services and verified automatic queues is mandatory before owner handoff. See [active state](../STAGE_13_ACTIVE_STATE.md). Status-only checks passed; full runtime gates inherited. rollover_required: no; recommended_next_session_mode: Medium.
+
+## Preview sole-operator clarification — 2026-09-08
+
+Owner operates alone and requires parent-originated events, out-of-hours queue
+and automatic delivery. The second-human gate blocked that operator milestone.
+Runbook 3.1 now permits the owner plus an actual read-only technical observer for
+isolated synthetic preview, with truthful distinct identities and evidence; no
+independent human review may be invented. Acceptance/test-plan/owner-guide changes
+follow the canonical rule. Existing owner target/scope confirmations are retained;
+no official artifact or new owner review was fabricated. Provider-send permission,
+production approvals and exact-target checks remain unchanged. Technical smoke
+does not establish the parent queue/cadence flow by itself.
+
+This is a documentation-only clarification with no remote mutation. Current
+permission, last remote result and next local/read-only action are solely in
+[active state](../STAGE_13_ACTIVE_STATE.md). Documentation, release scan and diff
+checks apply; unchanged runtime full evidence is reused. No owner handoff as
+fully working preview is claimed. rollover_required: no; recommended_next_session_mode: Medium.

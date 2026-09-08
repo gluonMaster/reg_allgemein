@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:46:33Z
+updated_utc: 2026-09-08T15:54:10Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -16,10 +16,10 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-enablement-authorized-with-functional-return
 last_atomic_action: TG09-E2-chat
 last_atomic_result: success
-next_atomic_action: resolve-one-message-prerequisites-before-temporary-isolation
+next_atomic_action: prepare-official-one-message-review-packet
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Next_readonly_send_prerequisites_before_temporary_isolation_existing_features_remain_enabled
+mode_reason_plain: Local_readonly_owner_and_technical_observer_packet_no_second_human_required_no_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -916,7 +916,7 @@ telegram_enablement_proposal:
   proposed_config_operation: one_same_module_deploy_eight_restricted_vars_only
   postcondition: exact_returned_version100percent_module_target_secret_presence_expected_flags_and_preserved_D1_sessions_provider_state
   disable_containment: same_module_only_TELEGRAM_PROVIDER_disabled_other_restrictive_flags_kept_history_and_secrets_preserved
-  future_send_gate: real_independent_deployment_observer_and_different_human_reviewer_official_target_preflight_separate_prepare_and_ONE_send_permissions_business_window
+  future_send_gate: actual_readonly_technical_observer_and_owner_target_scope_confirmation_official_preflight_separate_prepare_and_ONE_send_permissions_business_window
   local_finalization_correction: numeric_bot_fingerprint_input_converted_to_string_after_both_green_dry_runs_no_bundle_rerun_or_remote_attempt
 telegram_enablement_progress:
   latest_utc: 2026-09-08T15:46:33.550Z
@@ -938,16 +938,29 @@ telegram_enablement_progress:
   query_reads_writes: 379_0
   provider_sends: 0
   containment: preserve_existing_functions_Access_Cron_pause_Telegram_disabled_and_all_evidence_no_blind_retry
+telegram_single_owner_procedure:
+  updated_utc: 2026-09-08T15:54:10Z
+  owner_context: sole_operator_requires_parent_action_queue_outside_hours_and_automatic_delivery
+  milestone_finding: P1_operator_gate_second_human_unavailable_blocks_isolated_synthetic_preview
+  canonical_rule: operations_runbook_section_3_1_owner_plus_actual_readonly_technical_observer
+  second_human_required: false_for_this_isolated_synthetic_preview
+  identity_provenance: truthful_distinct_technical_observer_and_owner_no_fabricated_human_review
+  owner_target_scope_confirmation: existing_selected_private_preview_target_and_enablement_approval_preserved
+  artifact_status: official_deployment_evidence_and_manifest_pending_no_new_review_timestamp_or_signature_fabricated
+  permission_change: none_no_synthetic_prepare_or_provider_send_authorized
+  changes: documentation_only_no_runtime_config_or_remote_mutation
+  user_flow_remaining: parent_cabinet_event_persisted_then_out_of_hours_queue_then_automatic_business_window_delivery
 next_atomic_action:
-  id: resolve-one-message-prerequisites-before-temporary-isolation
+  id: prepare-official-one-message-review-packet
   permission: clarified_enablement_and_functional_return_authorized_no_synthetic_prepare_or_provider_send
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: none_resolve_external_one_message_prerequisites_and_business_window_before_E3
+  mutation: none_prepare_local_official_command_and_owner_review_packet_before_E3
   preconditions:
     - committed_preceding_checkpoint_exact_target_candidate_and_provider_identity
     - existing_auth_email_contract_features_preserved_Cron_paused_no_active_or_unknown_Telegram_rows
   postcondition:
-    - concrete_official_target_and_one_message_prerequisites_resolved_without_leaving_unrelated_features_disabled
+    - concrete_packet_records_real_observer_owner_roles_exact_target_fixed_message_and_remaining_send_permission
+    - no_second_human_requirement_no_fabricated_observation_or_review_no_unrelated_features_disabled_while_waiting
     - readback_and_docs_only_checkpoint_before_next_remote_operation
   containment: preserve_Access_original_working_features_Cron_pause_Telegram_disabled_secrets_and_history
   forbidden_in_this_action:
@@ -959,6 +972,30 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Preview sole-operator clarification — 2026-09-08T15:54:10Z
+
+Owner confirmed they operate alone and need to exercise parent-originated events,
+out-of-hours queuing and automatic delivery. Requiring another human for this
+isolated synthetic preview was an operator-gate P1 against SYS-04/OQ-036. Runbook
+3.1 now permits the owner plus a truthful technical observer using actual
+read-only provider/deployment evidence. Acceptance criteria, test plan and owner
+guide refer to this limited procedure; it does not claim independent human review
+or change production approvals. Existing target/scope confirmations remain valid;
+no new owner review, timestamp, signature or official artifact was fabricated.
+
+No remote mutation was attempted for this clarification. Last actual remote
+postcondition remains TG09-E2-chat; no runtime, configuration or send change.
+Authorized enabling and required functional return remain in scope. Synthetic
+prepare and ONE send remain separately gated. Technical smoke alone cannot close
+the required parent action -> queue -> automatic delivery scenario. Next action
+is local/read-only preparation of its official one-message review packet, without
+leaving existing features disabled while prerequisites are pending.
+
+Validation scope: documentation/link/command checks, release secret/PII scan and
+diff check. Exact runtime full evidence from 4a8c028 is reused; full suite, build
+and remote operations are not needed for this documentation-only clarification.
+rollover_required: no; recommended_next_session_mode: Medium.
 
 ## Prompt 09 TG09-E2-chat checkpoint — 2026-09-08T15:46:33Z
 
