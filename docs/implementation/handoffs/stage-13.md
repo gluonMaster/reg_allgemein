@@ -4502,3 +4502,24 @@ The earlier observed portal/queue containment remains the last recorded state;
 fresh target checks will be needed before any later write. Docs-only checks
 apply; runtime suites/review are inherited. See [active state](../STAGE_13_ACTIVE_STATE.md).
 rollover_required: no; recommended_next_session_mode: Medium for owner guidance.
+
+## Prompt 09 local secret and provider bot identity — 2026-09-08T14:34:54Z
+
+Owner confirmed the bot is added to a private dedicated preview channel, without
+real clients and with posting permission. Protected owner-channel-confirmation
+records this declaration; numeric channel/provider permission verification is
+still pending. Owner saved the token in a local masked form, encrypted by Windows
+DPAPI with owner-only ACLs; independent local format/decryption checks passed.
+The first hidden form had no saved input and was relaunched visibly; both safe
+statuses are retained. One actual getMe then matched the expected bot username
+and token numeric identity. This is initial bot binding, not full smoke preflight.
+
+Evidence is under tmp/telegram-phase-09-owner: token-input-status-20260908.json,
+owner-channel-confirmation-20260908.json, bot-identity-safe.json and the protected
+bot-identity-private.json. The encrypted token remains outside the repository.
+No remote mutation/send or fresh Cloudflare/D1 check occurred. Next action is
+owner-selected exact channel source through local input, without another message.
+See [active state](../STAGE_13_ACTIVE_STATE.md). Local helper syntax and secret
+roundtrip passed; docs-only checks apply and runtime full gates are inherited.
+rollover_required: no; recommended_next_session_mode: Medium for local/read-only
+binding; enablement, backlog disposition, prepare and send remain unapproved.
