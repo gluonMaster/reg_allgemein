@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:54:10Z
+updated_utc: 2026-09-08T16:03:26Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -16,10 +16,10 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-enablement-authorized-with-functional-return
 last_atomic_action: TG09-E2-chat
 last_atomic_result: success
-next_atomic_action: prepare-official-one-message-review-packet
+next_atomic_action: await-owner-one-message-sequence-approval
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Local_readonly_owner_and_technical_observer_packet_no_second_human_required_no_remote_write
+mode_reason_plain: Packet_ready_waiting_for_separate_ONE_send_scope_and_open_business_window_no_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -950,18 +950,38 @@ telegram_single_owner_procedure:
   permission_change: none_no_synthetic_prepare_or_provider_send_authorized
   changes: documentation_only_no_runtime_config_or_remote_mutation
   user_flow_remaining: parent_cabinet_event_persisted_then_out_of_hours_queue_then_automatic_business_window_delivery
+telegram_one_message_packet:
+  prepared_utc: 2026-09-08T16:01:27.069Z
+  status: local_ready_no_official_manifest_D1_prepare_or_send
+  evidence: tmp/telegram-phase-09-owner/one-message-review-packet-private.json_and_safe.json
+  owner_card: tmp/telegram-phase-09-owner/ONE_MESSAGE_REVIEW_RU.md
+  cli_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  cli_workspace: clean_detached_candidate_with_local_dependency_junctions_and_ignored_proposed_config
+  validators: 9_official_argument_parser_calls_passed_no_remote_commands_executed
+  config_and_code: root_config_preserved_proposed_config_hash_verified_three_return_configs_exact_same_module
+  binding_key: local_DPAPI_CurrentUser_owner_only_ACL_roundtrip_passed_no_value_printed
+  cohort: reserved_locally_only_not_a_D1_row
+  message: fixed_German_bureau_notification_technical_no_PII_or_free_text
+  text_finalization: delivery_reference_depends_on_actual_manifest_time_on_actual_prepare_verify_exact_row_and_hash_before_send
+  prior_remote_evidence: TG09-E2-chat_2026_09_08T15_46_33Z_reused_no_new_remote_truth_claimed
+  schedule_observation_utc: 2026-09-08T16:01:27.069Z
+  business_window: Mo_Fr_09_17_Europe_Berlin_closed_at_observation_next_2026_09_09T07_00_00Z
+  automation_created: false
+  remote_mutations_provider_sends: 0_0
+  remaining: sequence_permission_fresh_actual_E3_observation_official_manifest_preflight_prepare_exact_text_run_verify_functional_return_and_parent_queue_flow
 next_atomic_action:
-  id: prepare-official-one-message-review-packet
+  id: await-owner-one-message-sequence-approval
   permission: clarified_enablement_and_functional_return_authorized_no_synthetic_prepare_or_provider_send
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: none_prepare_local_official_command_and_owner_review_packet_before_E3
+  mutation: none_request_scoped_one_synthetic_prepare_and_at_most_ONE_send_approval_using_prepared_card
   preconditions:
     - committed_preceding_checkpoint_exact_target_candidate_and_provider_identity
     - existing_auth_email_contract_features_preserved_Cron_paused_no_active_or_unknown_Telegram_rows
+    - local_review_packet_ready_official_artifacts_not_fabricated_business_window_not_overridden
   postcondition:
-    - concrete_packet_records_real_observer_owner_roles_exact_target_fixed_message_and_remaining_send_permission
-    - no_second_human_requirement_no_fabricated_observation_or_review_no_unrelated_features_disabled_while_waiting
-    - readback_and_docs_only_checkpoint_before_next_remote_operation
+    - actual_owner_reply_records_one_cohort_preparation_and_at_most_one_normal_outbox_send_or_retains_unapproved_state
+    - then_fresh_readonly_preflight_and_authorized_E3_only_when_sequence_can_complete_in_business_window
+    - each_later_remote_mutation_requires_its_own_actual_readback_and_committed_checkpoint
   containment: preserve_Access_original_working_features_Cron_pause_Telegram_disabled_secrets_and_history
   forbidden_in_this_action:
     - provider_send_synthetic_prepare_delete_direct_SQL_write_or_unreviewed_Cron_catchup
@@ -972,6 +992,34 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## One-message local review packet — 2026-09-08T16:03:26Z
+
+Local preparation is complete under the owner's instruction to proceed. The
+protected packet/card records the selected target, a locally reserved cohort,
+fixed minimized notification template, honest pending dynamic fields, exact CLI
+candidate and official command drafts. Nine actual argument-parser calls passed.
+The candidate worktree is clean; its ignored config is explicitly a proposal,
+not evidence of deployed settings. Root config and reviewed module are unchanged;
+three cached functional-return variants were verified by hash without another
+build. The local binding key was generated under owner-only ACL, encrypted with
+CurrentUser DPAPI and verified by decrypt roundtrip; no value was printed.
+
+No remote read/write, D1 cohort creation, provider send or final official manifest
+was attempted in this preparation. The prior successful E2 remote observation is
+reused with its original timestamp. The actual application schedule calculation
+shows the window closed at preparation time; its next opening is 9 September at
+09:00 Europe/Berlin. No clock/config override or scheduled automation was created.
+Preserve existing functions until a supervised in-window sequence can complete.
+
+Next action is the original prompt's separate ONE-send scope request, explicitly
+including its necessary single synthetic prepare; enabling permission persists.
+Actual version/target observation, final artifacts, row/text checks and each
+mutation checkpoint still apply before dispatch. Full owner parent/queue/cadence
+acceptance remains unproven. Validation: local preparation/parser/config hashes,
+docs:check, release:scan and git diff --check; unchanged runtime full-suite/build
+evidence is reused rather than rerun. rollover_required: no;
+recommended_next_session_mode: Medium while awaiting approval/window.
 
 ## Preview sole-operator clarification — 2026-09-08T15:54:10Z
 
