@@ -4536,3 +4536,30 @@ type before any enabling write. No group conversion/new channel/provider send
 or agent remote mutation occurred. Docs-only checks apply, runtime gates reused.
 Current next action is in [active state](../STAGE_13_ACTIVE_STATE.md).
 rollover_required: no; recommended_next_session_mode: Medium.
+
+## Prompt 09 exact Telegram destination verified — 2026-09-08T14:54:06Z
+
+Owner selected the existing group in Web A; only its URL was read into protected
+ignored evidence. Four real read-only Bot API calls verified the bot, matching
+exact supergroup ID, absent public username, posting permission and disabled
+webhook. No messages were read or sent. The restricted bot has no optional
+administrator rights. destination-binding-safe.json and private.json under
+tmp/telegram-phase-09-owner retain this initial binding; official manifest/config
+preflight remains pending.
+
+Fresh bound-20260908-control/database/preflight-safe evidence confirms unchanged
+reviewed runtime and settings, Access 302, 26 migrations, five SELECTs/954 reads/
+zero writes. One historical contract signal remains pending/attempts0 with no
+lease/receipt; Telegram attempts/dead/unknowns, sessions and nonsent email are
+zero. The separate price trigger remains held. No agent remote mutation occurred.
+
+Next: obtain scoped authorization for normal preview admin login, one audited
+cancellation of the exact historical notification, and logout. Each mutation
+needs its own read-back/docs checkpoint. Preserve notification history and
+contract; no direct SQL/delete/send. Enabling settings/secrets, independent
+observer/reviewer manifests, synthetic prepare and ONE send remain separate
+gates. See [active state](../STAGE_13_ACTIVE_STATE.md) for the current target and
+next action. Local helper syntax and provider/control reads passed; docs-only
+checks apply, full runtime gates inherited from exact 4a8c028.
+rollover_required: no; recommended_next_session_mode: Medium while approval is
+pending; use High for known approved remote operations.

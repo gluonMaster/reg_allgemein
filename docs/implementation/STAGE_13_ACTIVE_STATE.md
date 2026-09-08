@@ -4,11 +4,11 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T14:41:47Z
+updated_utc: 2026-09-08T14:54:06Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
-next_gate: phase-5-telegram-exact-channel-identity
+next_gate: phase-5-telegram-held-backlog-disposition
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -16,10 +16,10 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-readonly-preparation
 last_atomic_action: prepare-telegram-phase-readonly
 last_atomic_result: success
-next_atomic_action: obtain-exact-preview-destination-source-readonly
+next_atomic_action: obtain-exact-held-row-disposition-authorization
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Local_token_and_bot_verified_next_exact_channel_binding_readonly_no_remote_write
+mode_reason_plain: Exact_private_supergroup_verified_next_scoped_owner_authorization_no_remote_write_yet
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -836,7 +836,7 @@ contract_L_progress:
   evidence: tmp/contract-phase-08-owner/L-A-logout-checkpoint-safe.json_and_before_after
   containment: Access_Cron_pause_batch1_no_repeat_resend_delete_repair_rollback_or_config_change
 telegram_phase_preparation:
-  observed_utc: 2026-09-07T17:05:42.117Z
+  observed_utc: 2026-09-08T14:54:06.599Z
   result: success_readonly_preparation_send_blocked_by_external_prerequisites
   owner_input: bot_added_private_dedicated_preview_channel_no_real_clients_posting_right_confirmed
   owner_bot_record: tmp/telegram-phase-09-owner/owner-bot-created-20260908.json
@@ -848,12 +848,17 @@ telegram_phase_preparation:
   local_token_locator: LOCALAPPDATA_Kolibri_CodexSecrets_telegram-preview-09_bot-token.dpapi
   local_token_capture_evidence: tmp/telegram-phase-09-owner/token-input-status-20260908.json
   channel_owner_confirmation: tmp/telegram-phase-09-owner/owner-channel-confirmation-20260908.json
-  channel_privacy_ownership_exact_identity: owner_confirms_private_test_only_and_posting_right_exact_numeric_channel_not_yet_received_or_API_verified
+  channel_privacy_ownership_exact_identity: owner_confirms_private_test_only_source_selected_in_Web_A_and_exact_API_ID_matches_no_public_username
   destination_UI_observation: owner_screenshot_shows_group_creation_service_label_and_no_copy_message_link_option
-  destination_API_subtype: group_or_supergroup_pending_getChat_do_not_assume_channel
+  destination_API_subtype: supergroup_verified_by_real_getChat
   destination_UI_evidence: tmp/telegram-phase-09-owner/owner-group-ui-observation-20260908.json
-  destination_source_route: owner_login_and_select_exact_group_in_visible_Telegram_Web_A_then_read_selected_URL_only
-  initial_provider_reads: one_getMe_no_send_no_full_target_preflight
+  destination_source_route: owner_selected_Web_A_URL_only_saved_in_protected_selected-destination-source-private.json_no_message_content_read
+  destination_fingerprint: 02e9638892ee
+  destination_binding_utc: 2026-09-08T14:53:10.886Z
+  destination_binding_evidence: tmp/telegram-phase-09-owner/destination-binding-safe.json_and_destination-binding-private.json
+  destination_posting_right: restricted_member_is_member_true_can_send_messages_true_no_optional_admin_rights
+  destination_webhook: disabled_verified_getWebhookInfo
+  initial_provider_reads: initial_getMe_then_four_readonly_getMe_getChat_getChatMember_getWebhookInfo_no_send_no_official_manifest_config_preflight
   latest_local_and_bot_checks_remote_mutations_provider_sends: 0_0
   candidate_and_version: unchanged_exact_reviewed_runtime_and_single_version_100_percent
   Access: anonymous_HEAD_302_Cloudflare_Access
@@ -870,27 +875,29 @@ telegram_phase_preparation:
   SELECT_queries_rows_read_writes: 5_954_0
   remote_mutations_provider_calls_authenticated_app_requests: 0_0_0
   runtime_P0_P1_found: none
-  milestone_P1_prerequisites: exact_private_target_restricted_config_and_audited_held_backlog_disposition
-  current_business_window: Mo_Fr_09_17_Europe_Berlin_observation_outside_window
+  milestone_P1_prerequisites: restricted_config_audited_held_backlog_disposition_and_real_independent_deployment_observer_target_reviewer
+  current_business_window: Mo_Fr_09_17_Europe_Berlin_refresh_inside_window_recheck_before_any_send
   first_local_observer_stop: filename_extension_error_before_network_corrected_no_remote_retry
-  protected_evidence: tmp/telegram-phase-09-owner/preflight-safe.json_and_control.json_and_database.json
+  protected_evidence: tmp/telegram-phase-09-owner/bound-20260908-preflight-safe.json_and_bound-20260908-control.json_and_bound-20260908-database.json
   protected_plan: tmp/telegram-phase-09-owner/preparation-plan.md
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_all_held_rows_preserved
 next_atomic_action:
-  id: obtain-exact-preview-destination-source-readonly
-  permission: local_input_and_readonly_target_preparation_only_no_remote_mutation
-  target: verified_preview_bot_and_owner_private_test_group_exact_numeric_identity_and_API_subtype_pending
-  mutation: no_agent_remote_mutation_owner_selects_existing_group_in_Telegram_Web
+  id: obtain-exact-held-row-disposition-authorization
+  permission: scoped_owner_approval_pending_no_admin_login_cancel_logout_or_other_remote_mutation_yet
+  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_held_contract_signal_d906ae9c7f6c
+  mutation: none_in_authorization_step_future_normal_admin_login_exact_audited_cancel_and_logout_each_checkpointed_separately
   preconditions:
-    - bot_token_locally_protected_and_getMe_matches_expected_identity
-    - owner_confirms_private_test_channel_and_bot_posting_right
+    - verified_private_preview_supergroup_bot_posting_right_and_disabled_webhook
+    - fresh_Control_and_SELECT_observation_exact_candidate_Access_302_26_migrations_no_unknowns
+    - one_exact_held_pending_contract_signal_attempts0_no_lease_no_receipt
   postcondition:
-    - exact_destination_identity_derived_from_owner_selected_Web_A_URL_no_message_content_or_new_post
-    - getChat_type_checked_against_canonical_private_channel_or_supergroup_requirement_before_any_enablement
-    - protected_source_retained_without_printing_chat_ID_destination_or_token
+    - owner_authorization_explicitly_covers_normal_preview_admin_login_one_exact_pending_row_cancel_and_logout
+    - proposed_cancel_uses_admin_outbox_change_verifiedAdminForm_CSRF_fresh_idempotencyKey_and_confirmation
+    - future_cancel_readback_requires_only_exact_row_cancelled_attempts0_receipt_absent_linked_action_audit_and_passing_assertion_contract_unchanged
+    - separate_Telegram_config_secret_prepare_send_permissions_remain_required
   containment: preserve_Access_private_artifacts_disabled_Telegram_Cron_pause_batch1_and_exact_held_rows
   forbidden_in_this_action:
-    - portal_deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
+    - unapproved_portal_deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -898,6 +905,44 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 exact private supergroup verified; held-row permission pending — 2026-09-08T14:54:06Z
+
+Owner selected the prepared group in Telegram Web A. Only the selected tab URL
+was read and saved in owner-only ignored selected-destination-source-private.json;
+no chat messages or unrelated conversations were read. Four real read-only Bot
+API calls bind the same bot to the exact selected destination: getMe, getChat,
+getChatMember and getWebhookInfo. The destination is a supergroup, fingerprint
+02e9638892ee, with no public username. The bot is a restricted member with the
+posting permission and no optional administrator privileges. Webhook is disabled.
+Protected destination-binding-safe.json/private.json retain initial binding;
+this is not the official manifest/config-bound preflight. No send occurred.
+
+Fresh Cloudflare/D1 observation at 14:54:06.599Z confirms unchanged reviewed
+candidate/version/settings/bindings, Access 302, 26 migrations and no pending
+migration. Five SELECTs read 954 rows and wrote zero. The historical contract
+signal d906ae9c7f6c remains the only active Telegram row, pending/attempts0,
+without lease/receipt. Delivery attempts, dead and unresolved unknowns are zero;
+active sessions, nonsent email and active locks are zero. The one price trigger
+remains held. Telegram is still disabled and deployed Telegram secrets absent.
+No authenticated app request, remote mutation or provider send occurred.
+
+The next approval is confined to normal preview admin login, audited cancellation
+of that one historical notification through /admin/outbox?/change, and logout.
+Each future mutation requires its own bounded read-back and docs-only checkpoint.
+Cancellation must preserve the row/history and contract, keep attempts/receipts
+zero, and create linked admin-action/audit/assertion evidence. No direct SQL,
+deletion or historic send is proposed. This scope is not yet authorized.
+
+The protected preparation plan now binds TELEGRAM_CHAT_TYPE=supergroup; all
+other proposed restrictive flags, secret/config enablement, official manifests
+with real independent observer/reviewer, prepare and ONE send remain future
+separate gates. Preserve Access, disabled Telegram, paused Cron and batch1.
+Local helper syntax and actual bounded reads passed. Only docs:check,
+release:scan and git diff --check apply; no runtime/config change, full tests,
+E2E/build or new review. Reuse exact 4a8c028 runtime evidence.
+rollover_required: no; recommended_next_session_mode: Medium for pending owner
+authorization; approved remote execution should use High with known containment.
 
 ## Prompt 09 screenshot clarifies group; Web selection pending — 2026-09-08T14:41:47Z
 
