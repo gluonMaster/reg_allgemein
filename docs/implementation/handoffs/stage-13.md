@@ -4563,3 +4563,11 @@ next action. Local helper syntax and provider/control reads passed; docs-only
 checks apply, full runtime gates inherited from exact 4a8c028.
 rollover_required: no; recommended_next_session_mode: Medium while approval is
 pending; use High for known approved remote operations.
+
+
+## Prompt 09 held notification disposition complete — 2026-09-08T15:25:20.239Z
+
+Owner authorized normal admin login, one exact old-notification cancellation and logout. All three passed native UI/actual D1 checks with separate docs-only checkpoints. The one historical Telegram row is cancelled/attempts0/no receipt, with linked action/audit/passing assertion. Normal logout leaves all 20 sessions revoked. Contracts, offers, provider state and unrelated held work are preserved; no Telegram send, config/secret/deploy/SQL write or deletion occurred.
+
+Evidence: tmp/telegram-phase-09-owner/TG09-A-login, TG09-H-cancel and TG09-A-logout before/after/control/response/checkpoint-safe records. Current next action is in [active state](../STAGE_13_ACTIVE_STATE.md): local/read-only preparation of the minimal restricted enablement plan. That remote scope and synthetic prepare/ONE send are not authorized. Preserve Access, disabled Telegram, Cron pause and batch1. Only docs:check, release:scan and git diff --check apply; unchanged runtime gates are inherited from exact 4a8c028.
+rollover_required: no; recommended_next_session_mode: Medium.

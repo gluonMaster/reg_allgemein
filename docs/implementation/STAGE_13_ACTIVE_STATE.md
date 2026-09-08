@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:24:20Z
+updated_utc: 2026-09-08T15:25:20Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
-next_gate: phase-5-telegram-held-backlog-disposition
+next_gate: phase-5-telegram-restricted-enablement
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-telegram-authorized-held-backlog-disposition
-last_atomic_action: TG09-H-cancel
+current_phase: phase-5-telegram-held-backlog-disposition-complete
+last_atomic_action: TG09-A-logout
 last_atomic_result: success
-next_atomic_action: TG09-A-logout
+next_atomic_action: prepare-restricted-Telegram-enablement-readonly
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Known_authorized_next_admin_operation_exact_target_postcondition_and_containment
+recommended_next_session_mode: Medium
+mode_reason_plain: Held_row_cancelled_and_session_revoked_next_local_readonly_restricted_enablement_plan
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: TG09_normal_admin_login_exact_held_cancel_logout_granted_once_each_no_Telegram_enablement_prepare_send_permission
+permission_state: TG09_login_exact_held_cancel_logout_consumed_no_Telegram_enablement_prepare_send_permission
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -882,8 +882,8 @@ telegram_phase_preparation:
   protected_plan: tmp/telegram-phase-09-owner/preparation-plan.md
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_all_held_rows_preserved
 telegram_held_disposition:
-  latest_utc: 2026-09-08T15:24:20.917Z
-  action: TG09-H-cancel
+  latest_utc: 2026-09-08T15:25:20.239Z
+  action: TG09-A-logout
   result: success
   authorization_record: tmp/telegram-phase-09-owner/held-owner-approval.json
   authorization_source: owner_explicit_razreshayu_for_normal_admin_login_one_old_notification_cancel_and_logout
@@ -891,27 +891,27 @@ telegram_held_disposition:
   version_fingerprint: a255463d5707
   target: Worker_242c1796e930_D1_ccdeb22bb2a1
   new_admin_session_fingerprint: 564f781f28b3
-  sessions_total_active: 20_1
+  sessions_total_active: 20_0
   held_row_fingerprint: d906ae9c7f6c
   held_row_status: cancelled
   Telegram_attempts_unresolved_unknown: 0_0
   linked_cancel_actions_assertions: 1_1
   provider_sends: 0
-  postcondition_reads_writes: 376_0
+  postcondition_reads_writes: 379_0
   all_postcondition_checks_passed: true
-  evidence: tmp/telegram-phase-09-owner/TG09-H-cancel-checkpoint-safe.json_and_before_after_response_control
+  evidence: tmp/telegram-phase-09-owner/TG09-A-logout-checkpoint-safe.json_and_before_after_response_control
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_preserved_history_exact_session_logout
 next_atomic_action:
-  id: TG09-A-logout
-  permission: owner_granted_once_each_scoped_login_exact_cancel_logout
+  id: prepare-restricted-Telegram-enablement-readonly
+  permission: local_readonly_preparation_only_remote_enablement_not_yet_authorized
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_held_row_d906ae9c7f6c
-  mutation: one_normal_logout_of_exact_new_admin_session
+  mutation: none_local_readonly_plan_only
   preconditions:
     - preceding_actual_postcondition_success_and_docs_only_checkpoint_committed
     - exact_candidate_Access_and_disabled_provider_Cron_pause_preserved
   postcondition:
-    - exact_new_admin_session_revoked_with_logout_reason_and_linked_audit
-    - zero_active_sessions_cancelled_row_and_contract_preserved
+    - exact_minimal_restricted_config_delta_postcondition_and_disable_containment_prepared
+    - no_enablement_prepare_provider_send_without_separate_owner_permission
   containment: preserve_Access_disabled_Telegram_Cron_pause_batch1_all_history_and_no_blind_retry
   forbidden_in_this_action:
     - provider_send_secret_config_deploy_delete_direct_SQL_write_or_Cron_restore
@@ -922,6 +922,16 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 TG09-A-logout: success — 2026-09-08T15:25:20.239Z
+
+Normal logout revoked only the newly created admin session, with a linked auth.session_revoked audit. All 20 sessions are now revoked. The cancelled notification, its evidence and the contract remain preserved. The complete approved login/cancel/logout scope is consumed.
+
+Exact evidence is protected under tmp/telegram-phase-09-owner/TG09-A-logout-checkpoint-safe.json, with before/after D1, response and control records. Eleven SELECTs read 379 rows and wrote zero. Candidate 4a8c028 and version a255463d5707 remain exact; Access, disabled Telegram, paused Cron and batch1 are preserved. Telegram delivery attempts and unresolved unknowns are zero; no provider send.
+
+Only next action: prepare-restricted-Telegram-enablement-readonly. Enabling config/secrets, official target evidence, synthetic prepare and ONE send remain separately gated. Status-only checks: docs:check, release:scan and git diff --check. Full check/Vitest/E2E/build and review remain inherited from exact reviewed 4a8c028 because runtime/config/migrations/dependencies are unchanged.
+rollover_required: no; recommended_next_session_mode: Medium — local/read-only preparation remains.
+
 
 ## Prompt 09 TG09-H-cancel: success — 2026-09-08T15:24:20.917Z
 
