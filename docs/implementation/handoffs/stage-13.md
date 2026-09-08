@@ -4523,3 +4523,16 @@ See [active state](../STAGE_13_ACTIVE_STATE.md). Local helper syntax and secret
 roundtrip passed; docs-only checks apply and runtime full gates are inherited.
 rollover_required: no; recommended_next_session_mode: Medium for local/read-only
 binding; enablement, backlog disposition, prepare and send remain unapproved.
+
+## Prompt 09 group screenshot and exact-destination source — 2026-09-08T14:41:47Z
+
+Owner screenshot shows a group-creation service label and no message-link menu
+item. Basic group versus supergroup is not proven by this image. Preserve the
+owner's private/test-only declaration but do not infer channel or acceptable API
+type. Safe UI observation is in protected owner-group-ui-observation-20260908.json;
+no screenshot/message content was copied. Telegram Web A is open for the owner
+to log in and select that exact group; read only the selected URL, then getChat
+type before any enabling write. No group conversion/new channel/provider send
+or agent remote mutation occurred. Docs-only checks apply, runtime gates reused.
+Current next action is in [active state](../STAGE_13_ACTIVE_STATE.md).
+rollover_required: no; recommended_next_session_mode: Medium.

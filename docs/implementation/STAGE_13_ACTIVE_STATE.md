@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T14:34:54Z
+updated_utc: 2026-09-08T14:41:47Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -16,7 +16,7 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-readonly-preparation
 last_atomic_action: prepare-telegram-phase-readonly
 last_atomic_result: success
-next_atomic_action: obtain-exact-preview-channel-source-readonly
+next_atomic_action: obtain-exact-preview-destination-source-readonly
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: Local_token_and_bot_verified_next_exact_channel_binding_readonly_no_remote_write
@@ -849,6 +849,10 @@ telegram_phase_preparation:
   local_token_capture_evidence: tmp/telegram-phase-09-owner/token-input-status-20260908.json
   channel_owner_confirmation: tmp/telegram-phase-09-owner/owner-channel-confirmation-20260908.json
   channel_privacy_ownership_exact_identity: owner_confirms_private_test_only_and_posting_right_exact_numeric_channel_not_yet_received_or_API_verified
+  destination_UI_observation: owner_screenshot_shows_group_creation_service_label_and_no_copy_message_link_option
+  destination_API_subtype: group_or_supergroup_pending_getChat_do_not_assume_channel
+  destination_UI_evidence: tmp/telegram-phase-09-owner/owner-group-ui-observation-20260908.json
+  destination_source_route: owner_login_and_select_exact_group_in_visible_Telegram_Web_A_then_read_selected_URL_only
   initial_provider_reads: one_getMe_no_send_no_full_target_preflight
   latest_local_and_bot_checks_remote_mutations_provider_sends: 0_0
   candidate_and_version: unchanged_exact_reviewed_runtime_and_single_version_100_percent
@@ -873,16 +877,17 @@ telegram_phase_preparation:
   protected_plan: tmp/telegram-phase-09-owner/preparation-plan.md
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_all_held_rows_preserved
 next_atomic_action:
-  id: obtain-exact-preview-channel-source-readonly
+  id: obtain-exact-preview-destination-source-readonly
   permission: local_input_and_readonly_target_preparation_only_no_remote_mutation
-  target: verified_preview_bot_and_owner_confirmed_private_dedicated_channel_exact_numeric_identity_pending
-  mutation: none_owner_provides_existing_channel_source_locally
+  target: verified_preview_bot_and_owner_private_test_group_exact_numeric_identity_and_API_subtype_pending
+  mutation: no_agent_remote_mutation_owner_selects_existing_group_in_Telegram_Web
   preconditions:
     - bot_token_locally_protected_and_getMe_matches_expected_identity
     - owner_confirms_private_test_channel_and_bot_posting_right
   postcondition:
-    - exact_channel_identity_derived_from_owner_selected_existing_channel_source_no_new_message
-    - protected_channel_source_retained_without_printing_chat_ID_destination_or_token
+    - exact_destination_identity_derived_from_owner_selected_Web_A_URL_no_message_content_or_new_post
+    - getChat_type_checked_against_canonical_private_channel_or_supergroup_requirement_before_any_enablement
+    - protected_source_retained_without_printing_chat_ID_destination_or_token
   containment: preserve_Access_private_artifacts_disabled_Telegram_Cron_pause_batch1_and_exact_held_rows
   forbidden_in_this_action:
     - portal_deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
@@ -893,6 +898,26 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 screenshot clarifies group; Web selection pending — 2026-09-08T14:41:47Z
+
+Owner supplied a screenshot of the single existing user message and its context
+menu. The UI shows a group-creation service label and no copy-message-link item.
+It does not establish the Bot API distinction between group and supergroup;
+do not continue assuming channel. No screenshot, names or message contents were
+copied into repository/evidence. Safe observation is recorded in protected
+owner-group-ui-observation-20260908.json. Owner's private/test-only declaration
+is retained, while exact numeric destination and API subtype remain pending.
+
+Telegram Web A was opened visibly at its normal QR login for owner selection of
+the existing group. Only the selected tab URL is needed to obtain a source ID;
+do not inspect unrelated chats, poll bot updates, post a message or use an invite
+link as an exact ID. Verify getChat type before enablement against MESSAGING.md's
+private channel/supergroup requirement. No migration/conversion or new channel
+creation is authorized by this diagnostic step. No provider send or agent remote
+mutation occurred. Next action is owner login and exact group selection, followed
+by read-only ID/type verification. Docs-only checks apply; runtime gates remain
+inherited. rollover_required: no; recommended_next_session_mode: Medium.
 
 ## Prompt 09 local token and real bot identity verified — 2026-09-08T14:34:54Z
 
