@@ -4571,3 +4571,10 @@ Owner authorized normal admin login, one exact old-notification cancellation and
 
 Evidence: tmp/telegram-phase-09-owner/TG09-A-login, TG09-H-cancel and TG09-A-logout before/after/control/response/checkpoint-safe records. Current next action is in [active state](../STAGE_13_ACTIVE_STATE.md): local/read-only preparation of the minimal restricted enablement plan. That remote scope and synthetic prepare/ONE send are not authorized. Preserve Access, disabled Telegram, Cron pause and batch1. Only docs:check, release:scan and git diff --check apply; unchanged runtime gates are inherited from exact 4a8c028.
 rollover_required: no; recommended_next_session_mode: Medium.
+
+
+## Prompt 09 two protected secrets; functional-return condition — 2026-09-08T15:46:33Z
+
+Owner approved enabling after clarification that temporary isolation must end in a fully functional manual preview. Return-after-success, return-if-held and operational configs were prepared; all strict local dry runs match the exact deployed module. E1 token and E2 chat secret PUTs passed separate actual control/D1 checks and docs checkpoints. Both protected secrets are present; public auth/email/contracts retain their previously enabled values. Telegram and Cron remain disabled, all sessions revoked, cancelled historical row preserved, zero Telegram attempts/unknowns.
+
+Protected evidence: tmp/telegram-phase-09-owner/enable-owner-approval.json, enable-ready-safe.json and TG09-E1-token/TG09-E2-chat before/after/control/response/checkpoint-safe records. E3 remains authorized but is timed to the actual one-message procedure so unrelated features are not left disabled awaiting input or a closed business window. Synthetic prepare/provider send remain separately gated; return to functioning services and verified automatic queues is mandatory before owner handoff. See [active state](../STAGE_13_ACTIVE_STATE.md). Status-only checks passed; full runtime gates inherited. rollover_required: no; recommended_next_session_mode: Medium.
