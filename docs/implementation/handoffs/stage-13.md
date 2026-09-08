@@ -4489,3 +4489,16 @@ a dedicated preview bot, with token kept private. No enabling/prepare/send/cance
 permission is implied. Preserve Access, Telegram disabled, paused Cron, batch1
 and both held items. rollover_required: no; recommended_next_session_mode: Medium
 for guidance and protected read-only preparation without mutation ambiguity.
+
+## Prompt 09 owner reports preview bot created — 2026-09-08T14:07:14Z
+
+Owner reports creating a dedicated preview bot after accepting environment
+isolation. Supplied username is in protected
+tmp/telegram-phase-09-owner/owner-bot-created-20260908.json; no token was received.
+Provider identity and exact private channel remain unverified. Next action is
+owner-guided addition to the private test channel with minimum posting rights.
+No agent remote mutation/provider call or fresh remote verification occurred.
+The earlier observed portal/queue containment remains the last recorded state;
+fresh target checks will be needed before any later write. Docs-only checks
+apply; runtime suites/review are inherited. See [active state](../STAGE_13_ACTIVE_STATE.md).
+rollover_required: no; recommended_next_session_mode: Medium for owner guidance.

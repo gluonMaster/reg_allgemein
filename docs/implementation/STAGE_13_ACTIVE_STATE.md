@@ -4,11 +4,11 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-07T17:06:49Z
+updated_utc: 2026-09-08T14:07:14Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
-next_gate: phase-5-telegram-owner-bot-prerequisite
+next_gate: phase-5-telegram-owner-channel-prerequisite
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
@@ -16,10 +16,10 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-readonly-preparation
 last_atomic_action: prepare-telegram-phase-readonly
 last_atomic_result: success
-next_atomic_action: owner-create-dedicated-preview-bot
+next_atomic_action: owner-add-preview-bot-to-private-channel
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Await_owner_bot_creation_then_protected_readonly_target_preparation_no_portal_write
+mode_reason_plain: Owner_reports_bot_created_next_channel_guidance_no_agent_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -838,7 +838,9 @@ contract_L_progress:
 telegram_phase_preparation:
   observed_utc: 2026-09-07T17:05:42.117Z
   result: success_readonly_preparation_send_blocked_by_external_prerequisites
-  owner_input: prepared_channel_exists_bot_not_created_step_by_step_guidance_requested
+  owner_input: dedicated_preview_bot_created_reported_2026_09_08_channel_setup_guidance_next
+  owner_bot_record: tmp/telegram-phase-09-owner/owner-bot-created-20260908.json
+  bot_identity_status: owner_report_only_getMe_and_numeric_identity_binding_pending_no_token_received
   channel_privacy_ownership_exact_identity: not_yet_verified_do_not_infer_from_prepared_channel
   candidate_and_version: unchanged_exact_reviewed_runtime_and_single_version_100_percent
   Access: anonymous_HEAD_302_Cloudflare_Access
@@ -855,21 +857,23 @@ telegram_phase_preparation:
   SELECT_queries_rows_read_writes: 5_954_0
   remote_mutations_provider_calls_authenticated_app_requests: 0_0_0
   runtime_P0_P1_found: none
-  milestone_P1_prerequisites: dedicated_bot_exact_private_target_restricted_config_and_audited_held_backlog_disposition
+  milestone_P1_prerequisites: verified_bot_credential_exact_private_target_restricted_config_and_audited_held_backlog_disposition
   current_business_window: Mo_Fr_09_17_Europe_Berlin_observation_outside_window
   first_local_observer_stop: filename_extension_error_before_network_corrected_no_remote_retry
   protected_evidence: tmp/telegram-phase-09-owner/preflight-safe.json_and_control.json_and_database.json
   protected_plan: tmp/telegram-phase-09-owner/preparation-plan.md
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_all_held_rows_preserved
 next_atomic_action:
-  id: owner-create-dedicated-preview-bot
+  id: owner-add-preview-bot-to-private-channel
   permission: owner_guidance_only_no_agent_remote_mutation
-  target: new_dedicated_preview_bot_for_owner_prepared_channel_exact_identity_pending
-  mutation: no_agent_mutation_owner_creates_bot_in_official_BotFather
+  target: owner_reported_preview_bot_and_existing_prepared_channel_private_dedicated_status_required
+  mutation: no_agent_mutation_owner_adds_bot_with_minimal_channel_posting_right
   preconditions:
-    - owner_requested_step_by_step_instruction_and_reports_no_existing_bot
+    - owner_reports_dedicated_preview_bot_created
+    - owner_checks_channel_is_private_test_only_without_real_client_subscribers
   postcondition:
-    - owner_confirms_bot_created_token_kept_private_no_token_or_chat_ID_in_conversation
+    - owner_confirms_bot_added_as_admin_with_post_messages_and_no_unneeded_optional_rights
+    - token_kept_private_provider_identity_and_channel_API_verification_still_pending
   containment: preserve_Access_private_artifacts_disabled_Telegram_Cron_pause_batch1_and_exact_held_rows
   forbidden_in_this_action:
     - portal_deploy_config_secret_role_session_provider_send_cancel_delete_or_Cron_restoration
@@ -880,6 +884,24 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 owner reports dedicated bot created — 2026-09-08T14:07:14Z
+
+The owner accepted separate preview/production bots and reports creating the
+dedicated preview bot. Its supplied username is retained only in protected
+tmp/telegram-phase-09-owner/owner-bot-created-20260908.json. This is owner-reported
+setup evidence, not getMe verification, numeric target binding or a token receipt.
+Existing prepared channel privacy, dedicated use and bot posting rights still
+need confirmation. No provider call or agent remote mutation occurred; previous
+remote observations retain their original timestamps and are not fresh evidence.
+
+One next action: guide the owner to add this bot to the private test-only channel
+as administrator with the posting right and no unnecessary optional rights.
+No test message, portal enablement, secret write, backlog cancellation or Cron
+change is authorized. Preserve existing fail-closed containment. Docs-only
+checks apply; unchanged runtime gates remain inherited, with no new full suite
+or review. rollover_required: no; recommended_next_session_mode: Medium — owner
+guidance followed by protected read-only setup, without agent remote writes.
 
 ## Prompt 09 read-only preparation and owner bot prerequisite — 2026-09-07T17:06:49Z
 
