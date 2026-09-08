@@ -4613,3 +4613,21 @@ action and permissions are in [active state](../STAGE_13_ACTIVE_STATE.md).
 Only local preparation and docs/release/diff checks apply; full runtime gates are
 reused. Owner parent/queue/cadence flow is still pending. rollover_required: no;
 recommended_next_session_mode: Medium while approval/window is pending.
+
+## Telegram ONE-send scope granted; continuation scheduled — 2026-09-08
+
+Owner's explicit approval is recorded in protected one-message-owner-approval.json
+with the packet/card hashes and saved exact cohort/target/template. It grants one
+synthetic prepare and at most one normal-outbox attempt in the allowed business
+window; no repeat approval is required for the unchanged scope. No portal write
+or send occurred. E3 and functional-return permission remain valid.
+
+A same-task one-occurrence heartbeat was created for the next 09:00 Europe/Berlin
+window; actual saved configuration and tool view confirm the schedule. The first
+argument validation rejection created nothing. Protected followup-safe/config
+evidence is retained. The continuation needs the local computer/app running and
+must perform fresh preflight, per-mutation checks and commits, no blind retry and
+restoration of previously working functions even if isolation is interrupted.
+Current next action is in [active state](../STAGE_13_ACTIVE_STATE.md). Docs/release/
+diff checks apply; unchanged runtime full gates are reused. rollover_required: no;
+recommended_next_session_mode: High for the known authorized deployment path.

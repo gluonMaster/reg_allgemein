@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T16:03:26Z
+updated_utc: 2026-09-08T16:10:26Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-telegram-enablement-authorized-with-functional-return
+current_phase: phase-5-telegram-one-message-authorized-awaiting-business-window
 last_atomic_action: TG09-E2-chat
 last_atomic_result: success
-next_atomic_action: await-owner-one-message-sequence-approval
+next_atomic_action: TG09-E3-config
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Packet_ready_waiting_for_separate_ONE_send_scope_and_open_business_window_no_remote_write
+recommended_next_session_mode: High
+mode_reason_plain: Known_authorized_E3_then_one_cohort_one_send_after_fresh_preflight_in_next_business_window
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: TG09_E1_E2_E3_and_narrow_containment_authorized_with_required_functional_return_no_synthetic_prepare_or_provider_send_permission
+permission_state: TG09_E1_E2_E3_containment_functional_return_and_one_exact_synthetic_cohort_at_most_ONE_normal_outbox_send_authorized_not_consumed
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -916,7 +916,7 @@ telegram_enablement_proposal:
   proposed_config_operation: one_same_module_deploy_eight_restricted_vars_only
   postcondition: exact_returned_version100percent_module_target_secret_presence_expected_flags_and_preserved_D1_sessions_provider_state
   disable_containment: same_module_only_TELEGRAM_PROVIDER_disabled_other_restrictive_flags_kept_history_and_secrets_preserved
-  future_send_gate: actual_readonly_technical_observer_and_owner_target_scope_confirmation_official_preflight_separate_prepare_and_ONE_send_permissions_business_window
+  future_send_gate: actual_readonly_technical_observer_and_owner_scope_confirmation_official_preflight_scoped_prepare_and_ONE_send_approval_granted_business_window_required
   local_finalization_correction: numeric_bot_fingerprint_input_converted_to_string_after_both_green_dry_runs_no_bundle_rerun_or_remote_attempt
 telegram_enablement_progress:
   latest_utc: 2026-09-08T15:46:33.550Z
@@ -927,7 +927,7 @@ telegram_enablement_progress:
   functional_return_configs: restore-after-smoke_restore-if-held_full-manual-preview_in_protected_Telegram_evidence
   return_strict_dry_runs: 3_all_exact_deployed_module_hash
   authorization: E1_token_E2_chat_E3_restricted_config_narrow_containment_and_required_previously_working_functions_return
-  provider_send_and_prepare_authorization: not_granted
+  provider_send_and_prepare_authorization: granted_one_saved_cohort_at_most_one_attempt_by_one_message_owner_approval_not_consumed
   scheduler_return: required_after_terminal_send_and_bounded_review_of_due_jobs_holds_recipients_and_cleanup_targets
   timing: enter_E3_only_when_send_prerequisites_and_business_window_allow_prompt_completion
   actual_Telegram_secret_presence: true_true
@@ -966,25 +966,41 @@ telegram_one_message_packet:
   prior_remote_evidence: TG09-E2-chat_2026_09_08T15_46_33Z_reused_no_new_remote_truth_claimed
   schedule_observation_utc: 2026-09-08T16:01:27.069Z
   business_window: Mo_Fr_09_17_Europe_Berlin_closed_at_observation_next_2026_09_09T07_00_00Z
-  automation_created: false
+  automation_created: true_one_occurrence_heartbeat_current_thread_2026_09_09_09_00_Europe_Berlin
   remote_mutations_provider_sends: 0_0
-  remaining: sequence_permission_fresh_actual_E3_observation_official_manifest_preflight_prepare_exact_text_run_verify_functional_return_and_parent_queue_flow
+  remaining: fresh_actual_E3_observation_official_manifest_preflight_prepare_exact_text_run_verify_functional_return_and_parent_queue_flow
+telegram_one_message_authorization:
+  recorded_utc: 2026-09-08T16:10:26Z
+  source: owner_explicit_razreshayu_to_prepared_one_synthetic_record_and_at_most_one_send_card
+  protected_record: tmp/telegram-phase-09-owner/one-message-owner-approval.json
+  status: granted_not_consumed_no_repeat_permission_for_same_scope
+  scope: saved_exact_cohort_dedicated_preview_target_fixed_template_max_one_provider_attempt
+  not_before_utc: 2026-09-09T07:00:00.000Z
+  constraints: normal_outbox_only_fresh_preflight_actual_dispatch_before_network_no_retry_after_ambiguity_each_mutation_readback_and_commit
+  production_authorized: false
+  actual_prepared_rows_provider_attempts: 0_0
+  followup: heartbeat_telegram_preview_current_thread_ACTIVE_one_occurrence_next_local_09_00
+  followup_evidence: tmp/telegram-phase-09-owner/one-message-followup-safe.json_and_automation_toml
+  schedule_postcondition: tool_view_and_actual_saved_config_confirm_heartbeat_ACTIVE_COUNT1_09_00_current_thread_W_Europe_local_timezone
+  schedule_initial_rejection: argument_validation_no_creation_then_corrected_supported_local_wall_clock_schedule
 next_atomic_action:
-  id: await-owner-one-message-sequence-approval
-  permission: clarified_enablement_and_functional_return_authorized_no_synthetic_prepare_or_provider_send
+  id: TG09-E3-config
+  permission: E3_restricted_config_and_functional_return_already_granted_later_one_cohort_one_attempt_also_granted
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: none_request_scoped_one_synthetic_prepare_and_at_most_ONE_send_approval_using_prepared_card
+  mutation: one_same_reviewed_module_deploy_with_eight_prepared_restricted_vars_only
   preconditions:
-    - committed_preceding_checkpoint_exact_target_candidate_and_provider_identity
-    - existing_auth_email_contract_features_preserved_Cron_paused_no_active_or_unknown_Telegram_rows
-    - local_review_packet_ready_official_artifacts_not_fabricated_business_window_not_overridden
+    - open_Mo_Fr_09_17_Europe_Berlin_window_not_before_2026_09_09T07_00_00Z_and_sufficient_time_for_functional_return
+    - committed_preceding_checkpoint_fresh_exact_control_candidate_module_provider_identity_and_unrevoked_owner_approval
+    - fresh_queue_check_no_active_dead_or_unresolved_unknown_other_rows_no_prior_cohort_dispatch
+    - two_Telegram_secrets_present_existing_auth_email_contract_features_preserved_Access_enforced_Cron_paused
+    - approved_proposed_config_and_cached_module_hashes_match_return_configs_available_no_unreviewed_runtime_diff
   postcondition:
-    - actual_owner_reply_records_one_cohort_preparation_and_at_most_one_normal_outbox_send_or_retains_unapproved_state
-    - then_fresh_readonly_preflight_and_authorized_E3_only_when_sequence_can_complete_in_business_window
-    - each_later_remote_mutation_requires_its_own_actual_readback_and_committed_checkpoint
-  containment: preserve_Access_original_working_features_Cron_pause_Telegram_disabled_secrets_and_history
+    - actual_single100percent_version_exact_module_expected_eight_vars_two_secret_names_and_preserved_bindings_Access_Cron_batch1
+    - bounded_D1_sessions_domain_provider_state_preserved_zero_provider_send_by_this_deploy
+    - readback_success_failed_or_ambiguous_and_docs_only_checkpoint_commit_before_next_mutation
+  containment: if_interrupted_after_isolation_restore_previously_working_functions_using_approved_same_module_return_if_held_Telegram_disabled_Cron_paused_preserve_history_no_blind_retry
   forbidden_in_this_action:
-    - provider_send_synthetic_prepare_delete_direct_SQL_write_or_unreviewed_Cron_catchup
+    - provider_send_or_synthetic_prepare_in_this_E3_atomic_operation_delete_direct_SQL_or_unreviewed_Cron_catchup
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -992,6 +1008,34 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## ONE-send approval and one-occurrence continuation — 2026-09-08T16:10:26Z
+
+Owner explicitly authorized the reviewed single synthetic prepare and at most one
+normal-outbox send to the already selected dedicated preview destination within
+the business window. Protected one-message-owner-approval.json binds the actual
+reply to the packet/card hashes, saved cohort, target and template. Permission is
+granted and unused; do not request it again for this unchanged scope. It does not
+authorize production or extra messages. Existing E3/containment/functional-return
+approval is preserved. No portal mutation, prepared D1 row or send occurred.
+
+A one-occurrence heartbeat continues this same task at the next 09:00 local
+business window, 9 September Europe/Berlin. Initial arguments were rejected before
+creation; corrected supported local-wall-clock arguments created the heartbeat.
+Tool view and actual saved configuration verify ACTIVE, heartbeat, one occurrence,
+09:00 and current-thread binding; Windows local zone is W. Europe. Protected
+one-message-followup-safe.json and copied automation configuration retain the
+evidence. The future run must recheck time, target, data and permission before E3;
+the schedule itself is not delivery evidence. Computer and desktop app must be
+running for the local continuation.
+
+Next atomic portal action is the already authorized E3 deploy, only after fresh
+in-window preflight. Preserve current functions while waiting. Each subsequent
+atomic prepare/send/restore still needs its own actual postcondition and separate
+docs-only commit. No new approval is inferred for additional provider attempts.
+Checks for this permission/schedule checkpoint: docs:check, release:scan and diff
+check; no runtime/build/full suite repeated for unchanged code. rollover_required:
+no; recommended_next_session_mode: High for the known authorized deployment path.
 
 ## One-message local review packet — 2026-09-08T16:03:26Z
 

@@ -442,6 +442,12 @@ manifest проверяет observer; запись не приписывает �
 ограничен Access-protected preview на синтетических данных и не меняет
 production approvals, отдельное разрешение на ONE send или запрет blind retry.
 
+В этом порядке `reviewedAt` фиксирует фактическое завершение технической сверки
+manifest с подтверждённым владельцем выбором после deployment observation.
+Исходное время и источник подтверждения владельца сохраняются отдельно в
+protected evidence. Более поздний `reviewedAt` не означает нового ручного
+подтверждения владельца; записывать его без выполненной сверки запрещено.
+
 Read-only target/preflight sequence после отдельных разрешений:
 
 Independent deployment observer получает exact deployed Worker version из
