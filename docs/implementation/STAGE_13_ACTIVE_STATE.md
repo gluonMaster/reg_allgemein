@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T15:20:11Z
+updated_utc: 2026-09-08T15:24:20Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -14,9 +14,9 @@ manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
 current_phase: phase-5-telegram-authorized-held-backlog-disposition
-last_atomic_action: TG09-A-login
+last_atomic_action: TG09-H-cancel
 last_atomic_result: success
-next_atomic_action: TG09-H-cancel
+next_atomic_action: TG09-A-logout
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Known_authorized_next_admin_operation_exact_target_postcondition_and_containment
@@ -882,8 +882,8 @@ telegram_phase_preparation:
   protected_plan: tmp/telegram-phase-09-owner/preparation-plan.md
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_all_held_rows_preserved
 telegram_held_disposition:
-  latest_utc: 2026-09-08T15:20:11.669Z
-  action: TG09-A-login
+  latest_utc: 2026-09-08T15:24:20.917Z
+  action: TG09-H-cancel
   result: success
   authorization_record: tmp/telegram-phase-09-owner/held-owner-approval.json
   authorization_source: owner_explicit_razreshayu_for_normal_admin_login_one_old_notification_cancel_and_logout
@@ -893,25 +893,25 @@ telegram_held_disposition:
   new_admin_session_fingerprint: 564f781f28b3
   sessions_total_active: 20_1
   held_row_fingerprint: d906ae9c7f6c
-  held_row_status: pending
+  held_row_status: cancelled
   Telegram_attempts_unresolved_unknown: 0_0
-  linked_cancel_actions_assertions: 0_0
+  linked_cancel_actions_assertions: 1_1
   provider_sends: 0
-  postcondition_reads_writes: 371_0
+  postcondition_reads_writes: 376_0
   all_postcondition_checks_passed: true
-  evidence: tmp/telegram-phase-09-owner/TG09-A-login-checkpoint-safe.json_and_before_after_response_control
+  evidence: tmp/telegram-phase-09-owner/TG09-H-cancel-checkpoint-safe.json_and_before_after_response_control
   containment: Access_enforced_Telegram_disabled_Cron_paused_batch1_preserved_history_exact_session_logout
 next_atomic_action:
-  id: TG09-H-cancel
+  id: TG09-A-logout
   permission: owner_granted_once_each_scoped_login_exact_cancel_logout
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_held_row_d906ae9c7f6c
-  mutation: one_native_CSRF_protected_admin_outbox_change_cancel_exact_held_row
+  mutation: one_normal_logout_of_exact_new_admin_session
   preconditions:
     - preceding_actual_postcondition_success_and_docs_only_checkpoint_committed
     - exact_candidate_Access_and_disabled_provider_Cron_pause_preserved
   postcondition:
-    - exact_row_cancelled_attempts0_receipt_absent
-    - one_linked_admin_action_audit_passing_assertion_contract_and_other_data_preserved
+    - exact_new_admin_session_revoked_with_logout_reason_and_linked_audit
+    - zero_active_sessions_cancelled_row_and_contract_preserved
   containment: preserve_Access_disabled_Telegram_Cron_pause_batch1_all_history_and_no_blind_retry
   forbidden_in_this_action:
     - provider_send_secret_config_deploy_delete_direct_SQL_write_or_Cron_restore
@@ -922,6 +922,16 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Prompt 09 TG09-H-cancel: success — 2026-09-08T15:24:20.917Z
+
+One native verified-admin outbox form cancelled the exact held historical notification. Actual D1 read-back proves status cancelled, attempts0, no receipt, one linked cancel action/audit/passing assertion, and preserved contract/offers and unrelated state. No deletion, SQL repair or provider dispatch occurred.
+
+Exact evidence is protected under tmp/telegram-phase-09-owner/TG09-H-cancel-checkpoint-safe.json, with before/after D1, response and control records. Eleven SELECTs read 376 rows and wrote zero. Candidate 4a8c028 and version a255463d5707 remain exact; Access, disabled Telegram, paused Cron and batch1 are preserved. Telegram delivery attempts and unresolved unknowns are zero; no provider send.
+
+Only next action: TG09-A-logout. The next admin action is already owner-authorized and requires its own postcondition/checkpoint before another write. Status-only checks: docs:check, release:scan and git diff --check. Full check/Vitest/E2E/build and review remain inherited from exact reviewed 4a8c028 because runtime/config/migrations/dependencies are unchanged.
+rollover_required: no; recommended_next_session_mode: High — known authorized operation with exact target and containment.
+
 
 ## Prompt 09 TG09-A-login: success — 2026-09-08T15:20:11.669Z
 
