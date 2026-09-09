@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T07:33:54Z
+updated_utc: 2026-09-09T07:35:00Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-telegram-one-send-complete
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-functional-queue-return
-last_atomic_action: TG09-queue-readonly-audit
+current_phase: phase-5-telegram-one-message-execution
+last_atomic_action: TG09-R2-scheduler
 last_atomic_result: success
-next_atomic_action: TG09-R2-scheduler
+next_atomic_action: TG09-queue-readonly-audit
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Known_authorized_scheduler_return_after_all_jobs_readonly_audit
+recommended_next_session_mode: Medium
+mode_reason_plain: Read_only_queue_and_functional_return_evidence_no_additional_send
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -55,12 +55,12 @@ review:
 preview:
   access: enforced
   deployed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-  deployed_fingerprint: cd0868a9c31c
+  deployed_fingerprint: 7b3987503c77
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: original_feature_gates_preserved_only_expected_Telegram_secret_additions
-  deployment_postcondition: TG09-R1-functions_success_actual_config_module_Access_and_database_postcondition
+  deployment_postcondition: TG09-R2-scheduler_success_actual_config_module_Access_and_database_postcondition
   latest_readonly_control_utc: 2026-09-08T15:46:33.550Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
@@ -932,7 +932,7 @@ telegram_enablement_progress:
   timing: enter_E3_only_when_send_prerequisites_and_business_window_allow_prompt_completion
   actual_Telegram_secret_presence: true_true
   actual_existing_functions: AUTH_PUBLIC_true_CONTRACT_SEND_true_EMAIL_PROVIDER_resend
-  actual_Telegram_Cron: bot_api_false
+  actual_Telegram_Cron: bot_api_true
   actual_sessions_active_Telegram_attempts_unknown: 0_1_0
   evidence: tmp/telegram-phase-09-owner/TG09-E2-chat-checkpoint-safe.json_and_before_after_control_database_response
   query_reads_writes: 379_0
@@ -984,31 +984,30 @@ telegram_one_message_authorization:
   schedule_postcondition: tool_view_and_actual_saved_config_confirm_heartbeat_ACTIVE_COUNT1_09_00_current_thread_W_Europe_local_timezone
   schedule_initial_rejection: argument_validation_no_creation_then_corrected_supported_local_wall_clock_schedule
 telegram_runtime_execution:
-  latest_utc: 2026-09-09T07:28:42.802Z
-  action: TG09-R1-functions
+  latest_utc: 2026-09-09T07:35:00.105Z
+  action: TG09-R2-scheduler
   result: success
-  protected_evidence: tmp/telegram-phase-09-owner/TG09-R1-functions-checkpoint-safe.json_and_before_after_records
+  protected_evidence: tmp/telegram-phase-09-owner/TG09-R2-scheduler-checkpoint-safe.json_and_before_after_records
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   readback_checks: {"responseConfirmed":true,"expectedVars":true,"otherControlsPreserved":true,"exactModule":true,"uploadedModule":true,"databasePreserved":true,"rootConfigRestored":true}
-  current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"false"}
+  current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"true"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-R2-scheduler
+  one_next_atomic_action: TG09-queue-readonly-audit
 next_atomic_action:
-  id: TG09-R2-scheduler
-  permission: existing_owner_functional_return_after_actual_all_jobs_review_no_new_send
-  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1
-  mutation: one_same_module_full_manual_preview_return_config_SCHEDULED_JOBS_ENABLED_true
+  id: TG09-queue-readonly-audit
+  permission: existing_scoped_owner_approval_no_repeat_request_no_second_provider_attempt
+  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
+  mutation: none_bounded_due_jobs_and_visual_receipt_audit
   preconditions:
-    - sent_one_attempt_visual_receipt_zero_outbound_queues_unknowns_and_no_active_sessions
-    - reviewed_one_synthetic_price_trigger_draft_calculation_only_and_ten_expired_rate_buckets
-    - no_price_application_funding_expiry_or_R2_cleanup_due
+    - one_send_scope_consumed_no_additional_provider_send
+    - preceding_actual_postcondition_checkpoint_committed
   postcondition:
-    - exact_module_all_other_vars_Access_and_domain_state_preserved
-    - then_actual_automatic_fast_and_maintenance_results_without_extra_provider_send
-  containment: prepared_same_module_restore_after_smoke_Cron_false_auth_email_contracts_preserved
+    - actual_receipt_and_due_job_safety_recorded_or_specific_missing_owner_evidence
+    - each_remote_attempt_readback_and_docs_only_commit_before_next_mutation
+  containment: approved_restore_if_held_preserve_Access_history_secrets_no_blind_retry_or_extra_send
   forbidden_in_this_action:
-    - second_provider_attempt_new_parent_message_business_price_approval_or_production
+    - production_real_PII_second_send_or_unreviewed_Cron_catchup
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -1378,6 +1377,78 @@ tmp/telegram-phase-09-owner/TG09-R1-functions. Sanitized postcondition:
     "EMAIL_PROVIDER": "resend",
     "TELEGRAM_PROVIDER": "bot_api",
     "SCHEDULED_JOBS_ENABLED": "false"
+  },
+  "rowsRead": 382,
+  "queryWrites": 0,
+  "providerSends": 0,
+  "counts": {
+    "users": 3,
+    "sessions": 20,
+    "active_sessions": 0,
+    "telegram": 2,
+    "active_telegram": 0,
+    "telegram_attempts": 1,
+    "telegram_dead": 0,
+    "telegram_unknown": 0,
+    "unresolved_unknown": 0,
+    "emails": 16,
+    "nonsent_email": 0,
+    "email_attempts": 16,
+    "held_price": 1,
+    "locks": 0,
+    "contracts": 1,
+    "offers": 4,
+    "outbox_actions": 1,
+    "outbox_assertions": 1
+  },
+  "nextAction": "TG09-queue-readonly-audit",
+  "containment": "approved_restore_if_held_if_isolated_preserve_Access_history_and_secrets_no_retry",
+  "rollover_required": "no",
+  "recommended_next_session_mode": "Medium"
+}
+```
+
+One next atomic action: TG09-queue-readonly-audit. Preserve the one-attempt limit and required
+functional return. Validation: actual bounded postcondition, local operator helper
+execution/syntax, docs:check, release:scan and git diff --check. Exact unchanged
+runtime full-suite/build evidence from 4a8c028 is reused. No full manual preview
+or production completion is claimed. rollover_required: no;
+recommended_next_session_mode: Medium.
+
+## TG09-R2-scheduler actual checkpoint — 2026-09-09T07:35:00Z
+
+Result: success. Protected actual before/after and command evidence are under
+tmp/telegram-phase-09-owner/TG09-R2-scheduler. Sanitized postcondition:
+
+```json
+{
+  "utc": "2026-09-09T07:35:00.105Z",
+  "action": "TG09-R2-scheduler",
+  "result": "success",
+  "checks": {
+    "responseConfirmed": true,
+    "expectedVars": true,
+    "otherControlsPreserved": true,
+    "exactModule": true,
+    "uploadedModule": true,
+    "databasePreserved": true,
+    "rootConfigRestored": true
+  },
+  "candidate": "4a8c02816ef12947d6bd748dc690dcb2f46cdbd0",
+  "target": {
+    "account": "5dbd04a4763a",
+    "worker": "242c1796e930",
+    "originHost": "88ed782ba25a",
+    "d1": "ccdeb22bb2a1"
+  },
+  "beforeVersionFingerprint": "cd0868a9c31c",
+  "afterVersionFingerprint": "7b3987503c77",
+  "features": {
+    "AUTH_PUBLIC_ENABLED": "true",
+    "CONTRACT_SEND_ENABLED": "true",
+    "EMAIL_PROVIDER": "resend",
+    "TELEGRAM_PROVIDER": "bot_api",
+    "SCHEDULED_JOBS_ENABLED": "true"
   },
   "rowsRead": 382,
   "queryWrites": 0,
