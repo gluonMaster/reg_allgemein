@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-08T16:10:26Z
+updated_utc: 2026-09-09T07:04:15Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 last_completed_gate: phase-5-contract-08-complete
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-telegram-one-message-authorized-awaiting-business-window
-last_atomic_action: TG09-E2-chat
+current_phase: phase-5-telegram-one-message-execution
+last_atomic_action: TG09-E3-config
 last_atomic_result: success
-next_atomic_action: TG09-E3-config
+next_atomic_action: TG09-P-prepare
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Known_authorized_E3_then_one_cohort_one_send_after_fresh_preflight_in_next_business_window
+mode_reason_plain: Known_authorized_next_atomic_operation_after_actual_postcondition_and_checkpoint
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -55,12 +55,12 @@ review:
 preview:
   access: enforced
   deployed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-  deployed_fingerprint: 7139a29d1bba
+  deployed_fingerprint: bdcab84958db
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: original_feature_gates_preserved_only_expected_Telegram_secret_additions
-  deployment_postcondition: TG09-E2-chat_success_exact_module_single100percent_secret_presence_and_preserved_domain_sessions_provider_state
+  deployment_postcondition: TG09-E3-config_success_actual_config_module_Access_and_database_postcondition
   latest_readonly_control_utc: 2026-09-08T15:46:33.550Z
   latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
   target_fingerprints:
@@ -931,8 +931,8 @@ telegram_enablement_progress:
   scheduler_return: required_after_terminal_send_and_bounded_review_of_due_jobs_holds_recipients_and_cleanup_targets
   timing: enter_E3_only_when_send_prerequisites_and_business_window_allow_prompt_completion
   actual_Telegram_secret_presence: true_true
-  actual_existing_functions: AUTH_PUBLIC_true_CONTRACT_SEND_true_EMAIL_PROVIDER_resend
-  actual_Telegram_Cron: disabled_false
+  actual_existing_functions: AUTH_PUBLIC_false_CONTRACT_SEND_false_EMAIL_PROVIDER_disabled
+  actual_Telegram_Cron: bot_api_false
   actual_sessions_active_Telegram_attempts_unknown: 0_0_0
   evidence: tmp/telegram-phase-09-owner/TG09-E2-chat-checkpoint-safe.json_and_before_after_control_database_response
   query_reads_writes: 379_0
@@ -983,24 +983,31 @@ telegram_one_message_authorization:
   followup_evidence: tmp/telegram-phase-09-owner/one-message-followup-safe.json_and_automation_toml
   schedule_postcondition: tool_view_and_actual_saved_config_confirm_heartbeat_ACTIVE_COUNT1_09_00_current_thread_W_Europe_local_timezone
   schedule_initial_rejection: argument_validation_no_creation_then_corrected_supported_local_wall_clock_schedule
+telegram_runtime_execution:
+  latest_utc: 2026-09-09T07:04:15.256Z
+  action: TG09-E3-config
+  result: success
+  protected_evidence: tmp/telegram-phase-09-owner/TG09-E3-config-checkpoint-safe.json_and_before_after_records
+  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  readback_checks: {"responseConfirmed":true,"expectedVars":true,"otherControlsPreserved":true,"exactModule":true,"uploadedModule":true,"databasePreserved":true,"rootConfigRestored":true}
+  current_features: {"AUTH_PUBLIC_ENABLED":"false","CONTRACT_SEND_ENABLED":"false","EMAIL_PROVIDER":"disabled","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"false"}
+  current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":1,"active_telegram":0,"telegram_attempts":0,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
+  current_smoke_state: not_changed_by_config_operation
+  one_next_atomic_action: TG09-P-prepare
 next_atomic_action:
-  id: TG09-E3-config
-  permission: E3_restricted_config_and_functional_return_already_granted_later_one_cohort_one_attempt_also_granted
+  id: TG09-P-prepare
+  permission: existing_scoped_owner_approval_no_repeat_request_no_second_provider_attempt
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: one_same_reviewed_module_deploy_with_eight_prepared_restricted_vars_only
+  mutation: one_exact_saved_synthetic_cohort_D1_prepare
   preconditions:
-    - open_Mo_Fr_09_17_Europe_Berlin_window_not_before_2026_09_09T07_00_00Z_and_sufficient_time_for_functional_return
-    - committed_preceding_checkpoint_fresh_exact_control_candidate_module_provider_identity_and_unrevoked_owner_approval
-    - fresh_queue_check_no_active_dead_or_unresolved_unknown_other_rows_no_prior_cohort_dispatch
-    - two_Telegram_secrets_present_existing_auth_email_contract_features_preserved_Access_enforced_Cron_paused
-    - approved_proposed_config_and_cached_module_hashes_match_return_configs_available_no_unreviewed_runtime_diff
+    - actual_E3_manifest_and_official_target_preflight_green_business_window_open_no_backlog
+    - preceding_actual_postcondition_checkpoint_committed
   postcondition:
-    - actual_single100percent_version_exact_module_expected_eight_vars_two_secret_names_and_preserved_bindings_Access_Cron_batch1
-    - bounded_D1_sessions_domain_provider_state_preserved_zero_provider_send_by_this_deploy
-    - readback_success_failed_or_ambiguous_and_docs_only_checkpoint_commit_before_next_mutation
-  containment: if_interrupted_after_isolation_restore_previously_working_functions_using_approved_same_module_return_if_held_Telegram_disabled_Cron_paused_preserve_history_no_blind_retry
+    - one_disarmed_pending_row_attempts0_max1_exact_fixed_template_and_no_domain_delta
+    - each_remote_attempt_readback_and_docs_only_commit_before_next_mutation
+  containment: approved_restore_if_held_preserve_Access_history_secrets_no_blind_retry_or_extra_send
   forbidden_in_this_action:
-    - provider_send_or_synthetic_prepare_in_this_E3_atomic_operation_delete_direct_SQL_or_unreviewed_Cron_catchup
+    - production_real_PII_second_send_or_unreviewed_Cron_catchup
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -1008,6 +1015,78 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## TG09-E3-config actual checkpoint — 2026-09-09T07:04:15Z
+
+Result: success. Protected actual before/after and command evidence are under
+tmp/telegram-phase-09-owner/TG09-E3-config. Sanitized postcondition:
+
+```json
+{
+  "utc": "2026-09-09T07:04:15.256Z",
+  "action": "TG09-E3-config",
+  "result": "success",
+  "checks": {
+    "responseConfirmed": true,
+    "expectedVars": true,
+    "otherControlsPreserved": true,
+    "exactModule": true,
+    "uploadedModule": true,
+    "databasePreserved": true,
+    "rootConfigRestored": true
+  },
+  "candidate": "4a8c02816ef12947d6bd748dc690dcb2f46cdbd0",
+  "target": {
+    "account": "5dbd04a4763a",
+    "worker": "242c1796e930",
+    "originHost": "88ed782ba25a",
+    "d1": "ccdeb22bb2a1"
+  },
+  "beforeVersionFingerprint": "7139a29d1bba",
+  "afterVersionFingerprint": "bdcab84958db",
+  "features": {
+    "AUTH_PUBLIC_ENABLED": "false",
+    "CONTRACT_SEND_ENABLED": "false",
+    "EMAIL_PROVIDER": "disabled",
+    "TELEGRAM_PROVIDER": "bot_api",
+    "SCHEDULED_JOBS_ENABLED": "false"
+  },
+  "rowsRead": 379,
+  "queryWrites": 0,
+  "providerSends": 0,
+  "counts": {
+    "users": 3,
+    "sessions": 20,
+    "active_sessions": 0,
+    "telegram": 1,
+    "active_telegram": 0,
+    "telegram_attempts": 0,
+    "telegram_dead": 0,
+    "telegram_unknown": 0,
+    "unresolved_unknown": 0,
+    "emails": 16,
+    "nonsent_email": 0,
+    "email_attempts": 16,
+    "held_price": 1,
+    "locks": 0,
+    "contracts": 1,
+    "offers": 4,
+    "outbox_actions": 1,
+    "outbox_assertions": 1
+  },
+  "nextAction": "TG09-P-prepare",
+  "containment": "approved_restore_if_held_if_isolated_preserve_Access_history_and_secrets_no_retry",
+  "rollover_required": "no",
+  "recommended_next_session_mode": "High"
+}
+```
+
+One next atomic action: TG09-P-prepare. Preserve the one-attempt limit and required
+functional return. Validation: actual bounded postcondition, local operator helper
+execution/syntax, docs:check, release:scan and git diff --check. Exact unchanged
+runtime full-suite/build evidence from 4a8c028 is reused. No full manual preview
+or production completion is claimed. rollover_required: no;
+recommended_next_session_mode: High.
 
 ## ONE-send approval and one-occurrence continuation — 2026-09-08T16:10:26Z
 
