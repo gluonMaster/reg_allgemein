@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T09:37:24Z
+updated_utc: 2026-09-09T09:54:44Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 last_completed_gate: phase-5-telegram-technical-smoke-complete
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: phase-6-parent-local-fix-validated
-last_atomic_action: TG09-parent-local-runtime-fix
+current_phase: phase-6-review-deploy-new-sessions-prepared
+last_atomic_action: TG09-parent-session-prompts
 last_atomic_result: success
-next_atomic_action: TG09-parent-owner-scope
-rollover_required: no
+next_atomic_action: TG09-parent-independent-review
+rollover_required: yes
 recommended_next_session_mode: High
-mode_reason_plain: Local_fix_validated_prepare_scoped_review_deploy_and_one_audited_recovery_known_target_and_containment
+mode_reason_plain: Owner_requested_separate_09A_review_and_09B_deploy_sessions_known_preview_recovery_scope
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: local_fix_complete_new_review_deploy_and_one_recovery_send_scope_pending
+permission_state: owner_granted_review_preview_deploy_continuation_and_one_recovery_attempt_execute_in_new_09A_09B_sessions
 review:
   status: pending_independent_review
   candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
@@ -43,7 +43,7 @@ review:
   unresolved_candidate_p1: 0
   deployed_open_p1: Telegram_parent_attempt_unknown_Workers_redirect_error_reproduced
   verdict_scope: local_fix_checks_passed_no_independent_verdict_for_new_runtime
-  independent_reviewer: not_assigned_new_subagent_requires_owner_instruction
+  independent_reviewer: new_09A_session_authorized_pending_actual_review
   local_validation:
     check: passed_0_errors_0_warnings
     full_vitest: 80_files_591_pass_0_fail_1_expected_Windows_skip
@@ -993,7 +993,7 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"true"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-parent-owner-scope
+  one_next_atomic_action: TG09-parent-independent-review
 telegram_parent_recovery:
   observed_status: delivery_unknown_one_attempt_no_receipt_held
   outbox_fingerprint: ddbd7d01ec2e
@@ -1006,20 +1006,34 @@ telegram_parent_recovery:
   recovery_plan: one_code_only_deploy_then_exact_audited_resolution_then_observe_normal_Cron
   additional_attempt_limit: 1
   remote_write_or_send_this_session: none
-  independent_review_and_owner_remote_scope: pending
+  independent_review: pending_09A
+  owner_remote_scope: granted_09B_after_GO_no_repeat_approval
+  owner_approval_record: tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json
   protected_evidence: tmp/telegram-phase-09-owner/TG09-parent-candidate_private_safe_and_local-validation-safe_and_recovery-packet_private_safe
+telegram_parent_continuation_permission:
+  recorded_utc: 2026-09-09T09:54:44Z
+  protected_record: tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json
+  status: granted_not_yet_executed
+  review: independent_new_09A_session
+  deploy: code_only_existing_preview_after_exact_review_GO
+  further_deployments: necessary_same_scope_preview_deployments_and_containment_authorized
+  recovery: existing_exact_unknown_audited_resolution_max_one_additional_normal_outbox_attempt
+  execution_session_boundary: owner_requested_09A_then_separate_09B_no_execution_in_prompt_preparation_session
+  repeat_owner_approval: not_required_for_unchanged_granted_scope
+  preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
+  production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: TG09-parent-owner-scope
-  permission: request_owner_scope_for_subagent_review_code_only_preview_deploy_and_one_exact_audited_recovery
-  target: existing_preview_bot_and_destination_existing_parent_notification
-  mutation: none_while_approval_pending
+  id: TG09-parent-independent-review
+  permission: granted_execute_in_new_session_09A
+  target: exact_local_candidate_23c3999_and_protected_recovery_packet
+  mutation: local_focused_review_tests_and_docs_only_no_remote_mutation
   postcondition:
-    - explicit_owner_instruction_for_bounded_independent_subagent_review_and_known_remote_recovery_scope
-    - only_after_review_and_fresh_target_checks_deploy_fixed_module_preserving_actual_functions
-    - verify_exact_reference_absence_before_one_audited_retry_after_review_then_normal_Cron
-  containment: native_Telegram_unknown_circuit_breaker_preserve_row_attempt_and_other_functions
+    - actual_independent_GO_or_NO_GO_for_exact_candidate_with_findings_and_validation_evidence
+    - persistent_review_report_and_active_state_docs_only_checkpoint
+    - on_GO_next_action_TG09_parent_code_deploy_in_separate_09B_under_existing_owner_approval
+  containment: existing_remote_unknown_remains_held_no_remote_or_provider_action_in_09A
   forbidden_in_this_action:
-    - blind_retry_new_message_cohort_direct_SQL_resolution_or_production
+    - runtime_changes_remote_mutations_blind_retry_new_cohort_direct_SQL_or_production
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -7969,3 +7983,40 @@ parent-fix-* logs under tmp/telegram-phase-09-owner. No deployment, remote mutat
 or provider send occurred in this incident session. One next action is
 TG09-parent-owner-scope. rollover_required: no; recommended_next_session_mode: High
 for the known preview repair/recovery procedure, without severe data/target risk.
+
+
+## Owner authorized continuation; separate 9A and 9B sessions — 2026-09-09T09:54:44Z
+
+The owner explicitly approved the proposed independent review, preview deployment
+and one additional delivery attempt for the existing parent notification, including
+further necessary deployments in the agreed preview scope. The owner requested
+two prompts and separate new sessions: 9A for review, 9B after successful review.
+This approval is preserved in protected
+tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json, bound to
+the prepared candidate/recovery packet and prompt hashes. Earlier immutable
+permission=false/pending records are historical and do not override this grant.
+
+The permission does not waive actual review, exact target checks, known rollback,
+normal audited recovery, one additional attempt limit, per-mutation read-back or
+docs-only checkpoints. Do not request permission again for this unchanged scope.
+Production, official-site CMS, real-client data and additional send cohorts are
+outside this continuation. Preserve public auth/email/contracts/Cron and all
+actual configuration. A required normal admin login belongs to the approved
+recovery flow; unavailable credentials/OTP remain user input, not a fresh scope gate.
+
+Local prompts created under out/codex-two-day-preview-prompts-2026-09-03:
+09A_HIGH_TELEGRAM_FIX_REVIEW.md and 09B_HIGH_TELEGRAM_DEPLOY_RECOVERY.md.
+The package README points to this continuation; original one-send prompt 09 must
+not be rerun. These optional ignored prompts route to canonical documents and
+this active state; they do not define new business rules. 9A records the actual
+independent verdict and unlocks TG09-parent-code-deploy only after GO. 9B consumes
+the existing grant and exact recovery packet, preserving historical attempts.
+
+This session only prepared prompts/permission/handoff. No independent review,
+runtime change, remote read/write, deploy, login or provider send occurred.
+Full runtime evidence from exact 23c3999d206ef9551f775a5dda2b30939cf746c7 is reused;
+only docs:check, release:scan, git diff --check and local prompt/evidence integrity
+checks apply. The deployed P1 is still held and independent review remains pending.
+One next action: TG09-parent-independent-review in a new 9A session.
+rollover_required: yes; recommended_next_session_mode: High, because the owner
+chose separate review/deploy sessions for this known preview recovery procedure.

@@ -4695,3 +4695,26 @@ are pending. Current routing and immutable fingerprints are solely in
 [active state](../STAGE_13_ACTIVE_STATE.md). Per-mutation actual checkpoints and
 docs-only commits remain mandatory. rollover_required: no;
 recommended_next_session_mode: High for the known contained preview recovery.
+
+
+## Owner grant and new-session prompts 9A/9B — 2026-09-09T09:54:44Z
+
+Owner approved the proposed independent review, same-preview deployments and one
+additional delivery attempt for the existing parent notification, then explicitly
+requested separate new sessions: 9A review, 9B continuation after successful review.
+The protected TG09-parent-continuation-owner-approval.json records the exact quote,
+scope, candidate/recovery binding and prompt hashes. Earlier permission-pending
+artifacts remain immutable history; no repeated approval is needed for this scope.
+
+Created optional ignored 09A_HIGH_TELEGRAM_FIX_REVIEW.md and
+09B_HIGH_TELEGRAM_DEPLOY_RECOVERY.md in the original two-day prompt directory and
+updated its README. Review does not mutate runtime/remote state. 9B requires exact
+GO, fresh target/queue/destination observations, preserves actual preview functions
+and performs native audited recovery on the existing row with at most one further
+attempt. Old consumed smoke/enable helpers are not rerun or bypassed.
+
+Only local documents/permission artifacts changed. No review, deploy, login or
+provider send was performed. Current status and next action are in
+[active state](../STAGE_13_ACTIVE_STATE.md); full 23c3999 runtime checks are reused,
+docs/release/diff and prompt integrity checks apply. rollover_required: yes;
+recommended_next_session_mode: High for the owner-requested new 9A session.
