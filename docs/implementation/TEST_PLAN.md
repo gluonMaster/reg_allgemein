@@ -703,6 +703,12 @@ blocked gates и local suite их не заменяет.
   numeric configured destination, plain text, `link_preview_options.is_disabled`,
   `protect_content`, no parse mode/media/reply markup и отсутствие token/chat/
   payload/provider description в diagnostics;
+- `tests/integration/telegram-workers.test.ts`: default native workerd fetch
+  выполняет `sendMessage` и четыре read-only preflight метода с deployed
+  compatibility date; HTTP redirects не следуются, их `ok=false` body не
+  превращается в conclusive rejection или automatic retry. Outbound Service
+  перехватывает все запросы с синтетическими token/destination, внешней отправки
+  нет; этот тест покрывает runtime-совместимость, которую injected fetch не проверяет;
 - provider response matrix: valid `ok=true` с ожидаемым message/chat, destination
   mismatch, `429` с `retry_after`, explicit valid-`ok=false` `408|425|5xx` как
   conclusive retryable, permanent `400|401|403|404` и `migrate_to_chat_id`;
@@ -741,8 +747,8 @@ blocked gates и local suite их не заменяет.
   PII/free text, non-UUID reference, noncanonical time, query string и path/
   reference mismatch; D1 trigger tests отклоняют terminal status без matching
   append-only attempt/audit/resolution evidence;
-- все перечисленные provider tests используют injected fake fetch и не делают
-  внешних Telegram API calls.
+- перечисленные provider tests используют injected fake fetch либо intercepted
+  workerd outbound service и не делают внешних Telegram API calls.
 
 ### Admin и privacy
 
@@ -899,7 +905,7 @@ full-suite exact ancestor можно использовать как inherited e
 - migrations on empty and representative upgraded D1;
 - `npm audit --omit=dev` с документированным результатом;
 - preview smoke с fake/non-production email и R2; локальные Telegram tests
-  используют только fake fetch/provider;
+  используют fake fetch/provider либо intercepted workerd outbound service;
 - только после отдельного разрешения — один real Telegram `bot_api` preview smoke
   в dedicated preview channel с синтетическим минимизированным payload:
   ignored target manifest, separate actual ≤24h deployment observation, clean exact

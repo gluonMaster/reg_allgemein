@@ -102,7 +102,7 @@ describe('Telegram Bot API provider', () => {
 		expect(init).toMatchObject({
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			redirect: 'error',
+			redirect: 'manual',
 		});
 		const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
 		expect(body).toEqual({

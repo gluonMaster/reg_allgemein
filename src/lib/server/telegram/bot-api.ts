@@ -164,13 +164,23 @@ export class TelegramBotApiProvider implements TelegramProvider {
 						headers: { 'content-type': 'application/json' },
 						body: JSON.stringify(body),
 						signal: controller.signal,
-						redirect: 'error',
+						redirect: 'manual',
 					}
 				);
 			} catch {
 				throw new TelegramProviderError(
 					mayDeliver ? 'TELEGRAM_DELIVERY_UNKNOWN' : 'TELEGRAM_PREFLIGHT_UNAVAILABLE',
 					!mayDeliver,
+					{ delivery: mayDeliver ? 'unknown' : 'not_delivered' }
+				);
+			}
+
+			// workerd accepts manual redirects; reject them before trusting any provider envelope.
+			if (response.status >= 300 && response.status < 400) {
+				await response.body?.cancel().catch(() => undefined);
+				throw new TelegramProviderError(
+					mayDeliver ? 'TELEGRAM_DELIVERY_UNKNOWN' : 'TELEGRAM_RESPONSE_INVALID',
+					false,
 					{ delivery: mayDeliver ? 'unknown' : 'not_delivered' }
 				);
 			}
