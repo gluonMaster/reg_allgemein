@@ -1,6 +1,6 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: pending_independent_review -->
+<!-- stage-13-current-review-status: independent_go -->
 
 Ревизия: 2026-09-02.
 
@@ -10,7 +10,7 @@
 > status/SHA/next-action ниже являются историческими снимками и никогда не
 > переопределяют active state. Обновлять его только на границе фазы/сессии.
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 23c3999d206ef9551f775a5dda2b30939cf746c7 -->
 
 Последний сохранённый phase-boundary record: exact D1-cost remediation candidate
 получил independent GO с `P0/P1 = 0`; production остаётся **NO-GO**. Текущее
@@ -4718,3 +4718,34 @@ provider send was performed. Current status and next action are in
 [active state](../STAGE_13_ACTIVE_STATE.md); full 23c3999 runtime checks are reused,
 docs/release/diff and prompt integrity checks apply. rollover_required: yes;
 recommended_next_session_mode: High for the owner-requested new 9A session.
+
+
+## Telegram Workers 9A review boundary — 2026-09-09T10:05:21Z
+
+Codex in the new 9A session reviewed candidate
+23c3999d206ef9551f775a5dda2b30939cf746c7 against parent 115dfac1b1d35e3be4c42bcb310e273e42851c2e.
+Verdict **GO**, new candidate P0/P1 zero; no new P2/P3 findings. Reviewer identity
+is an independent agent session, not a second human. Full scope, consumer trace,
+recovery preconditions and findings are in
+[telegram-workers-09a.md](../reviews/telegram-workers-09a.md).
+
+Clean initial HEAD b53cafb56daa98232e78a5c55d290b82fb509b27 is docs-only after
+the runtime candidate. Focused provider/native-workerd regression: 42/42.
+All seven saved release-log hashes, Worker hash/source mapping, owner approval
+and protected recovery/config hashes agree. Reused exact candidate evidence:
+check, 80 Vitest files/591 pass/one expected Windows skip, 23 Chromium E2E,
+build, audit and strict local dry-run. No repeated full suite or new runtime
+change. Protected 09a-review-integrity-safe.json and 09a-focused-review.log are
+under tmp/telegram-phase-09-owner. Docs:check/release:scan/diff passed for this
+docs-only checkpoint; status/compatibility comments are synchronized without
+changing the production ledger or prior dated records.
+
+9A performed zero remote target reads, mutations, logins or provider sends.
+Deployed parent-flow P1 remains held pending actual deployment/recovery. Existing
+owner approval needs no reconfirmation for unchanged scope. The sole next action
+in [active state](../STAGE_13_ACTIVE_STATE.md) is TG09-parent-code-deploy in a
+new 09B_HIGH_TELEGRAM_DEPLOY_RECOVERY.md session. Fresh actual config/target/queue
+checks, preserved settings/Access/history, fresh absence before audited recovery,
+one additional attempt and per-mutation read-back/docs commits remain required.
+rollover_required: yes; recommended_next_session_mode: High — separate deployment
+was requested by the owner; exact preview recovery/containment are known.
