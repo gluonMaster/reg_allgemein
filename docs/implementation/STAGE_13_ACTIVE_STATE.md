@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T07:46:31Z
+updated_utc: 2026-09-09T09:22:26Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-telegram-one-send-and-functional-return-complete
-next_gate: phase-6-owner-manual-preview
+last_completed_gate: phase-5-telegram-technical-smoke-complete
+next_gate: phase-6-parent-Telegram-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-6-owner-manual-preview
-last_atomic_action: TG09-cadence-final
+current_phase: phase-6-parent-Telegram-incident
+last_atomic_action: TG09-parent-readonly-diagnosis
 last_atomic_result: success
-next_atomic_action: TG09-owner-parent-queue-observation
+next_atomic_action: TG09-parent-local-runtime-fix
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Read_only_owner_scenario_observation_no_unresolved_remote_ambiguity_or_agent_send
+recommended_next_session_mode: High
+mode_reason_plain: Reproduced_Workers_fetch_compatibility_P1_prepare_fix_and_exact_recovery_no_blind_resend
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -41,7 +41,7 @@ review:
   last_independently_reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
-  deployed_open_p1: none_paused_config_login_P1_resolved_by_actual_200
+  deployed_open_p1: Telegram_parent_attempt_unknown_Workers_redirect_error_reproduced
   verdict_scope: one_code_only_preview_deploy_config_bindings_secrets_schema_preserved
   independent_reviewer: review_preview_pause
   local_validation:
@@ -129,12 +129,12 @@ preview:
     global_nonrevoked_sessions: 0
     agent_authenticated_requests: 0
   scheduled:
-    fast: actual_automatic_succeeded_after_restoration_zero_extra_sends
+    fast: failed_Telegram_delivery_unknown_circuit_breaker_email_succeeds
     maintenance: actual_automatic_succeeded_after_restoration_no_business_approval_or_price_application
     fixed_cadence_rows: 2
     recent_failures: 0
     automatic_history_growth: fixed_cardinality_cadence_rows_active_manual_ledger_preserved
-    health: actual_authorized_HEAD_204_no_store_noindex_after_both_cadences
+    health: last_success_204_before_owner_incident_current_Telegram_failure_requires_recovery
   synthetic_state:
     users: 3
     parents: 2
@@ -993,21 +993,18 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"true"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-owner-parent-queue-observation
+  one_next_atomic_action: TG09-parent-local-runtime-fix
 next_atomic_action:
-  id: TG09-owner-parent-queue-observation
-  permission: existing_preview_access_and_readonly_observation_no_second_agent_send
-  target: owner_synthetic_parent_cabinet_and_selected_private_preview_destination
-  mutation: none_by_agent_owner_performs_manual_preview_actions
-  preconditions:
-    - working_auth_email_contracts_Telegram_scheduler_Access_and_HEALTH_204
-    - one_send_limit_consumed_technical_smoke_not_a_parent_support_thread
+  id: TG09-parent-local-runtime-fix
+  permission: owner_reported_broken_preview_flow_local_fix_and_readonly_diagnosis
+  target: reviewed_preview_Telegram_provider_and_Workers_runtime_tests
+  mutation: local_code_tests_and_evidence_only_no_remote_write_or_send
   postcondition:
-    - record_actual_owner_parent_submission_and_out_of_hours_next_window_delivery_when_available
-    - continue_remaining_owner_desktop_mobile_exploratory_matrix_before_full_manual_preview_GO
-  containment: preserve_working_preview_do_not_disable_functions_on_handoff_no_production
+    - reproduce_current_redirect_error_in_workerd_and_validate_manual_no_follow_fix
+    - full_required_runtime_checks_then_concrete_preview_deploy_and_audited_unknown_recovery_plan
+  containment: native_Telegram_unknown_circuit_breaker_preserve_row_attempt_and_other_functions
   forbidden_in_this_action:
-    - second_agent_provider_send_or_new_cohort_without_new_specific_scope
+    - blind_retry_new_message_cohort_direct_SQL_resolution_or_production
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -7886,3 +7883,29 @@ local operator helper syntax/execution, docs:check, release:scan and git diff
 (79 files/586 tests, 23 E2E); no runtime/migration/dependency change, so no repeat
 suite or independent review. rollover_required: no;
 recommended_next_session_mode: Medium for owner observation.
+
+## Owner parent Telegram incident — 2026-09-09T09:22:26.167Z
+
+Owner created a real synthetic parent thread and reports no Telegram notification.
+Exact bounded read-only diagnosis confirms the thread notification was enqueued
+and dispatched once at 2026-09-09T09:12:50.344Z, then became delivery_unknown
+at 09:12:50.883Z. Outbox fingerprint ddbd7d01ec2e, attempt 52edf4875835; no
+provider receipt. The native circuit breaker prevents all further Telegram
+dispatch; email and maintenance continue. Original sent technical smoke and
+cancelled historical row are unchanged. Actual version/control match the
+restored environment. This is a new milestone P1, not a successful parent flow.
+
+Protected TG09-parent-1112-private/safe/control evidence contains only bounded
+metadata (16 rows read, zero writes/sends). An initial diagnostic SELECT used
+wrong attempt column names and was rejected without mutation; corrected schema
+fields produced this observation. No parent body/title/contact values queried.
+
+Local workerd Request construction reproduces rejection of redirect:error, used
+by the deployed Telegram provider, before network dispatch. redirect:manual is
+accepted. Node-hosted technical smoke did not expose this runtime incompatibility.
+This establishes a code defect; historical remote delivery still remains
+unknown until exact destination review and audited resolution. Do not rewrite
+its status from inference or retry blindly. Prepare the narrow no-follow fix and
+a workerd transport regression, then required release checks and a concrete
+preview deployment/recovery packet. No new remote write or send is authorized by
+this diagnostic record. rollover_required: no; recommended_next_session_mode: High.
