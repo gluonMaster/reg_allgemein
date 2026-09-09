@@ -4631,3 +4631,40 @@ restoration of previously working functions even if isolation is interrupted.
 Current next action is in [active state](../STAGE_13_ACTIVE_STATE.md). Docs/release/
 diff checks apply; unchanged runtime full gates are reused. rollover_required: no;
 recommended_next_session_mode: High for the known authorized deployment path.
+
+## Telegram actual one-send and restored automatic preview — 2026-09-09T07:46:31Z
+
+The separately authorized saved cohort passed canonical target/preflight, one
+disarmed prepare and one normal-outbox run/verify. Provider response, durable
+attempt, sent state and exactly one visible Telegram delivery agree. Message
+reference TG-88C659B65637 is technical synthetic evidence, not an actual
+parent-created support thread. No resend, unknown result or second cohort.
+
+Restricted E3, same-instant canonical activation formatting correction, prepare,
+send, restoration of auth/email/contracts and restoration of Cron each have
+actual bounded postconditions and separate docs-only commits. Local DPAPI/ACL
+writer recovery preserved original failed artifacts and passed unmodified
+canonical validators; no runtime guard was bypassed. The prepare helper's
+count comparison was reconciled to the sole expected active-row increment before
+send. Runtime remained the exact reviewed 4a8c028 module throughout.
+
+The all-job read-only audit found no outbound, funding or R2 cleanup work.
+The one synthetic activation price trigger only produced an ordinary calculation
+without business approval/application. Automatic fast and maintenance cadences
+now pass, health HEAD is 204, and provider totals still show one Telegram attempt
+and the original 16 email sends. Access remains enforced. The one-shot Codex
+follow-up is PAUSED with no replacement/repeat schedule.
+
+Protected evidence is under tmp/telegram-phase-09-owner: TG09-S-run,
+TG09-R1-functions, TG09-R2-scheduler checkpoint/before/after records;
+TG09-visual-receipt-safe; TG09-queue-audit-safe; TG09-cadence-final-private/safe;
+one-message-followup-paused-safe. Current routing is only in
+[active state](../STAGE_13_ACTIVE_STATE.md). Parent-originated outside-hours
+queue/next-window delivery and owner desktop/mobile exploration remain to be
+observed before full-manual-preview; production approvals are separate.
+
+Only documentation/status changed in Git. Actual remote observations plus
+docs:check/release:scan/git diff --check apply. Exact reviewed 4a8c028 full
+unit/integration/build/23 E2E evidence is reused; no runtime suite or new review
+is needed for these docs-only descendants. rollover_required: no;
+recommended_next_session_mode: Medium.

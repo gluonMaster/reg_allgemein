@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T07:35:00Z
+updated_utc: 2026-09-09T07:46:31Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-telegram-one-send-complete
-next_gate: phase-5-functional-queue-return
+last_completed_gate: phase-5-telegram-one-send-and-functional-return-complete
+next_gate: phase-6-owner-manual-preview
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-telegram-one-message-execution
-last_atomic_action: TG09-R2-scheduler
+current_phase: phase-6-owner-manual-preview
+last_atomic_action: TG09-cadence-final
 last_atomic_result: success
-next_atomic_action: TG09-queue-readonly-audit
+next_atomic_action: TG09-owner-parent-queue-observation
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Read_only_queue_and_functional_return_evidence_no_additional_send
+mode_reason_plain: Read_only_owner_scenario_observation_no_unresolved_remote_ambiguity_or_agent_send
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,7 +34,7 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: one_exact_provider_attempt_consumed_no_second_send_functional_return_authorized
+permission_state: one_provider_attempt_consumed_functional_return_complete_no_second_agent_send
 review:
   status: independent_go
   candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -59,10 +59,10 @@ preview:
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
-  bindings_and_feature_gates_unchanged: original_feature_gates_preserved_only_expected_Telegram_secret_additions
+  bindings_and_feature_gates_unchanged: expected_Telegram_secrets_and_config_enabled_original_functions_restored
   deployment_postcondition: TG09-R2-scheduler_success_actual_config_module_Access_and_database_postcondition
-  latest_readonly_control_utc: 2026-09-08T15:46:33.550Z
-  latest_anonymous_access_check: 2026_09_07_C00fix_HEAD_302_Cloudflare_Access
+  latest_readonly_control_utc: 2026-09-09T07:35:00.105Z
+  latest_anonymous_access_check: TG09_R2_actual_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -76,9 +76,9 @@ preview:
     integrity_postcondition: passed_10_affected_table_scoped_quick_checks_fk_zero
     migration_attempted: true
     migration_result: success
-    latest_bounded_postcondition_utc: 2026-09-07T16:27:03.121Z
-    postcondition_rows_read: 952
-    latest_read_kind: L-A-logout_bounded_actual_postcondition
+    latest_bounded_postcondition_utc: 2026-09-09T07:35:00.105Z
+    postcondition_rows_read: 382
+    latest_read_kind: TG09_R2_config_actual_postcondition_latest_cadence_read_recorded_separately
     preceding_preflight_rows_read: 1050
     postcondition_rows_written: 0
     postcondition_changes: 0
@@ -129,12 +129,12 @@ preview:
     global_nonrevoked_sessions: 0
     agent_authenticated_requests: 0
   scheduled:
-    fast: last_run_succeeded_automatic_dispatch_now_paused_by_authorized_config
-    maintenance: last_run_succeeded_automatic_maintenance_now_paused_by_authorized_config
+    fast: actual_automatic_succeeded_after_restoration_zero_extra_sends
+    maintenance: actual_automatic_succeeded_after_restoration_no_business_approval_or_price_application
     fixed_cadence_rows: 2
     recent_failures: 0
-    automatic_history_growth: stopped
-    health: head_503_expected_Cron_disabled_empty_no_store_noindex
+    automatic_history_growth: fixed_cardinality_cadence_rows_active_manual_ledger_preserved
+    health: actual_authorized_HEAD_204_no_store_noindex_after_both_cadences
   synthetic_state:
     users: 3
     parents: 2
@@ -952,7 +952,7 @@ telegram_single_owner_procedure:
   user_flow_remaining: parent_cabinet_event_persisted_then_out_of_hours_queue_then_automatic_business_window_delivery
 telegram_one_message_packet:
   prepared_utc: 2026-09-08T16:01:27.069Z
-  status: local_ready_no_official_manifest_D1_prepare_or_send
+  status: historical_packet_consumed_by_successful_official_send
   evidence: tmp/telegram-phase-09-owner/one-message-review-packet-private.json_and_safe.json
   owner_card: tmp/telegram-phase-09-owner/ONE_MESSAGE_REVIEW_RU.md
   cli_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
@@ -968,7 +968,7 @@ telegram_one_message_packet:
   business_window: Mo_Fr_09_17_Europe_Berlin_closed_at_observation_next_2026_09_09T07_00_00Z
   automation_created: true_one_occurrence_heartbeat_current_thread_2026_09_09_09_00_Europe_Berlin
   remote_mutations_provider_sends: 0_0
-  remaining: fresh_actual_E3_observation_official_manifest_preflight_prepare_exact_text_run_verify_functional_return_and_parent_queue_flow
+  remaining: owner_parent_message_out_of_hours_queue_and_next_window_observation
 telegram_one_message_authorization:
   recorded_utc: 2026-09-08T16:10:26Z
   source: owner_explicit_razreshayu_to_prepared_one_synthetic_record_and_at_most_one_send_card
@@ -979,9 +979,9 @@ telegram_one_message_authorization:
   constraints: normal_outbox_only_fresh_preflight_actual_dispatch_before_network_no_retry_after_ambiguity_each_mutation_readback_and_commit
   production_authorized: false
   actual_prepared_rows_provider_attempts: 1_1
-  followup: heartbeat_telegram_preview_current_thread_ACTIVE_one_occurrence_next_local_09_00
-  followup_evidence: tmp/telegram-phase-09-owner/one-message-followup-safe.json_and_automation_toml
-  schedule_postcondition: tool_view_and_actual_saved_config_confirm_heartbeat_ACTIVE_COUNT1_09_00_current_thread_W_Europe_local_timezone
+  followup: heartbeat_telegram_preview_PAUSED_after_one_shot_success_no_repeat
+  followup_evidence: tmp/telegram-phase-09-owner/one-message-followup-paused-safe.json
+  schedule_postcondition: actual_saved_PAUSED_config_original_prompt_schedule_and_target_preserved
   schedule_initial_rejection: argument_validation_no_creation_then_corrected_supported_local_wall_clock_schedule
 telegram_runtime_execution:
   latest_utc: 2026-09-09T07:35:00.105Z
@@ -993,21 +993,21 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"true"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-queue-readonly-audit
+  one_next_atomic_action: TG09-owner-parent-queue-observation
 next_atomic_action:
-  id: TG09-queue-readonly-audit
-  permission: existing_scoped_owner_approval_no_repeat_request_no_second_provider_attempt
-  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: none_bounded_due_jobs_and_visual_receipt_audit
+  id: TG09-owner-parent-queue-observation
+  permission: existing_preview_access_and_readonly_observation_no_second_agent_send
+  target: owner_synthetic_parent_cabinet_and_selected_private_preview_destination
+  mutation: none_by_agent_owner_performs_manual_preview_actions
   preconditions:
-    - one_send_scope_consumed_no_additional_provider_send
-    - preceding_actual_postcondition_checkpoint_committed
+    - working_auth_email_contracts_Telegram_scheduler_Access_and_HEALTH_204
+    - one_send_limit_consumed_technical_smoke_not_a_parent_support_thread
   postcondition:
-    - actual_receipt_and_due_job_safety_recorded_or_specific_missing_owner_evidence
-    - each_remote_attempt_readback_and_docs_only_commit_before_next_mutation
-  containment: approved_restore_if_held_preserve_Access_history_secrets_no_blind_retry_or_extra_send
+    - record_actual_owner_parent_submission_and_out_of_hours_next_window_delivery_when_available
+    - continue_remaining_owner_desktop_mobile_exploratory_matrix_before_full_manual_preview_GO
+  containment: preserve_working_preview_do_not_disable_functions_on_handoff_no_production
   forbidden_in_this_action:
-    - production_real_PII_second_send_or_unreviewed_Cron_catchup
+    - second_agent_provider_send_or_new_cohort_without_new_specific_scope
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -7694,3 +7694,195 @@ auth/email/contracts/Telegram and Access. Verify actual config immediately and
 commit before further writes; then observe automatic cadences read-only. Full
 manual preview still requires the owner's parent/out-of-hours/next-window flow.
 rollover_required: no; recommended_next_session_mode: High.
+
+## Telegram one-send and functional return complete — 2026-09-09T07:46:31Z
+
+Exactly one authorized PII-free normal-outbox message was sent and is visible
+once in the owner's selected private preview destination. Official prepare/run/
+verify, durable provider receipt and actual D1 postconditions agree. The cancelled
+old notification is preserved. No second message, retry or unknown result exists.
+
+Auth, email, contracts and Telegram are enabled. Actual automatic fast and
+maintenance cadences succeeded after scheduler restoration. The price trigger
+was processed by the ordinary calculation path; no price approval/application
+or external message was performed. Protected final evidence:
+tmp/telegram-phase-09-owner/TG09-cadence-final-private.json and safe.json,
+TG09-visual-receipt-safe.json, TG09-restored-login-ui-safe.json and per-action
+checkpoint records. The single-occurrence Codex follow-up is PAUSED with its
+original prompt/schedule/target preserved.
+
+```json
+{
+  "utc": "2026-09-09T07:46:31.489Z",
+  "oneSend": "sent",
+  "attempts": 1,
+  "receiptVisible": true,
+  "versionFingerprint": "7b3987503c77",
+  "features": {
+    "AUTH_PUBLIC_ENABLED": "true",
+    "CONTRACT_SEND_ENABLED": "true",
+    "EMAIL_PROVIDER": "resend",
+    "TELEGRAM_PROVIDER": "bot_api",
+    "SCHEDULED_JOBS_ENABLED": "true"
+  },
+  "automaticCadences": [
+    {
+      "cadence": "fast",
+      "status": "succeeded",
+      "startedAt": "2026-09-09T07:45:49.266Z",
+      "finishedAt": "2026-09-09T07:45:50.776Z",
+      "afterRestoration": true,
+      "results": {
+        "jobCount": 2,
+        "succeeded": 2,
+        "featureDisabled": 0,
+        "failed": 0,
+        "skippedLocked": 0,
+        "jobs": {
+          "email_outbox": {
+            "status": "succeeded",
+            "result": {
+              "claimed": 0,
+              "sent": 0,
+              "retry": 0,
+              "dead": 0,
+              "deliveryUnknown": 0,
+              "deferred": 0,
+              "lostLease": 0
+            }
+          },
+          "telegram_outbox": {
+            "status": "succeeded",
+            "result": {
+              "claimed": 0,
+              "sent": 0,
+              "retry": 0,
+              "dead": 0,
+              "deliveryUnknown": 0,
+              "deferred": 0,
+              "lostLease": 0,
+              "reconciledDeliveryUnknown": 0,
+              "unresolvedDeliveryUnknown": 0,
+              "terminalDead": 0
+            }
+          }
+        }
+      },
+      "recentFailures": 0
+    },
+    {
+      "cadence": "maintenance",
+      "status": "succeeded",
+      "startedAt": "2026-09-09T07:45:49.057Z",
+      "finishedAt": "2026-09-09T07:45:53.583Z",
+      "afterRestoration": true,
+      "results": {
+        "jobCount": 7,
+        "succeeded": 7,
+        "featureDisabled": 0,
+        "failed": 0,
+        "skippedLocked": 0,
+        "jobs": {
+          "price_review": {
+            "status": "succeeded",
+            "result": {
+              "reconciled": 0,
+              "processedTriggers": 1,
+              "overdue": 0,
+              "applied": 0,
+              "superseded": 0
+            }
+          },
+          "document_quarantine": {
+            "status": "succeeded",
+            "result": {
+              "claimed": 0,
+              "deleted": 0
+            }
+          },
+          "funding_authorization_expiry": {
+            "status": "succeeded",
+            "result": {
+              "candidates": 0,
+              "processed": 0
+            }
+          },
+          "email_reservation_cleanup": {
+            "status": "succeeded",
+            "result": {
+              "cleaned": 0
+            }
+          },
+          "privacy_r2_cleanup": {
+            "status": "succeeded",
+            "result": {
+              "claimed": 0,
+              "completed": 0,
+              "failed": 0
+            }
+          },
+          "security_metadata_cleanup": {
+            "status": "succeeded",
+            "result": {
+              "contractActions": 0,
+              "contractAcceptances": 0,
+              "priceActions": 0,
+              "priceAcceptances": 0,
+              "rateLimitBuckets": 10,
+              "workerErrorBuckets": 0
+            }
+          },
+          "storage_orphan_cleanup": {
+            "status": "succeeded",
+            "result": {
+              "reconciled": 0,
+              "claimed": 0,
+              "deleted": 0,
+              "failed": 0
+            }
+          }
+        }
+      },
+      "recentFailures": 0
+    }
+  ],
+  "counts": {
+    "emails": 16,
+    "nonsent_email": 0,
+    "email_attempts": 16,
+    "telegram": 2,
+    "sent_telegram": 1,
+    "cancelled_telegram": 1,
+    "telegram_attempts": 1,
+    "actionable_telegram": 0,
+    "active_sessions": 0,
+    "pending_price": 0,
+    "price_batches": 1,
+    "price_items": 1,
+    "expired_rate_buckets": 0,
+    "contracts": 1,
+    "offers": 4
+  },
+  "health": {
+    "status": 204,
+    "noStore": true,
+    "noIndex": true
+  },
+  "followup": "PAUSED"
+}
+```
+
+One next action: TG09-owner-parent-queue-observation. The owner can use the
+working synthetic preview at /messages after parent login. This technical
+smoke's synthetic reference is not a real parent-created support thread; it does
+not prove the linked admin ticket UI or an out-of-hours parent submission.
+Full-manual-preview and production remain blocked by their remaining actual
+manual/production gates, not by intentionally disabled auth/email/contracts/
+Telegram/scheduler. No production/CMS/real-client operation occurred.
+
+Validation: actual provider/D1/config/module/Access/UI/cadence/health observations,
+local operator helper syntax/execution, docs:check, release:scan and git diff
+--check. Full runtime tests/build/E2E reused from exact reviewed 4a8c028
+(79 files/586 tests, 23 E2E); no runtime/migration/dependency change, so no repeat
+suite or independent review. rollover_required: no;
+recommended_next_session_mode: Medium for owner observation.
