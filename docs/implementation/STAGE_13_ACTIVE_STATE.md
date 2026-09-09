@@ -1,25 +1,25 @@
 # Stage 13: current operational state
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T09:22:26Z
+updated_utc: 2026-09-09T09:37:24Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 last_completed_gate: phase-5-telegram-technical-smoke-complete
 next_gate: phase-6-parent-Telegram-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: independent_go
-current_phase: phase-6-parent-Telegram-incident
-last_atomic_action: TG09-parent-readonly-diagnosis
+current_review_status: pending_independent_review
+current_phase: phase-6-parent-local-fix-validated
+last_atomic_action: TG09-parent-local-runtime-fix
 last_atomic_result: success
-next_atomic_action: TG09-parent-local-runtime-fix
+next_atomic_action: TG09-parent-owner-scope
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Reproduced_Workers_fetch_compatibility_P1_prepare_fix_and_exact_recovery_no_blind_resend
+mode_reason_plain: Local_fix_validated_prepare_scoped_review_deploy_and_one_audited_recovery_known_target_and_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -34,23 +34,23 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: one_provider_attempt_consumed_functional_return_complete_no_second_agent_send
+permission_state: local_fix_complete_new_review_deploy_and_one_recovery_send_scope_pending
 review:
-  status: independent_go
-  candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+  status: pending_independent_review
+  candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
   last_independently_reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
   deployed_open_p1: Telegram_parent_attempt_unknown_Workers_redirect_error_reproduced
-  verdict_scope: one_code_only_preview_deploy_config_bindings_secrets_schema_preserved
-  independent_reviewer: review_preview_pause
+  verdict_scope: local_fix_checks_passed_no_independent_verdict_for_new_runtime
+  independent_reviewer: not_assigned_new_subagent_requires_owner_instruction
   local_validation:
     check: passed_0_errors_0_warnings
-    full_vitest: 79_files_586_pass_0_fail_1_expected_Windows_skip
+    full_vitest: 80_files_591_pass_0_fail_1_expected_Windows_skip
     chromium_e2e: 23_of_23
     build: passed
-    compiled_worker_smoke: login_200_inputs_present_anonymous_admin_401_health_503_outbound_0
-    independent_review: GO_no_new_P0_P1
+    compiled_worker_smoke: 5_native_workerd_provider_tests_success_preflight_redirect_rejection_no_external_send
+    independent_review: pending_for_new_runtime_historical_GO_not_reused
   previous_reviewed_candidate: 438a51399ac5f58b428b624c52ca2cbbc059ae9c
 preview:
   access: enforced
@@ -993,15 +993,30 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"true"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-parent-local-runtime-fix
+  one_next_atomic_action: TG09-parent-owner-scope
+telegram_parent_recovery:
+  observed_status: delivery_unknown_one_attempt_no_receipt_held
+  outbox_fingerprint: ddbd7d01ec2e
+  attempt_fingerprint: 52edf4875835
+  delivery_reference: TG-6854E6ADE571
+  local_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
+  candidate_module_sha256: 441dd3df4295f7146683638fa51654f060d06bbe7aed8cea5f7a1ccdf7212d51
+  candidate_module_bytes: 3429623
+  strict_dry_run: passed_actual_vars_preserved_root_config_restored
+  recovery_plan: one_code_only_deploy_then_exact_audited_resolution_then_observe_normal_Cron
+  additional_attempt_limit: 1
+  remote_write_or_send_this_session: none
+  independent_review_and_owner_remote_scope: pending
+  protected_evidence: tmp/telegram-phase-09-owner/TG09-parent-candidate_private_safe_and_local-validation-safe_and_recovery-packet_private_safe
 next_atomic_action:
-  id: TG09-parent-local-runtime-fix
-  permission: owner_reported_broken_preview_flow_local_fix_and_readonly_diagnosis
-  target: reviewed_preview_Telegram_provider_and_Workers_runtime_tests
-  mutation: local_code_tests_and_evidence_only_no_remote_write_or_send
+  id: TG09-parent-owner-scope
+  permission: request_owner_scope_for_subagent_review_code_only_preview_deploy_and_one_exact_audited_recovery
+  target: existing_preview_bot_and_destination_existing_parent_notification
+  mutation: none_while_approval_pending
   postcondition:
-    - reproduce_current_redirect_error_in_workerd_and_validate_manual_no_follow_fix
-    - full_required_runtime_checks_then_concrete_preview_deploy_and_audited_unknown_recovery_plan
+    - explicit_owner_instruction_for_bounded_independent_subagent_review_and_known_remote_recovery_scope
+    - only_after_review_and_fresh_target_checks_deploy_fixed_module_preserving_actual_functions
+    - verify_exact_reference_absence_before_one_audited_retry_after_review_then_normal_Cron
   containment: native_Telegram_unknown_circuit_breaker_preserve_row_attempt_and_other_functions
   forbidden_in_this_action:
     - blind_retry_new_message_cohort_direct_SQL_resolution_or_production
@@ -7909,3 +7924,48 @@ its status from inference or retry blindly. Prepare the narrow no-follow fix and
 a workerd transport regression, then required release checks and a concrete
 preview deployment/recovery packet. No new remote write or send is authorized by
 this diagnostic record. rollover_required: no; recommended_next_session_mode: High.
+
+
+## Parent Telegram runtime fix prepared — 2026-09-09T09:37:24Z
+
+Exact local remediation candidate 23c3999d206ef9551f775a5dda2b30939cf746c7 changes only Telegram
+HTTP redirect handling: manual no-follow mode plus rejection of all 3xx before
+parsing their envelope. The native workerd regression failed before the fix with
+the same delivery_unknown result and zero intercepted outbound calls, then passed
+after the fix. Five native runtime tests cover actual default fetch, valid receipt,
+four-method destination preflight and no redirect following/trust. Tests use only
+synthetic credentials and an intercepted outbound service; no external message.
+
+Full runtime checks passed for this exact tree: check (zero errors/warnings),
+80 Vitest files/591 tests with one expected Windows skip, 23 Chromium E2E,
+build, production dependency audit (zero vulnerabilities). Strict local Wrangler
+dry run matches all actual deployed vars, restores root config and produces module
+441dd3df4295f7146683638fa51654f060d06bbe7aed8cea5f7a1ccdf7212d51 (3429623 bytes).
+Docs:check/release:scan/diff are the final docs-only checkpoint gates. Do not repeat
+the full runtime suite for a later docs-only child without material change.
+
+Independent review of this new runtime has not been performed; historical GO for
+4a8c02816ef12947d6bd748dc690dcb2f46cdbd0 must not be reused as its verdict. Current
+session rules require an explicit owner instruction before subagent delegation.
+Prepared owner scope combines that bounded technical review, one code-only
+preview deployment and one audited retry of the existing notification, after
+fresh exact-destination absence checks. Full manual preview remains blocked by
+the deployed P1 and remaining user-flow observations. No requirement changed.
+
+Recovery SELECT confirms the same one unresolved attempt (two rows read, zero
+writes). Use the protected packet's exact outbox/attempt, retain TG-6854E6ADE571,
+and use the normal admin resolveTelegram action with message_absence_verified
+and additional attempt limit one. The original attempt remains in history.
+Before deployment revalidate current settings/queue; before resolution verify the
+fixed module and exact destination. Access, public auth, email, contracts, Cron,
+business hours, schema, bot and destination remain unchanged. After each attempted
+remote mutation read back actual state and commit its checkpoint before the next
+mutation; no resubmission after uncertainty. Rollback uses the recorded current
+baseline version/module while preserving settings and held notification evidence.
+
+Protected evidence: TG09-parent-candidate-private/safe,
+TG09-parent-local-validation-safe, TG09-parent-recovery-packet-private/safe and
+parent-fix-* logs under tmp/telegram-phase-09-owner. No deployment, remote mutation
+or provider send occurred in this incident session. One next action is
+TG09-parent-owner-scope. rollover_required: no; recommended_next_session_mode: High
+for the known preview repair/recovery procedure, without severe data/target risk.

@@ -1,6 +1,6 @@
 # Handoff этапа 13: hardening и production readiness
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Ревизия: 2026-09-02.
 
@@ -4668,3 +4668,30 @@ docs:check/release:scan/git diff --check apply. Exact reviewed 4a8c028 full
 unit/integration/build/23 E2E evidence is reused; no runtime suite or new review
 is needed for these docs-only descendants. rollover_required: no;
 recommended_next_session_mode: Medium.
+
+
+## Parent-originated Telegram runtime failure and local fix — 2026-09-09T09:37:24Z
+
+The owner-created parent event was queued in business hours, dispatched once
+11 seconds later and marked delivery_unknown without a receipt. The existing
+circuit breaker holds Telegram; email/maintenance continue. Native workerd rejects
+redirect:error before network, whereas the earlier Node CLI technical smoke
+accepted it. This is a reproduced mandatory-flow P1; no duplicate thread is needed.
+
+Candidate 23c3999d206ef9551f775a5dda2b30939cf746c7 uses manual no-follow and rejects 3xx envelopes.
+RED→GREEN native Workers evidence, 80 files/591 tests (one expected Windows skip),
+23 Chromium E2E, typecheck, build, audit and strict dry-run all pass. Five native
+tests cover production provider fetch without a fetch mock; outbound is intercepted
+and synthetic. Full tests need not repeat for docs-only descendants. Independent
+review of the new runtime remains pending; old 4a8c028 verdict is historical.
+
+Protected parent recovery/candidate/validation packets are under
+tmp/telegram-phase-09-owner. They specify code-only preview deploy preserving
+actual functions, fresh destination absence verification, one native audited
+retry_after_review on the exact unknown attempt, and normal Cron observation.
+Keep original reference/attempt evidence and at most one additional attempt.
+No remote mutation/send occurred; new owner scope and subagent review instruction
+are pending. Current routing and immutable fingerprints are solely in
+[active state](../STAGE_13_ACTIVE_STATE.md). Per-mutation actual checkpoints and
+docs-only commits remain mandatory. rollover_required: no;
+recommended_next_session_mode: High for the known contained preview recovery.
