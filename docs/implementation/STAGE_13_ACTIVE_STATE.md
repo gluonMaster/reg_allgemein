@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T07:28:42Z
+updated_utc: 2026-09-09T07:33:54Z
 reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 local_remediation_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-last_completed_gate: phase-5-contract-08-complete
-next_gate: phase-5-telegram-restricted-enablement
+last_completed_gate: phase-5-telegram-one-send-complete
+next_gate: phase-5-functional-queue-return
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-5-telegram-one-message-execution
-last_atomic_action: TG09-R1-functions
+current_phase: phase-5-functional-queue-return
+last_atomic_action: TG09-queue-readonly-audit
 last_atomic_result: success
-next_atomic_action: TG09-queue-readonly-audit
+next_atomic_action: TG09-R2-scheduler
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Read_only_queue_and_functional_return_evidence_no_additional_send
+recommended_next_session_mode: High
+mode_reason_plain: Known_authorized_scheduler_return_after_all_jobs_readonly_audit
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -993,21 +993,22 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"false"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-queue-readonly-audit
+  one_next_atomic_action: TG09-R2-scheduler
 next_atomic_action:
-  id: TG09-queue-readonly-audit
-  permission: existing_scoped_owner_approval_no_repeat_request_no_second_provider_attempt
-  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: none_bounded_due_jobs_and_visual_receipt_audit
+  id: TG09-R2-scheduler
+  permission: existing_owner_functional_return_after_actual_all_jobs_review_no_new_send
+  target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1
+  mutation: one_same_module_full_manual_preview_return_config_SCHEDULED_JOBS_ENABLED_true
   preconditions:
-    - one_send_scope_consumed_no_additional_provider_send
-    - preceding_actual_postcondition_checkpoint_committed
+    - sent_one_attempt_visual_receipt_zero_outbound_queues_unknowns_and_no_active_sessions
+    - reviewed_one_synthetic_price_trigger_draft_calculation_only_and_ten_expired_rate_buckets
+    - no_price_application_funding_expiry_or_R2_cleanup_due
   postcondition:
-    - actual_receipt_and_due_job_safety_recorded_or_specific_missing_owner_evidence
-    - each_remote_attempt_readback_and_docs_only_commit_before_next_mutation
-  containment: approved_restore_if_held_preserve_Access_history_secrets_no_blind_retry_or_extra_send
+    - exact_module_all_other_vars_Access_and_domain_state_preserved
+    - then_actual_automatic_fast_and_maintenance_results_without_extra_provider_send
+  containment: prepared_same_module_restore_after_smoke_Cron_false_auth_email_contracts_preserved
   forbidden_in_this_action:
-    - production_real_PII_second_send_or_unreviewed_Cron_catchup
+    - second_provider_attempt_new_parent_message_business_price_approval_or_production
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -7591,3 +7592,34 @@ current SHA, deployed fingerprint or next action into those documents.
 Historical evidence: [append-only Stage-13 handoff](handoffs/stage-13.md).
 Stable execution entry-point:
 [stage-13-continue-deployment.md](../prompts/stage-13-continue-deployment.md).
+
+## Telegram receipt and scheduler return scope — 2026-09-09T07:33:54.025Z
+
+The official one-shot run is terminal sent with one durable attempt and zero
+unresolved unknowns. Telegram Web visibly shows one matching delivery reference
+TG-88C659B65637 in the owner's exact selected private destination. The three
+unrelated function flags are restored. Protected receipt and queue evidence:
+tmp/telegram-phase-09-owner/TG09-visual-receipt-safe.json and
+TG09-queue-audit-safe.json (72 reads, zero writes).
+
+All provider queues and document/funding/privacy/storage cleanup candidates are
+empty. The one pending trigger is the authorized synthetic contract activation's
+price calculation. Runtime processTrigger only creates draft/manual-contact
+items or a no-change batch; approval, notifications and price application require
+separate business actions. There are zero existing price items/batches, so no
+overdue or scheduled price event can send. Ten expired rate buckets are normal
+metadata cleanup, with no active sessions.
+
+Scope interpretation: the owner's required return to automatic functioning,
+recorded in enable-owner-approval.json, already covers the reviewed return config
+and these normal background consequences. It does not approve a second message
+or a business price decision. The old notification remains cancelled. No new
+permission is requested for the same restoration. Prior narrower paused-phase
+containment is historical; this expressly reviewed restoration supersedes it.
+
+Next atomic action TG09-R2-scheduler changes only SCHEDULED_JOBS_ENABLED to true.
+Containment is the prepared same-module restore-after-smoke config, retaining
+auth/email/contracts/Telegram and Access. Verify actual config immediately and
+commit before further writes; then observe automatic cadences read-only. Full
+manual preview still requires the owner's parent/out-of-hours/next-window flow.
+rollover_required: no; recommended_next_session_mode: High.
