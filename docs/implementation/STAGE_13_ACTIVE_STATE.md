@@ -16,7 +16,7 @@ current_review_status: independent_go
 current_phase: phase-5-telegram-one-message-execution
 last_atomic_action: TG09-E3-config
 last_atomic_result: success
-next_atomic_action: TG09-P-prepare
+next_atomic_action: TG09-E3T-time
 rollover_required: no
 recommended_next_session_mode: High
 mode_reason_plain: Known_authorized_next_atomic_operation_after_actual_postcondition_and_checkpoint
@@ -993,17 +993,18 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"false","CONTRACT_SEND_ENABLED":"false","EMAIL_PROVIDER":"disabled","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"false"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":1,"active_telegram":0,"telegram_attempts":0,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-P-prepare
+  one_next_atomic_action: TG09-E3T-time
 next_atomic_action:
-  id: TG09-P-prepare
+  id: TG09-E3T-time
   permission: existing_scoped_owner_approval_no_repeat_request_no_second_provider_attempt
   target: preview_Worker_242c1796e930_D1_ccdeb22bb2a1_bot_4ba876965084_supergroup_02e9638892ee
-  mutation: one_exact_saved_synthetic_cohort_D1_prepare
+  mutation: one_same_module_config_deploy_canonicalize_only_activation_timestamp_representation_same_approved_instant
   preconditions:
-    - actual_E3_manifest_and_official_target_preflight_green_business_window_open_no_backlog
+    - canonical_execution_plan_full_target_draft_validator_passed_same_instant_and_exact_clean_candidate
+    - fresh_control_database_and_approved_same_target_no_provider_attempt
     - preceding_actual_postcondition_checkpoint_committed
   postcondition:
-    - one_disarmed_pending_row_attempts0_max1_exact_fixed_template_and_no_domain_delta
+    - one_changed_var_TELEGRAM_ACTIVATION_AT_same_instant_canonical_millisecond_UTC_exact_module_and_preserved_data
     - each_remote_attempt_readback_and_docs_only_commit_before_next_mutation
   containment: approved_restore_if_held_preserve_Access_history_secrets_no_blind_retry_or_extra_send
   forbidden_in_this_action:
@@ -1015,6 +1016,27 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## Local target preparation correction — 2026-09-09T07:18:50Z
+
+No synthetic D1 prepare or provider attempt occurred. Local official writers
+exposed two operator issues: PowerShell module-path/Set-Acl compatibility, and a
+P1 target-validator rejection of the approved activation instant written without
+milliseconds. Exact partial local artifacts remain protected and preserved. The
+ACL recovery uses an access-only FileSecurity update for the already correct
+owner and the unmodified canonical path/ACL validator; it does not change owner,
+audit ACL, privileges or runtime code.
+
+Protected canonical-execution-plan.json prepares the same activation instant in
+canonical UTC representation, four corresponding config variants and a fresh
+clean exact-candidate CLI workspace. The complete target draft validator passed
+locally; this draft is not represented as evidence of a deployed configuration.
+The sole next atomic action is TG09-E3T-time: one variable format correction under
+the existing approved cutoff/target/scope. Before/after control must prove equal
+instant and unchanged module, settings and data. Existing functions must be
+restored via the prepared return config on completion or interruption. No new
+send approval or business-time policy is introduced. Only local helpers and
+docs/release/diff checks apply; unchanged runtime full evidence is reused.
 
 ## TG09-E3-config actual checkpoint — 2026-09-09T07:04:15Z
 
