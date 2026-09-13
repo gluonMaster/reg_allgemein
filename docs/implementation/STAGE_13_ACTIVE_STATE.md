@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-09T10:05:21Z
+updated_utc: 2026-09-13T09:04:50Z
 reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-last_completed_gate: phase-6-telegram-09A-independent-review-complete
+last_completed_gate: phase-6-parent-Telegram-code-deploy-complete
 next_gate: phase-6-parent-Telegram-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-6-reviewed-Telegram-fix-awaiting-09B-deploy
-last_atomic_action: TG09-parent-independent-review
+current_phase: phase-6-fixed-Telegram-deployed-awaiting-audited-recovery
+last_atomic_action: TG09-parent-code-deploy
 last_atomic_result: success
-next_atomic_action: TG09-parent-code-deploy
-rollover_required: yes
+next_atomic_action: TG09-parent-audited-resolution
+rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Owner_requested_separate_09B_deploy_after_GO_known_target_postconditions_and_containment
+mode_reason_plain: Known_exact_preview_audited_recovery_one_additional_attempt_preserve_hold_until_absence_verified
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -41,7 +41,7 @@ review:
   last_independently_reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
-  deployed_open_p1: Telegram_parent_attempt_unknown_Workers_redirect_error_reproduced
+  deployed_open_p1: fixed_module_deployed_existing_unknown_still_requires_audited_recovery_and_delivery
   verdict_scope: exact_Telegram_fix_GO_code_only_preview_deploy_and_existing_one_attempt_recovery_in_09B
   independent_reviewer: Codex_new_09A_session_independent_code_reviewer_not_second_human
   reviewed_utc: 2026-09-09T10:03:04Z
@@ -60,15 +60,15 @@ review:
   previous_reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
 preview:
   access: enforced
-  deployed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
-  deployed_fingerprint: 7b3987503c77
+  deployed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
+  deployed_fingerprint: 06b52ab01db5
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: expected_Telegram_secrets_and_config_enabled_original_functions_restored
-  deployment_postcondition: TG09-R2-scheduler_success_actual_config_module_Access_and_database_postcondition
-  latest_readonly_control_utc: 2026-09-09T07:35:00.105Z
-  latest_anonymous_access_check: TG09_R2_actual_HEAD_302_Cloudflare_Access
+  deployment_postcondition: TG09_parent_code_deploy_success_actual_module_annotation_100_percent_preserved_settings_schema_queue
+  latest_readonly_control_utc: 2026-09-13T09:04:50.753Z
+  latest_anonymous_access_check: TG09B_actual_HEAD_302_Cloudflare_Access
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -1011,7 +1011,7 @@ telegram_parent_recovery:
   strict_dry_run: passed_actual_vars_preserved_root_config_restored
   recovery_plan: one_code_only_deploy_then_exact_audited_resolution_then_observe_normal_Cron
   additional_attempt_limit: 1
-  remote_write_or_send_this_session: none
+  remote_write_or_send_this_session: one_successful_code_only_preview_deploy_zero_provider_sends
   independent_review: GO_09A_complete_report_docs_implementation_reviews_telegram_workers_09a
   owner_remote_scope: granted_09B_after_GO_no_repeat_approval
   owner_approval_record: tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json
@@ -1019,7 +1019,7 @@ telegram_parent_recovery:
 telegram_parent_continuation_permission:
   recorded_utc: 2026-09-09T09:54:44Z
   protected_record: tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json
-  status: granted_review_complete_remote_scope_not_yet_executed
+  status: granted_review_and_code_deploy_complete_audited_recovery_pending
   review: independent_new_09A_session_complete_GO
   deploy: code_only_existing_preview_after_exact_review_GO
   further_deployments: necessary_same_scope_preview_deployments_and_containment_authorized
@@ -1029,23 +1029,19 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: TG09-parent-code-deploy
-  permission: already_granted_execute_only_in_new_09B_session_after_completed_09A_GO
-  target: exact_candidate_23c3999_preview_worker_242c1796e930_D1_ccdeb22bb2a1
-  mutation: one_code_only_preview_deploy_preserving_all_actual_configuration_and_held_unknown
+  id: TG09-parent-audited-resolution
+  permission: already_granted_exact_existing_unknown_and_one_additional_normal_outbox_attempt
+  target: fixed_candidate_23c3999_preview_worker_242c1796e930_outbox_ddbd7d01ec2e_attempt_52edf4875835
+  mutation: native_admin_resolveTelegram_retry_after_review_explicit_confirmation
   preconditions:
-    - fresh_exact_target_control_queue_and_known_rollback_no_material_candidate_drift
-    - protected_full_manual_preview_canonical_time_config_compared_to_fresh_actual_vars_bindings_secrets_Access_schedules
-    - TELEGRAM_MAX_ATTEMPTS_1_preserved_root_preview_config_not_an_actual_vars_snapshot
+    - fresh_exact_destination_reference_absence_and_unchanged_unknown_fixed_deployed_module
+    - no_other_actionable_Telegram_work_actual_max_attempt_policy_1
+    - normal_admin_session_if_missing_login_with_separate_actual_checkpoint
   postcondition:
-    - actual_module_SHA256_441dd3df4295f7146683638fa51654f060d06bbe7aed8cea5f7a1ccdf7212d51_and_exact_candidate_annotation
-    - one_active_version_100_percent_traffic_all_actual_configuration_Access_and_resources_preserved
-    - existing_unknown_attempt_reference_and_history_preserved_no_requeue
-    - actual_readback_active_state_and_docs_only_commit_before_next_remote_mutation
-  containment: verified_baseline_module_version_7b3987503c77_preserve_settings_and_held_unknown_no_blind_retry
-  forbidden_in_this_action:
-    - audited_resolution_provider_send_new_cohort_direct_SQL_schema_change_or_production_CMS
-    - old_consumed_smoke_enable_helpers_or_unprepared_root_config
+    - linked_resolution_audit_assertion_message_absence_verified_original_attempt_reference_preserved
+    - max_attempts_1_to_2_at_most_one_additional_normal_Cron_attempt
+    - actual_readback_active_state_docs_only_commit_before_next_mutation
+  containment: unknown_held_until_resolution_no_direct_SQL_blind_retry_manual_drain_or_new_cohort
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -1053,6 +1049,36 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## TG09-parent-code-deploy 09B actual checkpoint — 2026-09-13T09:04:50.753Z
+
+- Result: **success**, one authorized code-only preview deploy attempt. Target
+  fingerprints: account 5dbd04a4763a, Worker 242c1796e930, origin 88ed782ba25a,
+  D1 ccdeb22bb2a1. Production/CMS/resources/schema were not changed.
+- Candidate 23c3999d206ef9551f775a5dda2b30939cf746c7; actual Worker SHA-256
+  441dd3df4295f7146683638fa51654f060d06bbe7aed8cea5f7a1ccdf7212d51. Version fingerprint
+  7b3987503c77 → 06b52ab01db5; one active version, 100% traffic, exact annotation.
+- Fresh before/after proves all 62 vars, bindings, five secret names, runtime,
+  Access HEAD 302, both schedules and migration ledger preserved. No pending migration.
+  Exact existing outbox/attempt/resolution/queue snapshots are unchanged;
+  one unresolved unknown remains held, affected attempts/max attempts remain 1/1.
+  Bounded postcondition read 134 rows, zero writes/changes; no operator provider send.
+- Local strict dry-run reproduced the reviewed module exactly; temporary root
+  config restored in finally. Full candidate check/591 tests/23 E2E/build/audit
+  and 9A GO/42 focused tests are inherited; no material runtime/config drift.
+  Checkpoint checks: docs:check, release:scan, git diff --check only.
+- Protected evidence: tmp/telegram-phase-09-owner/09b-parent-deploy-checkpoint-safe.json,
+  TG09B-deploy-before/after control/database, TG09B-deploy-before-rollback,
+  TG09-parent-code-deploy-09b-attempt and 09b-local-package-safe.json.
+- Rollback baseline was read back before deployment and remains compatible;
+  no rollback is required. Preserve actual settings and original unknown history.
+- One next action: TG09-parent-audited-resolution after fresh destination absence
+  and normal admin access. Telegram Web currently requires owner login. Today is
+  outside Mo-Fr 09:00-17:00 Europe/Berlin; next ordinary window is
+  2026-09-14T07:00:00Z. No hours override or extra send cohort is authorized.
+- rollover_required: no; recommended_next_session_mode: High — exact scoped
+  recovery and its containment are known. Full-manual-preview remains blocked
+  until recovery and separate parent outside-hours/next-window evidence.
 
 ## Local target preparation correction — 2026-09-09T07:18:50Z
 
