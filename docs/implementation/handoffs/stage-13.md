@@ -4866,3 +4866,16 @@ UI-задача без dependency changes и без отдельного пор�
 не закрывает отложенную Telegram observation/manual gates. Ранее полученный
 9A GO относится к прежнему runtime и автоматически не распространяется на
 новые UI/hooks changes; перед их отдельным deploy нужен обычный release review.
+
+
+## UI01 preview release review — 2026-09-13T13:41:02Z
+
+A new session reviewed exact 117a9356346c4489f6d74f50af984e5f39601992 from the prior UI implementation.
+[Review report](../reviews/ui01-russian-preview.md): GO, candidate P0/P1 zero.
+17 focused tests, fresh build and strict actual-config dry-run passed. Existing
+600 executable unit/integration tests plus expected Windows skip, check and
+28 E2E evidence are inherited from that unchanged runtime. Fresh exact target,
+settings/Access/schema/health and compatible baseline checks passed.
+Owner explicitly authorized publication of this UI to preview. No remote write
+yet. Current operational cursor is only in
+[active state](../STAGE_13_ACTIVE_STATE.md); old Telegram 9A verdict is historical.

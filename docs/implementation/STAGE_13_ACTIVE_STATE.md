@@ -4,28 +4,45 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T09:16:11Z
-reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-last_completed_gate: phase-6-parent-Telegram-audited-resolution-complete
-next_gate: phase-6-parent-Telegram-recovery
+updated_utc: 2026-09-13T13:41:02Z
+reviewed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
+local_remediation_candidate: 117a9356346c4489f6d74f50af984e5f39601992
+last_completed_gate: UI01-release-review-and-preflight
+next_gate: UI01-preview-code-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-6-Telegram-recovery-verified-deferred-until-Monday
-last_atomic_action: TG09-parent-audited-resolution
+current_phase: UI01-preview-deployment-ready
+last_atomic_action: UI01-readonly-release-preflight
 last_atomic_result: success
-next_atomic_action: TG09-parent-scheduled-observation
+next_atomic_action: UI01-preview-code-deploy
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Known_business_window_deferral_no_ambiguity_only_bounded_Cron_receipt_health_observation
+recommended_next_session_mode: High
+mode_reason_plain: Known_preview_target_postcondition_and_compatible_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## UI01 release review and authorized publication — 2026-09-13T13:41:02Z
+
+Owner explicitly requested publication of the completed Russian UI to preview.
+New-session code review: GO for exact 117a9356346c4489f6d74f50af984e5f39601992; see
+[review report](reviews/ui01-russian-preview.md). No runtime changes this session.
+Fresh target fingerprints: account 5dbd04a4763a, Worker 242c1796e930, origin
+88ed782ba25a, D1 ccdeb22bb2a1. Baseline fingerprint 06b52ab01db5 is available
+for compatible rollback. All 62 actual vars, bindings, secret inventory, Cron,
+Access and 26 migrations agree with the protected packet; pending 0. Root 200,
+health HEAD 204; anonymous/invalid Access blocked. 104 rows read, zero writes.
+Strict dry-run module 26d6bfcddc953cced2d758256bef57bc9fadd204b78580ce72d21e69d00e8c8c.
+Protected evidence: tmp/ui01-preview-20260913/before-safe.json and package-safe.json.
+Known Telegram Monday deferral remains separate and unchanged. One next action
+UI01-preview-code-deploy. Containment: recorded compatible baseline, preserve
+settings/history; reconcile before any repeat write. rollover_required: no;
+recommended_next_session_mode: High for the known scoped deploy.
 
 ## Machine-readable state
 
@@ -34,30 +51,28 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_granted_review_preview_deploy_continuation_and_one_recovery_attempt_execute_in_new_09A_09B_sessions
+permission_state: owner_explicit_2026_09_13_Russian_UI_preview_deploy_preserve_actual_config_previous_Telegram_scope_unchanged
 review:
   status: independent_go
-  candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-  last_independently_reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
+  candidate: 117a9356346c4489f6d74f50af984e5f39601992
+  last_independently_reviewed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
-  deployed_open_p1: delivery_not_yet_observed_after_successful_audited_recovery
-  verdict_scope: exact_Telegram_fix_GO_code_only_preview_deploy_and_existing_one_attempt_recovery_in_09B
-  independent_reviewer: Codex_new_09A_session_independent_code_reviewer_not_second_human
-  reviewed_utc: 2026-09-09T10:03:04Z
-  report: docs/implementation/reviews/telegram-workers-09a.md
+  deployed_open_p1: Telegram_delivery_receipt_still_pending_configured_Monday_window
+  verdict_scope: UI01_existing_preview_code_only_deploy_preserve_configuration
+  independent_reviewer: Codex_new_session_reviewing_prior_session_implementation_no_subagent_or_second_human
+  reviewed_utc: 2026-09-13T13:41:02Z
+  report: docs/implementation/reviews/ui01-russian-preview.md
   review_gate: complete
-  focused_review_tests: 2_files_42_pass_0_fail
-  integrity_evidence: tmp/telegram-phase-09-owner/09a-review-integrity-safe.json
-  docs_only_checks: docs_check_release_scan_diff_check_passed
+  focused_review_tests: 3_files_17_pass_0_fail
   local_validation:
-    check: passed_0_errors_0_warnings
-    full_vitest: 80_files_591_pass_0_fail_1_expected_Windows_skip
-    chromium_e2e: 23_of_23
-    build: passed
-    compiled_worker_smoke: 5_native_workerd_provider_tests_success_preflight_redirect_rejection_no_external_send
-    independent_review: actual_09A_GO_for_exact_candidate_historical_GO_not_reused
-  previous_reviewed_candidate: 4a8c02816ef12947d6bd748dc690dcb2f46cdbd0
+    inherited_exact_candidate: 117a9356346c4489f6d74f50af984e5f39601992
+    check: inherited_0_errors_0_warnings
+    full_vitest: inherited_600_executable_tests_pass_after_documented_focused_reruns_1_expected_Windows_skip
+    chromium_e2e: inherited_28_of_28
+    build: passed_this_session
+    strict_dry_run: passed_actual_config
+  previous_reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 preview:
   access: enforced
   deployed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
@@ -1029,17 +1044,17 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: TG09-parent-scheduled-observation
-  permission: readonly_observation_of_already_authorized_one_additional_normal_Cron_attempt
-  target: existing_outbox_ddbd7d01ec2e_reference_TG_6854E6ADE571_fixed_preview_06b52ab01db5
-  mutation: none_by_operator_normal_Cron_only
+  id: UI01-preview-code-deploy
+  permission: owner_explicit_2026_09_13_publish_Russian_UI_to_preview
+  target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
+  mutation: one_code_only_Worker_deploy
   preconditions:
-    - bounded_read_after_2026_09_14T07_00_00Z_plus_normal_minute_Cron_cadence
-    - configured_Mo_Fr_09_17_Europe_Berlin_window_no_time_override
+    - fresh_exact_target_config_schema_Access_baseline_and_rollback_match
+    - exact_UI01_reviewed_module_and_clean_docs_only_descendant
   postcondition:
-    - exactly_one_additional_durable_attempt_sent_provider_receipt_same_reference_source
-    - one_visible_notification_exact_destination_no_unresolved_unknown_fast_cadence_health_recover
-  containment: no_manual_drain_direct_send_repeat_resolution_or_limit_increase_unknown_dead_remains_held
+    - one_version_100_percent_exact_module_and_annotation
+    - preserved_settings_Access_schema_counts_health_and_DE_RU_HTTP_pages
+  containment: captured_compatible_baseline_no_blind_retry_readonly_reconcile_on_ambiguity
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed

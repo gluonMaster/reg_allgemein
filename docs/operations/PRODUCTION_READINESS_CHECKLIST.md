@@ -13,7 +13,7 @@ Current candidate, deployed preview version и next atomic action читать �
 commands и не дают permission. Этот файл обновляется только при фактическом
 изменении production gate или на production phase boundary.
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 23c3999d206ef9551f775a5dda2b30939cf746c7 -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 117a9356346c4489f6d74f50af984e5f39601992 -->
 
 ## Production release record
 
