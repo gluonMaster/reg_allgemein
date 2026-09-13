@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T09:04:50Z
+updated_utc: 2026-09-13T09:10:05Z
 reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-last_completed_gate: phase-6-parent-Telegram-code-deploy-complete
+last_completed_gate: phase-6-parent-Telegram-admin-login-complete
 next_gate: phase-6-parent-Telegram-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-6-fixed-Telegram-deployed-awaiting-audited-recovery
-last_atomic_action: TG09-parent-code-deploy
+current_phase: phase-6-admin-session-ready-for-Telegram-recovery
+last_atomic_action: TG09-parent-admin-login
 last_atomic_result: success
 next_atomic_action: TG09-parent-audited-resolution
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Known_exact_preview_audited_recovery_one_additional_attempt_preserve_hold_until_absence_verified
+mode_reason_plain: Known_exact_audited_recovery_one_additional_attempt
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -1049,6 +1049,34 @@ following_route_permission_boundaries:
   - full_REQ11_rejected_and_nonapproved_14day_cleanup_remain_separate_required_gates
   - full_manual_preview_and_production_remain_blocked
 ```
+
+## TG09-parent-admin-login 09B actual checkpoint — 2026-09-13T09:10:05Z
+
+- Result: **success**. Authorized synthetic preview only. Candidate
+  23c3999d206ef9551f775a5dda2b30939cf746c7, deployed version fingerprint 06b52ab01db5.
+  Target fingerprints: account 5dbd04a4763a, Worker 242c1796e930, origin
+  88ed782ba25a, D1 ccdeb22bb2a1. Access/settings/schema preserved.
+- Owner completed one normal admin login. D1 read-back: sessions 22 → 23,
+  exactly one new valid session for the unchanged admin/session version. Actor
+  fingerprint e2b29269d4e8, session fingerprint 97231dc44a94;
+  server creation time 2026-09-13T09:08:28.458Z. Historical sessions preserved;
+  original unknown attempt and zero resolutions unchanged. Actual query: 219
+  rows read, zero writes. Normal createSession has no separate login audit;
+  zero new audit events observed, and the forthcoming recovery must have linked audit.
+- Fresh Bot API getMe/getChat/getChatMember/getWebhookInfo confirms the bound
+  private supergroup, bot identity, posting rights and no webhook. Exact selected
+  Telegram Web group search returned no matches for TG-6854E6ADE571 at
+  2026-09-13T09:08:47.130Z. Other chat content is not retained in evidence.
+- Evidence: tmp/telegram-phase-09-owner/09b-admin-login-checkpoint-safe.json,
+  09b-admin-login-prepared-private.json, TG09B-admin-login-before/after-database.json,
+  09b-admin-login-audit-private.json, 09b-fresh-destination-safe.json,
+  09b-destination-absence-safe.json.
+- One next action: TG09-parent-audited-resolution, exact native form with explicit
+  retry_after_review confirmation. Preserve the original attempt/reference;
+  no role change, repeated login, direct SQL or extra provider attempt.
+- Checks: docs:check, release:scan, git diff --check. Exact 23c3999 full release
+  and 9A GO evidence reused; no runtime/material change and no full-suite repeat.
+- rollover_required: no; recommended_next_session_mode: High.
 
 ## TG09-parent-code-deploy 09B actual checkpoint — 2026-09-13T09:04:50.753Z
 
