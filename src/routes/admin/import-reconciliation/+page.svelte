@@ -1,91 +1,96 @@
 <script lang="ts">
+	import { translateUiFeedback } from '$lib/i18n';
+	import { translateAdminCode } from '$lib/i18n';
+	import { page as portalPage } from '$app/state';
+	import { translate } from '$lib/i18n';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const actionsByClass: Record<
 		string,
-		Array<{ action: string; reason: string; label: string }>
+		Array<{ action: string; reason: string; label: import('$lib/i18n').MessageKey }>
 	> = {
 		course_mapping: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 			{
 				action: 'exact_catalog_mapping',
 				reason: 'exact_mapping_confirmed',
-				label: 'Exaktes Katalog-Mapping bestätigen',
+				label: 'ui.reconciliation.confirmMapping',
 			},
 		],
 		family_identity: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 			{
 				action: 'typed_family_correction',
 				reason: 'family_correction_verified',
-				label: 'Family-Korrektur verifizieren',
+				label: 'ui.reconciliation.verifyFamily',
 			},
 		],
 		invalid_email: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 			{
 				action: 'verified_portal_family_link',
 				reason: 'portal_family_link_verified',
-				label: 'Portal-Link verifizieren',
+				label: 'ui.reconciliation.verifyPortal',
 			},
 		],
 		invalid_birth_date: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 			{
 				action: 'typed_child_correction',
 				reason: 'child_correction_verified',
-				label: 'Kind-Korrektur verifizieren',
+				label: 'ui.reconciliation.verifyChild',
 			},
 		],
 		price: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 		],
 		duration: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 		],
 		duplicate_service: [
 			{
 				action: 'same_service_duplicate',
 				reason: 'same_service_confirmed',
-				label: 'Dieselbe Leistung (ein Belegungsplatz)',
+				label: 'ui.reconciliation.sameService',
 			},
 			{
 				action: 'distinct_service_proven',
 				reason: 'distinct_service_evidence_confirmed',
-				label: 'Getrennte Leistungen nachgewiesen',
+				label: 'ui.reconciliation.distinctService',
 			},
 		],
 		source_consistency: [
 			{
 				action: 'await_upstream',
 				reason: 'upstream_correction_requested',
-				label: 'Upstream-Korrektur anfordern',
+				label: 'ui.reconciliation.requestCorrection',
 			},
 		],
 	};
@@ -122,46 +127,46 @@
 </script>
 
 <section class="admin-section">
-	<h2>Import-Abgleich</h2>
-	<p>PII-freie Arbeitsliste für wiederkehrende Importprobleme und den Release-Gate.</p>
+	<h2>{translate(uiLocale, 'ui.reconciliation.title')}</h2>
+	<p>{translate(uiLocale, 'ui.reconciliation.notice')}</p>
 	<p>
 		<a href={exportUrl}
-			>PII-freie Upstream-Checkliste exportieren</a
+			>{translate(uiLocale, 'ui.reconciliation.export')}</a
 		>
 	</p>
-	{#if form?.message}<p class="form-status" aria-live="polite">{form.message}</p>{/if}
+	{#if form?.message}<p class="form-status" aria-live="polite">{translateUiFeedback(uiLocale, form.message)}</p>{/if}
 
 	<div class="admin-list">
 		{#each data.queue.summary as item}
 			<article class="admin-card">
-				<strong>{item.issueClass}</strong>
-				<p>{item.state}: {item.count} · blocking: {item.blocking}</p>
+				<strong>{translateAdminCode(uiLocale, item.issueClass)}</strong>
+				<p>{translateAdminCode(uiLocale, item.state)}: {item.count} {translate(uiLocale, 'ui.reconciliation.blocking')} {item.blocking}</p>
 			</article>
 		{/each}
 	</div>
 
 	<form method="GET" class="admin-filter-form">
-		<label>Periode <input name="period" value={data.filters.periodId ?? ''} /></label>
+		<label>{translate(uiLocale, 'ui.reconciliation.period')} <input name="period" value={data.filters.periodId ?? ''} /></label>
 		<label
-			>Quelle
+			>{translate(uiLocale, 'ui.reconciliation.source')}
 			<select name="source" value={data.filters.sourceKind ?? ''}>
-				<option value="">Alle</option><option value="access">Access</option><option
+				<option value="">{translate(uiLocale, 'ui.all')}</option><option value="access">Access</option><option
 					value="plusbtext">PlusBText</option
 				>
 			</select>
 		</label>
-		<label>Klasse <input name="class" value={data.filters.issueClass ?? ''} /></label>
-		<label>Status <input name="state" value={data.filters.state ?? ''} /></label>
-		<label>Bearbeiter-ID <input name="assignee" value={data.filters.assigneeId ?? ''} /></label>
-		<label>Erster Run <input name="firstRun" value={data.filters.firstSeenRunId ?? ''} /></label
+		<label>{translate(uiLocale, 'ui.reconciliation.class')} <input name="class" value={data.filters.issueClass ?? ''} /></label>
+		<label>{translate(uiLocale, 'ui.status')} <input name="state" value={data.filters.state ?? ''} /></label>
+		<label>{translate(uiLocale, 'ui.reconciliation.assignee')} <input name="assignee" value={data.filters.assigneeId ?? ''} /></label>
+		<label>{translate(uiLocale, 'ui.reconciliation.firstRun')} <input name="firstRun" value={data.filters.firstSeenRunId ?? ''} /></label
 		>
-		<label>Letzter Run <input name="lastRun" value={data.filters.lastSeenRunId ?? ''} /></label>
-		<button type="submit">Filtern</button>
+		<label>{translate(uiLocale, 'ui.reconciliation.lastRun')} <input name="lastRun" value={data.filters.lastSeenRunId ?? ''} /></label>
+		<button type="submit">{translate(uiLocale, 'ui.filter')}</button>
 	</form>
 
 	{#if data.queue.summary.some((item) => item.blocking > 0)}
 		<p class="form-status" role="alert">
-			Release und Registration bleiben blockiert, solange blocking cases offen sind.
+			{translate(uiLocale, 'ui.reconciliation.blocked')}
 		</p>
 	{/if}
 
@@ -180,56 +185,55 @@
 							type="checkbox"
 							name="case"
 							value={`${item.id}|${item.version}`}
-						/><span>Batch</span></label
+						/><span>{translate(uiLocale, 'ui.reconciliation.batch')}</span></label
 					>
 					<h3><a href={`?case=${item.id}`}>{item.issueCode}</a></h3>
 					<p>
-						{item.periodCode} · {item.sourceKind} · {item.issueClass} · {item.state} · v{item.version}
+						{item.periodCode} · {translateAdminCode(uiLocale, item.sourceKind)} · {translateAdminCode(uiLocale, item.issueClass)} · {translateAdminCode(uiLocale, item.state)} · v{item.version}
 					</p>
 					<p><code>{item.id}</code></p>
 					<p>
-						first: <code>{item.firstImportRunId}</code> · last:
+						{translate(uiLocale, 'ui.reconciliation.first')} <code>{item.firstImportRunId}</code> {translate(uiLocale, 'ui.reconciliation.last')}
 						<code>{item.lastSeenImportRunId}</code>
 					</p>
 				</article>
 			{/each}
 		</div>
 		<label
-			>Batch-Aktion
+			>{translate(uiLocale, 'ui.reconciliation.batchAction')}
 			<select name="action">
-				<option value="assign">Zuweisen</option>
-				<option value="unassign">Zuweisung lösen</option>
-				<option value="await_upstream">Upstream angefragt</option>
-				<option value="mark_ready_to_verify">Für Reimport-Prüfung bereit</option>
+				<option value="assign">{translate(uiLocale, 'ui.reconciliation.assign')}</option>
+				<option value="unassign">{translate(uiLocale, 'ui.reconciliation.unassign')}</option>
+				<option value="await_upstream">{translate(uiLocale, 'ui.reconciliation.awaitUpstream')}</option>
+				<option value="mark_ready_to_verify">{translate(uiLocale, 'ui.reconciliation.ready')}</option>
 			</select>
 		</label>
 		<label
-			>Reason-Code
+			>{translate(uiLocale, 'ui.reconciliation.reasonCode')}
 			<select name="reasonCode">
-				<option value="operator_assignment">operator_assignment</option>
-				<option value="operator_unassignment">operator_unassignment</option>
-				<option value="upstream_correction_requested">upstream_correction_requested</option>
-				<option value="upstream_correction_reported">upstream_correction_reported</option>
+				<option value="operator_assignment">{translate(uiLocale, 'ui.reconciliation.assignmentReason')}</option>
+				<option value="operator_unassignment">{translate(uiLocale, 'ui.reconciliation.unassignmentReason')}</option>
+				<option value="upstream_correction_requested">{translate(uiLocale, 'ui.reconciliation.requestedReason')}</option>
+				<option value="upstream_correction_reported">{translate(uiLocale, 'ui.reconciliation.reportedReason')}</option>
 			</select>
 		</label>
-		<label>Bearbeiter-ID <input name="assigneeId" /></label>
+		<label>{translate(uiLocale, 'ui.reconciliation.assignee')} <input name="assigneeId" /></label>
 		<label class="checkbox"
 			><input type="checkbox" name="confirmation" value="confirmed" required /><span
-				>Aktion bestätigen</span
+				>{translate(uiLocale, 'ui.confirm')}</span
 			></label
 		>
-		<button type="submit">Batch anwenden</button>
+		<button type="submit">{translate(uiLocale, 'ui.reconciliation.applyBatch')}</button>
 	</form>
 
 	{#if data.selected}
 		<article class="admin-card">
-			<h3>Case {data.selected.item.id}</h3>
+			<h3>{translate(uiLocale, 'ui.reconciliation.case')} {data.selected.item.id}</h3>
 			<p>
-				{data.selected.item.issueCode} · {data.selected.item.issueClass} · {data.selected
-					.item.state}
+				{data.selected.item.issueCode} · {translateAdminCode(uiLocale, data.selected.item.issueClass)} · {translateAdminCode(uiLocale, data.selected.item.state)}
 			</p>
 			{#if selectedEntityLink}
-				<a href={selectedEntityLink}>Autorisierte Detailansicht öffnen</a>
+				<a href={selectedEntityLink}>{translate(uiLocale, 'ui.reconciliation.openDetail')}</a>
 			{/if}
 			<form method="POST" action="?/mutate" class="admin-action-form">
 				<input type="hidden" name="_csrf" value={data.csrfToken} />
@@ -241,43 +245,43 @@
 					value={`${data.commandKey}:reconciliation:${data.selected.item.id}`}
 				/>
 				<label
-					>Aktion
+					>{translate(uiLocale, 'ui.action')}
 					<select name="action">
-						<option value="assign">Zuweisen</option>
-						<option value="unassign">Zuweisung lösen</option>
-						<option value="mark_ready_to_verify">Für Reimport-Prüfung bereit</option>
+						<option value="assign">{translate(uiLocale, 'ui.reconciliation.assign')}</option>
+						<option value="unassign">{translate(uiLocale, 'ui.reconciliation.unassign')}</option>
+						<option value="mark_ready_to_verify">{translate(uiLocale, 'ui.reconciliation.ready')}</option>
 						{#each actionsByClass[data.selected.item.issueClass] ?? [] as option}
-							<option value={option.action}>{option.label}</option>
+							<option value={option.action}>{translate(uiLocale, option.label)}</option>
 						{/each}
 					</select>
 				</label>
-				<label>Reason-Code <input name="reasonCode" required /></label>
-				<label>Bearbeiter-ID <input name="assigneeId" /></label>
+				<label>{translate(uiLocale, 'ui.reconciliation.reasonCode')} <input name="reasonCode" required /></label>
+				<label>{translate(uiLocale, 'ui.reconciliation.assignee')} <input name="assigneeId" /></label>
 				<label
-					>Evidence-Typ
+					>{translate(uiLocale, 'ui.reconciliation.evidenceType')}
 					<select name="targetType"
-						><option value=""></option><option value="course_group">course_group</option
-						><option value="legacy_family">legacy_family</option><option
-							value="legacy_child">legacy_child</option
-						><option value="legacy_enrollment">legacy_enrollment</option
-						><option value="user">user</option><option value="family_reassignment"
-							>family_reassignment</option
+						><option value=""></option><option value="course_group">{translate(uiLocale, 'ui.reconciliation.courseGroup')}</option
+						><option value="legacy_family">{translate(uiLocale, 'ui.reconciliation.legacyFamily')}</option><option
+							value="legacy_child">{translate(uiLocale, 'ui.reconciliation.legacyChild')}</option
+						><option value="legacy_enrollment">{translate(uiLocale, 'ui.reconciliation.legacyEnrollment')}</option
+						><option value="user">{translate(uiLocale, 'ui.reconciliation.user')}</option><option value="family_reassignment"
+							>{translate(uiLocale, 'ui.reconciliation.familyReassignment')}</option
 						></select
 					>
 				</label>
-				<label>Opaque Evidence-ID <input name="targetId" /></label>
+				<label>{translate(uiLocale, 'ui.reconciliation.evidenceId')} <input name="targetId" /></label>
 				<label class="checkbox"
 					><input type="checkbox" name="confirmation" value="confirmed" required /><span
-						>Exakte Wirkung bestätigen</span
+						>{translate(uiLocale, 'ui.reconciliation.confirmEffect')}</span
 					></label
 				>
-				<button type="submit">Anwenden</button>
+				<button type="submit">{translate(uiLocale, 'ui.apply')}</button>
 			</form>
-			<h4>PII-freie Timeline</h4>
+			<h4>{translate(uiLocale, 'ui.reconciliation.timeline')}</h4>
 			<ul>
 				{#each data.selected.timeline as entry}
 					<li>
-						{entry.createdAt} · {entry.action} · {entry.reasonCode} ·
+						{entry.createdAt} · {translateAdminCode(uiLocale, entry.action)} · {translateAdminCode(uiLocale, entry.reasonCode)} ·
 						<code>{entry.id}</code>
 					</li>
 				{/each}

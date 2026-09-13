@@ -42,9 +42,9 @@ export const actions = {
 				idempotencyKey: parsed.data.idempotencyKey,
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'privacy.export.ready') };
+			return { success: true, message: translate(event.locals.locale, 'privacy.export.ready') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'privacy.failed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'privacy.failed') });
 		}
 	},
 	requestDeletion: async (event) => {
@@ -61,11 +61,11 @@ export const actions = {
 			});
 			return {
 				success: result.status !== 'blocked_by_active_contract',
-				message: translate('de', result.status === 'blocked_by_active_contract'
+				message: translate(event.locals.locale, result.status === 'blocked_by_active_contract'
 					? 'privacy.delete.blocked' : 'privacy.delete.requested'),
 			};
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'privacy.failed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'privacy.failed') });
 		}
 	},
 } satisfies Actions;

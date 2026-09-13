@@ -32,7 +32,7 @@ export const actions = {
 				confirmation: form.get('confirmation'),
 				idempotencyKey: form.get('idempotencyKey'),
 			});
-			if (!parsed.success) return fail(400, { success: false, message: adminActionError() });
+			if (!parsed.success) return fail(400, { success: false, message: adminActionError(event.locals.locale) });
 			const now = new Date().toISOString();
 			await requestAdminConsoleRuntime(event).mutations.transitionTrial({
 				actor,
@@ -41,9 +41,9 @@ export const actions = {
 				currentDate: berlinCalendarDate(now),
 				now,
 			});
-			return { success: true, message: translate('de', 'admin.action.completed') };
+			return { success: true, message: translate(event.locals.locale, 'admin.action.completed') };
 		} catch {
-			return fail(409, { success: false, message: adminActionError() });
+			return fail(409, { success: false, message: adminActionError(event.locals.locale) });
 		}
 	},
 } satisfies Actions;

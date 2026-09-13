@@ -61,8 +61,7 @@ export const actions = {
 			const privacyVersionInvalid = invalidFields.includes('privacyNoticeVersion');
 			return fail(400, {
 				success: false,
-				message: translate(
-					'de',
+				message: translate(event.locals.locale,
 					invalidFields.includes('turnstileToken')
 						? 'auth.turnstileRequired'
 						: privacyVersionInvalid
@@ -83,17 +82,16 @@ export const actions = {
 				remoteIp: requestSubject(event),
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'auth.registrationAccepted') };
+			return { success: true, message: translate(event.locals.locale, 'auth.registrationAccepted') };
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			const turnstileRejected =
 				error instanceof AuthFlowError && error.code === 'TURNSTILE_REJECTED';
 			const privacyVersionMismatch =
 				error instanceof AuthFlowError && error.code === 'PRIVACY_VERSION_MISMATCH';
 			return fail(result.status, {
 				success: false,
-				message: translate(
-					'de',
+				message: translate(event.locals.locale,
 					turnstileRejected
 						? 'auth.turnstileRequired'
 						: privacyVersionMismatch

@@ -17,7 +17,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!user)
 		throw error(404, {
 			code: 'ADMIN_RESOURCE_NOT_FOUND',
-			message: translate('de', 'admin.notFound'),
+			message: translate(event.locals.locale, 'admin.notFound'),
 			requestId: event.locals.requestId,
 		});
 	const familyQuery = event.url.searchParams.get('familyQ') ?? '';
@@ -42,16 +42,16 @@ export const actions = {
 				confirmation: form.get('confirmation'),
 				idempotencyKey: form.get('idempotencyKey'),
 			});
-			if (!parsed.success) return fail(400, { success: false, message: adminActionError() });
+			if (!parsed.success) return fail(400, { success: false, message: adminActionError(event.locals.locale) });
 			await requestAdminConsoleRuntime(event).mutations.setBlocked({
 				actor,
 				...parsed.data,
 				requestId: event.locals.requestId,
 				now: new Date().toISOString(),
 			});
-			return { success: true, message: translate('de', 'admin.action.completed') };
+			return { success: true, message: translate(event.locals.locale, 'admin.action.completed') };
 		} catch {
-			return fail(409, { success: false, message: adminActionError() });
+			return fail(409, { success: false, message: adminActionError(event.locals.locale) });
 		}
 	},
 	previewFamilyCorrection: async (event) => {
@@ -68,7 +68,7 @@ export const actions = {
 					? destination.slice(legacyPrefix.length)
 					: undefined,
 			});
-			if (!parsed.success) return fail(400, { success: false, message: adminActionError() });
+			if (!parsed.success) return fail(400, { success: false, message: adminActionError(event.locals.locale) });
 			const preview = await requestAdminConsoleRuntime(event).familyCorrection.createPreview({
 				actor,
 				...parsed.data,
@@ -77,11 +77,11 @@ export const actions = {
 			});
 			return {
 				success: true,
-				message: translate('de', 'admin.family.previewReady'),
+				message: translate(event.locals.locale, 'admin.family.previewReady'),
 				preview,
 			};
 		} catch {
-			return fail(409, { success: false, message: adminActionError() });
+			return fail(409, { success: false, message: adminActionError(event.locals.locale) });
 		}
 	},
 	applyFamilyCorrection: async (event) => {
@@ -93,16 +93,16 @@ export const actions = {
 				confirmation: form.get('confirmation'),
 				idempotencyKey: form.get('idempotencyKey'),
 			});
-			if (!parsed.success) return fail(400, { success: false, message: adminActionError() });
+			if (!parsed.success) return fail(400, { success: false, message: adminActionError(event.locals.locale) });
 			await requestAdminConsoleRuntime(event).familyCorrection.apply({
 				actor,
 				...parsed.data,
 				requestId: event.locals.requestId,
 				now: new Date().toISOString(),
 			});
-			return { success: true, message: translate('de', 'admin.family.applied') };
+			return { success: true, message: translate(event.locals.locale, 'admin.family.applied') };
 		} catch {
-			return fail(409, { success: false, message: adminActionError() });
+			return fail(409, { success: false, message: adminActionError(event.locals.locale) });
 		}
 	},
 } satisfies Actions;

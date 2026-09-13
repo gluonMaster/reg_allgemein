@@ -14,7 +14,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!run)
 		throw error(404, {
 			code: 'ADMIN_RESOURCE_NOT_FOUND',
-			message: translate('de', 'admin.notFound'),
+			message: translate(event.locals.locale, 'admin.notFound'),
 			requestId: event.locals.requestId,
 		});
 	return { run };
@@ -31,16 +31,16 @@ export const actions = {
 				confirmation: form.get('confirmation'),
 				idempotencyKey: form.get('idempotencyKey'),
 			});
-			if (!parsed.success) return fail(400, { success: false, message: adminActionError() });
+			if (!parsed.success) return fail(400, { success: false, message: adminActionError(event.locals.locale) });
 			await requestAdminConsoleRuntime(event).mutations.decideImportIssue({
 				actor,
 				...parsed.data,
 				requestId: event.locals.requestId,
 				now: new Date().toISOString(),
 			});
-			return { success: true, message: translate('de', 'admin.action.completed') };
+			return { success: true, message: translate(event.locals.locale, 'admin.action.completed') };
 		} catch {
-			return fail(409, { success: false, message: adminActionError() });
+			return fail(409, { success: false, message: adminActionError(event.locals.locale) });
 		}
 	},
 } satisfies Actions;

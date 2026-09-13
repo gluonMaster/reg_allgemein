@@ -43,11 +43,11 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'trial.submitted') };
+			return { success: true, message: translate(event.locals.locale, 'trial.submitted') };
 		} catch (caught) {
 			return fail(
 				caught instanceof TrialError && caught.code === 'TRIAL_CHILD_NOT_OWNED' ? 404 : 409,
-				{ success: false, message: translate('de', 'trial.rejected') }
+				{ success: false, message: translate(event.locals.locale, 'trial.rejected') }
 			);
 		}
 	},

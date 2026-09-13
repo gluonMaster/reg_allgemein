@@ -35,20 +35,20 @@ export const actions = {
 			const { form, actor } = await verifiedForm(event);
 			const parsed = emailChangeInputSchema.safeParse({ email: form.get('email') });
 			if (!parsed.success) {
-				return fail(400, { success: false, message: translate('de', 'auth.invalidInput') });
+				return fail(400, { success: false, message: translate(event.locals.locale, 'auth.invalidInput') });
 			}
 			const changed = await requestAuthRuntime(event).service.requestEmailChange({
 				actor,
 				email: parsed.data.email,
 			});
 			return changed
-				? { success: true, message: translate('de', 'auth.emailChangeAccepted') }
+				? { success: true, message: translate(event.locals.locale, 'auth.emailChangeAccepted') }
 				: fail(400, {
 						success: false,
-						message: translate('de', 'auth.emailChangeUnavailable'),
+						message: translate(event.locals.locale, 'auth.emailChangeUnavailable'),
 					});
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, { success: false, message: result.message });
 		}
 	},
@@ -59,7 +59,7 @@ export const actions = {
 			await runtime.service.revokeAllSessions({ actor, requestId: event.locals.requestId });
 			clearSessionCookies(event.cookies, runtime.config.appEnvironment);
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, { success: false, message: result.message });
 		}
 		throw redirect(303, '/auth/login');
@@ -71,7 +71,7 @@ export const actions = {
 			await runtime.service.logout({ actor, requestId: event.locals.requestId });
 			clearSessionCookies(event.cookies, runtime.config.appEnvironment);
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, { success: false, message: result.message });
 		}
 		throw redirect(303, '/auth/login');

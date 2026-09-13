@@ -4802,3 +4802,67 @@ Exact 23c3999 full 591-test/23-E2E/check/build/audit and 9A 42-test/GO evidence
 are reused; no full-suite rerun for docs-only checkpoints.
 rollover_required: no; recommended_next_session_mode: Medium — known deferred
 delivery, no unresolved write ambiguity, read-only observation only.
+
+## UI-01: русский веб-интерфейс — локальная реализация 2026-09-13
+
+По прямому поручению владельца реализован немецкий/русский UI во всех
+public/auth/parent/admin разделах. Новые операционные промпты не создавались.
+Основа рабочей копии: 510a3714c5d4f2d519b6fcc4de69acd5f8fa39c7; изменения
+этой секции пока локальные, не deployed. Каноническое решение — UI-01 в
+[MVP_SPEC.md](../../spec/MVP_SPEC.md) и пересмотренный OQ-007; критерии и
+[TEST_PLAN.md](../TEST_PLAN.md) обновлены.
+
+Общий переключатель Deutsch / Русский сохраняет язык в отдельной host-only
+HttpOnly SameSite=Lax cookie. Язык применяется на сервере до auth/route guards,
+к html lang, страницам, статусам, form feedback, операционным экранам и
+отказам в доступе. Native POST работает без JS; enhanced переключение сохраняет
+введённые регистрационные поля и обновляет Turnstile. Проверка Origin использует
+существующий canonical portal origin, включая прежний browser fallback;
+return path ограничен текущим origin. Авторизация и формы бизнес-действий
+сохраняют прежние значения и проверки.
+
+Русский словарь содержит 814 UI-ключей, плюс display labels для кодов.
+Email/Telegram/absence message templates (47 ключей), contract PDFs, German
+acceptance texts/versions и evidence остаются немецкими. UI согласий показывает
+немецкий оригинал и русский перевод рядом. Текст согласия с новой ценой в
+словаре приведён к уже существующему PRICE_REVIEW_ACCEPTANCE_TEXT; сохранённая
+константа, её версия и бизнес-поведение не менялись. Имена, импортированные
+названия, свободная переписка, diagnostic JSON и resource IDs не переводятся.
+Cloudflare Access и системные диалоги браузера находятся вне UI портала.
+
+Затронут общий UI и hook, поэтому выполнен полный локальный regression scope:
+
+- npm run check: 0 errors / 0 warnings; npm run build: успешно.
+- Полный npm test: 81 файл / 601 тест, первоначально 593 pass, 7 fail,
+  один ожидаемый Windows skip. Три ошибки login fixture исправлены добавлением
+  request locals, которые всегда существуют в SvelteKit. Четыре D1 теста
+  превысили исходный лимит 15 секунд при параллельной нагрузке. Exact rerun
+  messaging-outbox-d1, migration-upgrade-d1 и login-role-redirect с
+  --maxWorkers=2: 28/28 pass без изменения D1/runtime кода или таймаутов.
+  Таким образом, все 600 исполняемых тестов имеют успешный результат; полный
+  suite повторно не запускался после локализованного исправления test fixture.
+- Новые unit checks покрывают полноту переводов, placeholders, German outgoing
+  fallback, cookie/Origin/return path и безопасный HTML отказов в доступе.
+- Первый полный Chromium прогон обнаружил четыре устаревших UI test assumptions:
+  первый Tab теперь проходит через переключатель, и форм регистрации стало две.
+  Assertions обновлены с проверкой видимого фокуса обеих языковых кнопок и
+  точным выбором регистрационной формы. В промежуточном прогоне один переход
+  получил ERR_ABORTED во время параллельного svelte-kit sync. Финальный полный
+  npm run test:e2e после завершения check/build: **28/28 pass**, включая полный
+  RBAC/IDOR/CSRF/session matrix, accessibility и бизнес-сценарии. Дополнительных
+  runtime исправлений для повторного прогона не понадобилось.
+- Пять новых RU browser scenarios проходят: public/auth, no-JS SSR/browser
+  isolation, заполненная mobile registration, parent sections/contract evidence,
+  все 16 admin sections. Мобильная регистрация и admin reconciliation также
+  просмотрены визуально на локальных синтетических screenshots.
+- Финальные документационные проверки: docs:check, release:scan и git diff --check.
+
+Remote target/config, D1/R2, deployments, providers, sessions и официальный
+сайт в этой работе не изменялись; зависимости и migrations также не менялись.
+Remote smoke, npm audit/clean install и deploy не выполнялись: это локальная
+UI-задача без dependency changes и без отдельного поручения на deployment.
+Текущая remote фаза и единственное следующее remote действие остаются в
+[STAGE_13_ACTIVE_STATE.md](../STAGE_13_ACTIVE_STATE.md). Эта локальная реализация
+не закрывает отложенную Telegram observation/manual gates. Ранее полученный
+9A GO относится к прежнему runtime и автоматически не распространяется на
+новые UI/hooks changes; перед их отдельным deploy нужен обычный release review.

@@ -1,5 +1,7 @@
-import { error, type Handle, type HandleServerError } from '@sveltejs/kit';
-import { translate } from '$lib/i18n';
+import { error, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
+import { translate, type MessageKey } from '$lib/i18n';
+import { localizedAccessError } from '$lib/server/i18n/error-response';
+import { normalizeUiLocale, UI_LOCALE_COOKIE } from '$lib/i18n/locale';
 import { loadRuntimeConfig } from '$lib/server/config/runtime';
 import { getOrCreateRequestId } from '$lib/server/observability/request-id';
 import { logServerError } from '$lib/server/observability/redaction';
@@ -9,15 +11,43 @@ import { routeAccessPolicy } from '$lib/server/security/route-policy';
 import { withSecurityHeaders } from '$lib/server/security/response-headers';
 import { isPortalFormOriginAllowed } from '$lib/server/security/form-origin';
 
+function accessDenied(
+	event: RequestEvent,
+	status: number,
+	code: string,
+	messageKey: MessageKey,
+	production: boolean
+): Response {
+	if (!event.isDataRequest && event.request.headers.get('accept')?.includes('text/html')) {
+		return localizedAccessError({
+			locale: event.locals.locale,
+			status,
+			messageKey,
+			requestId: event.locals.requestId,
+			returnPath: event.url.pathname,
+			production,
+		});
+	}
+	throw error(status, {
+		code,
+		locale: event.locals.locale,
+		message: translate(event.locals.locale, messageKey),
+		requestId: event.locals.requestId,
+	});
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
+	event.locals.locale = normalizeUiLocale(event.cookies.get(UI_LOCALE_COOKIE));
 	event.locals.requestId = getOrCreateRequestId(event.request.headers.get('x-request-id'));
 	const config = loadRuntimeConfig(event.platform?.env);
 	if (!isPortalFormOriginAllowed(event.request, config.portalPublicOrigin)) {
-		throw error(403, {
-			code: 'FORM_ORIGIN_FORBIDDEN',
-			message: translate('de', 'auth.invalidInput'),
-			requestId: event.locals.requestId,
-		});
+		return accessDenied(
+			event,
+			403,
+			'FORM_ORIGIN_FORBIDDEN',
+			'auth.invalidInput',
+			config.appEnvironment === 'production'
+		);
 	}
 	if (config.jwtSecret) {
 		event.locals.user =
@@ -29,32 +59,50 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const access = routeAccessPolicy(event.route.id);
 	if (access !== 'public' && !event.locals.user) {
-		throw error(401, {
-			code: 'AUTHENTICATION_REQUIRED',
-			message: translate('de', 'auth.invalidCredentials'),
-			requestId: event.locals.requestId,
-		});
+		return accessDenied(
+			event,
+			401,
+			'AUTHENTICATION_REQUIRED',
+			'auth.invalidCredentials',
+			config.appEnvironment === 'production'
+		);
 	}
 	if (access === 'admin' && event.locals.user?.role !== 'admin') {
-		throw error(403, {
-			code: 'FORBIDDEN',
-			message: translate('de', 'auth.invalidCredentials'),
-			requestId: event.locals.requestId,
-		});
+		return accessDenied(
+			event,
+			403,
+			'FORBIDDEN',
+			'auth.invalidCredentials',
+			config.appEnvironment === 'production'
+		);
 	}
 	if (access === 'parent' && event.locals.user?.role !== 'parent') {
-		throw error(403, {
-			code: 'FORBIDDEN',
-			message: translate('de', 'auth.invalidCredentials'),
-			requestId: event.locals.requestId,
-		});
+		return accessDenied(
+			event,
+			403,
+			'FORBIDDEN',
+			'auth.invalidCredentials',
+			config.appEnvironment === 'production'
+		);
 	}
 
-	return withSecurityHeaders(await resolve(event), {
-		requestId: event.locals.requestId,
-		production: config.appEnvironment === 'production',
-		noStore: event.route.id === '/auth/reset' || event.route.id === '/auth/verify',
-	});
+	const response = withSecurityHeaders(
+		await resolve(event, {
+			transformPageChunk: ({ html }) =>
+				html.replace('<html lang="de">', `<html lang="${event.locals.locale}">`),
+		}),
+		{
+			requestId: event.locals.requestId,
+			production: config.appEnvironment === 'production',
+			noStore: event.route.id === '/auth/reset' || event.route.id === '/auth/verify',
+		}
+	);
+	// Responses depend on the browser preference as well as its session.
+	const vary = response.headers.get('vary');
+	if (!vary?.split(',').some((name) => name.trim().toLowerCase() === 'cookie')) {
+		response.headers.set('vary', vary ? `${vary}, Cookie` : 'Cookie');
+	}
+	return response;
 };
 
 export const handleError: HandleServerError = ({ error, event, status }) => {
@@ -69,7 +117,8 @@ export const handleError: HandleServerError = ({ error, event, status }) => {
 
 	return {
 		code: 'UNEXPECTED_ERROR',
-		message: translate('de', 'errors.unexpected'),
+		locale: event.locals.locale,
+		message: translate(event.locals.locale, 'errors.unexpected'),
 		requestId,
 	};
 };

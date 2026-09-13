@@ -7,6 +7,7 @@
 			options: {
 				sitekey: string;
 				action: string;
+				language: 'de' | 'ru';
 				callback(token: string): void;
 				'error-callback'(): boolean;
 				'expired-callback'(): void;
@@ -69,11 +70,13 @@
 	let {
 		siteKey,
 		action,
+		language = 'de',
 		ready = $bindable(false),
 		failed = $bindable(false),
 	}: {
 		siteKey: string;
 		action: string;
+		language?: 'de' | 'ru';
 		ready?: boolean;
 		failed?: boolean;
 	} = $props();
@@ -93,6 +96,7 @@
 				widgetId = loadedApi.render(container, {
 					sitekey: siteKey,
 					action,
+					language,
 					callback: () => {
 						ready = true;
 						failed = false;

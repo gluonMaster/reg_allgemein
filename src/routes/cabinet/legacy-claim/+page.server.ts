@@ -29,7 +29,7 @@ export const actions = {
 			if (!parsed.success) {
 				return fail(400, {
 					success: false,
-					message: translate('de', 'cabinet.claim.failed'),
+					message: translate(event.locals.locale, 'cabinet.claim.failed'),
 				});
 			}
 			const confirmed = await requestFamilyRuntime(event).service.confirmLegacyClaim({
@@ -39,10 +39,10 @@ export const actions = {
 				requestSubject: requestSubject(event),
 			});
 			return confirmed
-				? { success: true, message: translate('de', 'cabinet.claim.confirmed') }
-				: fail(400, { success: false, message: translate('de', 'cabinet.claim.failed') });
+				? { success: true, message: translate(event.locals.locale, 'cabinet.claim.confirmed') }
+				: fail(400, { success: false, message: translate(event.locals.locale, 'cabinet.claim.failed') });
 		} catch {
-			return fail(400, { success: false, message: translate('de', 'cabinet.claim.failed') });
+			return fail(400, { success: false, message: translate(event.locals.locale, 'cabinet.claim.failed') });
 		}
 	},
 } satisfies Actions;

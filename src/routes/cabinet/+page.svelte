@@ -1,10 +1,14 @@
 <script lang="ts">
+	import { translateUiFeedback } from '$lib/i18n';
+	import { translateAdminCode } from '$lib/i18n';
+	import { page as portalPage } from '$app/state';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../../app.css';
 	import { formatMessage, translate } from '$lib/i18n';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
-	const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+	const euro = $derived(new Intl.NumberFormat(uiLocale === 'ru' ? 'ru-RU' : 'de-DE', { style: 'currency', currency: 'EUR' }));
 	const money = (cents: number) => euro.format(cents / 100);
 	const activityKindKeys = {
 		group: 'cabinet.activities.kind.group',
@@ -22,38 +26,38 @@
 		no_show: 'admin.code.no_show',
 		converted: 'admin.code.converted',
 	} as const;
-	const requestStatus = (status: string) => translate('de', `request.status.${status}` as 'request.status.draft');
+	const requestStatus = (status: string) => translate(uiLocale, `request.status.${status}` as 'request.status.draft');
 </script>
 
-<svelte:head><title>{translate('de', 'cabinet.title')}</title></svelte:head>
+<svelte:head><title>{translate(uiLocale, 'cabinet.title')}</title></svelte:head>
 
 <main class="cabinet-shell">
-	<nav class="cabinet-nav" aria-label={translate('de', 'cabinet.navigationLabel')}>
-		<a href="/">{translate('de', 'cabinet.link.home')}</a>
-		<a href="/account/security">{translate('de', 'cabinet.link.security')}</a>
-		<a href="/messages">{translate('de', 'cabinet.link.messages')}</a>
-		<a href="/account/privacy">{translate('de', 'cabinet.link.privacy')}</a>
+	<nav class="cabinet-nav" aria-label={translate(uiLocale, 'cabinet.navigationLabel')}>
+		<a href="/">{translate(uiLocale, 'cabinet.link.home')}</a>
+		<a href="/account/security">{translate(uiLocale, 'cabinet.link.security')}</a>
+		<a href="/messages">{translate(uiLocale, 'cabinet.link.messages')}</a>
+		<a href="/account/privacy">{translate(uiLocale, 'cabinet.link.privacy')}</a>
 	</nav>
-	<h1>{translate('de', 'cabinet.title')}</h1>
-	{#if form?.message}<p class="form-status" aria-live="polite">{form.message}</p>{/if}
+	<h1>{translate(uiLocale, 'cabinet.title')}</h1>
+	{#if form?.message}<p class="form-status" aria-live="polite">{translateUiFeedback(uiLocale, form.message)}</p>{/if}
 
 	<section class="cabinet-card">
-		<h2>{translate('de', 'cabinet.profile.title')}</h2>
+		<h2>{translate(uiLocale, 'cabinet.profile.title')}</h2>
 		<dl class="profile-grid">
 			<div>
-				<dt>{translate('de', 'auth.firstNameLabel')}</dt>
+				<dt>{translate(uiLocale, 'auth.firstNameLabel')}</dt>
 				<dd>{data.cabinet.profile.firstName}</dd>
 			</div>
 			<div>
-				<dt>{translate('de', 'auth.lastNameLabel')}</dt>
+				<dt>{translate(uiLocale, 'auth.lastNameLabel')}</dt>
 				<dd>{data.cabinet.profile.lastName}</dd>
 			</div>
 			<div>
-				<dt>{translate('de', 'auth.emailLabel')}</dt>
+				<dt>{translate(uiLocale, 'auth.emailLabel')}</dt>
 				<dd>{data.cabinet.profile.email}</dd>
 			</div>
 			<div>
-				<dt>{translate('de', 'cabinet.profile.familyId')}</dt>
+				<dt>{translate(uiLocale, 'cabinet.profile.familyId')}</dt>
 				<dd>{data.cabinet.profile.familyDisplayId}</dd>
 			</div>
 		</dl>
@@ -61,30 +65,29 @@
 
 	{#if data.cabinet.claimOffer}
 		<section class="cabinet-card notice-card">
-			<h2>{translate('de', 'cabinet.claim.title')}</h2>
+			<h2>{translate(uiLocale, 'cabinet.claim.title')}</h2>
 			<p>
-				{formatMessage('de', 'cabinet.claim.offer', {
+				{formatMessage(uiLocale, 'cabinet.claim.offer', {
 					maskedEmail: data.cabinet.claimOffer.maskedEmail,
 				})}
 			</p>
 			<form method="POST" action="?/requestClaim">
 				<input type="hidden" name="_csrf" value={data.csrfToken} />
-				<button type="submit">{translate('de', 'cabinet.claim.request')}</button>
+				<button type="submit">{translate(uiLocale, 'cabinet.claim.request')}</button>
 			</form>
 		</section>
 	{/if}
 
 	<section class="cabinet-card">
-		<h2>{translate('de', 'cabinet.children.title')}</h2>
+		<h2>{translate(uiLocale, 'cabinet.children.title')}</h2>
 		{#if data.cabinet.children.length === 0}<p>
-				{translate('de', 'cabinet.children.empty')}
+				{translate(uiLocale, 'cabinet.children.empty')}
 			</p>{/if}
 		<div class="child-list">
 			{#each data.cabinet.children as child}
 				<article class="child-item">
 					<p class="item-kicker">
-						{translate(
-							'de',
+						{translate(uiLocale,
 							child.origin === 'portal'
 								? 'cabinet.child.portal'
 								: 'cabinet.child.legacy'
@@ -97,7 +100,7 @@
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="childId" value={child.id} />
 						<label for={`name-${child.id}`}
-							>{translate('de', 'cabinet.child.fullName')}</label
+							>{translate(uiLocale, 'cabinet.child.fullName')}</label
 						>
 						<input
 							id={`name-${child.id}`}
@@ -107,7 +110,7 @@
 							maxlength="160"
 						/>
 						<label for={`birth-${child.id}`}
-							>{translate('de', 'cabinet.child.birthDate')}</label
+							>{translate(uiLocale, 'cabinet.child.birthDate')}</label
 						>
 						<input
 							id={`birth-${child.id}`}
@@ -119,13 +122,12 @@
 						{#if child.origin === 'portal'}
 							<label class="checkbox"
 								><input type="checkbox" name="confirmDuplicate" value="true" />
-								<span>{translate('de', 'cabinet.child.confirmDuplicate')}</span
+								<span>{translate(uiLocale, 'cabinet.child.confirmDuplicate')}</span
 								></label
 							>
 						{/if}
 						<button type="submit" disabled={child.pendingCorrection}
-							>{translate(
-								'de',
+							>{translate(uiLocale,
 								child.origin === 'portal'
 									? 'cabinet.child.update'
 									: 'cabinet.child.correct'
@@ -133,7 +135,7 @@
 						>
 					</form>
 					{#if child.pendingCorrection}<p>
-							{translate('de', 'cabinet.child.correctionPending')}
+							{translate(uiLocale, 'cabinet.child.correctionPending')}
 						</p>{/if}
 				</article>
 			{/each}
@@ -141,46 +143,46 @@
 
 		<form class="child-create" method="POST" action="?/createChild">
 			<input type="hidden" name="_csrf" value={data.csrfToken} />
-			<label for="new-child-name">{translate('de', 'cabinet.child.fullName')}</label>
+			<label for="new-child-name">{translate(uiLocale, 'cabinet.child.fullName')}</label>
 			<input id="new-child-name" name="fullName" required maxlength="160" />
-			<label for="new-child-birth">{translate('de', 'cabinet.child.birthDate')}</label>
+			<label for="new-child-birth">{translate(uiLocale, 'cabinet.child.birthDate')}</label>
 			<input id="new-child-birth" name="birthDate" type="date" required />
 			<label class="checkbox"
 				><input type="checkbox" name="confirmDuplicate" value="true" />
-				<span>{translate('de', 'cabinet.child.confirmDuplicate')}</span></label
+				<span>{translate(uiLocale, 'cabinet.child.confirmDuplicate')}</span></label
 			>
-			<button type="submit">{translate('de', 'cabinet.child.create')}</button>
+			<button type="submit">{translate(uiLocale, 'cabinet.child.create')}</button>
 		</form>
 	</section>
 
 	<section class="cabinet-card">
-		<h2>{translate('de', 'cabinet.activities.title')}</h2>
+		<h2>{translate(uiLocale, 'cabinet.activities.title')}</h2>
 		{#if data.cabinet.activities.length === 0}<p>
-				{translate('de', 'cabinet.activities.empty')}
+				{translate(uiLocale, 'cabinet.activities.empty')}
 			</p>{/if}
 		<div class="activity-list">
 			{#each data.cabinet.activities as activity}
 				<article class="activity-item">
 					<p class="item-kicker">
 						{activity.origin === 'legacy'
-							? translate('de', 'cabinet.activities.legacyService')
-							: translate('de', activityKindKeys[activity.lessonKind])}
+							? translate(uiLocale, 'cabinet.activities.legacyService')
+							: translate(uiLocale, activityKindKeys[activity.lessonKind])}
 					</p>
 					<h3>{activity.groupName}</h3>
 					<p>
 						{activity.childName}{activity.dayDisplay
 							? ` · ${activity.dayDisplay}`
 							: ''}{activity.durationMinutes
-							? ` · ${activity.durationMinutes} Min.`
+							? ` · ${activity.durationMinutes} ${translate(uiLocale, 'ui.minute')}`
 							: ''}
 					</p>
 					<p>
 						{activity.basePriceCents !== null && activity.priceConfirmed
 							? money(activity.basePriceCents)
-							: translate('de', 'cabinet.activities.priceUnknown')}
+							: translate(uiLocale, 'cabinet.activities.priceUnknown')}
 					</p>
 					{#if activity.origin === 'legacy'}<p class="muted">
-							{translate('de', 'cabinet.activities.noDigitalContract')}
+							{translate(uiLocale, 'cabinet.activities.noDigitalContract')}
 						</p>{/if}
 				</article>
 			{/each}
@@ -188,13 +190,13 @@
 	</section>
 
 	<section class="cabinet-card" id="price-reviews">
-		<h2>{translate('de', 'cabinet.priceReviews.title')}</h2>
-		<p>{translate('de', 'cabinet.priceReviews.basePriceNotice')}</p>
-		{#if data.priceReviews.length === 0}<p>{translate('de', 'cabinet.priceReviews.empty')}</p>{/if}
+		<h2>{translate(uiLocale, 'cabinet.priceReviews.title')}</h2>
+		<p>{translate(uiLocale, 'cabinet.priceReviews.basePriceNotice')}</p>
+		{#if data.priceReviews.length === 0}<p>{translate(uiLocale, 'cabinet.priceReviews.empty')}</p>{/if}
 		<div class="activity-list">
 			{#each data.priceReviews as priceReview}
 				<article class="activity-item">
-					<p class="item-kicker">{priceReview.status}</p>
+					<p class="item-kicker">{translateAdminCode(uiLocale, priceReview.status)}</p>
 					<h3>{priceReview.courseName}</h3>
 					<p>
 						{priceReview.oldPriceCents === null ? '—' : money(priceReview.oldPriceCents)}
@@ -202,7 +204,7 @@
 						{priceReview.newFinalPriceCents === null ? '—' : money(priceReview.newFinalPriceCents)}
 					</p>
 					<a href={`/price-reviews/${priceReview.publicReference}`}>
-						{translate('de', 'cabinet.priceReviews.open')}
+						{translate(uiLocale, 'cabinet.priceReviews.open')}
 					</a>
 				</article>
 			{/each}
@@ -210,40 +212,39 @@
 	</section>
 
 	<section class="cabinet-card" id="messages">
-		<h2>{translate('de', 'cabinet.messages.title')}</h2>
-		<p><a href="/messages">{translate('de', 'cabinet.messages.new')}</a></p>
-		{#if data.cabinet.extensions.threads.length === 0}<p>{translate('de', 'cabinet.messages.empty')}</p>{/if}
+		<h2>{translate(uiLocale, 'cabinet.messages.title')}</h2>
+		<p><a href="/messages">{translate(uiLocale, 'cabinet.messages.new')}</a></p>
+		{#if data.cabinet.extensions.threads.length === 0}<p>{translate(uiLocale, 'cabinet.messages.empty')}</p>{/if}
 		<div class="activity-list">
 			{#each data.cabinet.extensions.threads as thread}
 				<article class="activity-item">
-					<p class="item-kicker">{translate('de', `messages.status.${thread.status}` as 'messages.status.open')}</p>
+					<p class="item-kicker">{translate(uiLocale, `messages.status.${thread.status}` as 'messages.status.open')}</p>
 					<h3>{thread.label}</h3>
 					{#if thread.detail}<p>{thread.detail}</p>{/if}
-					{#if thread.href}<a href={thread.href}>{translate('de', 'cabinet.messages.open')}</a>{/if}
+					{#if thread.href}<a href={thread.href}>{translate(uiLocale, 'cabinet.messages.open')}</a>{/if}
 				</article>
 			{/each}
 		</div>
 	</section>
 
 	<section class="cabinet-card pricing-card">
-		<h2>{translate('de', 'cabinet.pricing.totalTitle')}</h2>
+		<h2>{translate(uiLocale, 'cabinet.pricing.totalTitle')}</h2>
 		<p class="price-total">{money(data.cabinet.pricing.knownMonthlyBaseTotalCents)}</p>
-		<p>{translate('de', 'cabinet.pricing.totalDisclaimer')}</p>
+		<p>{translate(uiLocale, 'cabinet.pricing.totalDisclaimer')}</p>
 		{#if data.cabinet.pricing.unknownMonthlyBasePriceCount > 0}<p>
-				{translate('de', 'cabinet.pricing.unknownNotice')}
+				{translate(uiLocale, 'cabinet.pricing.unknownNotice')}
 			</p>{/if}
 		{#if data.cabinet.activities.some((item) => item.lessonKind === 'individual')}<p>
-				{formatMessage('de', 'cabinet.pricing.individualNotice', {
+				{formatMessage(uiLocale, 'cabinet.pricing.individualNotice', {
 					amount: money(data.cabinet.pricing.individualUnitPriceCents),
 				})}
 			</p>{/if}
 		{#if data.cabinet.activities.some((item) => item.lessonKind === 'nachhilfe')}<p>
-				{translate('de', 'cabinet.pricing.nachhilfeNotice')}
+				{translate(uiLocale, 'cabinet.pricing.nachhilfeNotice')}
 			</p>{/if}
 		{#each data.cabinet.pricing.paymentNotices as notice}
 			<p>
-				{translate(
-					'de',
+				{translate(uiLocale,
 					notice === 'existing_external_sepa'
 						? 'cabinet.payment.externalSepa'
 						: notice === 'manual_payment'
@@ -255,12 +256,12 @@
 	</section>
 
 	<section class="cabinet-card" id="trials">
-		<h2>{translate('de', 'cabinet.trials.title')}</h2>
-		{#if data.cabinet.extensions.trials.length === 0}<p>{translate('de', 'cabinet.trials.empty')}</p>{/if}
+		<h2>{translate(uiLocale, 'cabinet.trials.title')}</h2>
+		{#if data.cabinet.extensions.trials.length === 0}<p>{translate(uiLocale, 'cabinet.trials.empty')}</p>{/if}
 		<div class="activity-list">
 			{#each data.cabinet.extensions.trials as trial, index}
 				<article class="activity-item">
-					<p class="item-kicker">{translate('de', trialStatusKeys[trial.status as keyof typeof trialStatusKeys])}</p>
+					<p class="item-kicker">{translate(uiLocale, trialStatusKeys[trial.status as keyof typeof trialStatusKeys])}</p>
 					<h3>{trial.label}</h3>
 					{#if trial.detail}<p>{trial.detail}</p>{/if}
 					{#if trial.cancellable}
@@ -268,7 +269,7 @@
 							<input type="hidden" name="_csrf" value={data.csrfToken} />
 							<input type="hidden" name="trialId" value={trial.id} />
 							<input type="hidden" name="idempotencyKey" value={`cancel:${trial.id}:${index}`} />
-							<button type="submit">{translate('de', 'cabinet.trials.cancel')}</button>
+							<button type="submit">{translate(uiLocale, 'cabinet.trials.cancel')}</button>
 						</form>
 					{/if}
 				</article>
@@ -277,40 +278,40 @@
 	</section>
 
 	<section class="cabinet-card" id="requests">
-		<h2>{translate('de', 'cabinet.requests.title')}</h2>
-		<p><a href="/requests/new?kind=nachhilfe">{translate('de', 'cabinet.requests.nachhilfe')}</a> · <a href="/requests/new?kind=individual">{translate('de', 'cabinet.requests.individual')}</a></p>
-		{#if data.cabinet.extensions.requests.length === 0}<p>{translate('de', 'cabinet.requests.empty')}</p>{/if}
+		<h2>{translate(uiLocale, 'cabinet.requests.title')}</h2>
+		<p><a href="/requests/new?kind=nachhilfe">{translate(uiLocale, 'cabinet.requests.nachhilfe')}</a> · <a href="/requests/new?kind=individual">{translate(uiLocale, 'cabinet.requests.individual')}</a></p>
+		{#if data.cabinet.extensions.requests.length === 0}<p>{translate(uiLocale, 'cabinet.requests.empty')}</p>{/if}
 		<div class="activity-list">
 			{#each data.cabinet.extensions.requests as request}
 				<article class="activity-item">
 					<p class="item-kicker">{requestStatus(request.status)}</p>
 					<h3>{request.label}</h3>{#if request.detail}<p>{request.detail}</p>{/if}
-					{#if request.href}<a href={request.href}>{translate('de', 'cabinet.requests.open')}</a>{/if}
+					{#if request.href}<a href={request.href}>{translate(uiLocale, 'cabinet.requests.open')}</a>{/if}
 				</article>
 			{/each}
 		</div>
 	</section>
 
 	<section class="cabinet-card" id="contracts">
-		<h2>{translate('de', 'cabinet.contracts.openTitle')}</h2>
-		{#if data.cabinet.extensions.contractOffers.length === 0}<p>{translate('de', 'cabinet.contracts.empty')}</p>{/if}
+		<h2>{translate(uiLocale, 'cabinet.contracts.openTitle')}</h2>
+		{#if data.cabinet.extensions.contractOffers.length === 0}<p>{translate(uiLocale, 'cabinet.contracts.empty')}</p>{/if}
 		<div class="activity-list">
 			{#each data.cabinet.extensions.contractOffers as offer}
 				<article class="activity-item">
-					<p class="item-kicker">{translate('de', `contract.status.${offer.status}` as 'contract.status.draft')}</p>
+					<p class="item-kicker">{translate(uiLocale, `contract.status.${offer.status}` as 'contract.status.draft')}</p>
 					<h3>{offer.label}</h3>{#if offer.detail}<p>{offer.detail}</p>{/if}
-					{#if offer.href}<a href={offer.href}>{translate('de', 'cabinet.contracts.open')}</a>{/if}
+					{#if offer.href}<a href={offer.href}>{translate(uiLocale, 'cabinet.contracts.open')}</a>{/if}
 				</article>
 			{/each}
 		</div>
-		<h2>{translate('de', 'cabinet.contracts.historyTitle')}</h2>
-		{#if data.cabinet.extensions.contractHistory.length === 0}<p>{translate('de', 'cabinet.contracts.empty')}</p>{/if}
+		<h2>{translate(uiLocale, 'cabinet.contracts.historyTitle')}</h2>
+		{#if data.cabinet.extensions.contractHistory.length === 0}<p>{translate(uiLocale, 'cabinet.contracts.empty')}</p>{/if}
 		<div class="activity-list">
 			{#each data.cabinet.extensions.contractHistory as contract}
 				<article class="activity-item">
-					<p class="item-kicker">{translate('de', `contract.status.${contract.status}` as 'contract.status.draft')}</p>
+					<p class="item-kicker">{translate(uiLocale, `contract.status.${contract.status}` as 'contract.status.draft')}</p>
 					<h3>{contract.label}</h3>{#if contract.detail}<p>{contract.detail}</p>{/if}
-					{#if contract.href}<a href={contract.href}>{translate('de', 'cabinet.contracts.open')}</a>{/if}
+					{#if contract.href}<a href={contract.href}>{translate(uiLocale, 'cabinet.contracts.open')}</a>{/if}
 				</article>
 			{/each}
 		</div>

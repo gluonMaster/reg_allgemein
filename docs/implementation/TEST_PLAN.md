@@ -1,6 +1,22 @@
 # Стратегия тестирования
 
-Ревизия: 2026-09-02.
+Ревизия: 2026-09-13.
+
+## UI-01: немецкий и русский веб-интерфейс
+
+- `tests/unit/i18n.test.ts`: полнота русского UI-словаря, совпадение placeholders,
+  немецкий fallback и неизменность всех email/Telegram templates при locale `ru`.
+- `tests/unit/ui-language-route.test.ts`: host-only UI cookie, canonical Origin,
+  same-origin browser fallback, unsupported locale, безопасный return path и
+  локализованный отказ в доступе без потери security headers.
+- `tests/e2e/00-ui-language.spec.ts`: переключение до/после входа, SSR без JS,
+  изоляция браузеров, сохранение регистрационных полей при переключении с JS,
+  русские сообщения form actions, parent/admin sections, mobile layout,
+  немецкий оригинал и русский перевод versioned согласий, RBAC denial.
+- Изменение request locale и общего UI затрагивает все маршруты: перед выпуском
+  этого изменения выполняются `npm run check`, полный Vitest, полный Chromium
+  E2E и `npm run build`. Remote provider sends/deploy не являются частью этих
+  локальных проверок и требуют отдельного поручения.
 
 ## Принципы
 
@@ -425,7 +441,7 @@ blocked gates и local suite их не заменяет.
 - golden VBA normalization cases, including `MISSING_PRICE_KEY`;
 - blank `T` для однозначной `group|dance_group`: yearly fallback даёт 4600,
   monthly fallback 6000 cents, сохраняет `ESTIMATED_MISSING_DURATION` и
-  показывает немецкое estimated/admin-confirmation сообщение;
+  показывает estimated/admin-confirmation сообщение на выбранном языке UI;
 - fallback не срабатывает для `individual|nachhilfe|group_nachhilfe`, unknown/
   ambiguous mapping или contract kind, present/invalid `T` и
   `MISSING_PRICE_KEY`; source duration остаётся `null`;

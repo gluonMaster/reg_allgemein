@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { page as portalPage } from '$app/state';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../app.css';
+	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import { translate } from '$lib/i18n';
 	import type { LayoutData } from './$types';
 
@@ -7,18 +10,19 @@
 </script>
 
 <svelte:head>
-	<meta name="description" content={translate('de', 'meta.description')} />
+	<meta name="description" content={translate(uiLocale, 'meta.description')} />
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </svelte:head>
 
+<LanguageSwitcher />
 {@render children()}
 
 {#if data.officialLinks}
 	<footer class="site-footer" data-links-version={data.officialLinks.version}>
-		<nav aria-label={translate('de', 'footer.navigationLabel')}>
-			<a href={data.officialLinks.privacyUrl}>{translate('de', 'footer.privacy')}</a>
-			<a href={data.officialLinks.imprintUrl}>{translate('de', 'footer.imprint')}</a>
-			<a href={data.officialLinks.contactUrl}>{translate('de', 'footer.contact')}</a>
+		<nav aria-label={translate(uiLocale, 'footer.navigationLabel')}>
+			<a href={data.officialLinks.privacyUrl}>{translate(uiLocale, 'footer.privacy')}</a>
+			<a href={data.officialLinks.imprintUrl}>{translate(uiLocale, 'footer.imprint')}</a>
+			<a href={data.officialLinks.contactUrl}>{translate(uiLocale, 'footer.contact')}</a>
 		</nav>
 	</footer>
 {/if}

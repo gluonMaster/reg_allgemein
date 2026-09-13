@@ -1,6 +1,12 @@
+import { russianCatalog } from './ru';
+import { additionalGermanCatalog } from './ui-additions';
+import { russianCodeLabels } from './ui-codes';
 export const defaultLocale = 'de' as const;
 
 export const germanCatalog = {
+	...additionalGermanCatalog,
+	'language.label': 'Sprache der Benutzeroberfläche',
+	'language.failed': 'Die Sprache konnte nicht geändert werden. Bitte versuchen Sie es erneut.',
 	'meta.description':
 		'Online-Registrierung, Kursübersicht und Elternbereich des Kinder- und Elternzentrums Kolibri e.V.',
 	'home.title': 'Kolibri Anmeldung',
@@ -232,8 +238,7 @@ export const germanCatalog = {
 	'privacy.status.reviewing': 'In Prüfung',
 	'privacy.status.processing': 'Wird verarbeitet',
 	'privacy.status.completed': 'Abgeschlossen',
-	'privacy.status.completed_with_retained_evidence':
-		'Abgeschlossen; Nachweise getrennt aufbewahrt',
+	'privacy.status.completed_with_retained_evidence': 'Abgeschlossen; Nachweise getrennt aufbewahrt',
 	'privacy.status.blocked_by_active_contract': 'Durch aktiven Vertrag blockiert',
 	'privacy.status.failed': 'Fehlgeschlagen',
 	'privacy.status.cancelled': 'Beendet',
@@ -491,7 +496,7 @@ export const germanCatalog = {
 	'priceReviews.detail.effectiveRule':
 		'Nach Ihrer Zustimmung muss die Verwaltung diese konkrete Änderung nochmals bestätigen. Erst danach kann sie am ersten Tag des folgenden Kalendermonats wirksam werden.',
 	'priceReviews.detail.acceptanceText':
-		'Ich stimme der genannten neuen monatlichen Grundgebühr zu. Mir ist bekannt, dass sie erst nach der gesonderten Bestätigung durch die Verwaltung gilt.',
+		'Ich stimme der in diesem Preisänderungsvorschlag genannten neuen monatlichen Grundgebühr zu. Mir ist bekannt, dass die Änderung erst nach einer gesonderten Bestätigung durch die Verwaltung und frühestens zum angegebenen Wirksamkeitsdatum gilt.',
 	'priceReviews.detail.accept': 'Preisänderung zustimmen',
 	'priceReviews.detail.decline': 'Preisänderung ablehnen',
 	'priceReviews.detail.responded': 'Ihre Antwort wurde unveränderlich gespeichert.',
@@ -860,6 +865,10 @@ export const germanCatalog = {
 } as const;
 
 export type MessageKey = keyof typeof germanCatalog;
+export type UiMessageKey = Exclude<
+	MessageKey,
+	`${string}.email.${string}` | `telegram.${string}` | 'absence.subject' | 'absence.messageFormat'
+>;
 
 const adminCodeKeys = {
 	open: 'admin.code.open',
@@ -949,6 +958,7 @@ type Catalog = Partial<Record<MessageKey, string>>;
 
 const catalogs: Record<string, Catalog> = {
 	de: germanCatalog,
+	ru: russianCatalog,
 };
 
 function baseLocale(locale: string | undefined): string {
@@ -961,7 +971,11 @@ export function translate(locale: string | undefined, key: MessageKey): string {
 
 export function translateAdminCode(locale: string | undefined, code: string): string {
 	const key = adminCodeKeys[code as keyof typeof adminCodeKeys];
-	return key ? translate(locale, key) : code;
+	return key
+		? translate(locale, key)
+		: baseLocale(locale) === 'ru'
+			? (russianCodeLabels[code] ?? code)
+			: code;
 }
 
 export function translatePrivacyCategory(locale: string | undefined, code: string): string {
@@ -982,4 +996,20 @@ export function formatMessage(
 	return translate(locale, key).replace(/\{([A-Za-z0-9_]+)\}/g, (placeholder, name: string) =>
 		Object.hasOwn(parameters, name) ? String(parameters[name]) : placeholder
 	);
+}
+
+// Form feedback is system-authored UI text, never user-entered correspondence.
+// Keep an existing action result readable when only the language is invalidated.
+const feedbackKeys = new Map<string, MessageKey>();
+for (const key of Object.keys(russianCatalog) as UiMessageKey[]) {
+	feedbackKeys.set(germanCatalog[key], key);
+	feedbackKeys.set(russianCatalog[key], key);
+}
+export function translateUiFeedback(locale: string | undefined, message: string): string {
+	const key = feedbackKeys.get(message);
+	if (key) return translate(locale, key);
+	const count =
+		/^(\d+) Preview-Vertragsvorlagen wurden bereitgestellt\.$/.exec(message)?.[1] ??
+		/^Подготовлено шаблонов договоров для preview: (\d+)\.$/.exec(message)?.[1];
+	return count ? formatMessage(locale, 'ui.preview.installed', { count }) : message;
 }

@@ -14,7 +14,7 @@ import { requestPriceReviewRuntime } from '$lib/server/price-reviews/runtime';
 export const load: PageServerLoad = async (event) => {
 	const actor = requireParent(event.locals.user);
 	const [cabinet, priceReviews] = await Promise.all([
-		requestCabinetRuntime(event).service.load(actor),
+		requestCabinetRuntime(event).service.load(actor, event.locals.locale),
 		requestPriceReviewRuntime(event).repository.listParentItems(actor.id),
 	]);
 	return {
@@ -64,18 +64,18 @@ export const actions = {
 				return fail(409, {
 					success: false,
 					duplicate: true,
-					message: translate('de', 'cabinet.child.duplicateWarning'),
+					message: translate(event.locals.locale, 'cabinet.child.duplicateWarning'),
 				});
 			}
 			if (result !== 'created') {
 				return fail(400, {
 					success: false,
-					message: translate('de', 'cabinet.child.rejected'),
+					message: translate(event.locals.locale, 'cabinet.child.rejected'),
 				});
 			}
-			return { success: true, message: translate('de', 'cabinet.child.saved') };
+			return { success: true, message: translate(event.locals.locale, 'cabinet.child.saved') };
 		} catch {
-			return fail(403, { success: false, message: translate('de', 'auth.csrfRejected') });
+			return fail(403, { success: false, message: translate(event.locals.locale, 'auth.csrfRejected') });
 		}
 	},
 	updateChild: async (event) => {
@@ -90,18 +90,18 @@ export const actions = {
 				return fail(409, {
 					success: false,
 					duplicate: true,
-					message: translate('de', 'cabinet.child.duplicateWarning'),
+					message: translate(event.locals.locale, 'cabinet.child.duplicateWarning'),
 				});
 			}
 			if (result !== 'updated') {
 				return fail(404, {
 					success: false,
-					message: translate('de', 'cabinet.child.rejected'),
+					message: translate(event.locals.locale, 'cabinet.child.rejected'),
 				});
 			}
-			return { success: true, message: translate('de', 'cabinet.child.updated') };
+			return { success: true, message: translate(event.locals.locale, 'cabinet.child.updated') };
 		} catch {
-			return fail(403, { success: false, message: translate('de', 'auth.csrfRejected') });
+			return fail(403, { success: false, message: translate(event.locals.locale, 'auth.csrfRejected') });
 		}
 	},
 	requestCorrection: async (event) => {
@@ -113,10 +113,10 @@ export const actions = {
 				requestId: event.locals.requestId,
 			});
 			return requested
-				? { success: true, message: translate('de', 'cabinet.child.correctionRequested') }
-				: fail(404, { success: false, message: translate('de', 'cabinet.child.rejected') });
+				? { success: true, message: translate(event.locals.locale, 'cabinet.child.correctionRequested') }
+				: fail(404, { success: false, message: translate(event.locals.locale, 'cabinet.child.rejected') });
 		} catch {
-			return fail(403, { success: false, message: translate('de', 'auth.csrfRejected') });
+			return fail(403, { success: false, message: translate(event.locals.locale, 'auth.csrfRejected') });
 		}
 	},
 	requestClaim: async (event) => {
@@ -127,15 +127,15 @@ export const actions = {
 				requestSubject: requestSubject(event),
 			});
 			return requested
-				? { success: true, message: translate('de', 'cabinet.claim.requested') }
+				? { success: true, message: translate(event.locals.locale, 'cabinet.claim.requested') }
 				: fail(400, {
 						success: false,
-						message: translate('de', 'cabinet.claim.unavailable'),
+						message: translate(event.locals.locale, 'cabinet.claim.unavailable'),
 					});
 		} catch {
 			return fail(400, {
 				success: false,
-				message: translate('de', 'cabinet.claim.unavailable'),
+				message: translate(event.locals.locale, 'cabinet.claim.unavailable'),
 			});
 		}
 	},
@@ -150,13 +150,13 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'cabinet.trials.cancelled') };
+			return { success: true, message: translate(event.locals.locale, 'cabinet.trials.cancelled') };
 		} catch (caught) {
 			return fail(
 				caught instanceof TrialError && caught.code === 'TRIAL_NOT_FOUND' ? 404 : 409,
 				{
 				success: false,
-				message: translate('de', 'cabinet.trials.cancelFailed'),
+				message: translate(event.locals.locale, 'cabinet.trials.cancelFailed'),
 				}
 			);
 		}

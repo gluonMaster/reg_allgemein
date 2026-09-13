@@ -10,7 +10,7 @@ export const load: PageServerLoad = async (event) => {
 	const thread = await requestMessageRuntime(event).repository.getAdminThread(event.params.publicReference);
 	if (!thread) throw error(404, {
 		code: 'SUPPORT_THREAD_NOT_FOUND',
-		message: translate('de', 'admin.notFound'),
+		message: translate(event.locals.locale, 'admin.notFound'),
 		requestId: event.locals.requestId,
 	});
 	return { thread, commandKey: crypto.randomUUID() };
@@ -24,8 +24,8 @@ export const actions = {
 				payload: { publicReference: event.params.publicReference,
 					message: form.get('message'), outcome: form.get('outcome'),
 					idempotencyKey: form.get('idempotencyKey') }, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'admin.messages.replySaved') };
-		} catch { return fail(409, { success: false, message: translate('de', 'admin.messages.actionFailed') }); }
+			return { success: true, message: translate(event.locals.locale, 'admin.messages.replySaved') };
+		} catch { return fail(409, { success: false, message: translate(event.locals.locale, 'admin.messages.actionFailed') }); }
 	},
 	close: async (event) => {
 		try {
@@ -33,7 +33,7 @@ export const actions = {
 			await requestMessageRuntime(event).service.closeAsAdmin({ admin: actor,
 				payload: { publicReference: event.params.publicReference,
 					idempotencyKey: form.get('idempotencyKey') }, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'messages.closed') };
-		} catch { return fail(409, { success: false, message: translate('de', 'admin.messages.actionFailed') }); }
+			return { success: true, message: translate(event.locals.locale, 'messages.closed') };
+		} catch { return fail(409, { success: false, message: translate(event.locals.locale, 'admin.messages.actionFailed') }); }
 	},
 } satisfies Actions;

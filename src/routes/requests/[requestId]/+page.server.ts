@@ -41,7 +41,7 @@ export const load: PageServerLoad = async (event) => {
 		if (caught instanceof IndividualRequestError && caught.code === 'REQUEST_NOT_FOUND') {
 			throw error(404, {
 				code: 'REQUEST_NOT_FOUND',
-				message: translate('de', 'admin.notFound'),
+				message: translate(event.locals.locale, 'admin.notFound'),
 				requestId: event.locals.requestId,
 			});
 		}
@@ -72,13 +72,13 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'request.saved') };
+			return { success: true, message: translate(event.locals.locale, 'request.saved') };
 		} catch (caught) {
 			return fail(
 				caught instanceof IndividualRequestError && caught.code === 'REQUEST_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'request.error.change') }
+				{ success: false, message: translate(event.locals.locale, 'request.error.change') }
 			);
 		}
 	},
@@ -86,13 +86,13 @@ export const actions = {
 		try {
 			const { form, actor } = await verifiedForm(event);
 			await requestRequestsRuntime(event).requestService.submit({ actor, payload: statePayload(form, event.params.requestId), requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'request.submitted') };
+			return { success: true, message: translate(event.locals.locale, 'request.submitted') };
 		} catch (caught) {
 			return fail(
 				caught instanceof IndividualRequestError && caught.code === 'REQUEST_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'request.error.submit') }
+				{ success: false, message: translate(event.locals.locale, 'request.error.submit') }
 			);
 		}
 	},
@@ -100,13 +100,13 @@ export const actions = {
 		try {
 			const { form, actor } = await verifiedForm(event);
 			await requestRequestsRuntime(event).requestService.cancel({ actor, payload: statePayload(form, event.params.requestId), requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'request.cancelled') };
+			return { success: true, message: translate(event.locals.locale, 'request.cancelled') };
 		} catch (caught) {
 			return fail(
 				caught instanceof IndividualRequestError && caught.code === 'REQUEST_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'request.error.cancel') }
+				{ success: false, message: translate(event.locals.locale, 'request.error.cancel') }
 			);
 		}
 	},
@@ -118,8 +118,8 @@ export const actions = {
 				payload: { requestId: event.params.requestId, authorizationId: form.get('authorizationId'), replaceDocumentId: form.get('replaceDocumentId')?.toString() || undefined, idempotencyKey: form.get('idempotencyKey') },
 				file: form.get('document'), requestSubject: requestSubject(event), requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'request.documentUploaded') };
-		} catch { return fail(409, { success: false, message: translate('de', 'request.error.upload') }); }
+			return { success: true, message: translate(event.locals.locale, 'request.documentUploaded') };
+		} catch { return fail(409, { success: false, message: translate(event.locals.locale, 'request.error.upload') }); }
 	},
 	deleteDocument: async (event) => {
 		try {
@@ -129,13 +129,13 @@ export const actions = {
 				documentId: form.get('documentId'),
 				idempotencyKey: form.get('idempotencyKey'),
 			}, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'request.documentDeleted') };
+			return { success: true, message: translate(event.locals.locale, 'request.documentDeleted') };
 		} catch (caught) {
 			return fail(
 				caught instanceof DocumentServiceError && caught.code === 'DOCUMENT_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'request.error.documentDelete') }
+				{ success: false, message: translate(event.locals.locale, 'request.error.documentDelete') }
 			);
 		}
 	},

@@ -18,7 +18,7 @@ export const actions = {
 			password: form.get('password'),
 		});
 		if (!parsed.success) {
-			return fail(400, { success: false, message: translate('de', 'auth.invalidInput') });
+			return fail(400, { success: false, message: translate(event.locals.locale, 'auth.invalidInput') });
 		}
 		try {
 			const reset = await requestAuthRuntime(event).service.resetPassword({
@@ -28,11 +28,11 @@ export const actions = {
 				requestSubject: requestSubject(event),
 			});
 			if (!reset) {
-				return fail(400, { success: false, message: translate('de', 'auth.passwordResetFailed') });
+				return fail(400, { success: false, message: translate(event.locals.locale, 'auth.passwordResetFailed') });
 			}
-			return { success: true, message: translate('de', 'auth.passwordResetSucceeded') };
+			return { success: true, message: translate(event.locals.locale, 'auth.passwordResetSucceeded') };
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, { success: false, message: result.message });
 		}
 	},

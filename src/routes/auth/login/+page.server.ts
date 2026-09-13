@@ -21,7 +21,7 @@ export const actions = {
 			);
 			return fail(400, {
 				success: false,
-				message: translate('de', 'auth.invalidCredentials'),
+				message: translate(event.locals.locale, 'auth.invalidCredentials'),
 				invalidFields: invalidFields.length > 0 ? invalidFields : ['email', 'password'],
 			});
 		}
@@ -35,7 +35,7 @@ export const actions = {
 				requestSubject: requestSubject(event),
 			});
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, {
 				success: false,
 				message: result.message,

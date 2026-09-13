@@ -60,11 +60,11 @@ export const actions = {
 				admin: { id: actor.id, requestId: event.locals.requestId },
 			});
 			if (!result || result.status === 'failed') throw new Error('MANUAL_JOB_FAILED');
-			return { success: true, message: translate('de', 'admin.operations.completed') };
+			return { success: true, message: translate(event.locals.locale, 'admin.operations.completed') };
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.operations.failed'),
+				message: translate(event.locals.locale, 'admin.operations.failed'),
 			});
 		}
 	},

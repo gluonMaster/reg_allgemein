@@ -55,7 +55,7 @@ export const actions = {
 			if (error && typeof error === 'object' && 'status' in error) throw error;
 			return fail(409, {
 				success: false,
-				message: translate('de', 'request.error.save'),
+				message: translate(event.locals.locale, 'request.error.save'),
 			});
 		}
 	},

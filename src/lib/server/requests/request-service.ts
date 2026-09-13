@@ -8,6 +8,7 @@ import {
 } from './contracts';
 import { IndividualRequestError, IndividualRequestRepository } from './request-repository';
 import { formatMessage, translate } from '$lib/i18n';
+import { formatEuro } from '$lib/i18n/locale';
 import { requireParent } from '$lib/server/security/authorization';
 
 export const FUNDED_NACHHILFE_RATE_CENTS_PER_45_MIN = 3000;
@@ -113,28 +114,27 @@ export class IndividualRequestService implements CabinetReadModelContributor {
 		});
 	}
 
-	async contribute(userId: string) {
+	async contribute(userId: string, locale?: string) {
 		const requests = await this.repository.listOwnerRequests(userId);
-		const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 		return {
 			requests: requests.map((request) => ({
 				id: request.id,
-				label: formatMessage('de', 'cabinet.requests.label', {
+				label: formatMessage(locale, 'cabinet.requests.label', {
 					child: request.child_name,
-					kind: translate('de', request.request_kind === 'nachhilfe'
+					kind: translate(locale, request.request_kind === 'nachhilfe'
 						? 'request.kind.nachhilfe' : 'request.kind.individual'),
 				}),
 				status: request.status,
 				detail:
 					request.request_kind === 'nachhilfe'
-						? formatMessage('de', request.valid_from && request.valid_until
+						? formatMessage(locale, request.valid_from && request.valid_until
 							? 'cabinet.requests.fundingDetail' : 'cabinet.requests.fundingDetailUndated', {
 							funding: request.funding_kind,
 							from: request.valid_from ?? '',
 							until: request.valid_until ?? '',
 						})
-						: formatMessage('de', 'cabinet.requests.individualDetail', {
-							amount: euro.format(request.unit_rate_cents / 100),
+						: formatMessage(locale, 'cabinet.requests.individualDetail', {
+							amount: formatEuro(locale, request.unit_rate_cents),
 						}),
 				href: `/requests/${encodeURIComponent(request.id)}`,
 				cancellable: !['cancelled', 'rejected'].includes(request.status),

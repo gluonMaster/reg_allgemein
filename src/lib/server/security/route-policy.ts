@@ -22,6 +22,7 @@ export function routeAccessPolicy(routeId: string | null): RouteAccess {
 	if (
 		routeId === null ||
 		routeId === '/' ||
+		routeId === '/language' ||
 		routeId === '/catalog' ||
 		routeId === '/auth' ||
 		routeId.startsWith('/auth/')

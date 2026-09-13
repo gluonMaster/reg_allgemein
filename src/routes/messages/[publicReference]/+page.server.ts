@@ -22,7 +22,7 @@ export const load: PageServerLoad = async (event) => {
 	);
 	if (!thread) throw error(404, {
 		code: 'SUPPORT_THREAD_NOT_FOUND',
-		message: translate('de', 'admin.notFound'),
+		message: translate(event.locals.locale, 'admin.notFound'),
 		requestId: event.locals.requestId,
 	});
 	return { csrfToken: event.cookies.get(CSRF_COOKIE_NAME) ?? '', commandKey: crypto.randomUUID(), thread };
@@ -36,14 +36,14 @@ export const actions = {
 				payload: { publicReference: event.params.publicReference,
 					message: form.get('message'), idempotencyKey: form.get('idempotencyKey') },
 				requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'messages.updated') };
+			return { success: true, message: translate(event.locals.locale, 'messages.updated') };
 		} catch (caught) {
 			return fail(
 				caught instanceof MessageRepositoryError &&
 					caught.code === 'SUPPORT_THREAD_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'messages.failed') }
+				{ success: false, message: translate(event.locals.locale, 'messages.failed') }
 			);
 		}
 	},
@@ -53,14 +53,14 @@ export const actions = {
 			await requestMessageRuntime(event).service.closeAsParent({ actor,
 				payload: { publicReference: event.params.publicReference,
 					idempotencyKey: form.get('idempotencyKey') }, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'messages.closed') };
+			return { success: true, message: translate(event.locals.locale, 'messages.closed') };
 		} catch (caught) {
 			return fail(
 				caught instanceof MessageRepositoryError &&
 					caught.code === 'SUPPORT_THREAD_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'messages.failed') }
+				{ success: false, message: translate(event.locals.locale, 'messages.failed') }
 			);
 		}
 	},

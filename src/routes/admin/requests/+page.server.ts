@@ -28,8 +28,8 @@ export const actions = {
 				requestId: form.get('requestId'), action: form.get('action'), reason: form.get('reason'),
 				confirmation: form.get('confirmation'), idempotencyKey: form.get('idempotencyKey'),
 			}, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'admin.requests.requestUpdated') };
-		} catch { return fail(409, { success: false, message: adminActionError() }); }
+			return { success: true, message: translate(event.locals.locale, 'admin.requests.requestUpdated') };
+		} catch { return fail(409, { success: false, message: adminActionError(event.locals.locale) }); }
 	},
 	documentAttestation: async (event) => {
 		try {
@@ -40,8 +40,8 @@ export const actions = {
 				attestationTextVersion: form.get('attestationTextVersion'), confirmation: form.get('confirmation'),
 				idempotencyKey: form.get('idempotencyKey'),
 			}, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'admin.requests.attested') };
-		} catch { return fail(409, { success: false, message: adminActionError() }); }
+			return { success: true, message: translate(event.locals.locale, 'admin.requests.attested') };
+		} catch { return fail(409, { success: false, message: adminActionError(event.locals.locale) }); }
 	},
 	documentReview: async (event) => {
 		try {
@@ -50,8 +50,8 @@ export const actions = {
 				documentId: form.get('documentId'), decision: form.get('decision'), reason: form.get('reason'),
 				confirmation: form.get('confirmation'), idempotencyKey: form.get('idempotencyKey'),
 			}, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'admin.requests.documentReviewed') };
-		} catch { return fail(409, { success: false, message: adminActionError() }); }
+			return { success: true, message: translate(event.locals.locale, 'admin.requests.documentReviewed') };
+		} catch { return fail(409, { success: false, message: adminActionError(event.locals.locale) }); }
 	},
 	authorizationReview: async (event) => {
 		try {
@@ -62,7 +62,7 @@ export const actions = {
 				validUntil: form.get('validUntil')?.toString() || undefined, reason: form.get('reason'),
 				confirmation: form.get('confirmation'), idempotencyKey: form.get('idempotencyKey'),
 			}, requestId: event.locals.requestId });
-			return { success: true, message: translate('de', 'admin.requests.authorizationReviewed') };
-		} catch { return fail(409, { success: false, message: adminActionError() }); }
+			return { success: true, message: translate(event.locals.locale, 'admin.requests.authorizationReviewed') };
+		} catch { return fail(409, { success: false, message: adminActionError(event.locals.locale) }); }
 	},
 } satisfies Actions;

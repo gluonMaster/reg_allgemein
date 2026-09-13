@@ -12,7 +12,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!family)
 		throw error(404, {
 			code: 'ADMIN_RESOURCE_NOT_FOUND',
-			message: translate('de', 'admin.notFound'),
+			message: translate(event.locals.locale, 'admin.notFound'),
 			requestId: event.locals.requestId,
 		});
 	return { family };

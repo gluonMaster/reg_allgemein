@@ -46,9 +46,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'messages.created') };
+			return { success: true, message: translate(event.locals.locale, 'messages.created') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'messages.failed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'messages.failed') });
 		}
 	},
 	absence: async (event) => {
@@ -71,9 +71,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'absence.created') };
+			return { success: true, message: translate(event.locals.locale, 'absence.created') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'messages.failed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'messages.failed') });
 		}
 	},
 } satisfies Actions;

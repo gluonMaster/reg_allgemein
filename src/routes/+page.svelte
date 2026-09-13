@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { page as portalPage } from '$app/state';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../app.css';
 	import AuthNav from '$lib/components/AuthNav.svelte';
 	import { translate } from '$lib/i18n';
 
-	const title = translate('de', 'home.title');
+	const title = $derived(translate(uiLocale, 'home.title'));
 </script>
 
 <svelte:head>
@@ -13,7 +15,7 @@
 <main class="shell">
 	<AuthNav />
 	<h1>{title}</h1>
-	<p>{translate('de', 'home.foundationNotice')}</p>
+	<p>{translate(uiLocale, 'home.foundationNotice')}</p>
 </main>
 
 <style>

@@ -45,7 +45,7 @@ export function publicAuthError(error: unknown): { status: number; messageKey: M
 	return { status: 503, messageKey: 'auth.serviceUnavailable' };
 }
 
-export function translatedPublicAuthError(error: unknown): {
+export function translatedPublicAuthError(error: unknown, locale?: string): {
 	status: number;
 	message: string;
 	messageKey: MessageKey;
@@ -53,7 +53,7 @@ export function translatedPublicAuthError(error: unknown): {
 	const result = publicAuthError(error);
 	return {
 		status: result.status,
-		message: translate('de', result.messageKey),
+		message: translate(locale, result.messageKey),
 		messageKey: result.messageKey,
 	};
 }

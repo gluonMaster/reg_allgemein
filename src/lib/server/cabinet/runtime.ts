@@ -1,3 +1,4 @@
+import { translateAdminCode } from '$lib/i18n';
 import type { RequestEvent } from '@sveltejs/kit';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
 import { DatabaseBoundary } from '$lib/server/db/database';
@@ -18,7 +19,7 @@ import { MessageService } from '$lib/server/messages/message-service';
 class ContractCabinetContributor implements CabinetReadModelContributor {
 	constructor(private readonly contracts: ContractRepository) {}
 
-	async contribute(userId: string) {
+	async contribute(userId: string, locale?: string) {
 		const rows = await this.contracts.listOwnerHistory(userId);
 		return {
 			contractOffers: rows
@@ -27,7 +28,7 @@ class ContractCabinetContributor implements CabinetReadModelContributor {
 					id: row.id,
 					label: `${row.child_name} · ${row.contract_number}`,
 					status: row.status,
-					detail: `${row.contract_kind} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
+					detail: `${translateAdminCode(locale, row.contract_kind)} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
 					href: `/contracts/${row.id}`,
 				})),
 			contractHistory: rows
@@ -36,7 +37,7 @@ class ContractCabinetContributor implements CabinetReadModelContributor {
 					id: row.id,
 					label: `${row.child_name} · ${row.contract_number}`,
 					status: row.status,
-					detail: `${row.contract_kind} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
+					detail: `${translateAdminCode(locale, row.contract_kind)} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
 					href: `/contracts/${row.id}`,
 				})),
 		};

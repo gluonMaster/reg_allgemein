@@ -18,7 +18,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!item)
 		throw error(404, {
 			code: 'PRICE_REVIEW_NOT_FOUND',
-			message: translate('de', 'priceReviews.detail.notActionable'),
+			message: translate(event.locals.locale, 'priceReviews.detail.notActionable'),
 			requestId: event.locals.requestId,
 		});
 	const card = (await runtime.repository.listParentItems(actor.id)).find(
@@ -55,7 +55,7 @@ export const actions = {
 				requestSubject: requestSubject(event),
 				userAgent: event.request.headers.get('user-agent') ?? 'unavailable',
 			});
-			return { success: true, message: translate('de', 'priceReviews.detail.responded') };
+			return { success: true, message: translate(event.locals.locale, 'priceReviews.detail.responded') };
 		} catch (caught) {
 			return fail(
 				caught instanceof PriceReviewServiceError &&
@@ -64,7 +64,7 @@ export const actions = {
 					: 409,
 				{
 				success: false,
-				message: translate('de', 'priceReviews.detail.rejected'),
+				message: translate(event.locals.locale, 'priceReviews.detail.rejected'),
 				}
 			);
 		}

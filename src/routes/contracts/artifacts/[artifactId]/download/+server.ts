@@ -22,7 +22,7 @@ export const GET: RequestHandler = async (event) => {
 		) {
 			throw error(404, {
 				code: 'CONTRACT_ARTIFACT_NOT_FOUND',
-				message: translate('de', 'admin.notFound'),
+				message: translate(event.locals.locale, 'admin.notFound'),
 				requestId: event.locals.requestId,
 			});
 		}

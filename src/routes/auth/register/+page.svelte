@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { translateUiFeedback } from '$lib/i18n';
+	import EvidenceText from '$lib/components/EvidenceText.svelte';
+	import { page as portalPage } from '$app/state';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import { tick } from 'svelte';
 	import '../../../app.css';
 	import AuthNav from '$lib/components/AuthNav.svelte';
@@ -44,14 +48,14 @@
 </script>
 
 <svelte:head>
-	<title>{translate('de', 'auth.register.title')}</title>
+	<title>{translate(uiLocale, 'auth.register.title')}</title>
 </svelte:head>
 
 <main class="auth-shell">
 	<AuthNav />
-	<h1>{translate('de', 'auth.register.title')}</h1>
+	<h1>{translate(uiLocale, 'auth.register.title')}</h1>
 	{#if !data.authEnabled}
-		<p class="form-status">{translate('de', 'auth.serviceUnavailable')}</p>
+		<p class="form-status">{translate(uiLocale, 'auth.serviceUnavailable')}</p>
 	{/if}
 	<form method="POST">
 		{#if form?.message}<p
@@ -61,9 +65,9 @@
 				aria-live="assertive"
 				aria-atomic="true"
 			>
-				{form.message}
+				{translateUiFeedback(uiLocale, form.message)}
 			</p>{/if}
-		<label for="firstName">{translate('de', 'auth.firstNameLabel')}</label>
+		<label for="firstName">{translate(uiLocale, 'auth.firstNameLabel')}</label>
 		<input
 			bind:this={firstNameInput}
 			id="firstName"
@@ -75,7 +79,7 @@
 			aria-invalid={firstNameInvalid ? 'true' : undefined}
 			aria-describedby={firstNameInvalid ? 'registration-error' : undefined}
 		/>
-		<label for="lastName">{translate('de', 'auth.lastNameLabel')}</label>
+		<label for="lastName">{translate(uiLocale, 'auth.lastNameLabel')}</label>
 		<input
 			bind:this={lastNameInput}
 			id="lastName"
@@ -87,7 +91,7 @@
 			aria-invalid={lastNameInvalid ? 'true' : undefined}
 			aria-describedby={lastNameInvalid ? 'registration-error' : undefined}
 		/>
-		<label for="email">{translate('de', 'auth.emailLabel')}</label>
+		<label for="email">{translate(uiLocale, 'auth.emailLabel')}</label>
 		<input
 			bind:this={emailInput}
 			id="email"
@@ -100,7 +104,7 @@
 			aria-invalid={emailInvalid ? 'true' : undefined}
 			aria-describedby={emailInvalid ? 'registration-error' : undefined}
 		/>
-		<label for="password">{translate('de', 'auth.passwordLabel')}</label>
+		<label for="password">{translate(uiLocale, 'auth.passwordLabel')}</label>
 		<input
 			id="password"
 			bind:this={passwordInput}
@@ -123,7 +127,7 @@
 				aria-invalid={privacyInvalid ? 'true' : undefined}
 				aria-describedby={privacyInvalid ? 'registration-error' : undefined}
 			/>
-			<span>{translate('de', 'auth.privacyAcceptance')}</span>
+			<span><EvidenceText messageKey="auth.privacyAcceptance" /></span>
 		</label>
 		<input
 			type="hidden"
@@ -131,20 +135,23 @@
 			value={form?.privacyNoticeVersion ?? data.privacyNoticeVersion}
 		/>
 		{#if data.authEnabled && data.turnstileSiteKey}
+			{#key uiLocale}
 			<TurnstileWidget
+				language={uiLocale}
 				siteKey={data.turnstileSiteKey}
 				action="registration"
 				bind:ready={turnstileReady}
 				bind:failed={turnstileFailed}
 			/>
+			{/key}
 			{#if turnstileFailed}<p class="form-status" role="alert">
-					{translate('de', 'auth.turnstileUnavailable')}
+					{translate(uiLocale, 'auth.turnstileUnavailable')}
 				</p>{/if}
 		{/if}
 		<button
 			type="submit"
 			disabled={!data.authEnabled || !data.turnstileSiteKey || !turnstileReady}
-			>{translate('de', 'auth.register.submit')}</button
+			>{translate(uiLocale, 'auth.register.submit')}</button
 		>
 	</form>
 </main>

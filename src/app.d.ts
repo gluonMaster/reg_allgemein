@@ -4,6 +4,7 @@
 declare global {
 	namespace App {
 		interface Error {
+			locale?: import('$lib/i18n/locale').UiLocale;
 			code: string;
 			message: string;
 			requestId: string;
@@ -89,6 +90,7 @@ declare global {
 			caches: CacheStorage;
 		}
 		interface Locals {
+			locale?: import('$lib/i18n/locale').UiLocale;
 			requestId: string;
 			user?: {
 				id: string;

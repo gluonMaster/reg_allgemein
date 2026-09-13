@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { adminQuery, verifiedAdminForm } from '$lib/server/admin/http';
 import { requestContractRuntime } from '$lib/server/contracts/runtime';
 import { requireAdmin } from '$lib/server/security/authorization';
-import { translate } from '$lib/i18n';
+import { translate, formatMessage } from '$lib/i18n';
 import { loadRuntimeConfig } from '$lib/server/config/runtime';
 
 export const load: PageServerLoad = async (event) => {
@@ -34,12 +34,12 @@ export const actions = {
 				await requestContractRuntime(event).service.installPreviewReviewTemplates(actor);
 			return {
 				success: true,
-				message: `${installed.length} Preview-Vertragsvorlagen wurden bereitgestellt.`,
+				message: formatMessage(event.locals.locale, 'ui.preview.installed', { count: installed.length }),
 			};
 		} catch {
 			return fail(409, {
 				success: false,
-				message: 'Die Preview-Vertragsvorlagen konnten nicht bereitgestellt werden.',
+				message: translate(event.locals.locale, 'ui.preview.failed'),
 			});
 		}
 	},
@@ -69,11 +69,11 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.contracts.created') };
+			return { success: true, message: translate(event.locals.locale, 'admin.contracts.created') };
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.contracts.failed'),
+				message: translate(event.locals.locale, 'admin.contracts.failed'),
 			});
 		}
 	},
@@ -86,11 +86,11 @@ export const actions = {
 				idempotencyKey: form.get('idempotencyKey')?.toString() ?? '',
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.contracts.sent') };
+			return { success: true, message: translate(event.locals.locale, 'admin.contracts.sent') };
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.contracts.failed'),
+				message: translate(event.locals.locale, 'admin.contracts.failed'),
 			});
 		}
 	},
@@ -107,11 +107,11 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.contracts.formed') };
+			return { success: true, message: translate(event.locals.locale, 'admin.contracts.formed') };
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.contracts.failed'),
+				message: translate(event.locals.locale, 'admin.contracts.failed'),
 			});
 		}
 	},
@@ -134,12 +134,12 @@ export const actions = {
 			});
 			return {
 				success: true,
-				message: translate('de', 'admin.contracts.mediaWithdrawalRecorded'),
+				message: translate(event.locals.locale, 'admin.contracts.mediaWithdrawalRecorded'),
 			};
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.contracts.failed'),
+				message: translate(event.locals.locale, 'admin.contracts.failed'),
 			});
 		}
 	},
@@ -160,12 +160,12 @@ export const actions = {
 			});
 			return {
 				success: true,
-				message: translate('de', 'admin.contracts.terminationReviewed'),
+				message: translate(event.locals.locale, 'admin.contracts.terminationReviewed'),
 			};
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.contracts.failed'),
+				message: translate(event.locals.locale, 'admin.contracts.failed'),
 			});
 		}
 	},

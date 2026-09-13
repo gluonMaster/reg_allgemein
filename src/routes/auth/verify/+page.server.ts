@@ -15,7 +15,7 @@ export const actions = {
 		const form = await event.request.formData();
 		const parsed = tokenInputSchema.safeParse({ token: form.get('token') });
 		if (!parsed.success) {
-			return fail(400, { success: false, message: translate('de', 'auth.verificationFailed') });
+			return fail(400, { success: false, message: translate(event.locals.locale, 'auth.verificationFailed') });
 		}
 		try {
 			const verified = await requestAuthRuntime(event).service.verifyEmail({
@@ -24,11 +24,11 @@ export const actions = {
 				requestSubject: requestSubject(event),
 			});
 			if (!verified) {
-				return fail(400, { success: false, message: translate('de', 'auth.verificationFailed') });
+				return fail(400, { success: false, message: translate(event.locals.locale, 'auth.verificationFailed') });
 			}
-			return { success: true, message: translate('de', 'auth.verificationSucceeded') };
+			return { success: true, message: translate(event.locals.locale, 'auth.verificationSucceeded') };
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, { success: false, message: result.message });
 		}
 	},

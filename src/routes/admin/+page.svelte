@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page as portalPage } from '$app/state';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import { translate } from '$lib/i18n';
 	import type { PageData } from './$types';
 	let { data }: { data: PageData } = $props();
@@ -27,12 +29,12 @@
 </script>
 
 <section class="admin-section">
-	<h2>{translate('de', 'admin.nav.dashboard')}</h2>
+	<h2>{translate(uiLocale, 'admin.nav.dashboard')}</h2>
 	<div class="admin-metrics">
 		{#each cards as card}
 			<a class="metric-card" href={card.href}>
 				<strong>{card.value}</strong>
-				<span>{translate('de', card.label)}</span>
+				<span>{translate(uiLocale, card.label)}</span>
 			</a>
 		{/each}
 	</div>

@@ -22,7 +22,7 @@ export const GET: RequestHandler = async (event) => {
 		if (caught instanceof DocumentServiceError && caught.code === 'DOCUMENT_NOT_FOUND') {
 			throw error(404, {
 				code: 'DOCUMENT_NOT_FOUND',
-				message: translate('de', 'admin.notFound'),
+				message: translate(event.locals.locale, 'admin.notFound'),
 				requestId: event.locals.requestId,
 			});
 		}

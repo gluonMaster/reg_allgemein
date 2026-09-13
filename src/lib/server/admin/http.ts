@@ -23,6 +23,6 @@ export async function verifiedAdminForm(event: RequestEvent) {
 	return { form, actor: requireAdmin(event.locals.user) };
 }
 
-export function adminActionError() {
-	return translate('de', 'admin.action.failed');
+export function adminActionError(locale?: string) {
+	return translate(locale, 'admin.action.failed');
 }

@@ -29,6 +29,15 @@ async function expectVisibleKeyboardFocus(target: Locator): Promise<void> {
 	).toBe(true);
 }
 
+async function tabThroughLanguageSwitcher(page: Page): Promise<void> {
+	await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+	await page.keyboard.press('Tab');
+	await expectVisibleKeyboardFocus(page.getByRole('button', { name: 'Deutsch', exact: true }));
+	await page.keyboard.press('Tab');
+	await expectVisibleKeyboardFocus(page.getByRole('button', { name: 'Русский', exact: true }));
+	await page.keyboard.press('Tab');
+}
+
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
 	const dimensions = await page.evaluate(() => ({
 		bodyScrollWidth: document.body.scrollWidth,
@@ -104,8 +113,7 @@ test.describe('representative German accessibility paths', () => {
 		await expect(privacyAcceptance).toBeVisible();
 		await expectGermanTextRendered(page.getByText(germanCatalog['auth.privacyAcceptance']));
 
-		await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-		await page.keyboard.press('Tab');
+		await tabThroughLanguageSwitcher(page);
 		await expectVisibleKeyboardFocus(
 			page.getByRole('link', { name: germanCatalog['home.catalogLink'] })
 		);
@@ -170,8 +178,7 @@ test.describe('representative German accessibility paths', () => {
 				page.getByText(germanCatalog['cabinet.child.fullName']).first()
 			);
 
-			await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-			await page.keyboard.press('Tab');
+			await tabThroughLanguageSwitcher(page);
 			await expectVisibleKeyboardFocus(
 				page.getByRole('link', { name: germanCatalog['cabinet.link.home'] })
 			);
@@ -203,8 +210,7 @@ test.describe('representative German accessibility paths', () => {
 			).toBeVisible();
 			await expectGermanTextRendered(page.getByText(germanCatalog['admin.reason']).first());
 
-			await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-			await page.keyboard.press('Tab');
+			await tabThroughLanguageSwitcher(page);
 			await expectVisibleKeyboardFocus(
 				page.getByRole('link', { name: germanCatalog['admin.accountSecurity'] })
 			);

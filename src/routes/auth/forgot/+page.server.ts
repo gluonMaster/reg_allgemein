@@ -12,16 +12,16 @@ export const actions = {
 		const form = await event.request.formData();
 		const parsed = emailOnlyInputSchema.safeParse({ email: form.get('email') });
 		if (!parsed.success) {
-			return fail(400, { success: false, message: translate('de', 'auth.invalidInput') });
+			return fail(400, { success: false, message: translate(event.locals.locale, 'auth.invalidInput') });
 		}
 		try {
 			await requestAuthRuntime(event).service.requestPasswordReset({
 				email: parsed.data.email,
 				requestSubject: requestSubject(event),
 			});
-			return { success: true, message: translate('de', 'auth.neutralAccountMessage') };
+			return { success: true, message: translate(event.locals.locale, 'auth.neutralAccountMessage') };
 		} catch (error) {
-			const result = translatedPublicAuthError(error);
+			const result = translatedPublicAuthError(error, event.locals.locale);
 			return fail(result.status, { success: false, message: result.message });
 		}
 	},

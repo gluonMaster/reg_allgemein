@@ -83,7 +83,7 @@ test('retains safe registration fields when Turnstile has no submission token', 
 	await expect(submit).toBeDisabled();
 	await Promise.all([
 		page.waitForNavigation(),
-		page.locator('form').evaluate((form) => (form as HTMLFormElement).submit()),
+		page.getByRole('main').locator('form').evaluate((form) => (form as HTMLFormElement).submit()),
 	]);
 
 	await expect(page.getByRole('alert').first()).toHaveText(

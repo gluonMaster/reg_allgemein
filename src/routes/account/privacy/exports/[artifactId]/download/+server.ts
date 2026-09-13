@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 		if (caught instanceof PrivacyServiceError && caught.code === 'PRIVACY_EXPORT_NOT_FOUND') {
 			throw error(404, {
 				code: 'PRIVACY_EXPORT_NOT_FOUND',
-				message: translate('de', 'admin.notFound'),
+				message: translate(event.locals.locale, 'admin.notFound'),
 				requestId: event.locals.requestId,
 			});
 		}

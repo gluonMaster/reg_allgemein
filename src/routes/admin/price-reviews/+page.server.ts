@@ -45,9 +45,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.priceReviews.actionDone') };
+			return { success: true, message: translate(event.locals.locale, 'admin.priceReviews.actionDone') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.priceReviews.actionFailed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'admin.priceReviews.actionFailed') });
 		}
 	},
 	approve: async (event) => {
@@ -63,9 +63,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.priceReviews.actionDone') };
+			return { success: true, message: translate(event.locals.locale, 'admin.priceReviews.actionDone') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.priceReviews.actionFailed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'admin.priceReviews.actionFailed') });
 		}
 	},
 	dispatch: async (event) => {
@@ -80,9 +80,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.priceReviews.actionDone') };
+			return { success: true, message: translate(event.locals.locale, 'admin.priceReviews.actionDone') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.priceReviews.actionFailed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'admin.priceReviews.actionFailed') });
 		}
 	},
 	finalConfirm: async (event) => {
@@ -98,9 +98,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.priceReviews.actionDone') };
+			return { success: true, message: translate(event.locals.locale, 'admin.priceReviews.actionDone') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.priceReviews.actionFailed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'admin.priceReviews.actionFailed') });
 		}
 	},
 	maintenance: async (event) => {
@@ -114,9 +114,9 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'admin.priceReviews.actionDone') };
+			return { success: true, message: translate(event.locals.locale, 'admin.priceReviews.actionDone') };
 		} catch {
-			return fail(409, { success: false, message: translate('de', 'admin.priceReviews.actionFailed') });
+			return fail(409, { success: false, message: translate(event.locals.locale, 'admin.priceReviews.actionFailed') });
 		}
 	},
 } satisfies Actions;

@@ -1,0 +1,33 @@
+import { translate, type MessageKey } from '$lib/i18n';
+import { normalizeUiLocale } from '$lib/i18n/locale';
+import { withSecurityHeaders } from '$lib/server/security/response-headers';
+
+const escapeHtml = (value: string) =>
+	value.replace(
+		/[&<>"']/g,
+		(char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!
+	);
+
+/** Hook denials happen before SvelteKit can render the root layout/error page. */
+export function localizedAccessError(input: {
+	locale?: string;
+	status: number;
+	messageKey: MessageKey;
+	requestId: string;
+	returnPath: string;
+	production: boolean;
+}): Response {
+	const locale = normalizeUiLocale(input.locale);
+	const t = (key: MessageKey) => escapeHtml(translate(locale, key));
+	const html = `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t('ui.error.title')}</title>
+<style>body{font:1rem/1.6 system-ui,sans-serif;background:#f5f8f8;color:#183c37;margin:0}main,nav{max-width:46rem;margin:1.5rem auto;padding:0 1rem}form{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}button{font:inherit;min-height:44px;padding:.5rem 1rem;border:1px solid #718780;border-radius:.5rem;background:white;color:#183c37}button[aria-pressed=true]{background:#176b54;color:white}a{color:#176b54}h1{font-size:1.6rem}code{overflow-wrap:anywhere}button:focus-visible,a:focus-visible{outline:3px solid #2563eb;outline-offset:3px}</style></head><body>
+<nav aria-label="${t('language.label')}"><form method="POST" action="/language"><input type="hidden" name="returnTo" value="${escapeHtml(input.returnPath)}"><button name="locale" value="de" lang="de" aria-pressed="${locale === 'de'}">Deutsch</button><button name="locale" value="ru" lang="ru" aria-pressed="${locale === 'ru'}">Русский</button></form></nav>
+<main><h1>${input.status} · ${t('ui.error.title')}</h1><p role="alert">${t(input.messageKey)}</p><p>${t('ui.error.reference')}: <code>${escapeHtml(input.requestId)}</code></p><p><a href="/auth/login">${t('auth.link.login')}</a> · <a href="/">${t('ui.error.home')}</a></p></main></body></html>`;
+	return withSecurityHeaders(
+		new Response(html, {
+			status: input.status,
+			headers: { 'content-type': 'text/html; charset=utf-8', vary: 'Cookie' },
+		}),
+		{ requestId: input.requestId, production: input.production, noStore: true }
+	);
+}

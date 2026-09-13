@@ -25,6 +25,7 @@ function eventWithClientRole(role: 'parent' | 'admin') {
 	form.set('password', 'synthetic-password-123');
 	form.set('role', role);
 	return {
+		locals: { locale: 'de' },
 		cookies: {},
 		request: new Request('https://portal.example.test/auth/login', {
 			method: 'POST',

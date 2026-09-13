@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { translateUiFeedback } from '$lib/i18n';
+	import { page as portalPage } from '$app/state';
+	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import { tick } from 'svelte';
 	import '../../../app.css';
 	import AuthNav from '$lib/components/AuthNav.svelte';
@@ -21,10 +24,10 @@
 	});
 </script>
 
-<svelte:head><title>{translate('de', 'auth.login.title')}</title></svelte:head>
+<svelte:head><title>{translate(uiLocale, 'auth.login.title')}</title></svelte:head>
 <main class="auth-shell">
 	<AuthNav />
-	<h1>{translate('de', 'auth.login.title')}</h1>
+	<h1>{translate(uiLocale, 'auth.login.title')}</h1>
 	<form method="POST">
 		{#if form?.message}<p
 				id="login-error"
@@ -33,9 +36,9 @@
 				aria-live="assertive"
 				aria-atomic="true"
 			>
-				{form.message}
+				{translateUiFeedback(uiLocale, form.message)}
 			</p>{/if}
-		<label for="email">{translate('de', 'auth.emailLabel')}</label>
+		<label for="email">{translate(uiLocale, 'auth.emailLabel')}</label>
 		<input
 			bind:this={emailInput}
 			id="email"
@@ -48,7 +51,7 @@
 			aria-describedby={emailInvalid ? 'login-error' : undefined}
 			aria-errormessage={emailInvalid ? 'login-error' : undefined}
 		/>
-		<label for="password">{translate('de', 'auth.passwordLabel')}</label>
+		<label for="password">{translate(uiLocale, 'auth.passwordLabel')}</label>
 		<input
 			bind:this={passwordInput}
 			id="password"
@@ -61,6 +64,6 @@
 			aria-describedby={passwordInvalid ? 'login-error' : undefined}
 			aria-errormessage={passwordInvalid ? 'login-error' : undefined}
 		/>
-		<button type="submit">{translate('de', 'auth.login.submit')}</button>
+		<button type="submit">{translate(uiLocale, 'auth.login.submit')}</button>
 	</form>
 </main>

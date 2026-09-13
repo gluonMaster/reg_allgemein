@@ -24,7 +24,7 @@ export interface CabinetExtensionSlots {
 }
 
 export interface CabinetReadModelContributor {
-	contribute(userId: string): Promise<Partial<CabinetExtensionSlots>>;
+	contribute(userId: string, locale?: string): Promise<Partial<CabinetExtensionSlots>>;
 }
 
 export interface CabinetReadModel {
@@ -77,7 +77,8 @@ export class CabinetService {
 	) {}
 
 	async load(
-		actor: AuthenticatedUser | NonNullable<App.Locals['user']>
+		actor: AuthenticatedUser | NonNullable<App.Locals['user']>,
+		locale?: string
 	): Promise<CabinetReadModel> {
 		requireParent(actor);
 		const profile = await this.repository.loadProfile(actor.id);
@@ -87,7 +88,7 @@ export class CabinetService {
 			this.repository.listChildren(actor.id),
 			this.repository.listActivities(actor.id, asOf),
 			this.repository.loadClaimOffer(actor.id),
-			Promise.all(this.contributors.map((contributor) => contributor.contribute(actor.id))),
+			Promise.all(this.contributors.map((contributor) => contributor.contribute(actor.id, locale))),
 		]);
 		const extensions: CabinetExtensionSlots = {
 			trials: [],

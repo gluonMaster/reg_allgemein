@@ -47,8 +47,8 @@ export const actions = {
 					? config.messaging.emailMaxAttempts
 					: config.messaging.telegramMaxAttempts,
 			});
-			return { success: true, message: translate('de', 'admin.outbox.actionDone') };
-		} catch { return fail(409, { success: false, message: translate('de', 'admin.outbox.actionFailed') }); }
+			return { success: true, message: translate(event.locals.locale, 'admin.outbox.actionDone') };
+		} catch { return fail(409, { success: false, message: translate(event.locals.locale, 'admin.outbox.actionFailed') }); }
 	},
 	resolveTelegram: async (event) => {
 		try {
@@ -76,11 +76,11 @@ export const actions = {
 				now: new Date().toISOString(),
 				additionalAttempts: config.messaging.telegramMaxAttempts,
 			});
-			return { success: true, message: translate('de', 'admin.outbox.actionDone') };
+			return { success: true, message: translate(event.locals.locale, 'admin.outbox.actionDone') };
 		} catch {
 			return fail(409, {
 				success: false,
-				message: translate('de', 'admin.outbox.actionFailed'),
+				message: translate(event.locals.locale, 'admin.outbox.actionFailed'),
 			});
 		}
 	},

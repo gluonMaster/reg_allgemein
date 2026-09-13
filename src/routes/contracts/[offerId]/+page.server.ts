@@ -22,7 +22,7 @@ export const load: PageServerLoad = async (event) => {
 		if (caught instanceof ContractServiceError && caught.code === 'CONTRACT_NOT_FOUND') {
 			throw error(404, {
 				code: 'CONTRACT_NOT_FOUND',
-				message: translate('de', 'admin.notFound'),
+				message: translate(event.locals.locale, 'admin.notFound'),
 				requestId: event.locals.requestId,
 			});
 		}
@@ -74,13 +74,12 @@ async function decide(event: Parameters<Actions[string]>[0], decision: 'accept' 
 		});
 		return {
 			success: true,
-			message: translate(
-				'de',
+			message: translate(event.locals.locale,
 				decision === 'accept' ? 'contract.accepted' : 'contract.declined'
 			),
 		};
 	} catch {
-		return fail(409, { success: false, message: translate('de', 'contract.decisionFailed') });
+		return fail(409, { success: false, message: translate(event.locals.locale, 'contract.decisionFailed') });
 	}
 }
 
@@ -112,13 +111,13 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'contract.end.received') };
+			return { success: true, message: translate(event.locals.locale, 'contract.end.received') };
 		} catch (caught) {
 			return fail(
 				caught instanceof ContractServiceError && caught.code === 'CONTRACT_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'contract.end.failed') }
+				{ success: false, message: translate(event.locals.locale, 'contract.end.failed') }
 			);
 		}
 	},
@@ -135,13 +134,13 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'contract.attendance.received') };
+			return { success: true, message: translate(event.locals.locale, 'contract.attendance.received') };
 		} catch (caught) {
 			return fail(
 				caught instanceof ContractServiceError && caught.code === 'CONTRACT_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'contract.attendance.failed') }
+				{ success: false, message: translate(event.locals.locale, 'contract.attendance.failed') }
 			);
 		}
 	},
@@ -162,13 +161,13 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate('de', 'contract.media.declined') };
+			return { success: true, message: translate(event.locals.locale, 'contract.media.declined') };
 		} catch (caught) {
 			return fail(
 				caught instanceof ContractServiceError && caught.code === 'MEDIA_DECISION_NOT_FOUND'
 					? 404
 					: 409,
-				{ success: false, message: translate('de', 'contract.media.failed') }
+				{ success: false, message: translate(event.locals.locale, 'contract.media.failed') }
 			);
 		}
 	},
