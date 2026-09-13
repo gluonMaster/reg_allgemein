@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T09:10:05Z
+updated_utc: 2026-09-13T09:14:28Z
 reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-last_completed_gate: phase-6-parent-Telegram-admin-login-complete
+last_completed_gate: phase-6-parent-Telegram-audited-resolution-complete
 next_gate: phase-6-parent-Telegram-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-6-admin-session-ready-for-Telegram-recovery
-last_atomic_action: TG09-parent-admin-login
+current_phase: phase-6-Telegram-audited-retry-awaiting-business-window
+last_atomic_action: TG09-parent-audited-resolution
 last_atomic_result: success
-next_atomic_action: TG09-parent-audited-resolution
+next_atomic_action: TG09-parent-scheduled-observation
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Known_exact_audited_recovery_one_additional_attempt
+recommended_next_session_mode: Medium
+mode_reason_plain: Only_normal_Cron_readonly_observation_remains_wait_business_window
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -41,7 +41,7 @@ review:
   last_independently_reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
-  deployed_open_p1: fixed_module_deployed_existing_unknown_still_requires_audited_recovery_and_delivery
+  deployed_open_p1: delivery_not_yet_observed_after_successful_audited_recovery
   verdict_scope: exact_Telegram_fix_GO_code_only_preview_deploy_and_existing_one_attempt_recovery_in_09B
   independent_reviewer: Codex_new_09A_session_independent_code_reviewer_not_second_human
   reviewed_utc: 2026-09-09T10:03:04Z
@@ -1001,7 +1001,7 @@ telegram_runtime_execution:
   current_smoke_state: not_changed_by_config_operation
   one_next_atomic_action: TG09-parent-code-deploy
 telegram_parent_recovery:
-  observed_status: delivery_unknown_one_attempt_no_receipt_held
+  observed_status: audited_retry_authorized_original_unknown_resolved_waiting_normal_Cron
   outbox_fingerprint: ddbd7d01ec2e
   attempt_fingerprint: 52edf4875835
   delivery_reference: TG-6854E6ADE571
@@ -1011,7 +1011,7 @@ telegram_parent_recovery:
   strict_dry_run: passed_actual_vars_preserved_root_config_restored
   recovery_plan: one_code_only_deploy_then_exact_audited_resolution_then_observe_normal_Cron
   additional_attempt_limit: 1
-  remote_write_or_send_this_session: one_successful_code_only_preview_deploy_zero_provider_sends
+  remote_write_or_send_this_session: code_deploy_normal_owner_admin_login_native_audited_resolution_zero_new_provider_sends
   independent_review: GO_09A_complete_report_docs_implementation_reviews_telegram_workers_09a
   owner_remote_scope: granted_09B_after_GO_no_repeat_approval
   owner_approval_record: tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json
@@ -1019,7 +1019,7 @@ telegram_parent_recovery:
 telegram_parent_continuation_permission:
   recorded_utc: 2026-09-09T09:54:44Z
   protected_record: tmp/telegram-phase-09-owner/TG09-parent-continuation-owner-approval.json
-  status: granted_review_and_code_deploy_complete_audited_recovery_pending
+  status: review_code_deploy_admin_login_audited_resolution_complete_one_Cron_attempt_pending
   review: independent_new_09A_session_complete_GO
   deploy: code_only_existing_preview_after_exact_review_GO
   further_deployments: necessary_same_scope_preview_deployments_and_containment_authorized
@@ -1029,19 +1029,16 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: TG09-parent-audited-resolution
-  permission: already_granted_exact_existing_unknown_and_one_additional_normal_outbox_attempt
-  target: fixed_candidate_23c3999_preview_worker_242c1796e930_outbox_ddbd7d01ec2e_attempt_52edf4875835
-  mutation: native_admin_resolveTelegram_retry_after_review_explicit_confirmation
+  id: TG09-parent-scheduled-observation
+  permission: readonly_observation_of_already_authorized_one_additional_normal_Cron_attempt
+  target: existing_outbox_ddbd7d01ec2e_reference_TG_6854E6ADE571_fixed_preview_06b52ab01db5
+  mutation: none_by_operator_normal_Cron_only
   preconditions:
-    - fresh_exact_destination_reference_absence_and_unchanged_unknown_fixed_deployed_module
-    - no_other_actionable_Telegram_work_actual_max_attempt_policy_1
-    - normal_admin_session_if_missing_login_with_separate_actual_checkpoint
+    - configured_Mo_Fr_09_17_Europe_Berlin_window_no_time_override
   postcondition:
-    - linked_resolution_audit_assertion_message_absence_verified_original_attempt_reference_preserved
-    - max_attempts_1_to_2_at_most_one_additional_normal_Cron_attempt
-    - actual_readback_active_state_docs_only_commit_before_next_mutation
-  containment: unknown_held_until_resolution_no_direct_SQL_blind_retry_manual_drain_or_new_cohort
+    - exactly_one_additional_durable_attempt_sent_provider_receipt_same_reference_source
+    - one_visible_notification_exact_destination_no_unresolved_unknown_fast_cadence_health_recover
+  containment: no_manual_drain_direct_send_repeat_resolution_or_limit_increase_unknown_dead_remains_held
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -1077,6 +1074,35 @@ following_route_permission_boundaries:
 - Checks: docs:check, release:scan, git diff --check. Exact 23c3999 full release
   and 9A GO evidence reused; no runtime/material change and no full-suite repeat.
 - rollover_required: no; recommended_next_session_mode: High.
+
+## TG09-parent-audited-resolution 09B actual checkpoint — 2026-09-13T09:14:28Z
+
+- Result: **success**. Authorized synthetic preview only. Candidate
+  23c3999d206ef9551f775a5dda2b30939cf746c7, deployed version fingerprint 06b52ab01db5.
+  Target fingerprints: account 5dbd04a4763a, Worker 242c1796e930, origin
+  88ed782ba25a, D1 ccdeb22bb2a1. Access/settings/schema preserved.
+- Native /admin/outbox resolveTelegram form submitted once with
+  retry_after_review and explicit confirmation, after exact visible source/reference/attempt,
+  fresh deployment/queue and selected-destination absence verification.
+- Actual linked resolution/audit/assertion verified: reason
+  message_absence_verified, additional_attempts 1, assertion 1, actor/target/time
+  agree. Resolution fingerprint a28b12545147; audit fingerprint
+  164bd7933430, action outbox.telegram.retry_after_review. Original attempt remains
+  delivery_unknown as immutable history with retry_after_review resolution;
+  original timestamps, source, dedupe and TG-6854E6ADE571 are preserved.
+- After read-back: status retry, attempts/max 1/2,
+  unresolved unknown 0. Limit changed 1 → 2 total attempts;
+  no second provider attempt observed. Read 138 rows, zero writes.
+  not_before 2026-09-14T07:00:00.000Z; next_attempt_at 2026-09-14T07:00:00.000Z.
+- Evidence: tmp/telegram-phase-09-owner/09b-resolution-checkpoint-safe.json,
+  09b-resolution-attempt-private.json, 09b-resolution-form-proof-safe.json,
+  TG09B-resolution-before-control.json and before/after-database.json.
+- One next action: TG09-parent-scheduled-observation; allow normal Cron in the
+  unchanged business window. No operator drain/send, new event, retry submission
+  or further limit increase. A new unknown/dead remains held with evidence.
+- Checks: docs:check, release:scan, git diff --check. Exact 23c3999 full release
+  and 9A GO evidence reused; no runtime/material change and no full-suite repeat.
+- rollover_required: no; recommended_next_session_mode: Medium.
 
 ## TG09-parent-code-deploy 09B actual checkpoint — 2026-09-13T09:04:50.753Z
 
