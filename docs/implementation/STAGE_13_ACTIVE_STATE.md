@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T13:41:02Z
+updated_utc: 2026-09-13T13:42:42Z
 reviewed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
 local_remediation_candidate: 117a9356346c4489f6d74f50af984e5f39601992
-last_completed_gate: UI01-release-review-and-preflight
-next_gate: UI01-preview-code-deploy
+last_completed_gate: UI01-preview-code-deploy-verified
+next_gate: UI01-browser-inspection
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: UI01-preview-deployment-ready
-last_atomic_action: UI01-readonly-release-preflight
+current_phase: UI01-preview-deployed
+last_atomic_action: UI01-preview-code-deploy
 last_atomic_result: success
-next_atomic_action: UI01-preview-code-deploy
+next_atomic_action: UI01-browser-inspection
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Known_preview_target_postcondition_and_compatible_rollback
+recommended_next_session_mode: Medium
+mode_reason_plain: Published_UI_verified_remaining_work_readonly_no_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -43,6 +43,23 @@ Known Telegram Monday deferral remains separate and unchanged. One next action
 UI01-preview-code-deploy. Containment: recorded compatible baseline, preserve
 settings/history; reconcile before any repeat write. rollover_required: no;
 recommended_next_session_mode: High for the known scoped deploy.
+
+## UI01 deployment actual checkpoint — 2026-09-13T13:42:42Z
+
+Result: success. Exactly one authorized code-only preview deployment attempted.
+Before version fingerprint 06b52ab01db5; after d9f6ba236de1, one version
+at 100 percent. Candidate 117a9356346c4489f6d74f50af984e5f39601992; actual uploaded module
+26d6bfcddc953cced2d758256bef57bc9fadd204b78580ce72d21e69d00e8c8c. Actual annotation, module and response agree.
+All vars/bindings/secrets/Cron/Access preserved; 26 migrations and bounded
+user/session/document/contract/provider counts and deferred Telegram row unchanged.
+Root DE/RU, Russian catalog/login/registration return 200; unauthenticated
+parent/admin return localized 401. Health HEAD 204; invalid/anonymous Access blocked.
+Postcondition: 104 D1 rows read, zero written; no operator provider send.
+Evidence: tmp/ui01-preview-20260913/checkpoint-safe.json and after-control.json,
+after-database.json, after-smoke.json, deploy-response.json; baseline and exact
+rollback ID remain in ignored immediate-before-rollback.json. No rollback required.
+One next action: UI01-browser-inspection. rollover_required: no;
+recommended_next_session_mode: Medium because only UI inspection remains.
 
 ## Machine-readable state
 
@@ -75,15 +92,15 @@ review:
   previous_reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 preview:
   access: enforced
-  deployed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
-  deployed_fingerprint: 06b52ab01db5
+  deployed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
+  deployed_fingerprint: d9f6ba236de1
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: expected_Telegram_secrets_and_config_enabled_original_functions_restored
-  deployment_postcondition: TG09_parent_code_deploy_success_actual_module_annotation_100_percent_preserved_settings_schema_queue
-  latest_readonly_control_utc: 2026-09-13T09:04:50.753Z
-  latest_anonymous_access_check: TG09B_actual_HEAD_302_Cloudflare_Access
+  deployment_postcondition: UI01_actual_module_annotation_100_percent_settings_Access_schema_counts_and_DE_RU_HTTP_smoke_passed
+  latest_readonly_control_utc: 2026-09-13T13:42:26.663Z
+  latest_anonymous_access_check: UI01_anonymous_and_invalid_Access_blocked_302
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -1044,17 +1061,13 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: UI01-preview-code-deploy
-  permission: owner_explicit_2026_09_13_publish_Russian_UI_to_preview
-  target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
-  mutation: one_code_only_Worker_deploy
-  preconditions:
-    - fresh_exact_target_config_schema_Access_baseline_and_rollback_match
-    - exact_UI01_reviewed_module_and_clean_docs_only_descendant
+  id: UI01-browser-inspection
+  permission: deployment_verification_public_UI_only
+  target: current_Access_protected_preview
+  mutation: browser_language_preference_only_no_auth_or_business_actions
   postcondition:
-    - one_version_100_percent_exact_module_and_annotation
-    - preserved_settings_Access_schema_counts_health_and_DE_RU_HTTP_pages
-  containment: captured_compatible_baseline_no_blind_retry_readonly_reconcile_on_ambiguity
+    - native_language_switch_navigation_reload_and_mobile_layout_pass
+  containment: inspect_only_no_new_sessions_provider_actions_or_data_changes
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
