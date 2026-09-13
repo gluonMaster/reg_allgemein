@@ -4879,3 +4879,35 @@ settings/Access/schema/health and compatible baseline checks passed.
 Owner explicitly authorized publication of this UI to preview. No remote write
 yet. Current operational cursor is only in
 [active state](../STAGE_13_ACTIVE_STATE.md); old Telegram 9A verdict is historical.
+
+## UI01 publication completed — 2026-09-13
+
+One owner-authorized code-only preview deployment succeeded. Actual module,
+version annotation and 100 percent traffic agree with the prepared UI candidate;
+all 62 vars, bindings, secret inventory, Access, schedules and 26 migrations are
+preserved. Bounded counts and deferred Telegram row did not change. No operator
+D1/R2 writes, logins, role changes or provider sends. Deploy checkpoint is
+committed separately before browser inspection.
+
+Live HTTP: DE/RU root, Russian catalog/login/registration 200; unauthenticated
+parent/admin 401 in Russian; health HEAD 204; anonymous/invalid Access blocked.
+Isolated Chromium: enhanced language switch, navigation/reload, retained input,
+mobile width, independent browser default and no-JS native form all pass, with
+zero page errors. Desktop/mobile screenshots visually inspected. Language
+preference POSTs changed only the isolated browser cookie.
+
+Executed this session: 17 focused tests, build, strict dry-run, exact-target
+preflight/read-back, HTTP/browser smoke, docs:check, release:scan, diff check.
+Full test/check/E2E evidence inherited from exact
+117a9356346c4489f6d74f50af984e5f39601992 as described in the release review;
+no runtime changes justified repeating it. Dependency install/audit not repeated
+without dependency changes. Initial review-document anchor typo was corrected
+and docs checks passed before deploy; no runtime remediation was needed.
+
+Protected evidence and screenshots: tmp/ui01-preview-20260913, especially
+checkpoint-safe.json, after-smoke.json and browser-safe.json. Exact version/target
+and compatible rollback remain in ignored control/rollback records. All current
+fingerprints and the sole next action are in
+[active state](../STAGE_13_ACTIVE_STATE.md). Previous Telegram Monday receipt
+observation remains separate; full manual preview/production gates are unchanged.
+rollover_required: no; recommended_next_session_mode: Medium for read-only work.

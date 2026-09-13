@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T13:42:42Z
+updated_utc: 2026-09-13T13:43:49Z
 reviewed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
 local_remediation_candidate: 117a9356346c4489f6d74f50af984e5f39601992
 last_completed_gate: UI01-preview-code-deploy-verified
-next_gate: UI01-browser-inspection
+next_gate: phase-6-parent-Telegram-recovery
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: UI01-preview-deployed
+current_phase: UI01-preview-complete-Telegram-observation-pending
 last_atomic_action: UI01-preview-code-deploy
 last_atomic_result: success
-next_atomic_action: UI01-browser-inspection
+next_atomic_action: TG09-parent-scheduled-observation
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: Published_UI_verified_remaining_work_readonly_no_unresolved_ambiguity
@@ -60,6 +60,19 @@ after-database.json, after-smoke.json, deploy-response.json; baseline and exact
 rollback ID remain in ignored immediate-before-rollback.json. No rollback required.
 One next action: UI01-browser-inspection. rollover_required: no;
 recommended_next_session_mode: Medium because only UI inspection remains.
+
+## UI01 publication session complete — 2026-09-13T13:43:49Z
+
+Deployed UI passed actual HTTP and isolated Chromium inspection. Native language
+switch, reload/persistence, navigation, no-JS SSR, independent German browser and
+mobile registration layout passed; browser check created no portal session or
+business action. Screenshots and sanitized evidence stay under
+tmp/ui01-preview-20260913. UI-only language POST stores a browser preference;
+no D1/R2, provider, role or session change. No runtime fixes were needed.
+Previous Telegram observation remains due after Monday 09:00 Berlin; it is the
+one next action TG09-parent-scheduled-observation, outside this publication task.
+Full-manual-preview and production gates remain as recorded.
+rollover_required: no; recommended_next_session_mode: Medium for read-only observation.
 
 ## Machine-readable state
 
@@ -1061,13 +1074,15 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: UI01-browser-inspection
-  permission: deployment_verification_public_UI_only
-  target: current_Access_protected_preview
-  mutation: browser_language_preference_only_no_auth_or_business_actions
+  id: TG09-parent-scheduled-observation
+  permission: readonly_observation_of_previously_authorized_normal_Cron_attempt
+  target: existing_outbox_ddbd7d01ec2e_in_current_preview
+  mutation: none_by_operator
+  preconditions:
+    - after_2026_09_14T07_00_00Z_plus_normal_Cron_cadence
   postcondition:
-    - native_language_switch_navigation_reload_and_mobile_layout_pass
-  containment: inspect_only_no_new_sessions_provider_actions_or_data_changes
+    - exact_existing_reference_receipt_one_additional_attempt_and_visible_notification
+  containment: no_manual_send_retry_limit_change_or_history_cleanup
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
