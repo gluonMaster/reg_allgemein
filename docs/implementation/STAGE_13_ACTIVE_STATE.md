@@ -153,17 +153,17 @@ preview:
     users_with_family_id: 3
     verification_deliveries_sent_with_receipt: 3
     welcome_deliveries_sent_with_receipt: 3
-    auth_sessions: 19
-    nonrevoked_auth_sessions: 0
-    logged_out_auth_sessions: 18
+    auth_sessions: 23
+    nonrevoked_auth_sessions: 1
+    logged_out_auth_sessions: 21
     role_change_revoked_auth_sessions: 1
     distinct_identities: 3
     distinct_assigned_families: 3
-    nonrevoked_session_owners: 0
+    nonrevoked_session_owners: 1
     distinct_delivery_recipients: 3
     orphan_sessions_and_recipients: 0
     token_commit_delivery_family_and_child_owner_mismatches: 0
-    first_admin_sessions_total_nonrevoked_valid: 9_0_0
+    first_admin_sessions_total_nonrevoked_valid: 13_1_1
     first_admin_session_version: 2
     second_parent_sessions_total_nonrevoked_valid: 4_0_0
     second_parent_session_version: 1
@@ -999,7 +999,7 @@ telegram_runtime_execution:
   current_features: {"AUTH_PUBLIC_ENABLED":"true","CONTRACT_SEND_ENABLED":"true","EMAIL_PROVIDER":"resend","TELEGRAM_PROVIDER":"bot_api","SCHEDULED_JOBS_ENABLED":"true"}
   current_counts: {"users":3,"sessions":20,"active_sessions":0,"telegram":2,"active_telegram":0,"telegram_attempts":1,"telegram_dead":0,"telegram_unknown":0,"unresolved_unknown":0,"emails":16,"nonsent_email":0,"email_attempts":16,"held_price":1,"locks":0,"contracts":1,"offers":4,"outbox_actions":1,"outbox_assertions":1}
   current_smoke_state: not_changed_by_config_operation
-  one_next_atomic_action: TG09-parent-code-deploy
+  historical_checkpoint_next_action: TG09-parent-code-deploy
 telegram_parent_recovery:
   observed_status: normal_Cron_deferred_to_2026_09_14T07_00_00Z_attempts_1_of_2_no_provider_receipt
   outbox_fingerprint: ddbd7d01ec2e
