@@ -4,7 +4,7 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T09:14:28Z
+updated_utc: 2026-09-13T09:16:11Z
 reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 local_remediation_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
 last_completed_gate: phase-6-parent-Telegram-audited-resolution-complete
@@ -13,13 +13,13 @@ nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: phase-6-Telegram-audited-retry-awaiting-business-window
+current_phase: phase-6-Telegram-recovery-verified-deferred-until-Monday
 last_atomic_action: TG09-parent-audited-resolution
 last_atomic_result: success
 next_atomic_action: TG09-parent-scheduled-observation
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Only_normal_Cron_readonly_observation_remains_wait_business_window
+mode_reason_plain: Known_business_window_deferral_no_ambiguity_only_bounded_Cron_receipt_health_observation
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -135,12 +135,12 @@ preview:
     global_nonrevoked_sessions: 0
     agent_authenticated_requests: 0
   scheduled:
-    fast: failed_Telegram_delivery_unknown_circuit_breaker_email_succeeds
-    maintenance: actual_automatic_succeeded_after_restoration_no_business_approval_or_price_application
+    fast: actual_succeeded_after_audited_resolution_no_unknown_or_dead
+    maintenance: actual_succeeded_2026_09_13_09_15_all_seven_jobs
     fixed_cadence_rows: 2
-    recent_failures: 0
+    recent_failures: 13_prior_fast_failures_in_natural_900_second_window
     automatic_history_growth: fixed_cardinality_cadence_rows_active_manual_ledger_preserved
-    health: last_success_204_before_owner_incident_current_Telegram_failure_requires_recovery
+    health: actual_HEAD_503_2026_09_13_09_16_prior_errors_window_not_cleared_successful_cadences
   synthetic_state:
     users: 3
     parents: 2
@@ -182,9 +182,9 @@ preview:
     import_pair: 2_plus_1703
   providers:
     auth_and_resend: enabled_only_behind_access_and_three_owner_controlled_recipient_hashes
-    telegram: fail_closed_until_separate_manual_preview_phase
+    telegram: enabled_bot_api_same_private_destination_exact_existing_retry_deferred_to_Monday
     documents: upload_enabled_authorized_scenario_D18a_verified
-    contracts: fail_closed_until_separate_manual_preview_phase
+    contracts: enabled_preview_review_Browser_Run_same_actual_configuration
 flow_verification:
   cost_bounded_runtime: deployed_and_bounded_scheduled_postcondition_passed
   controlled_registration: success_one_unverified_parent_one_privacy_acceptance_one_token_one_terminal_delivery
@@ -1001,7 +1001,7 @@ telegram_runtime_execution:
   current_smoke_state: not_changed_by_config_operation
   one_next_atomic_action: TG09-parent-code-deploy
 telegram_parent_recovery:
-  observed_status: audited_retry_authorized_original_unknown_resolved_waiting_normal_Cron
+  observed_status: normal_Cron_deferred_to_2026_09_14T07_00_00Z_attempts_1_of_2_no_provider_receipt
   outbox_fingerprint: ddbd7d01ec2e
   attempt_fingerprint: 52edf4875835
   delivery_reference: TG-6854E6ADE571
@@ -1009,7 +1009,7 @@ telegram_parent_recovery:
   candidate_module_sha256: 441dd3df4295f7146683638fa51654f060d06bbe7aed8cea5f7a1ccdf7212d51
   candidate_module_bytes: 3429623
   strict_dry_run: passed_actual_vars_preserved_root_config_restored
-  recovery_plan: one_code_only_deploy_then_exact_audited_resolution_then_observe_normal_Cron
+  recovery_plan: code_deploy_and_audited_resolution_complete_observe_existing_Cron_delivery_after_Monday_09_Berlin
   additional_attempt_limit: 1
   remote_write_or_send_this_session: code_deploy_normal_owner_admin_login_native_audited_resolution_zero_new_provider_sends
   independent_review: GO_09A_complete_report_docs_implementation_reviews_telegram_workers_09a
@@ -1034,6 +1034,7 @@ next_atomic_action:
   target: existing_outbox_ddbd7d01ec2e_reference_TG_6854E6ADE571_fixed_preview_06b52ab01db5
   mutation: none_by_operator_normal_Cron_only
   preconditions:
+    - bounded_read_after_2026_09_14T07_00_00Z_plus_normal_minute_Cron_cadence
     - configured_Mo_Fr_09_17_Europe_Berlin_window_no_time_override
   postcondition:
     - exactly_one_additional_durable_attempt_sent_provider_receipt_same_reference_source
@@ -1074,6 +1075,45 @@ following_route_permission_boundaries:
 - Checks: docs:check, release:scan, git diff --check. Exact 23c3999 full release
   and 9A GO evidence reused; no runtime/material change and no full-suite repeat.
 - rollover_required: no; recommended_next_session_mode: High.
+
+## 09B session boundary: normal Cron deferred delivery — 2026-09-13T09:16:11Z
+
+- Read-only outcome: **success_deferred_until_configured_window**, with no
+  ambiguous write or new runtime defect. Code deploy and native audited recovery
+  are complete; external delivery is **not yet confirmed**.
+- Original row ddbd7d01ec2e / reference TG-6854E6ADE571 remains retry,
+  attempts/max 1/2, original unknown resolved, one resolution, zero new durable
+  attempts and no receipt. Cron set both not_before and next_attempt_at to
+  2026-09-14T07:00:00.000Z (Monday 09:00 Europe/Berlin), respecting existing hours.
+- Automatic fast cadence succeeded at 09:15:29Z (both jobs); maintenance at
+  09:15:31Z (all seven jobs). No unresolved unknown/dead, no manual drain/send.
+  Health HEAD 503 is still explained by 13 retained prior fast failures in the
+  natural 900-second window. Do not clear history or claim healthy 204 yet.
+  Health decay and delivery/receipt remain part of the next bounded observation.
+- Protected evidence: tmp/telegram-phase-09-owner/TG09B-observe-sunday-after-cadence-safe.json
+  and its exact database snapshot. Observation read 138 rows, zero writes.
+  Previous mutation checkpoints committed separately: deploy 118e761, normal
+  owner admin login 6de3a00, audited resolution e94ca6e.
+- One next action: **TG09-parent-scheduled-observation**, after Monday's first
+  ordinary Cron cadence: confirm exactly one additional durable sent attempt,
+  matching receipt/reference/source, one visible notification in the exact group,
+  no unknown/dead and healthy cadence. No new automation, cohort or direct send.
+- Containment: unchanged hours, maximum two total attempts, original attempt and
+  linked audit retained; any additional unknown/dead stays held with evidence.
+  Compatible captured baseline remains available; rollback is not required.
+  Access, public auth, email, contracts, Telegram and Cron remain enabled.
+  Owner's normal admin session remains available for manual inspection.
+- Full-manual-preview is not complete: after this existing delivery, separately
+  observe a parent submission outside hours and its next-window notification,
+  then owner desktop/mobile exploration. Production remains blocked.
+- Per-checkpoint docs:check, release:scan and diff checks passed. The first deploy
+  docs check caught millisecond precision in continuity metadata; corrected to
+  canonical second precision and rerun successfully before commit. No runtime
+  tests changed. Exact 23c3999 full check/591 tests/23 E2E/build/audit and 9A
+  GO/42 focused tests are reused; one local strict dry-run reproduced the exact
+  reviewed Worker. No repeated full suite/build/review was needed.
+- rollover_required: no; recommended_next_session_mode: Medium — only bounded
+  read-only receipt/destination/health observation remains, with known time gate.
 
 ## TG09-parent-audited-resolution 09B actual checkpoint — 2026-09-13T09:14:28Z
 

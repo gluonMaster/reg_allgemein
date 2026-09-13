@@ -4749,3 +4749,56 @@ checks, preserved settings/Access/history, fresh absence before audited recovery
 one additional attempt and per-mutation read-back/docs commits remain required.
 rollover_required: yes; recommended_next_session_mode: High — separate deployment
 was requested by the owner; exact preview recovery/containment are known.
+
+
+## Telegram 09B deploy/recovery and closed-window handoff — 2026-09-13T09:16:11Z
+
+New 09B session reused actual 9A GO for exact runtime
+23c3999d206ef9551f775a5dda2b30939cf746c7; clean initial HEAD d584fae is docs-only.
+One local strict dry-run reproduced module SHA-256
+441dd3df4295f7146683638fa51654f060d06bbe7aed8cea5f7a1ccdf7212d51; no runtime change or rebuild.
+Fresh target/config/schema/queue control and available compatible baseline passed.
+One code-only preview deploy succeeded: version fingerprint 7b3987503c77 →
+06b52ab01db5, one version at 100%, exact module/annotation, all 62 vars, bindings,
+secret names, Access, schedules, schema and held attempt preserved.
+
+Owner performed normal Telegram Web and admin login. The selected private group
+search found no TG-6854E6ADE571; fresh getMe/getChat/getChatMember/getWebhookInfo
+verified the existing bot/destination, posting rights and no webhook. Admin
+login produced one correct session (22 → 23); no separate login audit exists in
+canonical createSession, and this fact was recorded without inventing one.
+Native resolveTelegram submitted retry_after_review exactly once with explicit
+confirmation. The browser's read-only DOM did not expose hidden values; native
+fields were untouched, unique visible source/reference/attempt matched exact D1,
+and actual postcondition proved the linked exact attempt/resolution/audit/assertion.
+No bypass, direct SQL or manual dispatch was used. Original history preserved;
+message_absence_verified, additional_attempts=1, max 1 → 2, unknown count 1 → 0.
+
+Code deploy, login and recovery have separate actual docs-only commits:
+118e761, 6de3a00, e94ca6e. Normal Cron has deferred the existing row to
+Monday 2026-09-14T07:00:00Z (09:00 Berlin). At 2026-09-13T09:16:11Z,
+attempts remain 1/2, no additional durable attempt or receipt. Both automatic
+cadences pass; health HEAD remains 503 due to 13 earlier fast failures inside
+the natural 900-second window. No error cleanup or false healthy claim.
+This is the prompt's permitted closed-window intermediate outcome.
+
+The sole next action is bounded TG09-parent-scheduled-observation after the
+first Monday cadence: one additional sent attempt, exact provider receipt and
+one visible notification, same source/reference, no unknown/dead and health.
+Do not retry, drain, increase attempts, change hours, create a new cohort or
+resume/create Codex automations. Preserve existing functions and Access.
+The owner's admin session remains for manual inspection. Full-manual-preview
+also still requires separate parent outside-hours/next-window evidence and
+owner exploration; production/CMS/real-client scope is unchanged and blocked.
+
+Protected evidence is under tmp/telegram-phase-09-owner: 09b-parent-deploy-checkpoint-safe,
+09b-admin-login-checkpoint-safe, 09b-destination-absence-safe,
+09b-fresh-destination-safe, 09b-resolution-checkpoint-safe,
+TG09B-observe-sunday-after-cadence-safe plus exact before/after/private records.
+Current state is solely [STAGE_13_ACTIVE_STATE.md](../STAGE_13_ACTIVE_STATE.md).
+All docs:check/release:scan/diff gates passed; the initial metadata precision
+checker failure was corrected and rerun before the deploy checkpoint commit.
+Exact 23c3999 full 591-test/23-E2E/check/build/audit and 9A 42-test/GO evidence
+are reused; no full-suite rerun for docs-only checkpoints.
+rollover_required: no; recommended_next_session_mode: Medium — known deferred
+delivery, no unresolved write ambiguity, read-only observation only.
