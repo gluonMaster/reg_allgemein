@@ -16,13 +16,20 @@
 		<select id="user-status" name="status" value={data.query.status}>
 			<option value="">{translate(uiLocale, 'admin.all')}</option>
 			<option value="active">{translateAdminCode(uiLocale, 'active')}</option><option
-				value="deletion_requested">{translateAdminCode(uiLocale, 'deletion_requested')}</option
+				value="deletion_requested"
+				>{translateAdminCode(uiLocale, 'deletion_requested')}</option
 			><option value="closed">{translateAdminCode(uiLocale, 'closed')}</option>
 		</select>
 		<button type="submit">{translate(uiLocale, 'admin.filter')}</button>
 	</form>
 	{#if data.users.items.length === 0}<p>{translate(uiLocale, 'admin.empty')}</p>{/if}
-	<div class="admin-table-wrap">
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard users must be able to scroll the table region.) -->
+	<div
+		class="admin-table-wrap"
+		tabindex="0"
+		role="region"
+		aria-label={translate(uiLocale, 'admin.users.title')}
+	>
 		<table>
 			<thead
 				><tr

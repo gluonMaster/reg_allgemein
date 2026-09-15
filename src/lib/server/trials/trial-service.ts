@@ -1,3 +1,4 @@
+import { formatCalendarDate } from '$lib/i18n/locale';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import type { CabinetReadModelContributor } from '$lib/server/cabinet/cabinet-service';
 import { CatalogRepository } from '$lib/server/catalog/catalog-repository';
@@ -116,14 +117,14 @@ export class TrialService implements CabinetReadModelContributor {
 		});
 	}
 
-	async contribute(userId: string) {
+	async contribute(userId: string, locale?: string) {
 		const trials = await this.repository.listOwnerTrials(userId);
 		return {
 			trials: trials.map((trial) => ({
 				id: trial.id,
 				label: `${trial.child_name} · ${trial.course_name}`,
 				status: trial.status,
-				detail: trial.confirmed_date ?? trial.requested_date,
+				detail: formatCalendarDate(locale, trial.confirmed_date ?? trial.requested_date),
 				cancellable: trial.status === 'requested' || trial.status === 'confirmed',
 			})),
 		};

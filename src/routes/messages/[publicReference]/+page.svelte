@@ -4,6 +4,7 @@
 	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../../../app.css';
 	import { translate } from '$lib/i18n';
+	import { formatTimestamp } from '$lib/i18n/locale';
 	import type { ActionData, PageData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
@@ -23,7 +24,7 @@
 		<div class="activity-list">
 			{#each data.thread.messages as message}
 				<article class="activity-item">
-					<p class="item-kicker">{translate(uiLocale, `messages.sender.${message.senderKind}` as 'messages.sender.parent')} · {message.createdAt}</p>
+					<p class="item-kicker">{translate(uiLocale, `messages.sender.${message.senderKind}` as 'messages.sender.parent')} · {formatTimestamp(uiLocale, message.createdAt)}</p>
 					<p class="message-body">{message.body}</p>
 				</article>
 			{/each}
@@ -52,4 +53,3 @@
 		</form>
 	{/if}
 </main>
-

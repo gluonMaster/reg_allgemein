@@ -24,8 +24,12 @@ export const load: PageServerLoad = async (event) => {
 	};
 };
 
-async function verifiedForm(event: Parameters<Actions[string]>[0]) {
+async function verifiedForm(
+	event: Parameters<Actions[string]>[0],
+	readValues?: (form: FormData) => void
+) {
 	const form = await event.request.formData();
+	readValues?.(form);
 	await requireCsrf({
 		cookies: event.cookies,
 		user: event.locals.user,
@@ -53,8 +57,12 @@ function correctionPayload(form: FormData) {
 
 export const actions = {
 	createChild: async (event) => {
+		let childForm: { action: string; childId?: string; fullName?: string; birthDate?: string } =
+			{ action: 'createChild' };
 		try {
-			const { form, actor } = await verifiedForm(event);
+			const { form, actor } = await verifiedForm(event, (values) => {
+				childForm = { action: 'createChild', ...childPayload(values, false) };
+			});
 			const result = await requestCabinetRuntime(event).service.createChild({
 				actor,
 				payload: childPayload(form, false),
@@ -63,6 +71,7 @@ export const actions = {
 			if (result === 'duplicate') {
 				return fail(409, {
 					success: false,
+					childForm,
 					duplicate: true,
 					message: translate(event.locals.locale, 'cabinet.child.duplicateWarning'),
 				});
@@ -70,17 +79,29 @@ export const actions = {
 			if (result !== 'created') {
 				return fail(400, {
 					success: false,
+					childForm,
 					message: translate(event.locals.locale, 'cabinet.child.rejected'),
 				});
 			}
-			return { success: true, message: translate(event.locals.locale, 'cabinet.child.saved') };
+			return {
+				success: true,
+				message: translate(event.locals.locale, 'cabinet.child.saved'),
+			};
 		} catch {
-			return fail(403, { success: false, message: translate(event.locals.locale, 'auth.csrfRejected') });
+			return fail(403, {
+				success: false,
+				childForm,
+				message: translate(event.locals.locale, 'auth.csrfRejected'),
+			});
 		}
 	},
 	updateChild: async (event) => {
+		let childForm: { action: string; childId?: string; fullName?: string; birthDate?: string } =
+			{ action: 'updateChild' };
 		try {
-			const { form, actor } = await verifiedForm(event);
+			const { form, actor } = await verifiedForm(event, (values) => {
+				childForm = { action: 'updateChild', ...childPayload(values, true) };
+			});
 			const result = await requestCabinetRuntime(event).service.updateChild({
 				actor,
 				payload: childPayload(form, true),
@@ -89,6 +110,7 @@ export const actions = {
 			if (result === 'duplicate') {
 				return fail(409, {
 					success: false,
+					childForm,
 					duplicate: true,
 					message: translate(event.locals.locale, 'cabinet.child.duplicateWarning'),
 				});
@@ -96,27 +118,53 @@ export const actions = {
 			if (result !== 'updated') {
 				return fail(404, {
 					success: false,
+					childForm,
 					message: translate(event.locals.locale, 'cabinet.child.rejected'),
 				});
 			}
-			return { success: true, message: translate(event.locals.locale, 'cabinet.child.updated') };
+			return {
+				success: true,
+				message: translate(event.locals.locale, 'cabinet.child.updated'),
+			};
 		} catch {
-			return fail(403, { success: false, message: translate(event.locals.locale, 'auth.csrfRejected') });
+			return fail(403, {
+				success: false,
+				childForm,
+				message: translate(event.locals.locale, 'auth.csrfRejected'),
+			});
 		}
 	},
 	requestCorrection: async (event) => {
+		let childForm: { action: string; childId?: string; fullName?: string; birthDate?: string } =
+			{ action: 'requestCorrection' };
 		try {
-			const { form, actor } = await verifiedForm(event);
+			const { form, actor } = await verifiedForm(event, (values) => {
+				childForm = { action: 'requestCorrection', ...correctionPayload(values) };
+			});
 			const requested = await requestCabinetRuntime(event).service.requestCorrection({
 				actor,
 				payload: correctionPayload(form),
 				requestId: event.locals.requestId,
 			});
 			return requested
-				? { success: true, message: translate(event.locals.locale, 'cabinet.child.correctionRequested') }
-				: fail(404, { success: false, message: translate(event.locals.locale, 'cabinet.child.rejected') });
+				? {
+						success: true,
+						message: translate(
+							event.locals.locale,
+							'cabinet.child.correctionRequested'
+						),
+					}
+				: fail(404, {
+						success: false,
+						childForm,
+						message: translate(event.locals.locale, 'cabinet.child.rejected'),
+					});
 		} catch {
-			return fail(403, { success: false, message: translate(event.locals.locale, 'auth.csrfRejected') });
+			return fail(403, {
+				success: false,
+				childForm,
+				message: translate(event.locals.locale, 'auth.csrfRejected'),
+			});
 		}
 	},
 	requestClaim: async (event) => {
@@ -127,7 +175,10 @@ export const actions = {
 				requestSubject: requestSubject(event),
 			});
 			return requested
-				? { success: true, message: translate(event.locals.locale, 'cabinet.claim.requested') }
+				? {
+						success: true,
+						message: translate(event.locals.locale, 'cabinet.claim.requested'),
+					}
 				: fail(400, {
 						success: false,
 						message: translate(event.locals.locale, 'cabinet.claim.unavailable'),
@@ -150,13 +201,16 @@ export const actions = {
 				},
 				requestId: event.locals.requestId,
 			});
-			return { success: true, message: translate(event.locals.locale, 'cabinet.trials.cancelled') };
+			return {
+				success: true,
+				message: translate(event.locals.locale, 'cabinet.trials.cancelled'),
+			};
 		} catch (caught) {
 			return fail(
 				caught instanceof TrialError && caught.code === 'TRIAL_NOT_FOUND' ? 404 : 409,
 				{
-				success: false,
-				message: translate(event.locals.locale, 'cabinet.trials.cancelFailed'),
+					success: false,
+					message: translate(event.locals.locale, 'cabinet.trials.cancelFailed'),
 				}
 			);
 		}

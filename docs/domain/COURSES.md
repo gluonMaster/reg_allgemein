@@ -29,6 +29,10 @@ capacity и occupancy. Правила цены находятся в [PRICING.md
 `capacity_override` администратора имеет приоритет над default, требует причины
 и audit. Capacity не равна price lookup count и не ограничивается шестью.
 
+Дополнительный вход для `group|dance_group` — обычное обращение о договоре без
+пробного по `CAT-03` в [MVP_SPEC](../spec/MVP_SPEC.md). Он не меняет trial,
+capacity и жизненный цикл договора.
+
 ## Классификация
 
 Приоритет правил:

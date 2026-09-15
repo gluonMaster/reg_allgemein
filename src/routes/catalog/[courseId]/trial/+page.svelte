@@ -5,6 +5,7 @@
 	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../../../../app.css';
 	import { translate } from '$lib/i18n';
+	import { formatCalendarDate } from '$lib/i18n/locale';
 	import type { ActionData, PageData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
@@ -27,7 +28,7 @@
 			<label for="trial-child">{translate(uiLocale, 'trial.child')}</label>
 			<select id="trial-child" name="childId" required>
 				<option value="">{translate(uiLocale, 'trial.chooseChild')}</option>
-				{#each data.trial.children as child}<option value={child.id}>{child.fullName} · {child.birthDate}</option>{/each}
+				{#each data.trial.children as child}<option value={child.id}>{child.fullName} · {formatCalendarDate(uiLocale, child.birthDate)}</option>{/each}
 			</select>
 			<label for="trial-session">{translate(uiLocale, 'trial.session')}</label>
 			<select id="trial-session" name="sessionId" required>
@@ -40,4 +41,3 @@
 		</form>
 	{/if}
 </main>
-

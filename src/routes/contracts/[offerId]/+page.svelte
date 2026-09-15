@@ -18,6 +18,7 @@
 <main class="contract-shell">
 	<nav><a href="/cabinet">{translate(uiLocale, 'contract.back')}</a></nav>
 	<h1>{translate(uiLocale, 'contract.detail.title')}</h1>
+	<p class="notice-card">{translate(uiLocale, 'contract.preparation.notice')}</p>
 	{#if form?.message}<p class="form-status" aria-live="polite">{translateUiFeedback(uiLocale, form.message)}</p>{/if}
 	<section class="cabinet-card">
 		<p class="item-kicker">{status(data.offer.status)}</p>

@@ -40,8 +40,8 @@
 		{#each data.courses as course}
 			<article class="catalog-card">
 				<p class="item-kicker">{course.academicPeriod} · {translate(uiLocale, kindKeys[course.lessonKind])}</p>
+				<p class="course-subject">{course.subject}</p>
 				<h2>{course.displayName}</h2>
-				<p>{course.subject}</p>
 				<ul class="session-list">
 					{#each course.sessions as session}
 						<li>
@@ -64,11 +64,32 @@
 						{translate(uiLocale, 'catalog.price.pending')}
 					{/if}
 				</p>
-				<a class="catalog-cta" href={course.cta.href}>
-					{translate(uiLocale, ctaKeys[course.cta.kind])}
-				</a>
+				{#if course.lessonKind === 'group' || course.lessonKind === 'dance_group'}
+					<p class="muted price-notice">{translate(uiLocale, 'catalog.price.baseNotice')}</p>
+				{/if}
 				{#if course.availability.requiresManualReview}<p class="muted">{translate(uiLocale, 'catalog.manualReviewNotice')}</p>{/if}
+				<div class="course-actions">
+					<a class="catalog-cta" href={course.cta.href}>
+						{translate(uiLocale, ctaKeys[course.cta.kind])}
+					</a>
+					{#if course.lessonKind === 'group' || course.lessonKind === 'dance_group'}
+						<a class="contract-entry" href={`/messages?course=${encodeURIComponent(course.id)}`}>
+							{translate(uiLocale, 'catalog.contract.cta')}
+						</a>
+					{/if}
+				</div>
 			</article>
 		{/each}
 	</div>
 </main>
+
+<style>
+	.catalog-card { display: flex; flex-direction: column; align-items: stretch; }
+	.course-subject { margin: .25rem 0; color: #176b54; font-weight: 700; }
+	.catalog-card h2 { font-size: 1.3rem; }
+	.catalog-price { margin-bottom: .35rem; }
+	.price-notice { margin-top: 0; font-size: .9rem; }
+	.course-actions { display: flex; flex-direction: column; align-items: start; gap: .5rem; margin-top: auto; padding-top: .75rem; }
+	.course-actions a { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; overflow-wrap: anywhere; }
+	.contract-entry { padding: .65rem .8rem; border: 1px solid #176b54; border-radius: .4rem; text-decoration: none; font-weight: 600; }
+</style>

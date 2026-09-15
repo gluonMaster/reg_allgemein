@@ -1,4 +1,5 @@
-import { formatMessage } from '$lib/i18n';
+import { formatTimestamp } from '$lib/i18n/locale';
+import { formatMessage, translate } from '$lib/i18n';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import type { MessagingRuntimeConfig } from '$lib/server/config/runtime';
 import type { CabinetReadModelContributor } from '$lib/server/cabinet/cabinet-service';
@@ -49,13 +50,13 @@ export class MessageService implements CabinetReadModelContributor {
 		private readonly clock: () => string = () => new Date().toISOString()
 	) {}
 
-	async contribute(userId: string) {
+	async contribute(userId: string, locale?: string) {
 		return {
 			threads: (await this.repository.listOwnerThreads(userId)).slice(0, 10).map((thread) => ({
 				id: thread.id,
 				label: thread.subject,
 				status: thread.status,
-				detail: `${thread.category} · ${thread.updatedAt}`,
+				detail: `${translate(locale, `messages.category.${thread.category}`)} · ${formatTimestamp(locale, thread.updatedAt)}`,
 				href: `/messages/${thread.publicReference}`,
 			})),
 		};

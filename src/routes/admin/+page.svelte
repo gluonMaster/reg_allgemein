@@ -18,7 +18,7 @@
 		{
 			label: 'admin.dashboard.blockedUsers',
 			value: data.dashboard.blockedUsers,
-			href: '/admin/users?status=active',
+			href: null,
 		},
 		{
 			label: 'admin.dashboard.catalogReview',
@@ -30,12 +30,26 @@
 
 <section class="admin-section">
 	<h2>{translate(uiLocale, 'admin.nav.dashboard')}</h2>
+	<h3>{translate(uiLocale, 'admin.dashboard.quickActions')}</h3>
+	<div class="admin-quick-links">
+		{#each data.navigation.filter( (item) => ['trials', 'requests', 'contracts', 'messages', 'catalog'].includes(item.id) ) as item}
+			<a class="secondary-cta" href={item.href}>{translate(uiLocale, item.labelKey)}</a>
+		{/each}
+	</div>
 	<div class="admin-metrics">
 		{#each cards as card}
-			<a class="metric-card" href={card.href}>
-				<strong>{card.value}</strong>
-				<span>{translate(uiLocale, card.label)}</span>
-			</a>
+			{#if card.href}
+				<a class="metric-card" href={card.href}>
+					<strong>{card.value}</strong>
+					<span>{translate(uiLocale, card.label)}</span>
+				</a>
+			{:else}
+				<div class="metric-card">
+					<strong>{card.value}</strong>
+					<span>{translate(uiLocale, card.label)}</span>
+					<a href="/admin/users">{translate(uiLocale, 'admin.dashboard.allUsers')}</a>
+				</div>
+			{/if}
 		{/each}
 	</div>
 </section>

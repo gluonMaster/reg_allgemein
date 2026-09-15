@@ -382,7 +382,37 @@ a.metric-card {
 
 .admin-action-form {
 	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 	gap: 0.55rem;
+}
+
+/* Compact administrative navigation and forms (PVUI-06). */
+.admin-nav { align-items: start; }
+.admin-nav > a { flex-basis: 100%; }
+.admin-nav-group { flex: 1 1 15rem; min-width: 0; }
+.admin-nav-group > div, .admin-quick-links { display: flex; flex-wrap: wrap; gap: .25rem .5rem; }
+.admin-nav-group a { padding: .25rem .5rem; border-radius: .4rem; }
+.admin-nav a[aria-current="page"] { background: #e3f1eb; font-weight: 750; text-decoration: underline; }
+.admin-shell summary { min-height: 44px; padding: .55rem 0; font-weight: 650; overflow-wrap: anywhere; }
+.admin-shell details, .admin-action-form > *, .admin-grid > * { min-width: 0; }
+.admin-shell details + details, .mapping-queue { margin-top: 1rem; }
+.admin-nav .admin-nav-group { margin-top: 0; }
+.admin-shell .filter-bar input { width: min(100%, 26rem); }
+.admin-shell .filter-bar select { width: min(100%, 18rem); }
+.admin-shell .admin-action-form select { width: 100%; }
+.admin-shell .contract-editor { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.contract-editor .wide-field { grid-column: 1 / -1; }
+.admin-shell .contract-editor textarea[name="renderInput"] { font-family: ui-monospace, Consolas, monospace; min-height: 22rem; tab-size: 2; }
+.contract-editor small { display: block; color: #4d5668; }
+.admin-empty { padding: 1rem; border: 1px dashed #b5c7bf; border-radius: .5rem; color: #4d5668; }
+.admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; }
+.metric-card > a { display: inline-flex; align-items: center; min-height: 44px; color: #176b54; }
+.metric-card > span { display: block; }
+.admin-quick-links { margin-bottom: 1rem; }
+.admin-table-wrap table { min-width: 40rem; }
+@media (max-width: 47.99rem) {
+	.admin-nav-group { flex-basis: 100%; }
+	.admin-shell .contract-editor { grid-template-columns: minmax(0, 1fr); }
 }
 
 .admin-shell input,

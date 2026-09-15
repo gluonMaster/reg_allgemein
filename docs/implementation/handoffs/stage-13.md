@@ -5014,3 +5014,405 @@ RU mobile registration проверена существующим language scen
 
 На проверенных путях открытых P0/P1 нет. Единственный следующий шаг:
 `out/codex-portal-ui-prompts-2026-09-15/02_PARENT_CABINET.md`.
+
+## PVUI prompt 02
+
+2026-09-15. Локально завершён `02_PARENT_CABINET.md`: PVUI-03, кабинетные
+части PVUI-05/07. Входной HEAD `e38ac1315432cae881d1a94fb3931b05a686e390`,
+worktree при входе чистый. Результат и проверки относятся к HEAD + текущему
+незакоммиченному diff, не к опубликованной версии. Коммит не создавался.
+Remote mutations, preview login/logout, provider sends, Telegram и официальный
+сайт не затрагивались. Production/full-manual-preview gates неизменны.
+`PORTAL_LOCAL_EXCHANGE_DRAFT.md` и ТЗ не изменялись.
+
+### Реализация
+
+- `src/routes/cabinet/+page.svelte`: быстрые действия и переходы, блок внимания
+  из уже загруженных состояний, занятия/цены перед карточками детей; отдельные
+  trials, requests, offers, price reviews, messages; раскрываемые профиль и
+  история. Сохранены текущая цена, unknown notice, payment пояснения и различие
+  legacy service/digital contract. Показан уже загруженный преподаватель.
+- `src/lib/components/CabinetChildForm.svelte`, cabinet `+page.server.ts`:
+  независимые create/edit/correction disclosures; сервер возвращает только
+  нужные submitted child fields, action и feedback при ошибке, включая отказ
+  CSRF. Проверки owner/role/CSRF/duplicate и все service/repository writes
+  сохранены. Duplicate checkbox только при реальном warning, изначально не выбран.
+  Legacy pending warning остаётся вне закрытой формы, повторная кнопка disabled.
+- Устранены воспроизведённые browser failures раннего взаимодействия:
+  `bind:value` сохраняет ввод до hydration, отсутствие принудительного
+  `open=false` сохраняет уже раскрытый native details. Для ошибки SSR по-прежнему
+  открывает нужную форму. Невидимые required принадлежат отдельным формам.
+- `src/lib/i18n/locale.ts`, `ui-additions.ts`: DE/RU действия, calendar-date и
+  Berlin timestamp helpers. В кабинетных `contribute()` из
+  `server/cabinet/runtime.ts`, `server/trials/trial-service.ts`,
+  `server/requests/request-service.ts`, `server/messages/message-service.ts`
+  локализованы даты/категория/время. Отправка сообщений, payload и provider
+  lifecycle не менялись; новая загрузка/фоновые запросы не добавлены.
+- `tests/unit/cabinet-ui.test.ts`, `tests/e2e/parent-cabinet.spec.ts` и existing
+  E2E seed/support покрывают пустой кабинет и legacy child на изолированных
+  синтетических данных. Обновлены direct consumers в
+  `authenticated-access.spec.ts`, `accessibility.spec.ts`,
+  `catalog-trial-lifecycle.spec.ts` под раскрытие и локальные даты.
+- Канонические требования/критерии: `MVP_SPEC.md` (`CAB-01`, `CHILD-02`),
+  `ACCEPTANCE_CRITERIA.md` §3A; mapping проверок — `TEST_PLAN.md`.
+  Общие CSS, auth shell, migrations, dependencies и deployment config неизменны.
+
+### Проверки и evidence
+
+Класс: **Локализованный runtime fix одной surface**. Пройдены 26 разных unit,
+3 focused D1 и 6 разных Chromium scenarios. Финальный `npm.cmd run check` —
+0 errors, 0 warnings; после последних runtime fixes выполнен повтор.
+
+Команды и результаты:
+
+- `npm.cmd test -- tests/unit/cabinet-ui.test.ts tests/unit/family-cabinet.test.ts tests/unit/i18n.test.ts tests/unit/parent-product-route-security.test.ts`:
+  первоначально 24 passed / 1 failed — пропущено форматирование message detail.
+  Исправлено; существующие family/i18n/role результаты сохранены.
+- `npm.cmd test -- tests/unit/cabinet-ui.test.ts tests/integration/family-cabinet-d1.test.ts -t 'cabinet child feedback|cabinet display dates|composes a safe cabinet|enforces owner-scoped child writes|keeps cabinet writes'`:
+  9 passed (6 UI unit + 3 D1), 6 unrelated family tests отфильтрованы.
+  D1 покрывает safe cabinet, ownership, duplicate confirmation, legacy correction
+  overrides/payment semantics и stale-role fail-closed.
+- После сохранения полей при CSRF rejection:
+  `npm.cmd test -- tests/unit/cabinet-ui.test.ts tests/unit/parent-product-route-security.test.ts` —
+  17/17 (7 UI + 10 role/route). Date tests проверяют calendar day, midnight и
+  обе DST offsets Berlin; unit contributors сохраняют исходные labels.
+- `npm.cmd run test:e2e -- tests/e2e/parent-cabinet.spec.ts tests/e2e/accessibility.spec.ts tests/e2e/authenticated-access.spec.ts tests/e2e/00-ui-language.spec.ts tests/e2e/catalog-trial-lifecycle.spec.ts --grep 'empty cabinet|real pending actions|parent cabinet and child form|redirects both roles|localizes parent pages|completes catalog quote'`:
+  3 passed / 3 failed. Passed: role/ownership, RU persisted read models и
+  populated/legacy scenario. Failures: старое ожидание ISO trial date,
+  старое ожидание focus после раскрытия, сброс раннего ввода при hydration.
+- `npm.cmd run test:e2e -- tests/e2e/parent-cabinet.spec.ts tests/e2e/accessibility.spec.ts tests/e2e/catalog-trial-lifecycle.spec.ts --grep 'empty cabinet|real pending actions|parent cabinet and child form|completes catalog quote'`:
+  2 passed / 2 failed. Trial lifecycle и populated DE/RU/legacy passed;
+  два failures выявили принудительное закрытие native details при hydration.
+- После исправления native disclosure:
+  `npm.cmd run test:e2e -- tests/e2e/parent-cabinet.spec.ts tests/e2e/accessibility.spec.ts --grep 'empty cabinet|parent cabinet and child form'`:
+  empty/create/edit/duplicate passed; a11y проверял focus-visible после
+  программного focus в mouse modality. Исправлен тест: реальный Shift+Tab к
+  summary, Enter закрыть/открыть, Tab к полю; CSS focus не ослаблялся.
+- `npm.cmd run test:e2e -- tests/e2e/accessibility.spec.ts --grep 'parent cabinet and child form'`:
+  1/1; keyboard flow и axe без violations/incomplete findings. Все предыдущие
+  relevant failures устранены; нет исключённых или помеченных неприменимыми assertions.
+- Итоговые docs-only checks: `npm.cmd run docs:check`, `npm.cmd run release:scan`,
+  `git diff --check`; новые untracked source/tests отдельно проверены.
+
+Полные Vitest/E2E/build/dependency audit не запускались: шаг 02 требует focused
+gate одной surface, общий release gate пакета предусмотрен шагом 05. Полные
+family claim/import/contract/message-provider lifecycle suites не повторялись:
+их rules, transactions и transports неизменны. Полная auth-матрица шага 01 не
+повторялась; использован только direct cabinet consumer.
+
+Ignored evidence: `tmp/portal-ui-2026-09-15/02-runtime-files.sha256` — SHA-256
+16 изменённых/новых src/tests файлов; hash manifest
+`66edd212d711ab5ddc768bacb1e9f2b91a24f58712d57947ddba6c318c3f7be8`.
+Скриншоты `02-{empty-de,populated-de,populated-ru}-{1366,390}.png`,
+`02-duplicate-de-390.png`, `02-legacy-ru-390.png` осмотрены локально.
+На 1366×768 быстрые действия и attention видны раньше форм; на 390×844
+переполнения документа нет, ссылки/поля/раскрытие доступны. RU/DE labels,
+введённые значения и duplicate/pending warnings читаемы. Synthetic profile
+по умолчанию закрыт; screenshot evidence не добавляется в Git. Окна/viewport
+владельца не использовались. Осмотры остальных страниц шага 01 сохраняются;
+кабинет в шаге 05 следует оценивать по evidence шага 02.
+
+Открытых P0/P1 на проверенных путях нет. Следующий шаг ровно один:
+`out/codex-portal-ui-prompts-2026-09-15/03_CATALOG_CONTRACT_ENTRY.md`.
+
+<a id="pvui-prompt-03"></a>
+
+## 2026-09-15 — UI-пакет, промпт 03: каталог и запрос договора
+
+Scope: PVUI-04, связанные формы PVUI-05/07. Реализация локальная на HEAD
+`e38ac1315432cae881d1a94fb3931b05a686e390` + незакоммиченный diff, включая
+сохранённую работу шага 02. Результаты относятся к local candidate, не к HEAD
+или опубликованной версии. Remote mutations, provider send, Telegram,
+production и официальный сайт не затрагивались. Документ
+`PORTAL_LOCAL_EXCHANGE_DRAFT.md` и ТЗ не изменялись.
+
+### Реализация
+
+- `src/routes/catalog/+page.svelte`: предмет над исходным названием, различимые
+  trial/contract CTA, пояснение ориентировочной базовой цены. Исходные названия,
+  synthetic маркировка, quote/availability semantics и прежний trial URL сохранены.
+- `src/lib/server/messages/contract-entry.ts`: read-only lookup через существующие
+  `loadPublishedCourse`/`listSessions`; только опубликованные group/dance_group
+  текущего периода с current session. DE/RU defaults включают название, предмет,
+  период и расписание. Недоступный/некорректный ID даёт обычную форму. URL передаёт
+  только course ID, произвольные query subject/message не используются.
+- `src/routes/messages/+page.server.ts` и `+page.svelte`: существующая категория
+  `contract`, редактируемые defaults, объяснение запроса и явной отправки,
+  сохранение allowlisted полей и idempotency key при ошибке, включая CSRF rejection.
+  Existing owner/role/CSRF/schema/idempotency service guards сохранены; новые
+  provider вызовы или business writes в load не добавлены. Локализовано время
+  списка сообщений, добавлен возврат в каталог, ограничены ширины темы/категории.
+- `src/routes/contracts/[offerId]/+page.svelte`: короткое объяснение подготовки
+  offer, parent acceptance и последующего admin confirmation; legal evidence,
+  payload, hashes и lifecycle не менялись.
+- Trial `+page.svelte` и `src/routes/requests/new/+page.svelte`: локализованы даты
+  детей в options; request form оформлена белой карточкой с компактными полями
+  и широкими textarea. Existing actions, payload и навигация сохранены.
+  Все новые тексты — `src/lib/i18n/ui-additions.ts` (DE/RU); shared CSS не менялся.
+- Требование: `MVP_SPEC.md` CAT-03; критерии: `ACCEPTANCE_CRITERIA.md` §5;
+  ссылка на entry добавлена в `COURSES.md`, mapping suites — в `TEST_PLAN.md`.
+- Tests: новые `tests/unit/catalog-contract-entry.test.ts`,
+  `tests/e2e/catalog-contract-entry.spec.ts`; focused D1 case в
+  `tests/integration/catalog-trials-d1.test.ts`; direct consumer trial selector
+  уточнён через `exact: true` в `tests/e2e/catalog-trial-lifecycle.spec.ts`.
+
+### Проверки и evidence
+
+Класс: **Локализованный runtime fix одной surface**. Пройдены 22 разных unit,
+2 D1 и 2 разных Chromium scenarios. Все выявленные failures устранены.
+
+- `npm.cmd run check`: первый запуск выявил optional locale в request locals;
+  добавлен fallback `de`. Последующие запуски, включая после финального CSS,
+  дали **0 errors, 0 warnings** в svelte-check. Startup warning о ещё не
+  созданном generated tsconfig и уведомления Vite о root не являются diagnostics.
+- `npm.cmd test -- tests/unit/catalog-contract-entry.test.ts tests/unit/i18n.test.ts tests/unit/parent-product-route-security.test.ts tests/integration/catalog-trials-d1.test.ts -t 'catalog contract entry route|parent product route boundaries|i18n|publishes only|prefills only'`:
+  **24 passed**, 3 unrelated trial lifecycle cases отфильтрованы.
+  D1 проверяет hidden/retired/staging/no-current-session/non-group/invalid IDs,
+  full/unknown/manual-review groups и неизменность counts business entities.
+- `npm.cmd test -- tests/unit/catalog-contract-entry.test.ts`: финальный
+  route regression после locale fallback — **6/6**, включает CSRF rejection,
+  validation feedback, allowlist echo и существующий submit payload.
+- `npm.cmd run test:e2e -- tests/e2e/catalog-contract-entry.spec.ts`:
+  message validation/edit/submit/replay и обычный technical submit — passed;
+  navigation сначала failed из-за частичного совпадения немецких названий двух
+  CTA. Исправлен test selector, runtime trial CTA не переименован.
+- `npm.cmd run test:e2e -- tests/e2e/catalog-contract-entry.spec.ts --grep 'opens catalog'`:
+  **1/1 passed** после selector fix и повторно после финальных размеров форм.
+  Проверены переход из карточки, выбранное занятие/расписание в форме DE/RU,
+  прежний trial CTA, individual/Nachhilfe формы, offer explanation и возвраты.
+- Итоговые docs-only gates: `npm.cmd run docs:check`, `npm.cmd run release:scan`,
+  `git diff --check`. Три новых source/test файла отдельно проверены на whitespace.
+
+Полные Vitest/E2E/build/dependency audit не запускались: impact ограничен entry/UI,
+общий release gate пакета относится к шагу 05. Длинные trial/contract/provider
+lifecycle и auth-матрица не повторялись; отправка проверена в локальном isolated
+harness без доставки уведомлений. После финального CSS повторён только affected
+visual/navigation scenario; зелёный submit/replay результат сохранён.
+
+Ignored evidence: `tmp/portal-ui-2026-09-15/03-runtime-files.sha256` — manifest
+12 source/test files; SHA-256 manifest
+`354f091792d6ff1cc2bca938d41ab63fb734849774263e5a58c4a1ed37654ecd`.
+Скриншоты `03-{catalog-de,catalog-ru,inquiry-de,inquiry-ru,trial-de,individual-de,nachhilfe-ru,offer-ru}-{1366,390}.png`
+осмотрены локально; после CSS повторно осмотрены все 8 изменённых изображений
+message/request форм. На 390×844 и 1366×768 переполнения документа нет,
+названия/пояснения читаемы, CTA и возвраты доступны. Textarea допускают прокрутку
+и изменение высоты; subject/select ограничены по ширине. Окна владельца не
+использовались. Evidence шагов 01/02 сохраняется для неизменённых surfaces.
+
+Открытых P0/P1 на проверенных путях нет. Следующий шаг ровно один:
+`out/codex-portal-ui-prompts-2026-09-15/04_ADMIN_INTERFACE.md`.
+
+<a id="pvui-prompt-04"></a>
+
+## 2026-09-15 — UI-пакет, промпт 04: административный интерфейс
+
+Завершено локально 2026-09-15T16:07:13Z. Scope: PVUI-06, административные части
+PVUI-05/07. HEAD `e38ac1315432cae881d1a94fb3931b05a686e390` не менялся;
+проверки относятся к незакоммиченному candidate поверх сохранённых шагов 02–03,
+а не к HEAD или опубликованной версии. Remote mutations, provider send,
+Telegram forms/config, production и официальный сайт не затрагивались.
+`PORTAL_LOCAL_EXCHANGE_DRAFT.md` и ТЗ сохранены без изменений.
+
+### Изменения
+
+- `src/routes/admin/+layout.svelte`: три группы, все прежние ссылки, активный
+  раздел на list/detail routes, native disclosure и видимый focus. На desktop
+  группы открыты, на mobile раскрыта текущая; остальные доступны по запросу.
+- `src/routes/admin/+page.svelte`: быстрые переходы выше метрик. Blocked count
+  остаётся обычным текстом; отдельная «Все учётные записи» ведёт ровно на
+  `/admin/users`. Серверный подсчёт и existing filters не менялись.
+- `src/routes/admin/catalog/+page.svelte`: занятия/статусы перед формами,
+  раскрываемое редактирование; отдельная свёрнутая mapping queue с числом
+  загруженных записей. Сохранены все targets, подтверждения, idempotency и
+  действия. Повторяющиеся названия различаются номером в списке и existing
+  reference внутри подробностей. Known lesson kinds локализованы.
+- `src/routes/admin/contracts/+page.svelte`: offers перед техническими формами,
+  отдельные состояния PDF/ожидания parent/operational contract; DE/RU kinds,
+  end-request states и artifact labels. Документы и формы решений раскрываются.
+  Editor: два desktop столбца коротких полей, полная строка JSON с monospace,
+  широкое основание изменения цены, timestamp hint, role alert/description.
+  Enhanced JSON rejection сохраняет inputs и retry key. Server actions,
+  payload, legal texts/hashes, confirmations и audit не менялись.
+- `src/lib/server/contracts/contract-repository.ts`: единственный server diff —
+  SELECT существующего `contracts.operational_status` в admin read model, чтобы
+  завершённый договор не назывался действующим только по offer approval.
+- `src/routes/admin/pricing/+page.svelte`, `users/+page.svelte`: объяснения пустых
+  price versions/rules, календарные даты без timezone shift, фокусируемые
+  именованные scroll regions. Три адресных Svelte a11y suppressions объясняют
+  необходимую клавиатурную прокрутку; интерактивная роль таблице не приписывается.
+- `src/app.css`: zero-minimum tracks в admin forms, bounds и переносы, native
+  summary targets, grouped nav, grid/editor geometry, локальная прокрутка таблиц.
+  Общий root/parent стиль визуально не изменился. Новые DE/RU строки —
+  `src/lib/i18n/ui-additions.ts`.
+- Канонический `ADMIN-01` в `MVP_SPEC.md`, admin/UX критерии в
+  `ACCEPTANCE_CRITERIA.md` и mapping проверок в `TEST_PLAN.md` обновлены.
+- Новый `tests/e2e/admin-interface.spec.ts`; existing synthetic seed дополнен
+  отдельной unclaimed семьёй и 50 mapping entries (49 одинаковых названий и
+  одно длинное). Ни один объект не переназначен между авторизованными семьями.
+  В `tests/integration/contracts-d1.test.ts` добавлены read-model assertions
+  до/после formation. Admin case в `tests/e2e/accessibility.spec.ts` обновлён
+  под текущий порядок навигации; остальные изменения файла сохранены.
+
+### Проверки и найденные отклонения
+
+Класс: **Локализованный runtime fix одной surface**. Финальный результат:
+13 unit + 1 D1 + 5 разных Chromium scenarios passed.
+
+- `npm.cmd run check`: финальный запуск **0 errors, 0 warnings**. Первый
+  наблюдавшийся результат имел 3 warnings на tabindex scroll regions; добавлены
+  узкие поясняющие suppressions, клавиатурная прокрутка проверена браузером.
+  Startup missing-generated-tsconfig/Vite root notices не являются diagnostics.
+- `npm.cmd test -- tests/unit/admin-console.test.ts tests/unit/admin-contracts-preview-gate.test.ts tests/unit/i18n.test.ts tests/integration/contracts-d1.test.ts -t 'stage 06A admin contracts|preview draft boundary|i18n|reserves permanent family numbers'`:
+  **12 passed, 15 filtered**. D1 `reserves permanent family numbers` доказывает
+  null contract status до formation и actual active/ready после; используются
+  изолированные storage/transport substitutes. Этот unchanged server diff не
+  перепроверялся после CSS/text-only правок.
+- `npm.cmd test -- tests/unit/admin-console.test.ts tests/unit/admin-contracts-preview-gate.test.ts tests/unit/i18n.test.ts`:
+  **13/13 passed**, включая оба navigation tests, после финальных runtime правок.
+- `npm.cmd run test:e2e -- tests/e2e/admin-interface.spec.ts tests/e2e/authenticated-access.spec.ts --grep "keeps all admin|opens every loaded|shares the current login|redirects both roles"`:
+  **4/4 passed**. Все 16 destinations сохранены; blocked label не внутри ссылки,
+  users URL без предустановки, filters и detail highlight работают; 50 разных
+  targets проверены по DOM, представительные записи открываются с Tab/Enter.
+- `npm.cmd run test:e2e -- tests/e2e/admin-interface.spec.ts tests/e2e/accessibility.spec.ts --grep "keeps all admin|opens every loaded|checks the authenticated admin detail"`:
+  после визуальных corrections **2 UI scenarios passed, 1 existing accessibility
+  assertion failed**. Failure был старым предположением, что первый Tab ведёт
+  к Deutsch, хотя общая шапка шага 01 уже содержит brand link. Admin case
+  переведён на проверку actual navigation/disclosure order и visible focus.
+- `npm.cmd run test:e2e -- tests/e2e/accessibility.spec.ts --grep "checks the authenticated admin detail"`:
+  **1/1 passed**, включая axe без исключённых правил/регионов и без findings.
+  Зелёные UI scenarios после test-only fix повторно не запускались.
+- UI scenario проверяет отсутствие admin POST при обычной навигации/раскрытии,
+  затем отдельно отправляет заведомо невалидный JSON, отклоняемый до createDraft.
+  Offer не создаётся; inputs, retry key и связь ошибки с editor сохранены.
+  Local table scroll проверен focus + ArrowRight, document width — на обеих
+  основных ширинах; существующий parent cabinet осмотрен после shared CSS.
+- Docs gates: `npm.cmd run docs:check`, `npm.cmd run release:scan`,
+  `git diff --check`. Новый untracked spec отдельно проверен на whitespace.
+
+Полные Vitest/E2E/build/dependency audit не запускались: изменение ограничено
+admin display/read model; полный release gate пакета относится к шагу 05.
+Remote/provider/contract lifecycle вручную не проверялся; published/manual
+preview и production readiness от этих локальных результатов не изменяются.
+
+### Visual evidence и передача
+
+Ignored evidence: `tmp/portal-ui-2026-09-15/04-runtime-files.sha256` (13 файлов),
+SHA-256 `9bbe25099e7e0455da2ca4461296366ec7fd274916e088684b1d7bf3c08d5f75`.
+32 screenshots `04-*-{1366,390}.png` созданы финальными UI scenarios:
+overview/users/contracts/editor/contracts-empty/pricing на DE/RU,
+catalog/course/mapping на DE и parent regression на DE. Геометрия всех этих
+снимков проверена автоматически; глазами осмотрены representative desktop/mobile
+overview, catalog, длинное mapping, editor, pricing и parent cabinet.
+На desktop быстрые переходы overview видны в первом viewport; технические формы
+не вытесняют сущности. На mobile поля и кнопки остаются в контейнерах, таблицы
+прокручиваются локально. Пустой offers/end-request UI осмотрен; price-empty ветви
+реализованы, но отдельный пустой pricing dataset браузером не моделировался.
+Окна владельца не использовались. Для изменённой admin navigation/table geometry
+использовать evidence этого шага; неизменённые parent/public части предыдущих
+шагов пригодны для переиспользования.
+
+P0/P1 на проверенных путях нет. P2 test-maintenance note для шага 05:
+не запускавшийся здесь public accessibility case всё ещё использует старый
+`tabThroughLanguageSwitcher` и ожидание `home.catalogLink`; сверить его с
+актуальной общей шапкой при финальном suite. Это не доказанный runtime отказ
+и не основание блокировать переход к итоговой проверке.
+
+Один следующий шаг:
+`out/codex-portal-ui-prompts-2026-09-15/05_FINAL_UI_VALIDATION.md`.
+
+<a id="pvui-prompt-05"></a>
+
+## 2026-09-15 — UI-пакет, промпт 05: итоговая локальная приёмка
+
+PVUI-01–07 завершены локально. HEAD `e38ac1315432cae881d1a94fb3931b05a686e390`
+не менялся; результаты относятся к незакоммиченному candidate шагов 02–05
+поверх шага 01, а не к опубликованной версии. Commit не создавался.
+Scope: оставшиеся PVUI-05/07 и таблица приёмки §10 ТЗ; без независимого аудита,
+deploy, remote mutations, provider sends и изменения Telegram-specific UI/config.
+Production, официальный сайт и `PORTAL_LOCAL_EXCHANGE_DRAFT.md` не затронуты.
+
+### Итог по требованиям
+
+| ID | Локальный результат / evidence |
+| --- | --- |
+| PVUI-01 | Общая cookie двух вкладок воспроизведена в 01; full Chromium подтвердил изолированные роли и 401/403. Причина конкретного старого preview-входа остаётся гипотезой. |
+| PVUI-02 | Шапка по серверной роли, главная, переходы и POST logout; existing shell/auth/language suites и screenshots 01/05. |
+| PVUI-03 | Пустой/заполненный кабинет, attention, child disclosures, ошибки и duplicate/legacy warnings; scenarios 02 и полный Chromium. |
+| PVUI-04 | Каталог → «Запросить договор без пробного» → `/messages?course=…`; editable DE/RU prefill, явный submit/replay, trial и individual/Nachhilfe paths; scenarios 03. |
+| PVUI-05 | Основные 390×844/1366×768 и resize 768×1024/1536×864; нет document overflow, даты компактны, JSON/textarea читаемы, tables scroll локально. |
+| PVUI-06 | Все admin destinations, mapping disclosures, contract states/editor, pricing/users и отдельная ссылка без фильтра; scenarios 04/05. |
+| PVUI-07 | DE/RU navigation/forms/categories/statuses/feedback, settings keyboard/axe, Berlin timestamps и calendar dates; перевод не меняет business payload, legal evidence и исходный текст. |
+
+Единственная runtime-доработка шага 05:
+`src/routes/messages/[publicReference]/+page.svelte` использует существующий
+`formatTimestamp` для сообщений: synthetic `08:07 UTC` отображается как `10:07`
+Berlin. Форматтер, данные и операции записи не менялись; существующий
+`cabinet-ui.test.ts` покрывает midnight, calendar date и оба DST перехода.
+Новый `tests/e2e/01-portal-ui-validation.spec.ts` дополняет визуальный проход,
+settings DE/RU labels/focus/axe, точное время сообщения и отсутствие business POST.
+В `accessibility.spec.ts` исправлены ожидания Tab под шапку 01, в
+`authenticated-access.spec.ts` — два старых ID полей под child component 02.
+Assertions authorization/CSRF/ownership не ослаблены. Канонические UI/time
+критерии дополнены в `ACCEPTANCE_CRITERIA.md`, покрытие — в `TEST_PLAN.md`.
+
+### Проверки и версия
+
+Класс: **Material runtime/migration/dependency/deploy-config/cross-cutting diff**
+для полного пакета. E2E wrapper выделяет отдельные port/runtime/state; adapter
+использует `remoteBindings: false`, synthetic JWT/fixtures, fake email,
+disabled Telegram/renderer/scheduler. Provider unit/integration tests используют
+transport substitutes/outbound handlers, реальные targets не вызывались.
+
+- `npm.cmd run check` — 0 errors/warnings; после финальной runtime-правки повтор
+  той же команды также 0/0, exit 0 (`05-check-final.log`).
+- `npm.cmd test` — 84 files, 618 passed, 5 timeout failures, 1 штатный Windows
+  skip signal-cleanup test. Все пять незавершённых случаев прошли с одним worker,
+  без изменения кода, timeout или assertions. Итого **623/623 executable tests**.
+- Focused command: `npm.cmd test -- tests/integration/messaging-d1.test.ts tests/integration/migration-upgrade-d1.test.ts tests/integration/pricing-d1.test.ts tests/unit/legacy-preview-fixture.test.ts tests/integration/legacy-import-d1.test.ts -t 'persists a monotonic Telegram activation floor|upgrades a populated pre-production schema|maps explicitly, dedupes occupancy|regenerates allowlisted 1703-row|rolls back the entire bundle batch' --maxWorkers=1`
+  — 4 passed, 18 filtered. Первый file filter был опечаткой и ничего не выбрал;
+  оставшийся случай отдельно выполнен правильной командой ниже.
+- `npm.cmd test -- tests/integration/messaging-outbox-d1.test.ts -t 'persists a monotonic Telegram activation floor' --maxWorkers=1`
+  — 1 passed, 16 filtered; только локальный substitute.
+- `npm.cmd run test:e2e` — 33 passed, 2 failed, 3 serial cases not run.
+  Failures: старый порядок Tab и отсутствующий старый child input ID.
+- `npm.cmd run test:e2e -- tests/e2e/accessibility.spec.ts tests/e2e/authenticated-access.spec.ts tests/e2e/01-portal-ui-validation.spec.ts --grep 'checks public labels|denies the complete|rejects a tampered|rejects a previously|revokes the target|completes portal reflow'`
+  — **6/6 passed** после test-only fixes; общий итог **38 разных scenarios**.
+  Повтор визуального сценария также ждёт завершения переключения admin RU до
+  снимков; первое admin overview evidence случайно успело снять DE и заменено.
+- `npm.cmd run build` — passed, Cloudflare adapter, exit 0.
+- `npm.cmd run docs:check`, `npm.cmd run release:scan`, `git diff --check` —
+  итоговые docs-only gates; новые untracked source/test files проверены отдельно.
+
+Логи: ignored `tmp/portal-ui-2026-09-15/05-*.log`. Manifest всех 397 source/test/
+script/migration/build-config файлов: `05-candidate-files.sha256`, SHA-256
+`5525db6edfabd462f87f352a69b1a9ab824f3f1d077ce550aee9563e053d4401`.
+После browser fixes менялись только tests/docs; runtime полного Chromium
+не менялся. Полные suites после focused completion/docs-only diff не повторялись.
+Dependency audit не запускался: dependencies/toolchain неизменны, этот prompt
+его не требует. Independent exact-candidate review, remote/manual lifecycle
+не выполнялись и остаются отдельными gates.
+
+### Visual evidence и ограничения
+
+Сохранено 40 новых `05-*.png` в ignored `tmp/portal-ui-2026-09-15/`:
+home/catalog/cabinet/trial/individual/inquiry/message/nachhilfe/admin overview/
+catalog/contracts/pricing/users на промежуточных размерах; settings DE/RU и
+message DE также на основных. Геометрия проверена на всех; глазами осмотрены
+representative screenshots каждой из этих страниц, оба основных размера
+settings и DE/RU переписка. Browser masks скрывают email fields/technical blocks;
+данные синтетические, screenshots не добавлены в Git. Окна владельца не использовались.
+Переиспользованы основные screenshots 01–04 по handoffs; hash manifest 04
+совпадает полностью, отличия более ранних manifests объясняются последующими
+шагами. Полный Chromium заново снял основные surface screenshots. Дополнительно
+осмотрены desktop catalog/editor/parent и mobile inquiry/pricing/parent.
+Отдельный пустой pricing dataset не моделировался; его простые empty branches
+сверены по реализации, empty contracts/cabinet имеют browser evidence.
+
+Новых P0/P1 на проверенных путях нет. P2 backlog без нового review-loop:
+full-suite resource contention даёт пять timeouts при успешных focused runs;
+внутри переписки старая подпись возврата называет кабинет, хотя href ведёт к
+списку сообщений (переход и общий доступ в кабинет работают).
+Локальный UI-пакет готов к следующему release gate. Единственный следующий шаг:
+**независимый exact-candidate review для отдельно порученной публикации preview**.
+После отдельной публикации владелец вручную проверяет заявки и договоры.
+`full-manual-preview`, Telegram gates и production GO этой работой не подтверждены.

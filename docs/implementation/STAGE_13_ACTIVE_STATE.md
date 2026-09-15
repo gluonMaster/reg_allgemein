@@ -27,18 +27,19 @@ Roadmap, runbooks, readiness/traceability и handoff задают стабиль
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
 
-## Локальный UI checkpoint — 2026-09-15, промпт 01
+## Локальный UI checkpoint — 2026-09-15, промпт 05
 
-Scope: PVUI-01/02, общая геометрия PVUI-05 и связанные DE/RU PVUI-07.
-Локально завершён на HEAD `dbbaf21424e9798e8cdf56d373886e288e98fd40` + local diff:
-навигация по роли, 401/403, общие формы; на проверенных путях P0/P1 нет.
+Завершено локально 2026-09-15T16:29:00Z: PVUI-01–07 на HEAD
+`e38ac1315432cae881d1a94fb3931b05a686e390` + незакоммиченный diff шагов 02–05.
 Класс проверок: **Material runtime/migration/dependency/deploy-config/cross-cutting diff**
-(общая оболочка, hook-ответы и CSS; migrations/dependencies/config не меняются).
-Focused auth/i18n/route suites, affected Chromium и check пройдены; единый полный
-локальный release gate пакета — в шаге 05 до отдельной публикации.
-Команды, результаты и визуальное evidence: [handoff промпта 01](handoffs/stage-13.md#pvui-prompt-01).
-Один следующий локальный шаг: `out/codex-portal-ui-prompts-2026-09-15/02_PARENT_CABINET.md`.
-Remote state, разрешения, опубликованный fingerprint и gates ниже неизменны.
+для всего UI-пакета. Полный локальный gate с focused completion пройден:
+623 Vitest tests, 1 штатный Windows skip; 38 разных Chromium scenarios;
+check 0 errors/warnings, build успешен. DE/RU и четыре viewport проверены;
+P0/P1 на проверенных путях нет. Версия, команды, visual evidence, ограничения
+и P2 backlog: [handoff промпта 05](handoffs/stage-13.md#pvui-prompt-05).
+Один следующий шаг: независимый exact-candidate review для отдельно порученной
+публикации UI в preview. Локальная готовность не является разрешением deploy
+или подтверждением manual preview. Remote state, fingerprint и gates ниже неизменны.
 
 ## UI01 release review and authorized publication — 2026-09-13T13:41:02Z
 

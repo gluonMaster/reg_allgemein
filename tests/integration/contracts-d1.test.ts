@@ -978,6 +978,8 @@ describe('stage 09 immutable contract workflow in D1', () => {
 		const mismatchedEndCarrier = await draft('mismatched-end-carrier');
 		const draftOffer = await repository.loadOffer(created.offerId);
 		expect(draftOffer).toMatchObject({ contract_number: '2. 9101-1', status: 'draft' });
+		expect((await repository.listAdminOffers()).find((offer) => offer.id === created.offerId))
+			.toMatchObject({ status: 'draft', contract_status: null, render_status: 'not_started' });
 
 		const rendered = await service.renderAndSend({
 			admin,
@@ -1042,6 +1044,8 @@ describe('stage 09 immutable contract workflow in D1', () => {
 			},
 		});
 		expect(formed).toMatchObject({ certificateReady: true, replayed: false });
+		expect((await repository.listAdminOffers()).find((offer) => offer.id === created.offerId))
+			.toMatchObject({ status: 'approved_by_admin', contract_status: 'active', render_status: 'ready', certificate_status: 'ready' });
 		expect(
 			await service.formAndActivate({
 				admin,

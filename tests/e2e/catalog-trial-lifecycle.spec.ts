@@ -1,3 +1,4 @@
+import { formatCalendarDate } from '../../src/lib/i18n/locale';
 import { expect, test, type APIResponse, type BrowserContext } from '@playwright/test';
 import { formatMessage, germanCatalog } from '../../src/lib/i18n';
 import { login, newE2eContext, syntheticIdentities } from './support/authenticated';
@@ -70,7 +71,7 @@ test('completes catalog quote and trial confirmation with owner/admin D1 re-read
 		await expect(catalogCard).toContainText('Mittwoch 16:00');
 		await expect(catalogCard).toContainText('90 Min.');
 
-		await catalogCard.getByRole('link', { name: germanCatalog['catalog.cta.trial'] }).click();
+		await catalogCard.getByRole('link', { name: germanCatalog['catalog.cta.trial'], exact: true }).click();
 		await expect(parent).toHaveURL(new RegExp(`/catalog/${courseId}/trial$`, 'u'));
 		await expect(parent.getByRole('heading', { level: 2, name: courseName })).toBeVisible();
 		await expect(parent.locator('option[value="e2e-child-b"]')).toHaveCount(0);
@@ -118,7 +119,7 @@ test('completes catalog quote and trial confirmation with owner/admin D1 re-read
 		await expect(
 			parentTrial.getByText(germanCatalog['admin.code.requested'], { exact: true })
 		).toBeVisible();
-		await expect(parentTrial).toContainText(requestedDate);
+		await expect(parentTrial).toContainText(formatCalendarDate('de', requestedDate));
 
 		await login(admin, syntheticIdentities.admin);
 		const adminQueueResponse = await admin.goto(
@@ -169,7 +170,7 @@ test('completes catalog quote and trial confirmation with owner/admin D1 re-read
 		await expect(
 			parentTrial.getByText(germanCatalog['admin.code.confirmed'], { exact: true })
 		).toBeVisible();
-		await expect(parentTrial).toContainText(confirmedDate);
+		await expect(parentTrial).toContainText(formatCalendarDate('de', confirmedDate));
 		await parentTrial
 			.getByRole('button', { name: germanCatalog['cabinet.trials.cancel'] })
 			.click();

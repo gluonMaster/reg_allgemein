@@ -8,7 +8,7 @@ import {
 } from './contracts';
 import { IndividualRequestError, IndividualRequestRepository } from './request-repository';
 import { formatMessage, translate } from '$lib/i18n';
-import { formatEuro } from '$lib/i18n/locale';
+import { formatEuro, formatCalendarDate } from '$lib/i18n/locale';
 import { requireParent } from '$lib/server/security/authorization';
 
 export const FUNDED_NACHHILFE_RATE_CENTS_PER_45_MIN = 3000;
@@ -130,8 +130,8 @@ export class IndividualRequestService implements CabinetReadModelContributor {
 						? formatMessage(locale, request.valid_from && request.valid_until
 							? 'cabinet.requests.fundingDetail' : 'cabinet.requests.fundingDetailUndated', {
 							funding: request.funding_kind,
-							from: request.valid_from ?? '',
-							until: request.valid_until ?? '',
+							from: request.valid_from ? formatCalendarDate(locale, request.valid_from) : '',
+							until: request.valid_until ? formatCalendarDate(locale, request.valid_until) : '',
 						})
 						: formatMessage(locale, 'cabinet.requests.individualDetail', {
 							amount: formatEuro(locale, request.unit_rate_cents),

@@ -24,3 +24,20 @@ export function formatEuro(locale: string | undefined, cents: number): string {
 		currency: 'EUR',
 	}).format(cents / 100);
 }
+
+/** Calendar dates keep their day; timestamps are displayed in Berlin time. */
+export function formatCalendarDate(locale: string | undefined, value: string): string {
+	const date = new Date(`${value}T00:00:00Z`);
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(date.getTime())) return value;
+	return new Intl.DateTimeFormat(normalizeUiLocale(locale) === 'ru' ? 'ru-RU' : 'de-DE', {
+		dateStyle: 'medium', timeZone: 'UTC',
+	}).format(date);
+}
+
+export function formatTimestamp(locale: string | undefined, value: string): string {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return value;
+	return new Intl.DateTimeFormat(normalizeUiLocale(locale) === 'ru' ? 'ru-RU' : 'de-DE', {
+		dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin',
+	}).format(date);
+}

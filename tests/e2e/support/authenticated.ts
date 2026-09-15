@@ -10,6 +10,7 @@ import { germanCatalog } from '../../../src/lib/i18n';
 export const syntheticPassword = 'Synthetic-E2E-Password-2026!';
 
 export const syntheticIdentities = {
+	cabinetParent: { email: 'cabinet-parent@e2e.invalid', destination: '/cabinet' },
 	parentA: { email: 'parent-a@e2e.invalid', destination: '/cabinet' },
 	parentB: { email: 'parent-b@e2e.invalid', destination: '/cabinet' },
 	priceParent: { email: 'price-parent@e2e.invalid', destination: '/cabinet' },

@@ -32,6 +32,8 @@ async function expectVisibleKeyboardFocus(target: Locator): Promise<void> {
 async function tabThroughLanguageSwitcher(page: Page): Promise<void> {
 	await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 	await page.keyboard.press('Tab');
+	await expectVisibleKeyboardFocus(page.getByRole('link', { name: germanCatalog['home.title'], exact: true }));
+	await page.keyboard.press('Tab');
 	await expectVisibleKeyboardFocus(page.getByRole('button', { name: 'Deutsch', exact: true }));
 	await page.keyboard.press('Tab');
 	await expectVisibleKeyboardFocus(page.getByRole('button', { name: 'Русский', exact: true }));
@@ -115,9 +117,13 @@ test.describe('representative German accessibility paths', () => {
 
 		await tabThroughLanguageSwitcher(page);
 		await expectVisibleKeyboardFocus(
-			page.getByRole('link', { name: germanCatalog['home.catalogLink'] })
+			page.getByRole('link', { name: germanCatalog['ui.nav.catalog'], exact: true })
 		);
-		for (let index = 0; index < 5; index += 1) await page.keyboard.press('Tab');
+		await page.keyboard.press('Tab');
+		await expectVisibleKeyboardFocus(page.getByRole('link', { name: germanCatalog['auth.link.login'], exact: true }));
+		await page.keyboard.press('Tab');
+		await expectVisibleKeyboardFocus(page.getByRole('link', { name: germanCatalog['auth.link.register'], exact: true }));
+		await page.keyboard.press('Tab');
 		await expectVisibleKeyboardFocus(firstName);
 
 		await expectNoAutomatedAxeFindings(page);
@@ -164,6 +170,7 @@ test.describe('representative German accessibility paths', () => {
 			await login(page, syntheticIdentities.parentA);
 			await expectAccessibleStructure(page);
 			await expectNoHorizontalOverflow(page);
+			await page.locator('#children .child-item summary').first().click();
 			const fullName = page
 				.getByRole('textbox', { name: germanCatalog['cabinet.child.fullName'] })
 				.first();
@@ -173,15 +180,20 @@ test.describe('representative German accessibility paths', () => {
 			).toBeVisible();
 			await expect(
 				page.getByLabel(germanCatalog['cabinet.child.confirmDuplicate']).first()
-			).toBeVisible();
+			).toHaveCount(0);
 			await expectGermanTextRendered(
 				page.getByText(germanCatalog['cabinet.child.fullName']).first()
 			);
 
-			await tabThroughLanguageSwitcher(page);
-			await expectVisibleKeyboardFocus(
-				page.getByRole('link', { name: germanCatalog['cabinet.link.home'] })
-			);
+			const disclosure = page.locator('#children .child-item summary').first();
+			await fullName.focus();
+			await page.keyboard.press('Shift+Tab');
+			await expectVisibleKeyboardFocus(disclosure);
+			await page.keyboard.press('Enter');
+			await expect(fullName).not.toBeVisible();
+			await page.keyboard.press('Enter');
+			await page.keyboard.press('Tab');
+			await expectVisibleKeyboardFocus(fullName);
 
 			await expectNoAutomatedAxeFindings(page);
 		} finally {
@@ -210,10 +222,20 @@ test.describe('representative German accessibility paths', () => {
 			).toBeVisible();
 			await expectGermanTextRendered(page.getByText(germanCatalog['admin.reason']).first());
 
-			await tabThroughLanguageSwitcher(page);
-			await expectVisibleKeyboardFocus(
-				page.getByRole('link', { name: germanCatalog['admin.accountSecurity'] })
-			);
+			await page.getByRole('link', { name: germanCatalog['admin.accountSecurity'] }).focus();
+			await page.keyboard.press('Tab');
+			await expectVisibleKeyboardFocus(page.locator('.admin-nav a[href="/admin"]'));
+			await page.keyboard.press('Tab');
+			const familyGroup = page.locator('.admin-nav summary').filter({
+				hasText: germanCatalog['admin.group.families'],
+			});
+			await expectVisibleKeyboardFocus(familyGroup);
+			await page.keyboard.press('Enter');
+			await expect(page.locator('.admin-nav a[href="/admin/users"]')).not.toBeVisible();
+			await page.keyboard.press('Enter');
+			await page.keyboard.press('Tab');
+			await expectVisibleKeyboardFocus(page.locator('.admin-nav a[href="/admin/reviews"]'));
+			await expect(page.locator('.admin-nav [aria-current="page"]')).toHaveAttribute('href', '/admin/users');
 
 			await expectNoAutomatedAxeFindings(page);
 		} finally {

@@ -6,8 +6,32 @@
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
+	let viewportWidth = $state(0);
+	const isCurrent = (href: string) =>
+		portalPage.url.pathname === href ||
+		(href !== '/admin' && portalPage.url.pathname.startsWith(`${href}/`));
+	const groups = $derived(
+		[
+			{
+				label: 'admin.group.families' as const,
+				ids: ['users', 'legacy', 'reviews', 'messages', 'privacy'],
+			},
+			{
+				label: 'admin.group.courses' as const,
+				ids: ['catalog', 'trials', 'requests', 'contracts', 'price-reviews', 'pricing'],
+			},
+			{
+				label: 'admin.group.system' as const,
+				ids: ['imports', 'import-reconciliation', 'outbox', 'operations'],
+			},
+		].map((group) => ({
+			...group,
+			items: data.navigation.filter((item) => group.ids.includes(item.id)),
+		}))
+	);
 </script>
 
+<svelte:window bind:innerWidth={viewportWidth} />
 <svelte:head><title>{translate(uiLocale, 'admin.title')}</title></svelte:head>
 
 <main class="admin-shell">
@@ -19,8 +43,25 @@
 		<a href="/account/security">{translate(uiLocale, 'admin.accountSecurity')}</a>
 	</header>
 	<nav class="admin-nav" aria-label={translate(uiLocale, 'admin.navigationLabel')}>
-		{#each data.navigation as item}
-			<a href={item.href}>{translate(uiLocale, item.labelKey)}</a>
+		{#each data.navigation.filter((item) => !groups.some( (group) => group.ids.includes(item.id) )) as item}
+			<a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}
+				>{translate(uiLocale, item.labelKey)}</a
+			>
+		{/each}
+		{#each groups as group}
+			<details
+				class="admin-nav-group"
+				open={viewportWidth >= 768 || group.items.some((item) => isCurrent(item.href))}
+			>
+				<summary>{translate(uiLocale, group.label)}</summary>
+				<div>
+					{#each group.items as item}
+						<a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}
+							>{translate(uiLocale, item.labelKey)}</a
+						>
+					{/each}
+				</div>
+			</details>
 		{/each}
 	</nav>
 	{@render children()}

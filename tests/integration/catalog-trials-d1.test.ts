@@ -10,6 +10,8 @@ import { AdminMutationRepository } from '$lib/server/admin/mutation-repository';
 import { requireAdmin } from '$lib/server/security/authorization';
 import type { AuthenticatedUser } from '$lib/server/auth/session';
 import { createMigratedTestD1, type TestD1Context } from '../helpers/d1';
+import { loadContractInquiry } from '$lib/server/messages/contract-entry';
+import { createThreadSchema } from '$lib/server/messages/contracts';
 
 const now = '2026-07-17T10:00:00.000Z';
 const hash = (character: string) => character.repeat(64);
@@ -277,6 +279,29 @@ describe('stage 07 catalog and trial workflow in D1', () => {
 			cta: { kind: 'individual_request' },
 			quote: { status: 'quoted', amountCents: 3000, parentPayable: true },
 		});
+	});
+
+	it('prefills only published group inquiries and creates no business entities', async () => {
+		const catalog = new CatalogRepository(db);
+		const tables = ['support_threads', 'support_messages', 'individual_requests', 'trial_bookings', 'contract_offers', 'enrollments'];
+		const counts = () => Promise.all(tables.map((table) => db.first<{ count: number }>({ sql: `SELECT COUNT(*) AS count FROM ${table}` })));
+		const before = await counts();
+		for (const locale of ['de', 'ru']) {
+			for (const id of ['course-available', 'course-review', 'course-full', 'course-unknown']) {
+				const inquiry = await loadContractInquiry(catalog, id, locale);
+				expect(inquiry?.category).toBe('contract');
+				expect(inquiry?.message).toContain('15:00–16:30');
+				expect(createThreadSchema.safeParse({ ...inquiry, idempotencyKey: 'synthetic-inquiry' }).success).toBe(true);
+			}
+		}
+		for (const id of [null, '', ' ', 'x'.repeat(201), "' OR 1=1 --", 'missing', 'course-retired', 'course-staging', 'course-needs-review', 'course-nachhilfe', 'course-individual']) {
+			expect(await loadContractInquiry(catalog, id, 'de')).toBeNull();
+		}
+		await db.run({ sql: "UPDATE course_groups SET catalog_status = 'hidden' WHERE id = 'course-available'" });
+		expect(await loadContractInquiry(catalog, 'course-available', 'de')).toBeNull();
+		await db.run({ sql: "UPDATE course_sessions SET is_current = 0 WHERE course_group_id = 'course-review'" });
+		expect(await loadContractInquiry(catalog, 'course-review', 'de')).toBeNull();
+		expect(await counts()).toEqual(before);
 	});
 
 	it('accepts manual-review requests but denies past, foreign, non-trial, duplicate and tampered submissions', async () => {

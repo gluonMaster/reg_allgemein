@@ -62,6 +62,48 @@
 
 ## Decision gate выбора проверок
 
+PVUI-01–07 (шаг 05): один полный локальный gate всего UI-пакета — check,
+Vitest, Chromium, build и docs/release checks. Existing surface scenarios
+покрывают основные 390×844/1366×768; `01-portal-ui-validation.spec.ts` дополняет
+resize до 768×1024/1536×864, DE/RU settings labels/focus/axe, отсутствие business
+submit при осмотре и локализованное время внутри переписки. Используются existing
+изолированные parent/admin fixtures, отдельный local runtime без remote bindings
+и внешних provider transports. Screenshots осматриваются отдельно от DOM checks;
+фактические результаты и версия candidate — в [handoff шага 05](handoffs/stage-13.md#pvui-prompt-05).
+Автоматизация не заменяет independent exact-candidate review перед публикацией
+и ручной lifecycle в отдельно разрешённом preview.
+
+PVUI-06/05/07 (шаг 04): `admin-interface.spec.ts` проверяет полноту и текущий
+раздел меню, non-link blocked count и чистый users URL, поиск/фильтры,
+раздельность 50 загруженных сопоставлений, keyboard disclosure, DE/RU,
+JSON editor/rejection и локальную геометрию таблиц. Синтетическая unclaimed
+семья в existing E2E seed не меняет семьи авторизованных родителей. Direct
+consumer сценарии `authenticated-access.spec.ts` проверяют роль и навигацию;
+один готовый parent screen покрывает regression общего CSS. Focused
+`contracts-d1.test.ts` проверяет фактический contract status в admin read model
+до и после formation; `admin-console.test.ts`, `admin-contracts-preview-gate.test.ts`
+и `i18n.test.ts` сохраняют профильные guards/словарь. Полный gate остаётся шагу 05.
+
+PVUI-04/05/07 (шаг 03): `catalog-contract-entry.test.ts` проверяет message load,
+DE/RU defaults, отсутствие вызовов business writes, сохранение исправлений и
+retry key при ошибках. Focused `catalog-trials-d1.test.ts` проверяет опубликованный
+каталог и отсутствие новых business entities при предзаполнении, включая
+hidden/staging/retired/no-session и некорректные ID. `catalog-contract-entry.spec.ts`
+проверяет CTA, DE/RU формы, возврат, validation/retry и обычную отправку сообщения
+в локальном harness, без доставки providers и contract lifecycle.
+Chromium screenshots: каталог, запрос договора, trial, individual/Nachhilfe и
+offer на 390×844/1366×768. Полный gate пакета остаётся шагу 05.
+
+PVUI-03/05/07 (шаг 02): `cabinet-ui.test.ts` покрывает возврат child fields
+при ошибках и локализацию read-model contributors, календарные даты и Berlin
+timestamps через DST. `parent-cabinet.spec.ts` использует isolated E2E seed:
+пустой/заполненный кабинет, раскрытие с клавиатуры, create/update ошибки и
+duplicate confirmation, legacy correction/pending, DE/RU и два основных viewport.
+Прямые consumers: cabinet assertions в authenticated-access/accessibility;
+family-cabinet D1 — owner/duplicate/correction и fail-closed; существующие
+catalog-trial и UI-language scenarios проверяют переставленные разделы.
+Полный release gate пакета остаётся шагу 05.
+
 PVUI-01/02 (UI-пакет 2026-09-15, шаг 01): `portal-shell.test.ts` проверяет
 минимальный server navigation payload, no-store публичных страниц и DE/RU
 HTML/data-отказы hook. Дополнения `authenticated-access.spec.ts` покрывают

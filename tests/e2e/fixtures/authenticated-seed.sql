@@ -105,6 +105,43 @@ INSERT INTO children (
 	 NULL, NULL, 'Synthetic Child B', 'synthetic child b', '2016-02-20',
 	 'e2e-import', 1, '2026-08-12T08:00:00.000Z', '2026-08-12T08:00:00.000Z');
 
+-- PVUI-06: independent, unclaimed synthetic family; repeated labels are not identities.
+INSERT INTO family_number_allocations
+	(id, namespace, sequence_number, display_family_id, legacy_family_id, owner_user_id,
+	 origin, status, assigned_at, created_at, updated_at)
+VALUES ('e2e-admin-map-number', 'legacy_1', 9901, '1. 9901', 'e2e-admin-map-family', NULL,
+	'legacy', 'assigned', '2026-08-12T08:00:00Z', '2026-08-12T08:00:00Z', '2026-08-12T08:00:00Z');
+INSERT INTO legacy_families
+	(id, source_namespace, source_family_id, family_number_id, numbering_status, created_at, updated_at)
+VALUES ('e2e-admin-map-family', 'synthetic-admin-ui', '1. 9901', 'e2e-admin-map-number', 'valid',
+	'2026-08-12T08:00:00Z', '2026-08-12T08:00:00Z');
+INSERT INTO children
+	(id, legacy_family_id, family_number_id, origin, source_child_key, source_full_name,
+	 source_full_name_normalized, source_birth_date, full_name, full_name_normalized,
+	 birth_date, last_seen_run_id, created_at, updated_at)
+VALUES ('e2e-admin-map-child', 'e2e-admin-map-family', 'e2e-admin-map-number', 'legacy',
+	'synthetic-admin-child', 'Synthetic Mapping Child', 'synthetic mapping child', '2016-02-01',
+	'Synthetic Mapping Child', 'synthetic mapping child', '2016-02-01', 'e2e-import',
+	'2026-08-12T08:00:00Z', '2026-08-12T08:00:00Z');
+WITH RECURSIVE entries(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM entries WHERE n < 50)
+INSERT INTO legacy_source_rows
+	(id, source_namespace, academic_period_id, source_access_id, legacy_family_id, child_id,
+	 import_run_id, source_hash, source_values_json, last_seen_run_id, created_at, updated_at)
+SELECT 'e2e-admin-map-row-' || n, 'synthetic-admin-ui', 'e2e-period', n,
+	'e2e-admin-map-family', 'e2e-admin-map-child', 'e2e-import',
+	'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '{}', 'e2e-import',
+	'2026-08-12T08:00:00Z', '2026-08-12T08:00:00Z' FROM entries;
+INSERT INTO legacy_enrollments
+	(id, legacy_source_row_id, legacy_family_id, child_id, academic_period_id, source_slot,
+	 source_record_key, group_name_raw, group_name_normalized, lesson_kind,
+	 last_seen_run_id, created_at, updated_at)
+SELECT 'e2e-admin-mapping-' || source_access_id, id, legacy_family_id, child_id,
+	academic_period_id, 'main_next', 'e2e-admin-mapping-' || source_access_id,
+	CASE WHEN source_access_id = 1 THEN 'Synthetic Old Group — sehr langer Name mit zusätzlichen Angaben für die mobile Prüfung / очень длинное название для проверки мобильного экрана'
+	ELSE 'Synthetic Old Group' END, 'synthetic old group', 'group', 'e2e-import',
+	'2026-08-12T08:00:00Z', '2026-08-12T08:00:00Z'
+FROM legacy_source_rows WHERE source_namespace = 'synthetic-admin-ui';
+
 INSERT INTO individual_requests (
 	id, user_id, child_id, request_kind, funding_kind, subjects_raw,
 	description, preferred_days_json, preferred_time_windows_json,
@@ -993,3 +1030,43 @@ INSERT INTO price_review_deliveries (
 	'queued', 'fake-email:e2e-price-lifecycle-item:v1',
 	'2026-08-12T08:13:01.000Z', '2026-08-12T08:13:01.000Z'
 );
+
+
+-- Isolated local cabinet UI fixtures (no production seed).
+INSERT INTO family_number_allocations (
+	id, namespace, sequence_number, display_family_id, legacy_family_id,
+	owner_user_id, origin, status, assigned_at, merged_into_family_number_id,
+	created_at, updated_at
+) VALUES
+	('e2e-cabinet-family', 'portal_2', 9010, '2-9010-E2E', NULL,
+	 'e2e-cabinet-parent', 'portal', 'assigned', '2026-08-12T08:00:00.000Z', NULL,
+	 '2026-08-12T08:00:00.000Z', '2026-08-12T08:00:00.000Z');
+
+INSERT INTO users (
+	id, email, email_normalized, password_hash, pending_email,
+	pending_email_normalized, pending_email_expires_at, email_version,
+	email_verified_at, role, is_blocked, account_status, closed_at,
+	first_name, last_name, first_name_normalized, last_name_normalized,
+	phone, preferred_language, family_number_id, family_assignment_status,
+	family_version, family_assignment_import_run_id, privacy_notice_version,
+	privacy_accepted_at, session_version, created_at, updated_at
+) VALUES
+	('e2e-cabinet-parent', 'cabinet-parent@e2e.invalid', 'cabinet-parent@e2e.invalid',
+	 '$2b$10$QFddzPUT7XT48TjIYi0aHu4NyaBlG4OloErt9R032SlcuFDQbqpuS',
+	 NULL, NULL, NULL, 1, '2026-08-12T08:00:00.000Z', 'parent', 0, 'active', NULL,
+	 'Synthetic', 'Cabinet Parent', 'synthetic', 'cabinet parent', NULL, 'de',
+	 'e2e-cabinet-family', 'assigned', 1, 'e2e-import', 'e2e-synthetic-notice-v1',
+	 '2026-08-12T08:00:00.000Z', 1, '2026-08-12T08:00:00.000Z',
+	 '2026-08-12T08:00:00.000Z');
+
+INSERT INTO children (
+	id, owner_user_id, legacy_family_id, family_number_id, origin,
+	source_child_key, source_full_name, source_full_name_normalized,
+	source_birth_date, full_name_override, birth_date_override, full_name,
+	full_name_normalized, birth_date, last_seen_run_id, is_current,
+	created_at, updated_at
+) VALUES
+	('e2e-ui-legacy-child', 'e2e-parent-b', NULL, 'e2e-family-b', 'legacy',
+	 'portal:e2e-ui-legacy-child', 'Synthetic Legacy Child', 'synthetic legacy child', '2015-01-10',
+	 NULL, NULL, 'Synthetic Legacy Child', 'synthetic legacy child', '2015-01-10',
+	 'e2e-import', 1, '2026-08-12T08:00:00.000Z', '2026-08-12T08:00:00.000Z');

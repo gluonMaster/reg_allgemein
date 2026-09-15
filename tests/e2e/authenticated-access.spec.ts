@@ -211,6 +211,8 @@ test.describe.serial('authenticated role, ownership and session boundaries', () 
 			await login(parentB, syntheticIdentities.parentB);
 			await login(admin, syntheticIdentities.admin);
 
+			await parentA.locator('#children .child-item summary').first().click();
+			await parentB.locator('#children .child-item summary').first().click();
 			await expect(
 				parentA
 					.getByRole('textbox', { name: germanCatalog['cabinet.child.fullName'] })
@@ -351,7 +353,7 @@ test.describe.serial('authenticated role, ownership and session boundaries', () 
 				await expectActionDenied(response, germanCatalog['auth.csrfRejected']);
 			}
 			await parentA.goto('/cabinet');
-			await expect(parentA.locator('#name-e2e-child-a')).toHaveValue('Synthetic Child A');
+			await expect(parentA.locator('#child-e2e-child-a-name')).toHaveValue('Synthetic Child A');
 
 			const childMutation = await parentAContext.request.post('/cabinet?/updateChild', {
 				form: {
@@ -364,7 +366,7 @@ test.describe.serial('authenticated role, ownership and session boundaries', () 
 			});
 			await expectNotFoundAction(childMutation, germanCatalog['cabinet.child.rejected']);
 			await parentB.goto('/cabinet');
-			await expect(parentB.locator('#name-e2e-child-b')).toHaveValue('Synthetic Child B');
+			await expect(parentB.locator('#child-e2e-child-b-name')).toHaveValue('Synthetic Child B');
 
 			const foreignRequestSave = await parentAContext.request.post(
 				'/requests/e2e-request-b?/save',

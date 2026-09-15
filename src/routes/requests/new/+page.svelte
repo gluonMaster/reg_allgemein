@@ -5,6 +5,7 @@
 	import '../../../app.css';
 	import type { ActionData, PageData } from './$types';
 	import { formatMessage, translate } from '$lib/i18n';
+	import { formatCalendarDate } from '$lib/i18n/locale';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const euro = $derived(new Intl.NumberFormat(uiLocale === 'ru' ? 'ru-RU' : 'de-DE', { style: 'currency', currency: 'EUR' }));
 </script>
@@ -31,7 +32,7 @@
 			<label for="request-child">{translate(uiLocale, 'request.child')}</label>
 			<select id="request-child" name="childId" required>
 				<option value="">{translate(uiLocale, 'request.choose')}</option>
-				{#each data.page.children as child}<option value={child.id}>{child.fullName} · {child.birthDate}</option>{/each}
+				{#each data.page.children as child}<option value={child.id}>{child.fullName} · {formatCalendarDate(uiLocale, child.birthDate)}</option>{/each}
 			</select>
 			{#if data.requestKind === 'nachhilfe'}
 				<label for="funding-kind">{translate(uiLocale, 'request.fundingKind')}</label>
@@ -60,3 +61,11 @@
 		</form>
 	{/if}
 </main>
+
+<style>
+	.request-form { max-width: 52rem; padding: 1.25rem; border: 1px solid #d9e3df; border-radius: .75rem; background: white; }
+	.request-form input[name="subjects"], .request-form select { max-width: 36rem; }
+	.request-form select[name="fundingKind"], .request-form select[name="preferredFormat"] { max-width: 24rem; }
+	.request-form textarea { min-height: 7rem; }
+	.request-form button { justify-self: start; }
+</style>

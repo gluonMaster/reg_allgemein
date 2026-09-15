@@ -3882,12 +3882,13 @@ export class ContractRepository {
 			expires_at: string;
 			contract_id: string | null;
 			certificate_status: string | null;
+			contract_status: string | null;
 			artifacts_json: string;
 		}>({
 			sql: `SELECT offer.id, offer.contract_number, offer.contract_kind,
 				offer.status, offer.render_status, child.full_name AS child_name,
 				offer.expires_at, contract.id AS contract_id,
-				certificate.render_status AS certificate_status,
+				certificate.render_status AS certificate_status, contract.operational_status AS contract_status,
 				COALESCE((SELECT json_group_array(json_object('id', artifact.id,
 					'kind', artifact.artifact_kind)) FROM contract_artifacts artifact
 					WHERE artifact.contract_offer_id = offer.id

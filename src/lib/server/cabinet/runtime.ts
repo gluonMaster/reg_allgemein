@@ -1,3 +1,4 @@
+import { formatCalendarDate } from '$lib/i18n/locale';
 import { translateAdminCode } from '$lib/i18n';
 import type { RequestEvent } from '@sveltejs/kit';
 import { loadRuntimeConfig, type RuntimeConfig } from '$lib/server/config/runtime';
@@ -28,7 +29,7 @@ class ContractCabinetContributor implements CabinetReadModelContributor {
 					id: row.id,
 					label: `${row.child_name} · ${row.contract_number}`,
 					status: row.status,
-					detail: `${translateAdminCode(locale, row.contract_kind)} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
+					detail: `${translateAdminCode(locale, row.contract_kind)} · ${formatCalendarDate(locale, row.effective_from)}${row.effective_to ? `–${formatCalendarDate(locale, row.effective_to)}` : ''}`,
 					href: `/contracts/${row.id}`,
 				})),
 			contractHistory: rows
@@ -37,7 +38,7 @@ class ContractCabinetContributor implements CabinetReadModelContributor {
 					id: row.id,
 					label: `${row.child_name} · ${row.contract_number}`,
 					status: row.status,
-					detail: `${translateAdminCode(locale, row.contract_kind)} · ${row.effective_from}${row.effective_to ? `–${row.effective_to}` : ''}`,
+					detail: `${translateAdminCode(locale, row.contract_kind)} · ${formatCalendarDate(locale, row.effective_from)}${row.effective_to ? `–${formatCalendarDate(locale, row.effective_to)}` : ''}`,
 					href: `/contracts/${row.id}`,
 				})),
 		};
