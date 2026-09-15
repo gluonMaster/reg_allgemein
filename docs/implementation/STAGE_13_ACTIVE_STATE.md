@@ -4,22 +4,22 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-15T17:41:29Z
+updated_utc: 2026-09-15T17:43:03Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-last_completed_gate: PVUI-release-verification-and-preflight
-next_gate: PVUI-preview-code-deploy
+last_completed_gate: PVUI-preview-code-deploy-verified
+next_gate: PVUI-static-assets-inspection
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: PVUI-preview-deployment-ready
-last_atomic_action: PVUI-readonly-release-preflight
+current_phase: PVUI-preview-deployed
+last_atomic_action: PVUI-preview-code-deploy
 last_atomic_result: success
-next_atomic_action: PVUI-preview-code-deploy
+next_atomic_action: PVUI-static-assets-inspection
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Known_preview_target_exact_module_postcondition_and_compatible_rollback
+recommended_next_session_mode: Medium
+mode_reason_plain: Only_readonly_UI_or_owner_inspection_remains_no_unresolved_deploy_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
@@ -53,6 +53,23 @@ Remote mutation ещё не выполнялась. Один следующий 
 Containment: exact baseline, сохранение settings/data, reconciliation до повторения.
 rollover_required: no; recommended_next_session_mode: High — плановый deploy
 с известными target/postcondition/rollback.
+
+## PVUI: фактический checkpoint деплоя — 2026-09-15T17:43:03Z
+
+Result: success. Выполнена одна разрешённая code-only deployment operation
+для candidate f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3. Before version fingerprint
+d9f6ba236de1; after 761139c10e86; одна версия на 100% traffic.
+Actual module SHA-256 ab054783c68d2329a66ed08ce025625fbfe4b8570bd6cd786506a0db3649557d
+совпадает со strict dry-run и upload; annotation указывает exact candidate.
+Все vars/bindings/secrets/Cron/Access, migrations и bounded business/session/
+provider counts сохранены. DE/RU public UI возвращает 200, parent/admin без
+portal session — локализованный 401; health HEAD 204; invalid/anonymous Access blocked.
+Postcondition: 107 D1 rows read, zero written; operator provider sends 0.
+Evidence: tmp/pvui-preview-20260915/checkpoint-safe.json, after-control.json,
+after-database.json, after-smoke.json, deploy-response.json. Exact rollback
+остаётся в protected immediate-before-rollback.json; rollback не потребовался.
+Один следующий action: PVUI-static-assets-inspection. rollover_required: no;
+recommended_next_session_mode: Medium — остаётся только read-only проверка статических ресурсов.
 
 ## Локальный UI checkpoint — 2026-09-15, review и исправления
 
@@ -170,15 +187,15 @@ review:
   previous_reviewed_candidate: d58f9db54bede6cdf8f7cc21da93b23a6de37c72
 preview:
   access: enforced
-  deployed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
-  deployed_fingerprint: d9f6ba236de1
+  deployed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+  deployed_fingerprint: 761139c10e86
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: expected_Telegram_secrets_and_config_enabled_original_functions_restored
-  deployment_postcondition: UI01_actual_module_annotation_100_percent_settings_Access_schema_counts_and_DE_RU_HTTP_smoke_passed
-  latest_readonly_control_utc: 2026-09-13T13:42:26.663Z
-  latest_anonymous_access_check: UI01_anonymous_and_invalid_Access_blocked_302
+  deployment_postcondition: PVUI_actual_module_annotation_100_percent_settings_Access_schema_counts_and_DE_RU_HTTP_smoke_passed
+  latest_readonly_control_utc: 2026-09-15T17:42:50.186Z
+  latest_anonymous_access_check: PVUI_anonymous_and_invalid_Access_blocked_302
   target_fingerprints:
     account: 5dbd04a4763a
     worker: 242c1796e930
@@ -1139,14 +1156,14 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: PVUI-preview-code-deploy
-  permission: owner_explicit_2026_09_15_preview_publication
+  id: PVUI-static-assets-inspection
+  permission: authorized_deployment_asset_verification_no_portal_login_or_business_submit
   target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
-  mutation: one_code_only_preview_Worker_deploy
+  mutation: none_by_operator
   preconditions:
-    - fresh_target_config_Access_schema_compatible_baseline_and_clean_reviewed_candidate
+    - successful_exact_module_deployment_checkpoint
   postcondition:
-    - one_version_100_percent_exact_module_settings_Access_schema_counts_and_health_preserved
+    - public_JS_CSS_assets_match_local_build_hashes
   containment: captured_compatible_baseline_preserve_settings_and_data_no_blind_retry
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
