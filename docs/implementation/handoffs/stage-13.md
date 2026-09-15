@@ -5505,3 +5505,17 @@ deploy действий нет. Один следующий шаг: отдель
 production gates неизменны. rollover_required: no;
 recommended_next_session_mode: High — плановый preview deploy после поручения,
 без неоднозначного remote state.
+
+
+## 2026-09-15 — PVUI release verification and target lock
+
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3 -->
+
+Владелец поручил публикацию исправленного UI в существующий preview.
+[Release review](../reviews/pvui-deploy-20260915.md) закрыл R1/R2 для exact
+исправленного runtime; из 397 manifest files изменены только два E2E specs. Полные local gates,
+build, audit и strict dry-run пройдены. Fresh read-only actual settings/Access/
+schema/health/rollback подтверждены. До этой границы remote writes отсутствуют.
+Текущий cursor и exact deployment evidence находятся только в
+[active state](../STAGE_13_ACTIVE_STATE.md). Checklist изменён лишь в служебном
+compatibility comment для continuity checker, production gate не изменился.

@@ -4,28 +4,55 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-13T13:43:49Z
-reviewed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
-local_remediation_candidate: 117a9356346c4489f6d74f50af984e5f39601992
-last_completed_gate: UI01-preview-code-deploy-verified
-next_gate: phase-6-parent-Telegram-recovery
+updated_utc: 2026-09-15T17:41:29Z
+reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+local_remediation_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+last_completed_gate: PVUI-release-verification-and-preflight
+next_gate: PVUI-preview-code-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: UI01-preview-complete-Telegram-observation-pending
-last_atomic_action: UI01-preview-code-deploy
+current_phase: PVUI-preview-deployment-ready
+last_atomic_action: PVUI-readonly-release-preflight
 last_atomic_result: success
-next_atomic_action: TG09-parent-scheduled-observation
+next_atomic_action: PVUI-preview-code-deploy
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Published_UI_verified_remaining_work_readonly_no_unresolved_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: Known_preview_target_exact_module_postcondition_and_compatible_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## PVUI: разрешённая публикация исправленного UI — 2026-09-15T17:41:29Z
+
+Владелец прямо поручил deploy выполненного UI-пакета и исправлений review в
+существующий preview. Exact candidate f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3;
+Runtime совпадает с manifest исправлений; из 397 файлов изменены только два E2E specs. Новая сессия проверила R1/R2
+и непосредственные consumers; [release review](reviews/pvui-deploy-20260915.md)
+разрешает эту публикацию. Исторический NO-GO относится к d58f9db.
+Полный локальный gate, build, dependency audit и strict actual-config dry-run
+пройдены; evidence: tmp/pvui-preview-20260915/validation-safe.json и package-safe.json.
+
+Fresh read-only target lock: account 5dbd04a4763a, Worker 242c1796e930,
+origin 88ed782ba25a, D1 ccdeb22bb2a1. Baseline d9f6ba236de1 доступен
+для совместимого code rollback. Все 62 vars, bindings/secrets/Cron/Access
+совпадают с protected конфигурацией; 26 migrations, pending 0; root 200,
+health HEAD 204, anonymous/invalid Access blocked. 107 D1 rows read, zero writes.
+Ранее отложенная Telegram row теперь sent с durable receipt и двумя attempts;
+unknown attempts 0. Это bounded наблюдение, без новой отправки или подтверждения
+видимости сообщения владельцем. Остальные manual/production gates сохраняются.
+
+Первая попытка read-only Wrangler обнаружила отсутствие локальной авторизации;
+штатный OAuth login восстановил доступ. Access helper адаптирован локально с
+отсутствующего pwsh на установленный PowerShell, без изменения token/config.
+Remote mutation ещё не выполнялась. Один следующий action: PVUI-preview-code-deploy.
+Containment: exact baseline, сохранение settings/data, reconciliation до повторения.
+rollover_required: no; recommended_next_session_mode: High — плановый deploy
+с известными target/postcondition/rollback.
 
 ## Локальный UI checkpoint — 2026-09-15, review и исправления
 
@@ -118,28 +145,29 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicit_2026_09_13_Russian_UI_preview_deploy_preserve_actual_config_previous_Telegram_scope_unchanged
+permission_state: owner_explicit_2026_09_15_publish_completed_PVUI_and_review_fixes_to_existing_preview_preserve_actual_config
 review:
   status: independent_go
-  candidate: 117a9356346c4489f6d74f50af984e5f39601992
-  last_independently_reviewed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
+  candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+  last_independently_reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
   unresolved_candidate_p0: 0
   unresolved_candidate_p1: 0
-  deployed_open_p1: Telegram_delivery_receipt_still_pending_configured_Monday_window
-  verdict_scope: UI01_existing_preview_code_only_deploy_preserve_configuration
-  independent_reviewer: Codex_new_session_reviewing_prior_session_implementation_no_subagent_or_second_human
-  reviewed_utc: 2026-09-13T13:41:02Z
-  report: docs/implementation/reviews/ui01-russian-preview.md
+  deployed_open_p1: none_found_in_PVUI_scope_other_manual_milestone_gates_remain
+  verdict_scope: PVUI_existing_preview_code_only_publication_prior_review_plus_R1_R2_closure
+  independent_reviewer: new_Codex_session_reviewed_prior_agent_fixes_no_subagent_or_second_human
+  reviewed_utc: 2026-09-15T17:41:29Z
+  report: docs/implementation/reviews/pvui-deploy-20260915.md
   review_gate: complete
-  focused_review_tests: 3_files_17_pass_0_fail
   local_validation:
-    inherited_exact_candidate: 117a9356346c4489f6d74f50af984e5f39601992
-    check: inherited_0_errors_0_warnings
-    full_vitest: inherited_600_executable_tests_pass_after_documented_focused_reruns_1_expected_Windows_skip
-    chromium_e2e: inherited_28_of_28
+    exact_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+    manifest: all_runtime_matches_395_unchanged_2_test_only_updates
+    check: 0_errors_0_warnings
+    full_vitest: 84_files_623_pass_1_expected_Windows_skip
+    chromium_e2e: 40_distinct_scenarios_pass_after_documented_test_only_focused_completion
     build: passed_this_session
+    production_dependency_audit: zero_vulnerabilities
     strict_dry_run: passed_actual_config
-  previous_reviewed_candidate: 23c3999d206ef9551f775a5dda2b30939cf746c7
+  previous_reviewed_candidate: d58f9db54bede6cdf8f7cc21da93b23a6de37c72
 preview:
   access: enforced
   deployed_candidate: 117a9356346c4489f6d74f50af984e5f39601992
@@ -1111,15 +1139,15 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: TG09-parent-scheduled-observation
-  permission: readonly_observation_of_previously_authorized_normal_Cron_attempt
-  target: existing_outbox_ddbd7d01ec2e_in_current_preview
-  mutation: none_by_operator
+  id: PVUI-preview-code-deploy
+  permission: owner_explicit_2026_09_15_preview_publication
+  target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
+  mutation: one_code_only_preview_Worker_deploy
   preconditions:
-    - after_2026_09_14T07_00_00Z_plus_normal_Cron_cadence
+    - fresh_target_config_Access_schema_compatible_baseline_and_clean_reviewed_candidate
   postcondition:
-    - exact_existing_reference_receipt_one_additional_attempt_and_visible_notification
-  containment: no_manual_send_retry_limit_change_or_history_cleanup
+    - one_version_100_percent_exact_module_settings_Access_schema_counts_and_health_preserved
+  containment: captured_compatible_baseline_preserve_settings_and_data_no_blind_retry
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
