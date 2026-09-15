@@ -792,6 +792,15 @@ test.describe.serial('authenticated role, ownership and session boundaries', () 
 			await expect(
 				blockedLogin.getByText(germanCatalog['auth.invalidCredentials'])
 			).toBeVisible();
+
+			// Later specs share this synthetic account. Restore eligibility while
+			// preserving the revocation proved above and all authentication assertions.
+			await admin.getByLabel(germanCatalog['admin.reason']).fill('Synthetic E2E fixture restoration');
+			await admin.getByLabel(germanCatalog['admin.confirmAction']).check();
+			await admin.getByRole('button', { name: germanCatalog['admin.users.unblock'] }).click();
+			await expect(admin.getByText(germanCatalog['admin.action.completed'])).toBeVisible();
+			await expect(admin.getByRole('button', { name: germanCatalog['admin.users.block'] })).toBeVisible();
+			await expectRouteStatus(parent, '/account/security', 401);
 		} finally {
 			await closeContexts([parentContext, adminContext, blockedLoginContext]);
 		}

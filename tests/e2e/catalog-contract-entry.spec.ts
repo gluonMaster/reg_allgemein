@@ -71,6 +71,7 @@ test('preserves inquiry edits on rejection and submits ordinary messages once', 
 		const page = await context.newPage();
 		await login(page, syntheticIdentities.parentA);
 		await page.goto(inquiryPath);
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
 		const form = page.locator('form[action="?/create"]');
 		const subject = 'Synthetic edited contract inquiry';
 		const message = 'Synthetic request edited before explicit submission.';
@@ -84,6 +85,7 @@ test('preserves inquiry edits on rejection and submits ordinary messages once', 
 		await expect(form.locator('[name="message"]')).toHaveValue('   ');
 		await expect(form.locator('[name="idempotencyKey"]')).toHaveValue(key);
 		await expect(page.locator('article.activity-item').filter({ hasText: subject })).toHaveCount(0);
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
 		await form.locator('[name="message"]').fill(message);
 		await form.getByRole('button').click();
 		await expect(page.getByText(de['messages.created'])).toBeVisible();
@@ -98,6 +100,7 @@ test('preserves inquiry edits on rejection and submits ordinary messages once', 
 		await card.getByRole('link', { name: de['messages.open'] }).click();
 		await expect(page.getByText(message, { exact: true })).toBeVisible();
 		await page.goto('/messages');
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
 		await form.locator('[name="subject"]').fill('Synthetic ordinary technical question');
 		await form.locator('[name="message"]').fill('Synthetic ordinary body.');
 		await form.getByRole('button').click();

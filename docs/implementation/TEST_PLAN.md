@@ -36,6 +36,11 @@
   bound params или result rows.
 - Concurrency/idempotency проверяется повтором и параллельными запросами, а не
   только happy path.
+- После проверки блокировки общий синтетический parent возвращается в
+  незаблокированное состояние обычным admin action; прежняя session остаётся
+  отозванной. Это позволяет следующим specs проверять вход того же fixture.
+- Перед быстрым вводом в enhanced UI browser test дожидается hydration marker;
+  отдельные no-JS scenarios продолжают проверять обычные серверные формы.
 - Browser/e2e runner — Playwright согласно `ADR-011`; этап 01 создает harness,
   последующие этапы добавляют свои критические сценарии.
 - Test selection risk-proportional: сначала определяется изменённая production
