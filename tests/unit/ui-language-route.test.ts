@@ -70,7 +70,8 @@ describe('UI language preference', () => {
 		const response = localizedAccessError({
 			locale: 'ru',
 			status: 403,
-			messageKey: 'auth.invalidCredentials',
+			messageKey: 'ui.access.forbidden',
+			role: 'parent',
 			requestId: 'safe-request-reference',
 			returnPath: '/admin/\"><script>alert(1)</script>',
 			production: true,
@@ -80,7 +81,8 @@ describe('UI language preference', () => {
 		expect(response.headers.get('x-frame-options')).toBe('DENY');
 		const html = await response.text();
 		expect(html).toContain('<html lang="ru">');
-		expect(html).toContain('Неверный адрес электронной почты или пароль.');
+		expect(html).toContain('Эта страница недоступна для текущей роли.');
+		expect(html).toContain('href="/cabinet"');
 		expect(html).not.toContain('<script>');
 		expect(html).toContain('action="/language"');
 	});

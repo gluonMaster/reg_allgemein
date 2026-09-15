@@ -2,7 +2,6 @@
 	import { page as portalPage } from '$app/state';
 	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../../app.css';
-	import AuthNav from '$lib/components/AuthNav.svelte';
 	import { formatMessage, translate } from '$lib/i18n';
 	import type { PageData } from './$types';
 
@@ -31,7 +30,6 @@
 <svelte:head><title>{translate(uiLocale, 'catalog.title')}</title></svelte:head>
 
 <main class="catalog-shell">
-	<AuthNav />
 	<header class="catalog-header">
 		<p class="item-kicker">{translate(uiLocale, 'catalog.kicker')}</p>
 		<h1>{translate(uiLocale, 'catalog.title')}</h1>

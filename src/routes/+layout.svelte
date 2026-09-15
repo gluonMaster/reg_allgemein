@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page as portalPage } from '$app/state';
-	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
+	const uiLocale = $derived(portalPage.error?.locale ?? portalPage.data.locale ?? 'de');
 	import '../app.css';
+	import AuthNav from '$lib/components/AuthNav.svelte';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import { translate } from '$lib/i18n';
 	import type { LayoutData } from './$types';
@@ -14,7 +15,15 @@
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 </svelte:head>
 
-<LanguageSwitcher />
+<header class="site-header">
+	<div class="brand-row">
+		<a class="site-brand" href="/" aria-label={translate(uiLocale, 'home.title')}
+			>Kolibri<span>{translate(uiLocale, 'home.title')}</span></a
+		>
+		<LanguageSwitcher />
+	</div>
+	<AuthNav />
+</header>
 {@render children()}
 
 {#if data.officialLinks}

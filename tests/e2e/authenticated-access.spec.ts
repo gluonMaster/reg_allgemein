@@ -1,5 +1,6 @@
 import { expect, test, type APIResponse, type BrowserContext, type Page } from '@playwright/test';
 import { germanCatalog } from '../../src/lib/i18n';
+import { russianCatalog } from '../../src/lib/i18n/ru';
 import { SESSION_COOKIE_NAME } from '../../src/lib/server/auth/session';
 import {
 	e2eOrigin,
@@ -48,6 +49,154 @@ async function expectNotFoundAction(response: APIResponse, message: string): Pro
 }
 
 test.describe.serial('authenticated role, ownership and session boundaries', () => {
+	test('shares the current login across tabs while isolated parent access stays valid', async ({
+		browser,
+	}, testInfo) => {
+		const shared = await newE2eContext(browser, testInfo);
+		const isolated = await newE2eContext(browser, testInfo);
+		try {
+			const parentTab = await shared.newPage();
+			const adminTab = await shared.newPage();
+			const parent = await isolated.newPage();
+			const staleTab = await shared.newPage();
+			await login(parentTab, syntheticIdentities.parentA);
+			await expectRouteStatus(parentTab, '/catalog/e2e-trial-course/trial', 200);
+			await parentTab.goto('/cabinet');
+			await staleTab.goto('/cabinet');
+			await staleTab.locator('.auth-nav a[href="/catalog"]').hover();
+			await login(parent, syntheticIdentities.parentB);
+			await login(adminTab, syntheticIdentities.admin);
+			await expect(adminTab.locator('.session-role')).toHaveText(germanCatalog['ui.nav.role.admin']);
+			await staleTab.locator('.auth-nav a[href="/catalog"]').click();
+			await expect(staleTab.locator('.session-role')).toHaveText(
+				germanCatalog['ui.nav.role.admin']
+			);
+			await expect(staleTab.locator('.auth-nav a[href="/cabinet"]')).toHaveCount(0);
+			const dataDenied = staleTab.waitForResponse((response) =>
+				response.url().includes('/trial/__data.json')
+			);
+			await staleTab.locator('a[href="/catalog/e2e-trial-course/trial"]').click();
+			expect((await dataDenied).status()).toBe(403);
+			await expect(staleTab.getByRole('alert')).toHaveText(
+				germanCatalog['ui.access.parentRequired']
+			);
+			await expect(staleTab.locator('main a[href="/admin"]')).toBeVisible();
+			expect((await parentTab.reload())?.status()).toBe(403);
+			await expect(parentTab.getByRole('alert')).toHaveText(
+				germanCatalog['ui.access.parentRequired']
+			);
+			await expectRouteStatus(parentTab, '/catalog/e2e-trial-course/trial', 403);
+			await expectRouteStatus(parent, '/cabinet', 200);
+			await expectRouteStatus(parent, '/catalog/e2e-trial-course/trial', 200);
+			await expectRouteStatus(adminTab, '/admin', 200);
+			// Replacing the shared login also invalidates the old admin tab's navigation.
+			await login(parentTab, syntheticIdentities.parentA);
+			await adminTab.locator('.admin-nav a[href="/admin/users"]').click();
+			await expect(adminTab.getByRole('alert')).toHaveText(
+				germanCatalog['ui.access.forbidden']
+			);
+			await expect(adminTab.locator('main a[href="/cabinet"]')).toBeVisible();
+		} finally {
+			await closeContexts([shared, isolated]);
+		}
+	});
+
+	test('shows guest sign-in errors and refreshes the shared header after logout', async ({
+		browser,
+	}, testInfo) => {
+		const context = await newE2eContext(browser, testInfo);
+		try {
+			const page = await context.newPage();
+			await page.goto('/catalog');
+			await expect(page.locator('.auth-nav a[href="/auth/login"]')).toBeVisible();
+			await expect(page.locator('.language-switcher')).toHaveAttribute(
+				'data-enhanced',
+				'true'
+			);
+			const denied = page.waitForResponse((response) =>
+				response.url().includes('/trial/__data.json')
+			);
+			await page.locator('a[href="/catalog/e2e-trial-course/trial"]').click();
+			const response = await denied;
+			expect(response.status()).toBe(401);
+			expect(response.headers()['cache-control']).toBe('no-store');
+			expect(response.headers()['x-request-id']).toBeTruthy();
+			await expect(page.getByRole('alert')).toHaveText(germanCatalog['ui.access.signIn']);
+			await expect(page.locator('main a[href="/auth/login"]')).toBeVisible();
+			await page.getByRole('button', { name: 'Русский', exact: true }).click();
+			await expect(page.getByRole('alert')).toHaveText(russianCatalog['ui.access.signIn']);
+			expect((await page.reload())?.status()).toBe(401);
+			await expect(page.getByRole('alert')).toHaveText(russianCatalog['ui.access.signIn']);
+			await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
+			await login(page, syntheticIdentities.parentA);
+			await page.locator('.auth-nav a[href="/catalog"]').click();
+			await expect(page.locator('.session-role')).toHaveText(
+				germanCatalog['ui.nav.role.parent']
+			);
+			// The existing CSRF guard rejects a header logout with no token.
+			const rejected = await context.request.post('/account/security?/logout', { form: {} });
+			expect(await rejected.text()).toContain(germanCatalog['auth.csrfRejected']);
+			await page.locator('.auth-nav button[type="submit"]').click();
+			await expect(page).toHaveURL(/\/auth\/login$/);
+			await expect(page.locator('.auth-nav a[href="/auth/register"]')).toBeVisible();
+			await expect(page.locator('.session-role')).toHaveCount(0);
+			expect((await page.goto('/cabinet'))?.status()).toBe(401);
+		} finally {
+			await context.close();
+		}
+	});
+
+	test('inspects the shared shell and forms on mobile and desktop', async ({
+		browser,
+	}, testInfo) => {
+		test.setTimeout(60_000);
+		const context = await newE2eContext(browser, testInfo);
+		try {
+			const page = await context.newPage();
+			async function inspect(name: string) {
+				for (const viewport of [
+					{ width: 390, height: 844 },
+					{ width: 1366, height: 768 },
+				]) {
+					await page.setViewportSize(viewport);
+					expect(
+						await page.evaluate(
+							() => document.documentElement.scrollWidth > innerWidth
+						),
+						name
+					).toBe(false);
+					await page.screenshot({
+						path: `tmp/portal-ui-2026-09-15/01-${name}-${viewport.width}.png`,
+					});
+				}
+			}
+			for (const [route, name] of [
+				['/', 'home-de'],
+				['/catalog', 'catalog-de'],
+				['/auth/login', 'login-de'],
+			]) {
+				await page.goto(route);
+				await inspect(name);
+			}
+			await login(page, syntheticIdentities.parentA);
+			await inspect('cabinet-de');
+			await page.goto('/catalog/e2e-trial-course/trial');
+			await inspect('trial-de');
+			await login(page, syntheticIdentities.admin);
+			await expect(page.locator('.session-role')).toHaveText(germanCatalog['ui.nav.role.admin']);
+			await page.getByRole('button', { name: 'Русский', exact: true }).click();
+			await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+			await expect(page.locator('.session-role')).toHaveText(russianCatalog['ui.nav.role.admin']);
+			await page.reload();
+			await expect(page.locator('.session-role')).toHaveText(russianCatalog['ui.nav.role.admin']);
+			await inspect('admin-ru');
+			await page.goto('/cabinet');
+			await inspect('error-ru');
+		} finally {
+			await context.close();
+		}
+	});
+
 	test('redirects both roles, isolates owned rows and enforces the route matrix', async ({
 		browser,
 	}, testInfo) => {

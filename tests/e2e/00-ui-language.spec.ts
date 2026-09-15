@@ -144,11 +144,11 @@ test('localizes parent pages, persisted read models and access errors without ch
 		).toHaveAttribute('lang', 'ru');
 		const denied = await page.goto('/admin');
 		expect(denied?.status()).toBe(403);
-		await expect(page.getByRole('alert')).toContainText(russianCatalog['auth.invalidCredentials']);
+		await expect(page.getByRole('alert')).toContainText(russianCatalog['ui.access.forbidden']);
 		await expect(page.getByRole('button', { name: 'Русский', exact: true })).toBeVisible();
 		await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
 		await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
-		await expect(page.getByRole('alert')).toContainText(germanCatalog['auth.invalidCredentials']);
+		await expect(page.getByRole('alert')).toContainText(germanCatalog['ui.access.forbidden']);
 	} finally {
 		await context.close();
 	}

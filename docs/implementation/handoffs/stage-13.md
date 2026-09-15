@@ -4911,3 +4911,106 @@ fingerprints and the sole next action are in
 [active state](../STAGE_13_ACTIVE_STATE.md). Previous Telegram Monday receipt
 observation remains separate; full manual preview/production gates are unchanged.
 rollover_required: no; recommended_next_session_mode: Medium for read-only work.
+
+## PVUI prompt 01
+
+2026-09-15. Локально завершён `01_SHELL_ACCESS_FORMS.md`: PVUI-01/02,
+общая часть PVUI-05 и соответствующие DE/RU PVUI-07. HEAD
+`dbbaf21424e9798e8cdf56d373886e288e98fd40` + незакоммиченный diff; результаты
+относятся к этому diff, не к чистому HEAD и не к опубликованной версии.
+Remote mutations, preview login/logout, provider sends и работа с официальным
+сайтом не выполнялись. Telegram и production gates не менялись.
+Существующие untracked `PORTAL_LOCAL_EXCHANGE_DRAFT.md` и
+`PORTAL_UI_QUICK_IMPROVEMENTS_TZ.md` сохранены без изменений.
+
+### Реализация
+
+- `src/routes/+layout.server.ts`, `+layout.svelte`, `+page.svelte`,
+  `src/lib/components/AuthNav.svelte`, `LanguageSwitcher.svelte`: единая шапка,
+  текущая серверная роль, полезная главная, переходы по роли, существующий
+  POST `/account/security?/logout` со штатным form CSRF token. Root payload
+  `portalNavigation` содержит только pathname/role/form token; session
+  identifiers/hash/token не сериализуются. Отдельное имя предотвращает коллизию
+  с `navigation` административного layout, выявленную и исправленную при осмотре.
+- `src/app.html`: отключена data preload по hover, чтобы смена входа в другой
+  вкладке не оставляла для следующего клика ранее загруженные данные роли.
+  Чтение pathname в server layout обновляет шапку при обычном переходе.
+- `src/hooks.server.ts`, `src/lib/server/i18n/error-response.ts`,
+  `src/routes/+error.svelte`, `src/app.d.ts`, `src/lib/i18n/ui-additions.ts`:
+  отдельные 401/403/credentials, одинаковый смысл DE/RU в HTML и Svelte data
+  ответах, request ID/security headers/no-store и подходящий следующий переход.
+  Public страницы с новой шапкой также получают no-store и Vary: Cookie.
+- `src/lib/components/AuthHelp.svelte` и шесть `src/routes/auth/*/+page.svelte`:
+  восстановление/повторное подтверждение доступны у auth-форм; старые локальные
+  AuthNav удалены из auth, каталога и главной в пользу общей шапки.
+- `src/app.css`: светлый фон, белые карточки, зелёный акцент, типографика,
+  box-sizing/min-width/переносы, компактные date/number, поля/textarea, focus,
+  touch targets, локальный scroll таблиц. Специальная перестановка кабинета
+  и admin-форм остаётся соответствующим следующим шагам.
+- Канонические UI-критерии обновлены в `MVP_SPEC.md`, `ACCEPTANCE_CRITERIA.md`,
+  покрытие — в `TEST_PLAN.md`. Новое unit-покрытие: `portal-shell.test.ts`;
+  дополнены `ui-language-route.test.ts`, `authenticated-access.spec.ts` и
+  `00-ui-language.spec.ts`.
+
+### Факты о 403
+
+До runtime-правок новый retained E2E воспроизвёл parent → admin в двух вкладках
+одного context: обновление прежнего кабинета и GET trial дают 403. Изолированный
+parent одновременно открывает кабинет и trial с 200; admin открывает свой
+раздел с 200. После правок дополнительно проверены клиентская смена шапки,
+обе стороны отказа роли и доступный следующий переход. Пробная форма только
+открывалась, отправки не было. Это подтверждает механизм общей cookie;
+конкретный прежний preview-вход и замена его cookie остаются исторической
+гипотезой. Отказ действующего изолированного parent не воспроизведён.
+
+### Проверки и версия evidence
+
+Класс: **Material runtime/migration/dependency/deploy-config/cross-cutting diff**
+для оболочки/hook/CSS. Focused gate шага пройден; единый полный локальный
+release gate пакета остаётся шагу 05 перед отдельной публикацией.
+
+Выполнено:
+
+- `npm.cmd run check` — 0 errors, 0 warnings, повторён после финального
+  переименования `portalNavigation`.
+- `npm.cmd test -- tests/unit/portal-shell.test.ts tests/unit/auth-security.test.ts tests/unit/parent-product-route-security.test.ts tests/unit/ui-language-route.test.ts tests/unit/i18n.test.ts`:
+  34 теста существующих четырёх suites прошли; три новых RU assertions сначала
+  упали из-за неверного test import словаря. После исправления
+  `npm.cmd test -- tests/unit/portal-shell.test.ts` — 9/9, также после финального
+  переименования. Итого 43 разных unit-теста зелёные; прежний assertion failure
+  устранён, а не исключён.
+- Baseline: `npm.cmd run test:e2e -- tests/e2e/authenticated-access.spec.ts --grep 'shares the current login'` — 1/1 до runtime-правок.
+- Основной focused Chromium:
+  `npm.cmd run test:e2e -- tests/e2e/authenticated-access.spec.ts tests/e2e/00-ui-language.spec.ts --grep 'shares the current login|shows guest|inspects the shared|redirects both roles|supports keyboard login|switches public UI|renders Russian|keeps entered|localizes parent pages'`:
+  5 passed; guest client test получил timeout, поскольку клик до hydration
+  выполнил document GET, а тест ожидал data response; 3 serial tests не запускались.
+  Добавлено ожидание существующего признака hydration, логика отказа не ослаблена.
+- `npm.cmd run test:e2e -- tests/e2e/authenticated-access.spec.ts --grep 'shows guest|inspects the shared|redirects both roles|supports keyboard login'` — 4/4.
+- После исправления коллизии admin navigation:
+  `npm.cmd run test:e2e -- tests/e2e/authenticated-access.spec.ts --grep 'shares the current login|shows guest|inspects the shared'` — 3/3.
+  Добавлены assertions роли admin до/после DE/RU и reload. Всего 9 разных
+  affected browser scenarios зелёные; финальные три повторно покрыли изменённый
+  shared payload. Неизменённые auth/RBAC/i18n assertions предыдущих runs переиспользованы.
+- `npm.cmd run docs:check`, `npm.cmd run release:scan`, `git diff --check` —
+  итоговые docs-only checks; новые AuthHelp/unit test отдельно проверены на
+  whitespace, конфликтные маркеры и секреты.
+
+Полные `npm test`, E2E, build, dependency audit и новый lifecycle revoke/expiry
+не запускались: шаг 01 требует focused gate, полный gate предусмотрен в 05;
+session storage/TTL/crypto/RBAC/dependencies/config/migrations не менялись.
+
+Ignored evidence: `tmp/portal-ui-2026-09-15/01-runtime-files.sha256` содержит
+SHA-256 всех 24 изменённых/новых файлов src/tests. Hash manifest:
+`a81600b5aeb2505a6916cbb1c98e100e2ef78f168b3467e9c4e491e702526c35`.
+Скриншоты `01-{home-de,catalog-de,login-de,cabinet-de,trial-de,admin-ru,error-ru}-{390,1366}.png`
+сохранены там же; все 14 осмотрены, финальная admin-шапка перепроверена после fix.
+Размеры — 390×844 и 1366×768; synthetic fixtures, реальные пользовательские окна
+не использовались. На всех семи страницах автоматическая проверка ширины
+документа пройдена. DE/RU auth/server/client errors дополнительно покрыты tests;
+RU mobile registration проверена существующим language scenario. Эти осмотры
+можно переиспользовать в шаге 05 при неизменном UI; изменённые позже страницы
+перепроверяются. Компактность первого экрана кабинета и длинное mobile admin
+меню — запланированный scope шагов 02/04, не новые блокеры.
+
+На проверенных путях открытых P0/P1 нет. Единственный следующий шаг:
+`out/codex-portal-ui-prompts-2026-09-15/02_PARENT_CABINET.md`.

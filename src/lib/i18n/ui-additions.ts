@@ -1,5 +1,23 @@
 // Labels formerly embedded in individual screens. Values are [German, Russian].
 const messages = {
+	'ui.nav.label': ['Hauptnavigation', 'Основная навигация'],
+	'ui.nav.catalog': ['Kurse', 'Занятия'],
+	'ui.nav.parent': ['Mein Bereich', 'Личный кабинет'],
+	'ui.nav.admin': ['Verwaltung', 'Администрирование'],
+	'ui.nav.messages': ['Nachrichten', 'Сообщения'],
+	'ui.nav.settings': ['Einstellungen', 'Настройки'],
+	'ui.nav.role.parent': ['Angemeldet als Elternteil', 'Вход: родитель'],
+	'ui.nav.role.admin': ['Angemeldet als Verwaltung', 'Вход: администратор'],
+	'ui.home.intro': [
+		'Entdecken Sie die Kurse von Kolibri. In Ihrem persönlichen Bereich verwalten Sie Kinder, Anfragen, Dokumente und Vertragsangebote.',
+		'Выберите занятия Kolibri. В личном кабинете доступны дети, заявки, документы и предложения договоров.',
+	],
+	'ui.access.signIn': ['Bitte melden Sie sich an, um fortzufahren.', 'Для продолжения войдите в учётную запись.'],
+	'ui.access.forbidden': ['Diese Seite ist für Ihre aktuelle Rolle nicht zugänglich.', 'Эта страница недоступна для текущей роли.'],
+	'ui.access.parentRequired': [
+		'Diese Seite ist für Ihre aktuelle Rolle nicht zugänglich. Hierfür ist ein Elternkonto erforderlich. Sie sind als Verwaltung angemeldet.',
+		'Эта страница недоступна для текущей роли. Для неё нужен вход родителя. Сейчас вы вошли как администратор.',
+	],
 	'ui.preview.active': ['Preview-Vertragsprüfung aktiv.', 'Проверка договоров в preview включена.'],
 	'ui.preview.notice': [
 		'Nur synthetische Daten und kontrollierte Testempfänger verwenden. Alle erzeugten PDFs tragen TEST/ENTWURF.',

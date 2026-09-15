@@ -4,6 +4,7 @@
 declare global {
 	namespace App {
 		interface Error {
+			accessRole?: 'parent' | 'admin' | null;
 			locale?: import('$lib/i18n/locale').UiLocale;
 			code: string;
 			message: string;

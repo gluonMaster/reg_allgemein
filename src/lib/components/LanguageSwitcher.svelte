@@ -3,7 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { translate } from '$lib/i18n';
-	const locale = $derived(page.data.locale ?? page.error?.locale ?? 'de');
+	const locale = $derived(page.error?.locale ?? page.data.locale ?? 'de');
 	let pending = $state(false);
 	let failed = $state(false);
 	let enhanced = $state(false);
@@ -70,8 +70,7 @@
 
 <style>
 	.language-switcher {
-		width: min(100% - 2rem, 76rem);
-		margin: 1rem auto 0;
+		min-width: 0;
 	}
 	form {
 		display: flex;

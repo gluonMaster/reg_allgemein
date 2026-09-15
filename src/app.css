@@ -7,8 +7,8 @@
 		BlinkMacSystemFont,
 		'Segoe UI',
 		sans-serif;
-	color: #18212f;
-	background: #f7f8fa;
+	color: #183c37;
+	background: #f5f8f8;
 }
 
 body {
@@ -34,7 +34,7 @@ a {
 }
 
 .site-footer a {
-	color: #3157a4;
+	color: #176b54;
 }
 
 .site-footer a:focus-visible {
@@ -52,11 +52,11 @@ a {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem 1rem;
-	margin-bottom: 2rem;
+	margin-bottom: 0;
 }
 
 .auth-nav a {
-	color: #3157a4;
+	color: #176b54;
 }
 
 .auth-shell form {
@@ -130,7 +130,7 @@ a {
 	display: inline-block;
 	padding: 0.7rem 1rem;
 	border-radius: 0.4rem;
-	background: #3157a4;
+	background: #176b54;
 	color: white;
 	font-weight: 650;
 	text-decoration: none;
@@ -157,7 +157,7 @@ a {
 	padding: 0.75rem 1rem;
 	border: 0;
 	border-radius: 0.4rem;
-	background: #3157a4;
+	background: #176b54;
 	color: white;
 	font: inherit;
 	font-weight: 650;
@@ -182,8 +182,8 @@ a {
 
 .form-status {
 	padding: 0.8rem 1rem;
-	border-left: 4px solid #3157a4;
-	background: #edf2ff;
+	border-left: 4px solid #176b54;
+	background: #edf6f2;
 }
 
 .cabinet-shell {
@@ -200,7 +200,7 @@ a {
 }
 
 .cabinet-nav a {
-	color: #3157a4;
+	color: #176b54;
 }
 
 .cabinet-card {
@@ -212,7 +212,7 @@ a {
 }
 
 .notice-card {
-	border-left: 5px solid #3157a4;
+	border-left: 5px solid #176b54;
 }
 
 .profile-grid,
@@ -228,7 +228,7 @@ a {
 .activity-item {
 	padding: 1rem;
 	border-radius: 0.6rem;
-	background: #f7f8fa;
+	background: #f5f8f8;
 }
 
 .profile-grid dt,
@@ -273,7 +273,7 @@ a {
 	padding: 0.7rem 1rem;
 	border: 0;
 	border-radius: 0.4rem;
-	background: #3157a4;
+	background: #176b54;
 	color: white;
 	font: inherit;
 	font-weight: 650;
@@ -320,7 +320,7 @@ a {
 .admin-nav a,
 .pagination a,
 .admin-section > a {
-	color: #3157a4;
+	color: #176b54;
 }
 
 .admin-nav {
@@ -353,7 +353,7 @@ a {
 	padding: 1rem;
 	border: 1px solid #e0e4ec;
 	border-radius: 0.65rem;
-	background: #f7f8fa;
+	background: #f5f8f8;
 }
 
 a.metric-card {
@@ -406,7 +406,7 @@ a.metric-card {
 	padding: 0.65rem 0.9rem;
 	border: 0;
 	border-radius: 0.4rem;
-	background: #3157a4;
+	background: #176b54;
 	color: white;
 	font: inherit;
 	font-weight: 650;
@@ -461,7 +461,7 @@ a.metric-card {
 }
 
 .preview-card {
-	border-left: 5px solid #3157a4;
+	border-left: 5px solid #176b54;
 }
 
 .admin-shell input:focus-visible,
@@ -524,11 +524,11 @@ a.metric-card {
 .request-shell .checkbox input { width: auto; }
 .request-shell button {
 	justify-self: start; padding: 0.7rem 1rem; border: 0; border-radius: 0.4rem;
-	background: #3157a4; color: white; font: inherit; font-weight: 650; cursor: pointer;
+	background: #176b54; color: white; font: inherit; font-weight: 650; cursor: pointer;
 }
 .request-shell .secondary-button { background: #596273; }
 .document-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; }
-.document-card { padding: 1rem; border: 1px solid #d9deea; border-radius: 0.65rem; background: #f7f8fa; }
+.document-card { padding: 1rem; border: 1px solid #d9deea; border-radius: 0.65rem; background: #f5f8f8; }
 .request-shell :focus-visible { outline: 3px solid #f2b84b; outline-offset: 2px; }
 
 @media (max-width: 40rem) {
@@ -552,7 +552,7 @@ a.metric-card {
 	padding: 0.7rem 1rem;
 	border: 0;
 	border-radius: 0.4rem;
-	background: #3157a4;
+	background: #176b54;
 	color: white;
 	font: inherit;
 	font-weight: 650;
@@ -561,3 +561,58 @@ a.metric-card {
 
 .contract-actions .secondary-button { background: #596273; }
 .contract-shell :focus-visible { outline: 3px solid #f2b84b; outline-offset: 2px; }
+
+/* Shared portal shell and form geometry (PVUI-02/05). */
+*, *::before, *::after { box-sizing: border-box; }
+body { line-height: 1.55; }
+h1, h2, h3 { line-height: 1.25; text-wrap: balance; }
+h1 { font-size: clamp(1.75rem, 4vw, 2.35rem); }
+a { text-underline-offset: .2em; }
+p, li, dd, dt, label, h1, h2, h3, code { overflow-wrap: anywhere; }
+main, section, article, form, fieldset, label,
+.profile-grid > *, .child-list > *, .activity-list > *, .catalog-grid > *,
+.admin-metrics > *, .admin-list > *, .admin-detail-grid > *, .filter-bar > * { min-width: 0; }
+input, select, textarea { min-width: 0; max-width: 100%; font: inherit; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, button { min-height: 44px; }
+button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) { width: 100%; }
+:where(input, select, textarea) { padding: .65rem .75rem; border: 1px solid #8993a8; border-radius: .4rem; background: white; color: inherit; }
+:where(input[type="date"]) { width: 14rem; }
+:where(input[type="number"]) { width: 9rem; }
+:where(input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="tel"]) { max-width: 36rem; }
+:where(textarea) { min-height: 7rem; resize: vertical; }
+:where(:focus-visible) { outline: 3px solid #2563eb; outline-offset: 3px; }
+:where(button, summary) { cursor: pointer; }
+:where(button:disabled) { cursor: not-allowed; opacity: .55; }
+:where(.checkbox, .radio) { min-height: 44px; align-content: center; }
+.auth-shell input[type="date"], .cabinet-card input[type="date"], .request-shell input[type="date"], .admin-shell input[type="date"] { width: min(100%, 14rem); }
+.auth-shell input[type="number"], .cabinet-card input[type="number"], .request-shell input[type="number"], .admin-shell input[type="number"] { width: min(100%, 9rem); }
+.admin-action-form > textarea, .request-form > textarea { grid-column: 1 / -1; width: 100%; }
+.admin-table-wrap { max-width: 100%; }
+.site-header { background: white; border-bottom: 1px solid #d9e3df; padding: 1rem max(1rem, calc((100% - 76rem) / 2)); }
+.brand-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1.5rem; margin-bottom: .75rem; }
+.site-brand { color: #176b54; text-decoration: none; font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.site-brand span { display: block; font-size: .8rem; font-weight: 500; color: #4d5668; margin-top: .3rem; }
+.auth-nav { align-items: center; gap: .3rem .75rem; }
+.auth-nav a, .nav-logout { display: inline-flex; align-items: center; min-height: 44px; padding: .45rem .55rem; border-radius: .4rem; }
+.auth-nav a { text-decoration: none; font-weight: 600; }
+.auth-nav a:hover, .auth-nav a[aria-current="page"] { background: #edf6f2; }
+.auth-nav a[aria-current="page"] { text-decoration: underline; }
+.auth-nav form { margin: 0; }
+.session-role { margin-left: auto; font-size: .85rem; color: #4d5668; }
+.nav-logout { font: inherit; background: white; color: #176b54; border: 1px solid #b5c7bf; }
+.home-shell { width: min(100% - 2rem, 76rem); margin: 0 auto; padding: clamp(2rem, 6vw, 5rem) 0; }
+.home-intro { max-width: 52rem; padding: clamp(1.25rem, 4vw, 3rem); background: white; border: 1px solid #d9e3df; border-radius: 1rem; }
+.home-intro h1 { margin-top: 0; }
+.home-intro p { max-width: 42rem; font-size: 1.1rem; color: #4d5668; }
+.home-actions { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: center; margin-top: 1.5rem; }
+.home-actions a { min-height: 44px; display: inline-flex; align-items: center; }
+.secondary-cta { padding: .7rem 1rem; border: 1px solid #b5c7bf; border-radius: .4rem; color: #176b54; font-weight: 650; text-decoration: none; background: white; }
+.auth-help { display: flex; flex-direction: column; align-items: start; gap: .35rem; }
+.auth-help a, .cabinet-nav a, .admin-nav a, .site-footer a { min-height: 44px; display: inline-flex; align-items: center; }
+.error-card { padding: 1.5rem; border: 1px solid #d9e3df; border-radius: .75rem; background: white; }
+@media (max-width: 40rem) {
+ .session-role { margin-left: 0; }
+ .auth-nav { column-gap: .35rem; }
+ .brand-row { align-items: flex-start; }
+}

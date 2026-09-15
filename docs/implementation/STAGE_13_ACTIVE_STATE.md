@@ -27,6 +27,19 @@ Roadmap, runbooks, readiness/traceability и handoff задают стабиль
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
 
+## Локальный UI checkpoint — 2026-09-15, промпт 01
+
+Scope: PVUI-01/02, общая геометрия PVUI-05 и связанные DE/RU PVUI-07.
+Локально завершён на HEAD `dbbaf21424e9798e8cdf56d373886e288e98fd40` + local diff:
+навигация по роли, 401/403, общие формы; на проверенных путях P0/P1 нет.
+Класс проверок: **Material runtime/migration/dependency/deploy-config/cross-cutting diff**
+(общая оболочка, hook-ответы и CSS; migrations/dependencies/config не меняются).
+Focused auth/i18n/route suites, affected Chromium и check пройдены; единый полный
+локальный release gate пакета — в шаге 05 до отдельной публикации.
+Команды, результаты и визуальное evidence: [handoff промпта 01](handoffs/stage-13.md#pvui-prompt-01).
+Один следующий локальный шаг: `out/codex-portal-ui-prompts-2026-09-15/02_PARENT_CABINET.md`.
+Remote state, разрешения, опубликованный fingerprint и gates ниже неизменны.
+
 ## UI01 release review and authorized publication — 2026-09-13T13:41:02Z
 
 Owner explicitly requested publication of the completed Russian UI to preview.

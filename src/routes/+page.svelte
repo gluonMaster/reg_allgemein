@@ -1,37 +1,26 @@
 <script lang="ts">
-	import { page as portalPage } from '$app/state';
-	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
-	import '../app.css';
-	import AuthNav from '$lib/components/AuthNav.svelte';
+	import { page } from '$app/state';
 	import { translate } from '$lib/i18n';
-
-	const title = $derived(translate(uiLocale, 'home.title'));
+	const locale = $derived(page.data.locale ?? 'de');
+	const role = $derived(page.data.portalNavigation?.role);
 </script>
 
-<svelte:head>
-	<title>{title}</title>
-</svelte:head>
-
-<main class="shell">
-	<AuthNav />
-	<h1>{title}</h1>
-	<p>{translate(uiLocale, 'home.foundationNotice')}</p>
+<svelte:head><title>{translate(locale, 'home.title')}</title></svelte:head>
+<main class="home-shell">
+	<section class="home-intro">
+		<h1>{translate(locale, 'home.title')}</h1>
+		<p>{translate(locale, 'ui.home.intro')}</p>
+		<div class="home-actions">
+			<a class="catalog-cta" href="/catalog">{translate(locale, 'home.catalogLink')}</a>
+			{#if role}
+				<a class="secondary-cta" href={role === 'admin' ? '/admin' : '/cabinet'}
+					>{translate(locale, role === 'admin' ? 'ui.nav.admin' : 'ui.nav.parent')}</a
+				>
+			{:else}
+				<a class="secondary-cta" href="/auth/login"
+					>{translate(locale, 'auth.link.login')}</a
+				>
+			{/if}
+		</div>
+	</section>
 </main>
-
-<style>
-	.shell {
-		max-width: 760px;
-		margin: 0 auto;
-		padding: 48px 20px;
-	}
-
-	h1 {
-		font-size: 2rem;
-		margin: 0 0 16px;
-	}
-
-	p {
-		font-size: 1rem;
-		line-height: 1.6;
-	}
-</style>

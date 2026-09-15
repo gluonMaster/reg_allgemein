@@ -1,10 +1,10 @@
 <script lang="ts">
+	import AuthHelp from '$lib/components/AuthHelp.svelte';
 	import { translateUiFeedback } from '$lib/i18n';
 	import { page as portalPage } from '$app/state';
 	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import { tick } from 'svelte';
 	import '../../../app.css';
-	import AuthNav from '$lib/components/AuthNav.svelte';
 	import { translate } from '$lib/i18n';
 	import type { ActionData } from './$types';
 
@@ -26,7 +26,6 @@
 
 <svelte:head><title>{translate(uiLocale, 'auth.login.title')}</title></svelte:head>
 <main class="auth-shell">
-	<AuthNav />
 	<h1>{translate(uiLocale, 'auth.login.title')}</h1>
 	<form method="POST">
 		{#if form?.message}<p
@@ -66,4 +65,5 @@
 		/>
 		<button type="submit">{translate(uiLocale, 'auth.login.submit')}</button>
 	</form>
+	<AuthHelp />
 </main>

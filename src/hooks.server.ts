@@ -1,4 +1,4 @@
-import { error, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
+import { json, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
 import { translate, type MessageKey } from '$lib/i18n';
 import { localizedAccessError } from '$lib/server/i18n/error-response';
 import { normalizeUiLocale, UI_LOCALE_COOKIE } from '$lib/i18n/locale';
@@ -26,14 +26,26 @@ function accessDenied(
 			requestId: event.locals.requestId,
 			returnPath: event.url.pathname,
 			production,
+			role: event.locals.user?.role ?? null,
 		});
 	}
-	throw error(status, {
-		code,
-		locale: event.locals.locale,
-		message: translate(event.locals.locale, messageKey),
-		requestId: event.locals.requestId,
-	});
+	return withSecurityHeaders(
+		json(
+			{
+				code,
+				locale: event.locals.locale,
+				message: translate(event.locals.locale, messageKey),
+				requestId: event.locals.requestId,
+				accessRole: event.locals.user?.role ?? null,
+			},
+			{ status, headers: { vary: 'Cookie' } }
+		),
+		{
+			requestId: event.locals.requestId,
+			production,
+			noStore: true,
+		}
+	);
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -63,7 +75,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event,
 			401,
 			'AUTHENTICATION_REQUIRED',
-			'auth.invalidCredentials',
+			'ui.access.signIn',
 			config.appEnvironment === 'production'
 		);
 	}
@@ -72,7 +84,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event,
 			403,
 			'FORBIDDEN',
-			'auth.invalidCredentials',
+			'ui.access.forbidden',
 			config.appEnvironment === 'production'
 		);
 	}
@@ -81,7 +93,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event,
 			403,
 			'FORBIDDEN',
-			'auth.invalidCredentials',
+			'ui.access.parentRequired',
 			config.appEnvironment === 'production'
 		);
 	}
@@ -94,7 +106,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		{
 			requestId: event.locals.requestId,
 			production: config.appEnvironment === 'production',
-			noStore: event.route.id === '/auth/reset' || event.route.id === '/auth/verify',
+			// Every page now contains session-dependent navigation, including public pages.
+			noStore: true,
 		}
 	);
 	// Responses depend on the browser preference as well as its session.

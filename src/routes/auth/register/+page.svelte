@@ -1,11 +1,11 @@
 <script lang="ts">
+	import AuthHelp from '$lib/components/AuthHelp.svelte';
 	import { translateUiFeedback } from '$lib/i18n';
 	import EvidenceText from '$lib/components/EvidenceText.svelte';
 	import { page as portalPage } from '$app/state';
 	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import { tick } from 'svelte';
 	import '../../../app.css';
-	import AuthNav from '$lib/components/AuthNav.svelte';
 	import TurnstileWidget from '$lib/components/TurnstileWidget.svelte';
 	import { translate } from '$lib/i18n';
 	import type { ActionData, PageData } from './$types';
@@ -52,7 +52,6 @@
 </svelte:head>
 
 <main class="auth-shell">
-	<AuthNav />
 	<h1>{translate(uiLocale, 'auth.register.title')}</h1>
 	{#if !data.authEnabled}
 		<p class="form-status">{translate(uiLocale, 'auth.serviceUnavailable')}</p>
@@ -154,4 +153,5 @@
 			>{translate(uiLocale, 'auth.register.submit')}</button
 		>
 	</form>
+	<AuthHelp />
 </main>
