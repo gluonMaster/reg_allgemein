@@ -5519,3 +5519,15 @@ schema/health/rollback подтверждены. До этой границы re
 Текущий cursor и exact deployment evidence находятся только в
 [active state](../STAGE_13_ACTIVE_STATE.md). Checklist изменён лишь в служебном
 compatibility comment для continuity checker, production gate не изменился.
+
+
+## 2026-09-15 — PVUI preview publication complete
+
+Одна code-only preview deployment operation завершена; фактические module/
+annotation/traffic, прежние settings/Access/schema и bounded business counts
+проверены read-only. Отдельный checkpoint commit сохранён до проверки статических ресурсов.
+HTTP DE/RU и hash-check статических ресурсов прошли; reflow/no-JS покрыты локальным Chromium; portal logins и business/provider
+операций в smoke не было. Rollback не понадобился. Owner manual parent/admin
+inspection остаётся следующим действием по [active state](../STAGE_13_ACTIVE_STATE.md).
+Evidence и executed/skipped checks: [release verification](../reviews/pvui-deploy-20260915.md).
+Full-manual-preview и production status не повышались.

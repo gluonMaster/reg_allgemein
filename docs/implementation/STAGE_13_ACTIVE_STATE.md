@@ -4,19 +4,19 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-15T17:43:03Z
+updated_utc: 2026-09-15T17:44:12Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-last_completed_gate: PVUI-preview-code-deploy-verified
-next_gate: PVUI-static-assets-inspection
+last_completed_gate: PVUI-preview-publication-verified
+next_gate: PVUI-owner-parent-admin-inspection
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: independent_go
-current_phase: PVUI-preview-deployed
+current_phase: PVUI-preview-publication-complete
 last_atomic_action: PVUI-preview-code-deploy
 last_atomic_result: success
-next_atomic_action: PVUI-static-assets-inspection
+next_atomic_action: PVUI-owner-parent-admin-inspection
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: Only_readonly_UI_or_owner_inspection_remains_no_unresolved_deploy_ambiguity
@@ -70,6 +70,21 @@ after-database.json, after-smoke.json, deploy-response.json. Exact rollback
 остаётся в protected immediate-before-rollback.json; rollback не потребовался.
 Один следующий action: PVUI-static-assets-inspection. rollover_required: no;
 recommended_next_session_mode: Medium — остаётся только read-only проверка статических ресурсов.
+
+## PVUI: публикация завершена — 2026-09-15T17:44:12Z
+
+Обновлённый preview прошёл фактический HTTP smoke DE/RU и проверку
+доставки статических ресурсов: JS/CSS отвечают 200, SHA-256 совпадают с build.
+Portal login, business POST, provider send и data mutation не выполнялись.
+Protected evidence: tmp/pvui-preview-20260915/asset-safe.json.
+Первая локальная сверка указывала на каталог выше фактического adapter assets;
+путь исправлен, уже полученные remote hashes совпали без повторного HTTP-запроса.
+Полный локальный Chromium gate проверил navigation/reflow/no-JS, parent/admin
+flows и регрессии R1/R2; desktop/mobile screenshots выборочно осмотрены.
+Один следующий action: PVUI-owner-parent-admin-inspection, ручной просмотр владельцем
+обновлённого кабинета и админки в preview. Это не закрывает весь full-manual-preview
+и production gate. rollover_required: no; recommended_next_session_mode: Medium —
+следующее действие только manual inspection, deploy ambiguity отсутствует.
 
 ## Локальный UI checkpoint — 2026-09-15, review и исправления
 
@@ -1156,14 +1171,14 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: PVUI-static-assets-inspection
-  permission: authorized_deployment_asset_verification_no_portal_login_or_business_submit
+  id: PVUI-owner-parent-admin-inspection
+  permission: owner_manual_inspection_no_new_agent_remote_write
   target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
   mutation: none_by_operator
   preconditions:
     - successful_exact_module_deployment_checkpoint
   postcondition:
-    - public_JS_CSS_assets_match_local_build_hashes
+    - owner_observes_updated_parent_and_admin_UI
   containment: captured_compatible_baseline_preserve_settings_and_data_no_blind_retry
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
