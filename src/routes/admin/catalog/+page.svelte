@@ -44,7 +44,7 @@
 			{translate(uiLocale, 'admin.empty')}
 		</p>{/if}
 	<div class="admin-list">
-		{#each data.catalog.items as course, index}
+		{#each data.catalog.items as course, index (course.id)}
 			<article class="admin-card">
 				<p class="item-kicker">
 					{kindLabel(course.lesson_kind)} · {translateAdminCode(
@@ -70,8 +70,8 @@
 							action="?/updateCourse"
 							class="admin-action-form"
 							use:enhance={() =>
-								async ({ update }) => {
-									await update({ reset: false });
+								async ({ update, result }) => {
+									await update({ reset: result.type === 'success' });
 								}}
 						>
 							<input type="hidden" name="_csrf" value={data.csrfToken} />
@@ -151,7 +151,7 @@
 		<p>{translate(uiLocale, 'admin.catalog.mappingNotice')}</p>
 		{#if data.mappingQueue.length === 0}<p>{translate(uiLocale, 'admin.empty')}</p>{/if}
 		<div class="admin-list">
-			{#each data.mappingQueue as mapping, index}
+			{#each data.mappingQueue as mapping, index (mapping.legacy_enrollment_id)}
 				<details class="admin-card" open={form?.success === false}>
 					<summary>{mapping.group_name_raw} · {index + 1}</summary>
 					<p class="item-kicker">
@@ -163,8 +163,8 @@
 						action="?/decideMapping"
 						class="admin-action-form"
 						use:enhance={() =>
-							async ({ update }) => {
-								await update({ reset: false });
+							async ({ update, result }) => {
+								await update({ reset: result.type === 'success' });
 							}}
 					>
 						<input type="hidden" name="_csrf" value={data.csrfToken} />

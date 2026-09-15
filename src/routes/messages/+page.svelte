@@ -10,9 +10,21 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const categories = ['technical', 'contract', 'payment', 'schedule', 'nachhilfe', 'other'] as const;
 	const threadValues = $derived(form && 'threadValues' in form ? form.threadValues : undefined);
-	let category = $derived(threadValues?.category ?? data.contractInquiry?.category ?? 'technical');
-	let subject = $derived(threadValues?.subject ?? data.contractInquiry?.subject ?? '');
-	let message = $derived(threadValues?.message ?? data.contractInquiry?.message ?? '');
+	const course = $derived(portalPage.url.searchParams.get('course'));
+	// Locale invalidation may refresh defaults, but must not replace the user's edits.
+	let edits = $state<{
+		course: string | null;
+		category?: string;
+		subject?: string;
+		message?: string;
+	}>();
+	const currentEdits = $derived(edits?.course === course ? edits : undefined);
+	const category = $derived(currentEdits?.category ?? threadValues?.category ?? data.contractInquiry?.category ?? 'technical');
+	const subject = $derived(currentEdits?.subject ?? threadValues?.subject ?? data.contractInquiry?.subject ?? '');
+	const message = $derived(currentEdits?.message ?? threadValues?.message ?? data.contractInquiry?.message ?? '');
+	function edit(field: 'category' | 'subject' | 'message', value: string) {
+		edits = { ...currentEdits, course, [field]: value };
+	}
 </script>
 
 <svelte:head><title>{translate(uiLocale, 'messages.title')}</title></svelte:head>
@@ -31,7 +43,7 @@
 			<input type="hidden" name="_csrf" value={data.csrfToken} />
 			<input type="hidden" name="idempotencyKey" value={threadValues?.idempotencyKey ?? data.threadKey} />
 			<label>{translate(uiLocale, 'messages.category')}
-				<select name="category" bind:value={category} required>
+				<select name="category" value={category} onchange={(event) => edit('category', event.currentTarget.value)} required>
 					{#each categories as option}
 						<option value={option}>{translate(uiLocale, `messages.category.${option}` as 'messages.category.other')}</option>
 					{/each}
@@ -44,10 +56,10 @@
 				</div>
 			{/if}
 			<label>{translate(uiLocale, 'messages.subject')}
-				<input name="subject" type="text" bind:value={subject} required maxlength="160" />
+				<input name="subject" type="text" value={subject} oninput={(event) => edit('subject', event.currentTarget.value)} required maxlength="160" />
 			</label>
 			<label>{translate(uiLocale, 'messages.message')}
-				<textarea name="message" bind:value={message} required maxlength="4000"></textarea>
+				<textarea name="message" value={message} oninput={(event) => edit('message', event.currentTarget.value)} required maxlength="4000"></textarea>
 			</label>
 			<button type="submit">{translate(uiLocale, 'messages.submit')}</button>
 		</form>

@@ -107,3 +107,60 @@ test('preserves inquiry edits on rejection and submits ordinary messages once', 
 		await expect(card).toContainText(de['messages.category.technical']);
 	} finally { await context.close(); }
 });
+
+test('keeps edited inquiry fields across language changes and refreshes untouched defaults', async ({ browser }, testInfo) => {
+	const context = await newE2eContext(browser, testInfo);
+	try {
+		const page = await context.newPage();
+		await login(page, syntheticIdentities.parentB);
+		await page.goto(inquiryPath);
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
+		let businessPosts = 0;
+		page.on('request', (request) => {
+			if (request.method() === 'POST' && new URL(request.url()).pathname !== '/language') businessPosts++;
+		});
+		const form = page.locator('.thread-form');
+		const category = form.locator('[name="category"]');
+		const subject = form.locator('[name="subject"]');
+		const message = form.locator('[name="message"]');
+		await page.getByRole('button', { name: 'Русский', exact: true }).click();
+		await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+		await expect(subject).toHaveValue(formatMessage('ru', 'catalog.contract.subject', { course: courseName }));
+		await category.selectOption('other');
+		await subject.fill('Synthetic edited subject');
+		await message.fill('Synthetic edited inquiry message');
+		await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
+		await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+		await expect(category).toHaveValue('other');
+		await expect(subject).toHaveValue('Synthetic edited subject');
+		await expect(message).toHaveValue('Synthetic edited inquiry message');
+		// An intentional empty value is also an edit, not a request to restore a default.
+		await subject.fill('');
+		await message.fill('');
+		await page.getByRole('button', { name: 'Русский', exact: true }).click();
+		await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+		await expect(subject).toHaveValue('');
+		await expect(message).toHaveValue('');
+		expect(businessPosts).toBe(0);
+		// Server rejection restores values through a fresh document; locale changes keep the retry.
+		await subject.fill('Synthetic rejected inquiry subject');
+		await message.fill('   ');
+		const retryKey = await form.locator('[name="idempotencyKey"]').inputValue();
+		await form.getByRole('button').click();
+		await expect(page.getByText(ru['messages.failed'])).toBeVisible();
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
+		await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
+		await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+		await expect(category).toHaveValue('other');
+		await expect(subject).toHaveValue('Synthetic rejected inquiry subject');
+		await expect(message).toHaveValue('   ');
+		await expect(form.locator('[name="idempotencyKey"]')).toHaveValue(retryKey);
+		expect(businessPosts).toBe(1);
+		// Leaving the inquiry must not leak its edits into the ordinary message form.
+		await page.locator('main a[href="/cabinet"]').click();
+		await page.getByRole('navigation', { name: de['ui.nav.label'] }).getByRole('link', { name: de['ui.nav.messages'], exact: true }).click();
+		await expect(category).toHaveValue('technical');
+		await expect(subject).toHaveValue('');
+		await expect(message).toHaveValue('');
+	} finally { await context.close(); }
+});

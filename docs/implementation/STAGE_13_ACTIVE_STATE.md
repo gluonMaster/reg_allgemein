@@ -27,7 +27,7 @@ Roadmap, runbooks, readiness/traceability и handoff задают стабиль
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
 
-## Локальный UI checkpoint — 2026-09-15, промпт 05
+## Локальный UI checkpoint — 2026-09-15, review и исправления
 
 Завершено локально 2026-09-15T16:29:00Z: PVUI-01–07 на HEAD
 `e38ac1315432cae881d1a94fb3931b05a686e390` + незакоммиченный diff шагов 02–05.
@@ -35,11 +35,34 @@ Roadmap, runbooks, readiness/traceability и handoff задают стабиль
 для всего UI-пакета. Полный локальный gate с focused completion пройден:
 623 Vitest tests, 1 штатный Windows skip; 38 разных Chromium scenarios;
 check 0 errors/warnings, build успешен. DE/RU и четыре viewport проверены;
-P0/P1 на проверенных путях нет. Версия, команды, visual evidence, ограничения
-и P2 backlog: [handoff промпта 05](handoffs/stage-13.md#pvui-prompt-05).
-Один следующий шаг: независимый exact-candidate review для отдельно порученной
-публикации UI в preview. Локальная готовность не является разрешением deploy
-или подтверждением manual preview. Remote state, fingerprint и gates ниже неизменны.
+На этапе реализации P0/P1 не были обнаружены; последующий review ниже выявил P1.
+Версия, команды, visual evidence, ограничения и прежний P2 backlog:
+[handoff промпта 05](handoffs/stage-13.md#pvui-prompt-05).
+Независимый review завершён 2026-09-15T16:49:46Z для закоммиченного exact candidate
+`d58f9db54bede6cdf8f7cc21da93b23a6de37c72`: **NO-GO**, один новый P1 — admin
+catalog переносит действие/причину/подтверждение на соседнюю запись после
+успешного удаления первой из фильтра. Дополнительный P2 — переключение языка
+заменяет правки в предзаполненном обращении. [Review/evidence](reviews/pvui-exact-candidate-20260915.md).
+397/397 файлов итогового manifest совпали; 44 focused unit tests passed,
+два новых Chromium assertions воспроизводят R1/R2. Полный gate шага 05
+переиспользован; runtime/seed/tracked tests не изменены.
+По поручению владельца R1 и R2 исправлены локально 2026-09-15T17:06:37Z поверх
+`d58f9db54bede6cdf8f7cc21da93b23a6de37c72`, изменения ещё не закоммичены.
+Класс проверок: **Локализованный runtime fix одной surface** — отдельно для
+admin catalog и message form, без изменения shared runtime. Check 0/0,
+12/12 unit tests, 6 разных affected Chromium scenarios и build passed;
+первый browser run имел один test-interaction timeout, исправленный и закрытый
+focused completion. Manifest 397 файлов: 393 неизменны, две страницы и два E2E
+spec изменены; SHA-256 `849e754b0cece09a7e4d2fd7f23c9597b6e13563d133837a12cbb2f0bb610398`.
+Команды, evidence и границы переиспользованного gate:
+[handoff исправлений](handoffs/stage-13.md#pvui-review-fixes).
+Выявленный P1 устранён; это проверка исправлений тем же агентом, а не новый
+независимый review. Один следующий шаг: отдельно порученная публикация preview
+с фиксацией exact candidate перед deploy. Такое поручение ещё не получено.
+Remote state, fingerprint, Telegram и production gates ниже неизменны;
+их исторический `independent_go` относится к опубликованному UI-01, не к PVUI.
+rollover_required: no; recommended_next_session_mode: High — следующий плановый
+preview deploy после отдельного поручения, remote ambiguity отсутствует.
 
 ## UI01 release review and authorized publication — 2026-09-13T13:41:02Z
 

@@ -19,6 +19,16 @@ async function inspect(page: Page, name: string) {
 	}
 }
 
+async function submitCatalogAction(page: Page, form: ReturnType<Page['locator']>, action: string) {
+	const responsePromise = page.waitForResponse((response) =>
+		response.request().method() === 'POST' &&
+		new URL(response.url()).pathname === '/admin/catalog' &&
+		new URL(response.url()).searchParams.has(`/${action}`)
+	);
+	await form.locator('button[type="submit"]').click();
+	return (await responsePromise).json();
+}
+
 test('keeps all admin destinations, honest metrics and existing user filters accessible', async ({
 	browser,
 }, testInfo) => {
@@ -233,4 +243,86 @@ test('opens every loaded mapping independently and keeps contract editor and tab
 	} finally {
 		await parent.close();
 	}
+});
+
+test('keeps catalog decisions with their records and resets only successful forms', async ({ browser }, testInfo) => {
+	test.setTimeout(90_000);
+	const context = await newE2eContext(browser, testInfo);
+	try {
+		const page = await context.newPage();
+		await login(page, syntheticIdentities.admin);
+		await page.goto('/admin/catalog?status=draft');
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
+		const courses = page.locator('form[action="?/updateCourse"]');
+		await expect(courses).toHaveCount(2);
+		const first = courses.first();
+		const second = courses.nth(1);
+		const remainingId = await second.locator('[name="courseGroupId"]').inputValue();
+		await first.locator('..').locator(':scope > summary').click();
+		await first.locator('[name="action"]').selectOption('hide');
+		await first.locator('[name="reason"]').fill('Synthetic first course decision');
+		await first.locator('[name="confirmation"]').check();
+		await second.locator('..').locator(':scope > summary').click();
+		await second.locator('[name="action"]').selectOption('set_capacity');
+		await second.locator('[name="capacity"]').fill('15');
+		await second.locator('[name="reason"]').fill('Synthetic second course draft');
+		expect((await submitCatalogAction(page, first, 'updateCourse')).type).toBe('success');
+		await expect(courses).toHaveCount(1);
+		const remaining = courses.first();
+		await expect(remaining.locator('[name="courseGroupId"]')).toHaveValue(remainingId);
+		await expect(remaining.locator('[name="action"]')).toHaveValue('set_capacity');
+		await expect(remaining.locator('[name="capacity"]')).toHaveValue('15');
+		await expect(remaining.locator('[name="reason"]')).toHaveValue('Synthetic second course draft');
+		await expect(remaining.locator('[name="confirmation"]')).not.toBeChecked();
+		// Rejection retains only this record's values and retry key.
+		if (!(await remaining.isVisible())) {
+			await remaining.locator('..').locator(':scope > summary').click();
+		}
+		await remaining.locator('[name="reason"]').fill('   ');
+		await remaining.locator('[name="confirmation"]').check();
+		const retryKey = await remaining.locator('[name="idempotencyKey"]').inputValue();
+		expect((await submitCatalogAction(page, remaining, 'updateCourse')).type).toBe('failure');
+		await expect(remaining).toBeVisible();
+		await expect(remaining.locator('[name="reason"]')).toHaveValue('   ');
+		await expect(remaining.locator('[name="capacity"]')).toHaveValue('15');
+		await expect(remaining.locator('[name="idempotencyKey"]')).toHaveValue(retryKey);
+		await remaining.locator('[name="reason"]').fill('Synthetic approved capacity');
+		expect((await submitCatalogAction(page, remaining, 'updateCourse')).type).toBe('success');
+		await expect(remaining.locator('[name="action"]')).toHaveValue('publish');
+		await expect(remaining.locator('[name="capacity"]')).toHaveValue('');
+		await expect(remaining.locator('[name="reason"]')).toHaveValue('');
+		await expect(remaining.locator('[name="confirmation"]')).not.toBeChecked();
+		await expect(remaining.locator('..').locator('..')).toContainText(`${de['admin.catalog.capacity']}: 15`);
+
+		// Mapping decisions use the same failure/success rule, without clearing another draft.
+		await page.goto('/admin/catalog');
+		await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
+		await page.locator('.mapping-queue > summary').click();
+		const mappings = page.locator('form[action="?/decideMapping"]');
+		await expect(mappings).toHaveCount(50);
+		const mapping = mappings.first();
+		const otherMapping = mappings.nth(1);
+		await mapping.locator('..').locator(':scope > summary').click();
+		await mapping.locator('[name="courseGroupId"]').selectOption('e2e-trial-course');
+		await mapping.locator('[name="decision"]').selectOption('reject');
+		await mapping.locator('[name="reason"]').fill('   ');
+		await mapping.locator('[name="confirmation"]').check();
+		await otherMapping.locator('..').locator(':scope > summary').click();
+		await otherMapping.locator('[name="reason"]').fill('Synthetic separate mapping draft');
+		const mappingKey = await mapping.locator('[name="idempotencyKey"]').inputValue();
+		expect((await submitCatalogAction(page, mapping, 'decideMapping')).type).toBe('failure');
+		await expect(mapping).toBeVisible();
+		await expect(mapping.locator('[name="decision"]')).toHaveValue('reject');
+		await expect(mapping.locator('[name="courseGroupId"]')).toHaveValue('e2e-trial-course');
+		await expect(mapping.locator('[name="reason"]')).toHaveValue('   ');
+		await expect(mapping.locator('[name="idempotencyKey"]')).toHaveValue(mappingKey);
+		await mapping.locator('[name="reason"]').fill('Synthetic rejected mapping candidate');
+		expect((await submitCatalogAction(page, mapping, 'decideMapping')).type).toBe('success');
+		await expect(mapping.locator('[name="courseGroupId"]')).toHaveValue('');
+		await expect(mapping.locator('[name="decision"]')).toHaveValue('confirm');
+		await expect(mapping.locator('[name="reason"]')).toHaveValue('');
+		await expect(mapping.locator('[name="confirmation"]')).not.toBeChecked();
+		await expect(otherMapping.locator('[name="reason"]')).toHaveValue('Synthetic separate mapping draft');
+		await expect(otherMapping.locator('[name="confirmation"]')).not.toBeChecked();
+	} finally { await context.close(); }
 });

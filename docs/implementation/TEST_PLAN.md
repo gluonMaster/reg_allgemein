@@ -62,6 +62,16 @@
 
 ## Decision gate выбора проверок
 
+PVUI review R1/R2: локализованный runtime fix двух страниц. Дополнительный
+`admin-interface.spec.ts` scenario проверяет исчезновение строки из фильтра,
+сохранность соседнего черновика и failure/success поведение форм занятий и
+сопоставлений. `catalog-contract-entry.spec.ts` проверяет DE/RU с изменёнными
+и очищенными полями, untouched defaults, rejected submit/retry key и новый
+вход в обычную форму. Выполняются оба affected Chromium spec, unit suites
+`admin-console`/`catalog-contract-entry`, check и build; полный gate
+точного ancestor `d58f9db54bede6cdf8f7cc21da93b23a6de37c72` переиспользуется
+для неизменённых surfaces. Auth/storage/providers/schema/config не меняются.
+
 PVUI-01–07 (шаг 05): один полный локальный gate всего UI-пакета — check,
 Vitest, Chromium, build и docs/release checks. Existing surface scenarios
 покрывают основные 390×844/1366×768; `01-portal-ui-validation.spec.ts` дополняет

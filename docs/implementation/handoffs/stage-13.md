@@ -5416,3 +5416,92 @@ full-suite resource contention даёт пять timeouts при успешны�
 **независимый exact-candidate review для отдельно порученной публикации preview**.
 После отдельной публикации владелец вручную проверяет заявки и договоры.
 `full-manual-preview`, Telegram gates и production GO этой работой не подтверждены.
+
+## 2026-09-15 — PVUI: независимый review exact candidate
+
+Проверен `d58f9db54bede6cdf8f7cc21da93b23a6de37c72` (оба UI-коммита после
+`dbbaf21424e9798e8cdf56d373886e288e98fd40`), начальное дерево чистое.
+**NO-GO: R1/P1** — после успешного изменения admin catalog скрытый target
+соседней формы меняется, а прежние действие/причина/подтверждение остаются.
+R2/P2 — смена языка заменяет собственные правки запроса договора;
+не открывает самостоятельный review-loop. P0 не обнаружен.
+Подробности: [review](../reviews/pvui-exact-candidate-20260915.md).
+
+Manifest шага 05 совпал 397/397; полный gate переиспользован. Новая сессия
+провела 44/44 focused unit tests и два дополнительных Chromium scenarios:
+оба завершились assertion failures, воспроизводящими R1/R2. Исторические
+успешные 38 scenarios этих проверок не содержат. Evidence и воспроизводимый
+spec сохранены в ignored `tmp/pvui-independent-review-20260915/`.
+Runtime, seed, tracked tests/config/dependencies/migrations не менялись.
+Временный review spec убран из suite после сохранения evidence. Изменены
+только review/current checkpoint/handoff; docs:check, release:scan и diff check
+относятся к этому docs-only пакету. Remote/provider/deploy действий нет.
+
+Один следующий шаг: локальное исправление R1 и affected admin regression для
+нового кандидата. Публикация отдельно после устранения P1; Telegram/manual
+preview/production gates неизменны. rollover_required: no;
+recommended_next_session_mode: High — причина локализована, нужен обычный UI fix.
+
+<a id="pvui-review-fixes"></a>
+
+## 2026-09-15 — PVUI: исправления R1/P1 и R2/P2 по поручению владельца
+
+Обе находки [review](../reviews/pvui-exact-candidate-20260915.md) исправлены
+локально. Base HEAD — `d58f9db54bede6cdf8f7cc21da93b23a6de37c72`; commit не
+создавался. Проверен незакоммиченный candidate с двумя изменёнными страницами
+и двумя E2E specs. В manifest 397 source/test/script/migration/build-config
+файлов, из них 393 совпадают с исходным exact candidate. Итоговый SHA-256
+`849e754b0cece09a7e4d2fd7f23c9597b6e13563d133837a12cbb2f0bb610398`;
+ignored `tmp/pvui-fix-20260915/candidate-files.sha256` и `integrity-safe.json`.
+
+- **R1/P1:** course и mapping lists привязаны к стабильному ID; enhanced action
+  сбрасывает отправленную форму после success, сохраняет ввод при failure.
+  Соседняя запись сохраняет свой черновик и checkbox. Browser regression
+  проверяет удаление первой строки из фильтра, target/action/reason/checkbox
+  второй, failure/retry и success/reset обеих разновидностей admin forms.
+- **R2/P2:** пользовательские правки category/subject/message хранятся отдельно
+  от локализованного предзаполнения, с привязкой к course query. DE/RU сохраняет
+  правки и намеренно пустые поля; нетронутые defaults переводятся. Проверены
+  rejected submit с прежним retry key и новый вход в обычную форму.
+- Критерии уточнены в `MVP_SPEC.md`, `ACCEPTANCE_CRITERIA.md`, покрытие — в
+  `TEST_PLAN.md`. Server actions, authorization, storage, providers, schema,
+  dependencies и deploy config не изменены.
+
+### Проверки исправлений
+
+Класс: **Локализованный runtime fix одной surface**, применён независимо к
+двум страницам. Affected browser specs проверяют пользовательские действия,
+unit suites — их непосредственные consumers; check/build проверяют Svelte
+и сборку. Использован штатный изолированный E2E wrapper с synthetic fixtures,
+локальной D1, `remoteBindings: false`, fake email и выключенными остальными
+providers. Логи ниже находятся в ignored `tmp/pvui-fix-20260915/`.
+
+- `npm.cmd run check` — 0 errors, 0 warnings (`check.log`).
+- `npm.cmd test -- tests/unit/admin-console.test.ts tests/unit/catalog-contract-entry.test.ts --maxWorkers=1`
+  — **12/12 passed**, два файла (`unit.log`).
+- `npm.cmd run test:e2e -- tests/e2e/admin-interface.spec.ts tests/e2e/catalog-contract-entry.spec.ts`
+  — 5 passed, один timeout в новом admin scenario (`e2e.log`). Все assertions
+  исходного R1 прошли; продолжение теста пыталось ввести reason в закрытую
+  после success форму. В тест добавлено раскрытие перед следующим вводом;
+  runtime, timeout и assertions не изменялись. Trace сохранён отдельно.
+- `npm.cmd run test:e2e -- tests/e2e/admin-interface.spec.ts --grep 'keeps catalog decisions'`
+  — **1/1 passed** (`admin-focused.log`). Итого **6 разных affected scenarios**,
+  включая оба новых regression scenarios; это completion, не единый green run.
+- `npm.cmd run build` — passed (`build.log`).
+- `npm.cmd run docs:check`, `npm.cmd run release:scan`, `git diff --check` —
+  финальные проверки docs/evidence пакета.
+
+Полные Vitest/E2E не повторялись: impact ограничен двумя страницами, остальные
+393 файла manifest неизменны; exact ancestor `d58f9db54bede6cdf8f7cc21da93b23a6de37c72`
+имеет [полный gate шага 05](#pvui-prompt-05). Для неизменённой вёрстки
+переиспользован visual evidence шага 05; existing affected browser scenarios
+дополнительно проверили layout. Dependency audit и deploy dry-run не запускались:
+dependencies/config неизменны, deploy не поручен. Проверка исправлений проведена
+тем же агентом; исторический независимый NO-GO относится к исходному SHA.
+
+R1/P1 и R2/P2 закрыты для локального исправленного candidate. Remote/provider/
+deploy действий нет. Один следующий шаг: отдельно порученная публикация preview
+с фиксацией exact candidate перед deploy. `full-manual-preview`, Telegram и
+production gates неизменны. rollover_required: no;
+recommended_next_session_mode: High — плановый preview deploy после поручения,
+без неоднозначного remote state.
