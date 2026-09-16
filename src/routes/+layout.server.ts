@@ -5,6 +5,7 @@ import { CSRF_COOKIE_NAME } from '$lib/server/auth/session';
 export const load: LayoutServerLoad = (event) => {
 	const config = loadRuntimeConfig(event.platform?.env);
 	return {
+		portalMode: config.portalMode ?? 'full',
 		officialLinks: config.officialLinks ?? null,
 		locale: event.locals.locale ?? 'de',
 		portalNavigation: {

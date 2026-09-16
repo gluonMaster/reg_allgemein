@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "e86c1ca3ed303d0a20a4a12af469e4f9f60b40b5dc2c3cd7574435f6b511b7da",
+      "subject": "Musik",
+      "group": "Gruppe A",
+      "weekday": 4,
+      "start": "15:00",
+      "end": "16:00",
+      "teacher": "Lehrkraft A",
+      "room": "R1",
+      "building": "Kolibri"
+    },
+    {
+      "id": "6f0e5fb7bdbff5055d5b5cd11e340e3b599319ea46dc7af56cdee8830f754d6c",
+      "subject": "Kunst",
+      "group": "Gruppe B",
+      "weekday": 6,
+      "start": "10:00",
+      "end": "11:30",
+      "teacher": "Lehrkraft B",
+      "room": "R2",
+      "building": "Villa"
+    }
+  ]
+}

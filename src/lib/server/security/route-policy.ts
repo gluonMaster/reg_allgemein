@@ -23,6 +23,7 @@ export function routeAccessPolicy(routeId: string | null): RouteAccess {
 		routeId === null ||
 		routeId === '/' ||
 		routeId === '/language' ||
+		routeId === '/probestunde' || routeId.startsWith('/probestunde/') ||
 		routeId === '/catalog' ||
 		routeId === '/auth' ||
 		routeId.startsWith('/auth/')

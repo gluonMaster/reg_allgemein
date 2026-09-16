@@ -1,0 +1,39 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "kolibri-trial-intake",
+  "main": "../../src/worker.ts",
+  "compatibility_date": "2026-03-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": { "directory": "../../.svelte-kit/cloudflare/assets", "binding": "ASSETS" },
+  // Verification/reset URLs contain tokens. Use aggregate D1 operations health;
+  // do not persist automatic request logs/traces containing complete URLs.
+  "observability": { "enabled": false, "logs": { "enabled": false, "invocation_logs": false }, "traces": { "enabled": false } },
+  "triggers": { "crons": ["* * * * *", "*/15 * * * *"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "kolibri-trial-intake", "database_id": "REPLACE_WITH_NEW_D1_ID", "migrations_dir": "../../migrations" }],
+  "vars": {
+    "APP_ENV": "production",
+    "PORTAL_MODE": "trial_intake",
+    "PORTAL_PUBLIC_ORIGIN": "https://replace.example.invalid",
+    "TRIAL_INTAKE_ACCEPTING": "false",
+    "TRIAL_INTAKE_SCHEDULE_URL": "https://stalwart-gumption-9545e9.netlify.app/",
+    "AUTH_PUBLIC_ENABLED": "true",
+    "PRIVACY_NOTICE_VERSION": "trial-intake-retention-2026-09-16-v1",
+    "EMAIL_PROVIDER": "resend",
+    "EMAIL_FROM": "Kinder- und Elternzentrum \"KOLIBRI\" e.V. <registration@kolibri-dresden.de>",
+    "EMAIL_REPLY_TO": "registration@kolibri-dresden.de",
+    "TELEGRAM_PROVIDER": "disabled",
+    "TELEGRAM_CHAT_TYPE": "supergroup",
+    "TELEGRAM_BUSINESS_TIMEZONE": "Europe/Berlin",
+    "TELEGRAM_BUSINESS_HOURS": "Mo-Fr 09:00-17:00",
+    "SCHEDULED_JOBS_ENABLED": "false",
+    "SCHEDULED_OUTBOX_BATCH_LIMIT": "1",
+    "SCHEDULED_MAINTENANCE_BATCH_LIMIT": "5",
+    "TURNSTILE_SITE_KEY": "replace-with-site-key",
+    "TURNSTILE_HOSTNAMES": "replace.example.invalid",
+    "OFFICIAL_PRIVACY_URL": "https://www.kolibri-dresden.de/replace-with-approved-privacy",
+    "OFFICIAL_IMPRINT_URL": "https://www.kolibri-dresden.de/replace-with-approved-imprint",
+    "OFFICIAL_CONTACT_URL": "https://www.kolibri-dresden.de/replace-with-approved-contact",
+    "OFFICIAL_LINKS_VERSION": "replace-with-approved-version"
+  }
+}

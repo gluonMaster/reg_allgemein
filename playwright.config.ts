@@ -28,7 +28,7 @@ export default defineConfig({
 	],
 	webServer: {
 		command: 'node scripts/run-e2e-server.js',
-		url: e2eOrigin,
+		url: process.env.KOLIBRI_E2E_TRIAL_INTAKE === '1' ? `${e2eOrigin}/auth/login` : e2eOrigin,
 		reuseExistingServer: false,
 		timeout: 120_000,
 	},

@@ -19,6 +19,9 @@ declare global {
 				ASSETS?: Fetcher;
 				BROWSER?: BrowserRun;
 				APP_ENV?: string;
+				PORTAL_MODE?: string;
+				TRIAL_INTAKE_ACCEPTING?: string;
+				TRIAL_INTAKE_SCHEDULE_URL?: string;
 				PORTAL_PUBLIC_ORIGIN?: string;
 				OFFICIAL_PRIVACY_URL?: string;
 				OFFICIAL_IMPRINT_URL?: string;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORGANIZATION_NAME } from '$lib/organization';
 import { parseBusinessHours, type BusinessHoursSchedule } from '$lib/server/outbox/business-hours';
 import {
 	isTelegramBotToken,
@@ -11,6 +12,9 @@ import {
 
 const rawConfigSchema = z.object({
 	APP_ENV: z.enum(['development', 'test', 'preview', 'production']),
+	PORTAL_MODE: z.enum(['full', 'trial_intake']).optional(),
+	TRIAL_INTAKE_ACCEPTING: z.enum(['true', 'false']).optional(),
+	TRIAL_INTAKE_SCHEDULE_URL: z.string().optional(),
 	PORTAL_PUBLIC_ORIGIN: z.string().min(1),
 	OFFICIAL_PRIVACY_URL: z.string().min(1).optional(),
 	OFFICIAL_IMPRINT_URL: z.string().min(1).optional(),
@@ -84,8 +88,11 @@ export type TelegramProviderKind = 'disabled' | 'fake' | 'bot_api';
 export const APPROVED_EMAIL_FROM =
 	'Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>';
 export const APPROVED_EMAIL_REPLY_TO = 'registration@kolibri-dresden.de';
+export const INTAKE_EMAIL_FROM = `${ORGANIZATION_NAME} <${APPROVED_EMAIL_REPLY_TO}>`;
 
 export interface RuntimeConfig {
+	portalMode?: 'full' | 'trial_intake';
+	trialIntake?: { accepting: boolean; scheduleUrl: string };
 	appEnvironment: PortalEnvironment;
 	portalPublicOrigin: string;
 	db: D1Database;
@@ -390,6 +397,17 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 
 	const issues: string[] = [];
+	const intakeMode = parsed.data.PORTAL_MODE === 'trial_intake';
+	const intakeAccepting = intakeMode && parsed.data.TRIAL_INTAKE_ACCEPTING === 'true';
+	const scheduleUrl = parsed.data.TRIAL_INTAKE_SCHEDULE_URL ?? '';
+	if (intakeMode) {
+		try {
+			const url = new URL(scheduleUrl);
+			if (url.protocol !== 'https:' || url.username || url.password || url.hash) throw new Error();
+		} catch { issues.push('TRIAL_INTAKE_SCHEDULE_URL:https_url_required'); }
+		if (parsed.data.AUTH_PUBLIC_ENABLED !== 'true') issues.push('AUTH_PUBLIC_ENABLED:required_for_intake_admin');
+		if (!parsed.data.JWT_SECRET) issues.push('JWT_SECRET:required_for_intake');
+	}
 	const productionLike =
 		parsed.data.APP_ENV === 'preview' || parsed.data.APP_ENV === 'production';
 	const portalPublicOrigin = validatePortalOrigin(
@@ -400,9 +418,9 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	const turnstileHostnames = parseTurnstileHostnames(parsed.data.TURNSTILE_HOSTNAMES, issues);
 
 	if (!isD1Database(env?.DB)) issues.push('DB:missing_or_invalid_binding');
-	if (productionLike && !isR2Bucket(env?.R2_ARCHIVE))
+	if (productionLike && !intakeMode && !isR2Bucket(env?.R2_ARCHIVE))
 		issues.push('R2_ARCHIVE:missing_or_invalid_binding');
-	if (productionLike && !isR2Bucket(env?.R2_QUARANTINE))
+	if (productionLike && !intakeMode && !isR2Bucket(env?.R2_QUARANTINE))
 		issues.push('R2_QUARANTINE:missing_or_invalid_binding');
 	if (
 		isR2Bucket(env?.R2_ARCHIVE) &&
@@ -412,7 +430,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 		issues.push('R2_BINDINGS:must_be_distinct');
 	}
 	if (productionLike && !isFetcher(env?.ASSETS)) issues.push('ASSETS:missing_or_invalid_binding');
-	if (productionLike && !isBrowserRun(env?.BROWSER))
+	if (productionLike && !intakeMode && !isBrowserRun(env?.BROWSER))
 		issues.push('BROWSER:missing_or_invalid_binding');
 	if (productionLike && !parsed.data.JWT_SECRET) issues.push('JWT_SECRET:required');
 	if (productionLike && isPlaceholder(parsed.data.JWT_SECRET))
@@ -508,7 +526,8 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (emailProvider === 'resend' && isPlaceholder(parsed.data.RESEND_API_KEY)) {
 		issues.push('RESEND_API_KEY:placeholder');
 	}
-	if (emailProvider === 'resend' && parsed.data.EMAIL_FROM !== APPROVED_EMAIL_FROM) {
+	if (emailProvider === 'resend' && parsed.data.EMAIL_FROM !== APPROVED_EMAIL_FROM
+		&& !(intakeMode && parsed.data.EMAIL_FROM === INTAKE_EMAIL_FROM)) {
 		issues.push('EMAIL_FROM:approved_registration_identity_required');
 	}
 	if (emailProvider === 'resend' && parsed.data.EMAIL_REPLY_TO !== APPROVED_EMAIL_REPLY_TO) {
@@ -735,7 +754,7 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	}
 	const messaging: MessagingRuntimeConfig = {
 		emailProvider,
-		emailFrom: parsed.data.EMAIL_FROM,
+		emailFrom: intakeMode ? INTAKE_EMAIL_FROM : parsed.data.EMAIL_FROM,
 		emailReplyTo: parsed.data.EMAIL_REPLY_TO,
 		resendApiKey: parsed.data.RESEND_API_KEY,
 		previewEmailRecipientHashes,
@@ -975,15 +994,21 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (
 		productionLike &&
 		operations.scheduledJobsEnabled === false &&
+		!intakeMode &&
 		!supervisedContractPreviewPause
 	) {
 		issues.push('SCHEDULED_JOBS_ENABLED:required');
 	}
 
+	if (intakeAccepting && productionLike && (emailProvider !== 'resend' || telegramProvider !== 'bot_api')) {
+		issues.push('TRIAL_INTAKE_ACCEPTING:real_providers_required');
+	}
 	if (issues.length > 0) throw new RuntimeConfigError(issues);
 
 	return {
 		appEnvironment: parsed.data.APP_ENV,
+		portalMode: parsed.data.PORTAL_MODE ?? 'full',
+		trialIntake: intakeMode ? { accepting: intakeAccepting, scheduleUrl } : undefined,
 		portalPublicOrigin,
 		db: env?.DB as D1Database,
 		r2ArchiveBucket: isR2Bucket(env?.R2_ARCHIVE) ? env.R2_ARCHIVE : undefined,

@@ -9,7 +9,7 @@ import {
 	scheduledJobNames,
 	type ScheduledJobName,
 } from '$lib/server/operations/operations-repository';
-import { runScheduledJobs } from '$lib/server/operations/scheduler';
+import { runScheduledJobs, intakeJobAllowed } from '$lib/server/operations/scheduler';
 import { requireAdmin } from '$lib/server/security/authorization';
 
 const jobSet = new Set<string>(scheduledJobNames);
@@ -23,7 +23,7 @@ export const load: PageServerLoad = async (event) => {
 		repository.listRecentRuns(),
 	]);
 	return {
-		jobs: scheduledJobNames,
+		jobs: config.portalMode === 'trial_intake' ? scheduledJobNames.filter(intakeJobAllowed) : scheduledJobNames,
 		commandKey: crypto.randomUUID(),
 		cadences: cadences.map((cadence) => ({
 			...cadence,

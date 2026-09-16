@@ -139,6 +139,10 @@ export async function renderEmailTemplate(input: {
 	secret?: string;
 }): Promise<EmailMessage> {
 	const { row } = input;
+	// Guest stores supply a separate renderer; the existing user templates stay closed.
+	if (row.recipient_address_kind === 'guest' || !row.user_id) {
+		throw new OutboxTemplateError('AUTH_EMAIL_CONTEXT_INVALID');
+	}
 	const data = payload(row.payload_json);
 	switch (row.template_or_category as EmailTemplateId) {
 		case 'auth.email_verification':

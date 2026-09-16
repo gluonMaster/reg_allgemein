@@ -15,7 +15,7 @@ Production deploy, remote production migration, реальный PII import, в�
 ## Граница с full manual preview
 
 Этот документ относится к production и не является current operational route.
-Ближайший `full-manual-preview` по `SYS-04`/`OQ-036` выполняется на synthetic data
+`full-manual-preview` по `SYS-04`/`OQ-036` выполняется на synthetic data
 и выделенных preview resources. Production-only legal/privacy/training/data,
 custom-origin, restore-policy и resource approvals не блокируют его; они остаются
 `blocked` здесь и проверяются позже. Current candidate/deployed version/next
@@ -38,6 +38,14 @@ Cloudflare Worker, D1, private R2, bindings, secrets и monitoring. Он физ�
 или R2 портала. Runbook не должен предполагать доступ к инфраструктуре сайта.
 
 ## Статусы release gate
+
+Владелец 2026-09-16 поручил подготовить срочный ограниченный `trial-intake`
+(SYS-05). Его собственная готовность определяется
+[TRIAL_INTAKE](../domain/TRIAL_INTAKE.md) и TIN-AC. До запуска остаются только
+применимые пути: intake data/privacy, production target/auth/providers,
+backup/containment и реальные уведомления. Готовность контрактов, uploads,
+pricing и legacy import не подменяет и не блокирует этот ограниченный scope.
+Он не объявляется полным MVP; подготовка ТЗ не является production GO или deploy.
 
 Каждый gate имеет ровно один status:
 

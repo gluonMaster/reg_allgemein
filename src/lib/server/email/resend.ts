@@ -145,6 +145,7 @@ export class ResendEmailProvider implements EmailProvider {
 					reply_to: this.options.replyTo,
 					subject: message.subject,
 					text: message.text,
+					...(message.html ? { html: message.html } : {}),
 					...(attachments ? { attachments } : {}),
 				}),
 				signal: AbortSignal.timeout(this.timeoutMs),

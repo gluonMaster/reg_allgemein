@@ -378,6 +378,13 @@ postconditions и incident evidence находятся в append-only handoff и
 
 ### 13.1 Ближайший milestone: `full-manual-preview`
 
+Поручение владельца 2026-09-16 ставит впереди завершения полного preview срочный
+limited release `trial-intake` по SYS-05. Его scope и четыре шага:
+[TRIAL_INTAKE_RELEASE_TZ](TRIAL_INTAKE_RELEASE_TZ.md). Требования к полному
+preview ниже сохраняются для последующего продолжения; его готовность не
+объявляется по результату ограниченного запуска. Operational state в этой
+сессии планирования не переключался.
+
 `full-manual-preview` по `SYS-04`/`OQ-036` — отдельный delivery gate, а не
 production release. На выделенных Access-protected preview resources и только с
 synthetic data должны реально пройти:

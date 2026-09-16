@@ -100,7 +100,8 @@ export class EmailOutboxWorker {
 		private readonly timing: WorkerTimingConfig,
 		private readonly workerId: string = `email-worker:${crypto.randomUUID()}`,
 		private readonly clock: () => string = () => new Date().toISOString(),
-		private readonly attachmentResolver?: EmailAttachmentResolver
+		private readonly attachmentResolver?: EmailAttachmentResolver,
+		private readonly render: (input: Parameters<typeof renderEmailTemplate>[0] & { now: string }) => ReturnType<typeof renderEmailTemplate> = renderEmailTemplate
 	) {}
 
 	async prepareDrain(now = this.clock(), limit = 100): Promise<number> {
@@ -121,7 +122,8 @@ export class EmailOutboxWorker {
 		});
 		if (!row) return 'empty';
 		try {
-			const message = await renderEmailTemplate({
+			const message = await this.render({
+				now,
 				row,
 				config: this.config,
 				secret: this.secret,
@@ -170,7 +172,8 @@ export class TelegramOutboxWorker {
 		private readonly schedule: BusinessHoursSchedule,
 		private readonly timing: TelegramWorkerConfig,
 		private readonly workerId: string = `telegram-worker:${crypto.randomUUID()}`,
-		private readonly clock: () => string = () => new Date().toISOString()
+		private readonly clock: () => string = () => new Date().toISOString(),
+		private readonly render: (input: Parameters<typeof renderTelegramTemplate>[0] & { now: string }) => ReturnType<typeof renderTelegramTemplate> = renderTelegramTemplate
 	) {}
 
 	async prepareDrain(now = this.clock(), limit = 100): Promise<number> {
@@ -212,7 +215,8 @@ export class TelegramOutboxWorker {
 		}
 		let message: Awaited<ReturnType<typeof renderTelegramTemplate>>;
 		try {
-			message = await renderTelegramTemplate({
+			message = await this.render({
+				now,
 				row,
 				config: this.config,
 				chatId: this.chatId,

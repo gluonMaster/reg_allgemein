@@ -5532,6 +5532,47 @@ inspection остаётся следующим действием по [active s
 Evidence и executed/skipped checks: [release verification](../reviews/pvui-deploy-20260915.md).
 Full-manual-preview и production status не повышались.
 
+## 2026-09-15 — ТЗ автоматической цены и синтетического прайса
+
+Подготовлен [узкий пакет](../PREVIEW_SERVICE_PRICING_TZ.md): каталог, заявки и
+автоматический ценовой блок подготовки договора, как прямо уточнил владелец.
+Добавлены `PRICE-05` и критерии приёмки; правила источников group/individual/
+Nachhilfe сохранены. Предусмотрены два профиля существующих demo-групп,
+12 синтетических правил и публикация с обязательными remote checkpoints.
+Отдельный проход spec-rightsize исключил новый pricing engine, редактор прайса,
+полный мастер договора и массовый seed. Это docs-only подготовка: runtime,
+remote data и operational gates в этой сессии не изменялись; реализация не начата.
+
+По отдельному поручению выполнен повторный `spec-rightsize` проход того же ТЗ.
+По текущему коду уточнено, что parent tariff UI уже существует; не требуется
+его повторная реализация. Подтверждение новой цены остаётся действием текущей
+формы, формат synthetic fixture выбирается из существующих helpers. Сохранены
+четыре draft-варианта, 12 правил и remote checkpoints; проверка ценового render
+payload включена в имеющиеся local contract tests. Scope владельца не сокращён,
+вопросов на решение нет. Выполнена только правка документации.
+
+## 2026-09-16 — PREVIEW-PRICING: пакет последовательных промптов
+
+По поручению владельца подготовлены четыре отдельные сессии в ignored
+`out/codex-preview-pricing-prompts-2026-09-16/`: локальный server/UI срез;
+синтетические данные и operator; bounded review/общий gate/release preparation;
+явно поручаемая публикация с remote-приёмкой. Общий README задаёт передачу через
+этот handoff и единственный operational active state, без нового журнала.
+Полный release gate выполняется один раз перед deploy; каждый remote write
+сохраняет обязательный checkpoint. ТЗ и scope не расширены. Создание пакета
+не запускает реализацию и не изменяет runtime/preview. Следующий локальный шаг
+по отдельному запуску владельца — промпт 01.
+
+Отдельный `spec-rightsize` проход 2026-09-16 сохранил четыре сессии и весь scope
+ТЗ. В промптах уточнено переиспользование fixtures между шагами 1–2, существующих
+remote D1 transport/target guards и общего release-пакета. Проверки новых стыков
+распределены без дублирования четырёх contract-веток и полной UI-матрицы;
+remote-приёмка допускает обычные формы без отдельного smoke-runner. Независимый
+review, четыре свежих preview draft, ownership, rollback/containment и checkpoint
+после каждой remote mutation сохранены. Исходные ignored промпты сохранены в
+`tmp/spec-rightsize-prompts-20260916/`. Продуктовые требования не менялись;
+ожидающих решения вопросов нет. Это docs-only правка, реализация не запущена.
+
 
 ## 2026-09-16 — Preview email: ограничение получателей снято
 
@@ -5555,3 +5596,291 @@ root config и actual-wrangler.preview.toml в новом evidence пакете;
 config snapshots остаются историческими. rollover_required: no;
 recommended_next_session_mode: High — известный normal resend изменяет token
 и отправляет письмо; новая отправка агентом этим не авторизована.
+
+## 2026-09-16 — Срочный limited release trial-intake: ТЗ и промпты
+
+По новому поручению владельца подготовлен
+[пакет реализации/деплоя](../TRIAL_INTAKE_RELEASE_TZ.md) и канонический
+[контур TIN-01–12](../../domain/TRIAL_INTAKE.md). Scope по SYS-05 имеет приоритет
+перед полным preview и незавершённым pricing-пакетом; их existing changes сохранены.
+Согласованы OQ-037–043: guest, несколько занятий/дат/детей, начиная с завтра,
+DE/RU UI и DE email, полная заявка в прежний Telegram в рабочие часы,
+отдельные production Worker/D1 на workers.dev, retention 14/90 дней,
+Telegram auto-delete 14 дней. Email RU утверждён и переведён; короткий notice
+подготовлен для итоговой release-проверки.
+
+Прочитан код portal trial/auth/email/outbox/Telegram/admin/config/scheduler и
+source HTML-визуализатора. Read-only browser inspection показал 108 group-блоков
+на указанном Netlify. Реальный editor path — `A-SchedGen_PreRelease`; он не Git
+checkout. Editor/Office не изменялись и не исполнялись. План обновления списка:
+versioned JSON в том же HTML, portal reader с кратким cache; отдельный импорт
+при изменении расписания не нужен.
+
+Локальные промпты находятся в ignored `out/codex-trial-intake-prompts-2026-09-16/`:
+01 server; 02 UI/exporter; 03 один общий gate/release packet; 04 прямо поручаемый
+production deployment. Scope не включает официальный сайт. Обязательные remote
+checkpoint commits сохранены. Реализация, remote control-plane reads/writes,
+provider sends и gate advancement в этой сессии отсутствуют; active state
+по-прежнему хранит фактический прежний preview cursor.
+
+Следующий implementation шаг по отдельному запуску владельца — 01_SERVER.md.
+OQ-037–043 закрыты; credentials/exact targets и итоговый notice проверяются
+в подготовке выпуска, уже принятые решения не спрашиваются повторно.
+Отдельно задан OQ-044 о вечернем открытии приёма до фактической утренней Telegram-
+доставки. До ответа сохраняется более строгий delivery gate перед включением CTA;
+это не блокирует локальные шаги 01–03.
+Проверки документации и итоговый spec-rightsize проход фиксируются ниже.
+
+Spec-rightsize: сохранены прямо выбранные multi-lesson/dates/assignments и полный
+Telegram payload. Исключены отдельный schedule import/DB registry, новые engine
+для messaging, жёсткая последовательность частей длинного Telegram-сообщения,
+несколько review-агентов и повторные полные test loops. Обнаруженная зависимость
+выбора дополнительных занятий от опубликованного JSON учтена отдельной фазой
+Netlify «данные без CTA», а первый deploy имеет containment без несуществующей
+предыдущей версии. Auto-delete Telegram — штатная настройка, не собственный purge API.
+
+Выполнены docs:check (371 local links / 70 files, 112 command lines, continuity
+passed), release:scan (618 text files, no prohibited artifacts/secrets/PII),
+git diff --check и отдельная проверка 5 ignored prompt files / 10 local links.
+Runtime typecheck, unit/integration/E2E, build и Python tests осознанно не
+запускались: эта сессия меняет только документы и инструкции.
+Финальный docs-only проход: 372 local links / 70 files, 112 command lines,
+continuity passed; release:scan 618 files passed; git diff --check passed.
+Runtime suite не запускался. Новых remote observations/mutations нет.
+
+## 2026-09-16 — Уточнения названия, клиентского текста и изоляции intake
+
+По текущему поручению и OQ-045 обновлены канонический TRIAL_INTAKE, release ТЗ,
+TIN-AC и все четыре ignored промпта. Полное название учреждения:
+`Kinder- und Elternzentrum "KOLIBRI" e.V.`; применяется и к доступным общим
+auth/reset экранам/письмам, From и отображаемой подписи здания. Машинные ключи
+и immutable history не переименовываются. Клиентский текст на DE/RU содержит
+только сроки удаления, без Telegram/provider деталей. Владелец отдельно повторно
+подтвердил 90 дней после отметки «Обработано»; pending остаётся 14 дней от создания.
+
+По явно вызванному spec-rightsize выполнен отдельный проход по исходному запросу
+и ответам владельца. Новая папка `src/lib/trial-intake/`, тонкие routes,
+`deploy/trial-intake/` и ограниченные shared подключения обеспечивают требуемое
+разделение без второго npm проекта/движка доставки. Убраны добавленная агентом
+обязательная галочка и повторное согласование уже выбранного текста. Ранний
+read-only preflight включён в 01, на 03 уточняются изменившиеся факты и команды;
+настройка Telegram auto-delete явно оставлена шагу 04 с remote authorization.
+Несколько детей/занятий/дат и один общий release gate сохранены.
+
+Оригиналы новых негитовых документов и промптов сохранены перед правкой в
+ignored `out/trial-intake-before-rightsize-2026-09-16/`. Pricing changes сохранены.
+Код приложения/редактора, deployed state и ресурсы не менялись; app tests/build,
+Computer Use, миграции и provider sends в этом проходе не выполнялись.
+OQ-044 остаётся открытым с прежним delivery gate; следующий шаг по отдельному
+поручению владельца — 01_SERVER.md.
+
+Проверки этого уточнения: docs:check — 374 local links / 70 files, 112 command
+lines и continuity passed; release:scan — 618 text files passed; git diff --check
+passed. Отдельно проверены 5 ignored prompt files / 10 local links и whitespace.
+Runtime checks осознанно не запускались для docs-only diff и review по skill.
+
+<a id="trial-intake-preflight-20260916"></a>
+
+## 2026-09-16 — Шаг 01: read-only preflight и уточнение exporter boundary
+
+01_SERVER был начат с чтения spec/handoff/source и read-only preflight.
+До реализации runtime владелец уточнил OQ-046: функции записи вносятся в логику
+визуализации редактора и должны переживать каждый обычный экспорт. Netlify
+хранит сгенерированный результат; патч готового HTML не допускается.
+Обновлены TIN-01/06, release ТЗ, TIN-AC-01/12, TEST_PLAN и все пять ignored
+prompt files (README + 01–04). Требование сохраняемых origin/CTA settings и
+повторного экспорта добавлено в шаг 02. Публикация в 03/04 описана только как
+штатная публикация результата экспортера; доступ к Netlify на 01/02 не нужен.
+Ранний запрос Netlify credentials отменён; открытая панель не означает
+необходимость её менять. Pricing docs и ранее незакоммиченные изменения сохранены.
+
+Read-only evidence: `tmp/trial-intake-server-20260916/preflight-safe.json`,
+`resend-ui-safe.json` и соседние private API responses под закрытым ACL.
+API observation UTC 2026-09-16T12:07:54Z; Cloudflare account fingerprint
+`5dbd04a4763a`. Worker/D1 inventory и workers.dev namespace читаются;
+имя-кандидат `kolibri-trial-intake` свободно в этом account на момент проверки.
+Новые ресурсы не созданы; create permission read-only чтением не доказана.
+Публичный HTML: HTTP 200, 108 карточек, intake JSON ещё отсутствует.
+Фактический каталог редактора на диске — `C:\path\to\schedule-editor`.
+
+Telegram: bot fingerprint `4ba876965084`, destination `02e9638892ee`, закрытый
+supergroup. Bot membership `restricted`, но `is_member=true` и
+`can_send_messages=true`: отправка разрешена. Первоначальный safe helper
+ошибочно учитывал только administrator; predicate исправлен локально по тому же
+ответу API, без повторного запроса/изменения прав. Auto-delete 0: установка
+14 дней остаётся шагу 04. Preview hours Mo–Fr 09:00–17:00 Europe/Berlin.
+Вызваны только read-only getMe/getChat/getChatMember, provider sends 0.
+
+Resend проверен через авторизованный Chrome: существующий домен Verified,
+preview key имеет Sending access и недавнее использование. Доменные настройки
+не меняются. Новый Worker требует binding `RESEND_API_KEY`; при отсутствии
+сохранённого исходного значения достаточно отдельного Sending access key в том
+же account с ограничением домена. Пошаговая инструкция включена в release ТЗ.
+Ключи/credentials не читались и не создавались; secret binding не менялся.
+
+Новая P1 для server implementation: TIN-12 требует удалять персональный payload,
+но текущая Telegram queue сохраняет immutable delivery evidence. Планируемое
+решение — отдельное удаляемое intake payload storage с opaque reference в
+existing queue; до реализации и focused tests считать этот стык незавершённым.
+Это техническая находка, не новый принятый продуктовый workflow.
+Runtime, migration, admin CLI, UI и exporter ещё не реализованы. Нельзя объявлять
+шаг 01 завершённым или переходить к 02 по одному этому preflight.
+Remote mutations 0; preview/production/Access/Netlify/официальный сайт не менялись.
+Active state не переключался: нового deployment checkpoint нет.
+Следующий шаг — продолжить локальную реализацию 01_SERVER с уточнённым scope.
+
+Проверки пакета уточнения: `docs:check` — 375 local links / 70 files,
+112 command lines, continuity passed; `release:scan` — 618 text files passed;
+`git diff --check` passed. Ignored prompts и два новых канонических документа
+дополнительно проверены на local links/whitespace. Runtime typecheck,
+Vitest/E2E/build и exporter tests не запускались: исполняемый код не менялся.
+
+## 2026-09-16 — spec-rightsize: проверка уточнений OQ-046
+
+По прямому вызову skill выполнен отдельный критический проход по последнему
+сообщению владельца и внесённым правкам. Нужный результат: каждый обычный экспорт
+редактора сохраняет запись на пробное; существующий Resend переиспользуется.
+Ранее принятые multi-child/multi-lesson, delivery, retention и release gates
+не пересматривались. Новых решений владельца этот проход не требует; OQ-044
+остаётся прежним отдельным вопросом, до ответа действует delivery gate.
+
+P2-дубли исправлены одним docs-пакетом: свежие preflight facts убраны из ТЗ
+в пользу ссылки на evidence выше; повторная synthetic проверка экспортера на
+03/04 заменена использованием результата 02 при неизменённых exporter/callers/
+config. Read-back публикации, полный общий release gate и rollback сохранены.
+Уточнено переиспользование текущей конфигурации и способа публикации без нового
+экрана настроек, publisher или CI/CD. Новый Resend key остаётся условным шагом
+только при отсутствии доступного сохранённого значения.
+
+Целевое read-only чтение `visualiser/enhanced_export_manager_html.py` подтвердило
+существующий config access. Полный путь вызова из обычного веб-редактора этим
+чтением не доказан: его подключение и focused regression явно остаются в 02.
+Оригиналы двух untracked документов и пяти ignored prompt files сохранены в
+`out/trial-intake-oq046-before-rightsize-2026-09-16/`; пользовательские pricing
+изменения сохранены. Runtime/редактор/remote state не менялись, Computer Use,
+app tests/build и provider calls не выполнялись. Результат этого прохода —
+проверенный пакет документов; реализация 01 остаётся отдельным следующим шагом.
+
+Проверки: docs:check — 375 local links / 70 files, 112 command lines и continuity
+passed; release:scan — 618 text files passed; git diff --check passed. Отдельно
+проверены 7 untracked/ignored документов, 21 local link и whitespace; исходный
+diff просмотрен. Неверный автоматически составленный anchor handoff исправлен
+на явный стабильный anchor, повторный docs:check прошёл. Runtime suite не запускался.
+
+<a id="trial-intake-server-20260916"></a>
+
+## 2026-09-16 — trial-intake: серверный срез 01
+
+По прямому поручению владельца выполнен локальный `01_SERVER.md`.
+База worktree: `3ea46b12d077568d3fbee6fd65b9317294b8f343`; изменения не закоммичены.
+Существующий pricing/docs diff сохранён. Reuse preflight выше; новый remote
+preflight не требовался. Операционные prompts остаются Git-ignored.
+
+Реализовано:
+
+- Миграция `0027_trial_intake.sql`, модель/сервисы в `src/lib/trial-intake/`:
+  гостевой create, несколько детей/занятий/дат, assignments, content-bound
+  idempotency, scoped token/receipt, resend и atomic verification/Telegram queue.
+  Canonical users/children/family/import не участвуют в гостевой заявке.
+- Reader фиксированного HTML с versioned JSON, schema/hash validation, cache,
+  size/time bounds. Единственный контракт TIN-06 уточнён exact envelope;
+  `tests/fixtures/trial-intake/catalog-v1.json` используется также на 02.
+- Guest store к существующему EmailOutboxWorker/Resend; немецкое письмо с
+  HTML-кнопкой и plain text, полное название одной константой
+  `src/lib/organization.ts`, тот же sender address. Intake auth/reset mail
+  использует ту же константу. Старые full-mode template guards сохранены.
+- Telegram использует существующие provider, окно, durable delivery/recovery.
+  Полная заявка делится на части; immutable ledger содержит только opaque
+  reference, а PII находится в удаляемой intake payload table. Cleanup отменяет
+  unsent, reconciles истёкшие leases и удаляет данные по TIN-12; живой dispatch
+  задерживает удаление. После purge unknown можно закрыть existing audited
+  recovery; повторная отправка без payload запрещена.
+- `PORTAL_MODE=trial_intake` (default full), `TRIAL_INTAKE_ACCEPTING`,
+  `TRIAL_INTAKE_SCHEDULE_URL`: server route gate, config без R2/Browser,
+  сохранённые login/reset/logout, outbox и minimal scheduler/operations.
+  Контракт HTTP routes и query names — в TIN, раздел «Серверный интерфейс шага 01».
+  `/probestunde` и admin UI пока не имеют `+page`: это следующий шаг 02.
+- Admin JSON list/detail/status, combined filters, stable sorts, 50-item
+  pagination, audit чтения/статусов, технический guest email retry.
+- `scripts/trial-intake/bootstrap-admin.ts`: exact target/identity-bound CLI,
+  stdin credentials, existing password/session/bootstrap primitives, fresh
+  empty users guard, одна batch и read-back после попытки. Локальная synthetic
+  репетиция прошла; реальный admin не создавался.
+- `deploy/trial-intake/wrangler.example.jsonc` и README с inputs/containment.
+  Это template, не заполненный release manifest. Automatic request logs/traces
+  выключены из-за token-bearing URLs; aggregate D1 monitoring сохранён.
+
+### Focused evidence
+
+Affected paths: public intake JSON, auth/route/config mode gates, shared delivery
+и scheduler, D1 migration/retention/admin. Проверки ограничены этими paths и
+непосредственными consumers; полный gate выполняется после UI/exporter на 03.
+Все fixtures synthetic, provider network в тестах перехвачен локально.
+
+Выполненные команды:
+
+```bash
+npx vitest run tests/unit/trial-intake/http-mode.test.ts tests/unit/config.test.ts tests/unit/messaging-outbox.test.ts tests/unit/auth-security.test.ts tests/unit/operations-scheduler.test.ts tests/unit/admin-outbox-route-security.test.ts tests/unit/admin-operations-route-security.test.ts tests/unit/resend-email-provider.test.ts --maxWorkers=2 --reporter=verbose
+npx vitest run tests/integration/trial-intake/intake-d1.test.ts tests/integration/messaging-outbox-d1.test.ts tests/integration/auth-d1.test.ts tests/integration/operations-scheduler-d1.test.ts --maxWorkers=2 --reporter=verbose
+npx vitest run tests/integration/trial-intake/intake-d1.test.ts tests/unit/trial-intake/catalog-validation.test.ts tests/unit/trial-intake/http-mode.test.ts --maxWorkers=2 --reporter=verbose
+npx vitest run tests/integration/trial-intake/intake-d1.test.ts -t 'verification|Telegram|email engine|business hours|retention deletes' --maxWorkers=1 --reporter=verbose
+npx vitest run tests/integration/trial-intake/catalog-workers.test.ts tests/unit/trial-intake/catalog-validation.test.ts --reporter=verbose
+npx vitest run tests/integration/trial-intake/intake-d1.test.ts -t 'HTTP submit' --reporter=verbose
+npm run check
+npx tsx scripts/trial-intake/bootstrap-admin.ts --rehearse
+```
+
+PowerShell dedicated browser check:
+
+```powershell
+$env:KOLIBRI_E2E_TRIAL_INTAKE='1'
+npm run test:e2e -- tests/e2e/trial-intake/server-boundaries.spec.ts
+```
+
+Результаты: shared/config/security unit pass — 78 tests; ещё 4 reader/date unit
+tests pass. Shared D1 consumers — 31 tests pass. Все 17 новых D1 scenarios имеют
+passing evidence; после финального исправления ID повторены 8 affected cases,
+остальные ранее прошедшие cases не переоткрывались. Native workerd reader —
+2 tests pass. Browser boundary — 1 pass. Typecheck — 0 errors / 0 warnings.
+Bootstrap rehearsal: success, activeAdminCount=1, auditVerified=true.
+
+Первичные failures не пропущены: исправлен подсчёт retention DELETE с cascade
+(D1 meta.changes считает дочерние строки), исправлены test-only type/fixture
+ошибки и timeout synthetic pagination setup. Browser readiness первоначально
+ожидал `/`, который redirect-ил на будущую страницу 02; для intake harness
+выбран существующий `/auth/login`, после этого сценарий прошёл.
+Два воспроизводимых P1 исправлены до завершения: operator search длинного
+Telegram ID превышал D1 LIKE limit (теперь короткий `ti:` prefix); native
+Workerd отвергал `redirect:error` (теперь `manual` + отказ non-2xx, bound fetch).
+Native red→green и отсутствие второго outbound request при redirect проверены.
+
+Evidence находится в Git-ignored `tmp/trial-intake-*.log`: focused/final-tests,
+recovery-tests, native-fetch, http-tests, e2e, check, bootstrap. Combined ранние
+логи содержат исправленные failures; финальное evidence оценивается с повторными
+focused runs выше, а не выдаётся за полностью зелёный первоначальный запуск.
+`npm test`, весь E2E, `npm run build`, audit и реальные provider smoke сознательно
+не запускались: единый release gate 03 ещё впереди. E2E здесь работал на existing
+Vite/local-D1 harness; native test собирал только отдельный in-memory fixture.
+
+### Остаток и передача
+
+В реализованном локальном серверном срезе unresolved P0/P1 не обнаружены.
+До milestone обязательны: UI/DE-RU/mobile/полное название в доступных auth screens
+и штатный exporter на 02; общий release gate и exact target/commands/rollback
+на 03; отдельное разрешённое создание target/secret/admin, real inbox/Telegram
+и published HTML read-back перед CTA. Это не production-ready declaration.
+OQ-044 остаётся открытым: до иного решения реальная Telegram доставка — gate.
+
+Владелец сообщил о созданном Resend key для `kolibri-trial-intake`; значение
+не запрашивалось и не читалось. На этапе secret binding использовать его через
+protected ввод, без повторной настройки domain/DNS. Telegram auto-delete 14 дней
+остаётся обязательной настройкой до реальных уведомлений, согласно preflight.
+
+Remote mutations: **0**, provider sends: **0**. Preview/prod/Access/Netlify,
+редактор расписания и официальный сайт не менялись. Active state/deployment
+checkpoint не обновлялись: remote операции не было. Следующий шаг — **02 UI и
+экспортер**, используя настоящий серверный контракт/fixture этого пакета.
+
+Финальные docs/artifact checks: `npm run docs:check` — 383 local links / 71 files,
+122 command lines, continuity passed; `npm run release:scan` — 650 text files,
+без запрещённых artifacts/secrets/PII; `git diff --check` passed.

@@ -20,6 +20,46 @@
 
 ## Принципы
 
+Для нового limited release SYS-05 использовать матрицу
+[TRIAL_INTAKE_RELEASE_TZ](TRIAL_INTAKE_RELEASE_TZ.md#проверки-по-фактической-поверхности)
+и TIN-AC. Один общий gate перед deploy покрывает migration/shared mode;
+между шагами только affected tests. Полный contract/upload manual lifecycle
+не является проверкой этого limited release.
+
+Уточнения TIN-02/11/12 проверяются в том же intake browser/release pass:
+полное название учреждения (включая From и доступные auth/reset экраны), перенос
+на mobile, короткий текст сроков без Telegram и дополнительной галочки.
+В review diff/imports сверяется отделение `src/lib/trial-intake/` и deployment
+config; отдельный архитектурный checker или новый UI suite для этих текстов не нужен.
+
+TIN-AC-01/OQ-046: проверить путь обычного экспорта из веб-редактора, сохранение
+portal origin/CTA settings и повторный экспорт после изменения synthetic занятия.
+В обоих артефактах карточки, JSON и ссылки формирует экспортер; ручной HTML patch
+и отдельный post-processing не являются проверкой или допустимым обходом.
+Эта проверка не требует Netlify credentials или публикации synthetic расписания.
+Выполняется как один focused regression шага 02; на 03 переиспользуется его
+evidence при неизменённых exporter/callers/config. Это не отдельный новый
+browser suite редактора; тест вызывает используемый штатным экспортом путь
+на synthetic данных. При deploy отдельно сверяется опубликованный артефакт.
+
+Локальный серверный срез 01 покрывают
+`tests/integration/trial-intake/intake-d1.test.ts` (D1 lifecycle, max 10×10,
+create/verify/resend concurrency, assignments, Turnstile/rate limits, retention
+с delivery leases, admin filter/sort/pagination, bootstrap и upgrade 0026→0027),
+`tests/unit/trial-intake/catalog-validation.test.ts` и
+`tests/unit/trial-intake/http-mode.test.ts` (bounded reader/cache, Berlin dates,
+input/origin/CSRF и mode/config gate). Synthetic catalog fixture общая с 02.
+`tests/integration/trial-intake/catalog-workers.test.ts` проверяет native
+Workers fetch/cache и отсутствие перехода при redirect, без внешнего HTTP.
+Dedicated browser scenario — `tests/e2e/trial-intake/server-boundaries.spec.ts`,
+включается только `KOLIBRI_E2E_TRIAL_INTAKE=1`; existing E2E harness остаётся
+изолированным, readiness URL для этого режима — `/auth/login`.
+Непосредственные consumers: config/auth-security, messaging-outbox,
+operations-scheduler, admin route security и Resend provider suites.
+Exact commands/evidence среза находятся в
+[handoff 01](handoffs/stage-13.md#trial-intake-server-20260916).
+Полный release suite и реальные provider smoke на шаге 01 не выполняются.
+
 - Ни один automated fixture не содержит реальных имен, email, телефонов,
   адресов или документов клиентов.
 - Бизнес-правило получает unit/golden test; граница D1/R2/API — integration test;

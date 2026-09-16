@@ -1,5 +1,32 @@
 # Целевая модель данных D1
 
+Ограниченный `trial-intake` добавляет собственные request/child/item и email-store
+records по [TRIAL_INTAKE](../domain/TRIAL_INTAKE.md) и
+[плану модели](../implementation/TRIAL_INTAKE_RELEASE_TZ.md).
+Они не являются `users`, canonical `children` или `trial_requests`; ordinary
+family/ownership invariants ниже не заменяются гостевыми идентификаторами.
+Репозиторий/сервисы этой модели изолированы в `src/lib/trial-intake/` по TIN-11;
+схема добавлена append-only миграцией `0027_trial_intake.sql`:
+
+- `trial_intake_requests`: контакты, state, content-bound idempotency, версия
+  privacy text, scoped verification hash/nonces, timestamps и retention deadline;
+- `trial_intake_children`, `trial_intake_items`, `trial_intake_item_children`:
+  дети, неизменяемый snapshot занятия/желаемая дата, назначения; composite FK
+  запрещают связать ребёнка и занятие разных заявок;
+- `trial_intake_email_outbox`: гостевые задания с request/version, без фиктивных
+  users; existing EmailOutboxWorker работает через intake store adapter;
+- `trial_intake_telegram_payloads`: удаляемые тела частей нового template.
+  Immutable existing Telegram ledger хранит только opaque `payloadId`,
+  request reference и delivery metadata. После TTL payload удаляется каскадом.
+
+Создание использует одну D1 batch и JSON `INSERT … SELECT` с постоянным числом
+SQL queries при максимуме назначений. Verification и постановка всех частей
+уведомления также атомарны. Cleanup сначала reconciles истёкшие delivery leases,
+отменяет unsent jobs и удаляет PII; live processing блокирует удаление. Новая
+миграция добавляет узкий audited retention переход Telegram pending/retry →
+cancelled, сохраняя остальные transition guards. Retry после удаления payload
+запрещён; разрешён existing audited cancel/confirm_sent для unknown ledger.
+
 Ревизия: 2026-08-20.
 
 Документ задает логическую модель и обязательные инварианты. Конкретные SQL-

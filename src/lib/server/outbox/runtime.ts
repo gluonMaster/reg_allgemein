@@ -15,13 +15,19 @@ import {
 import { OutboxRepository } from './outbox-repository';
 import { EmailOutboxWorker, TelegramOutboxWorker } from './outbox-worker';
 import { ContractEmailAttachmentResolver } from './email-attachments';
+import { IntakeEmailStore, renderIntakeEmail } from '$lib/trial-intake/server/email-store.server';
+import { IntakeService } from '$lib/trial-intake/server/service.server';
+import { renderIntakeTelegram } from '$lib/trial-intake/server/templates.server';
+import { renderTelegramTemplate } from './templates';
 
 export function createOutboxRuntime(
 	config: RuntimeConfig,
 	overrides: { emailProvider?: EmailProvider; telegramProvider?: TelegramProvider } = {}
 ) {
 	const database = new DatabaseBoundary(config.db);
-	const repository = new OutboxRepository(database);
+	const intake = config.portalMode === 'trial_intake';
+	const repository = intake ? new IntakeEmailStore(database) : new OutboxRepository(database);
+	const intakeService = intake ? new IntakeService(database, config.jwtSecret!, config.messaging.telegramSchedule) : null;
 	const attachmentResolver = config.r2ArchiveBucket
 		? new ContractEmailAttachmentResolver(
 				database,
@@ -67,7 +73,8 @@ export function createOutboxRuntime(
 			timing,
 			undefined,
 			undefined,
-			attachmentResolver
+			attachmentResolver,
+			intakeService ? (input) => renderIntakeEmail(intakeService, input) : undefined
 		),
 		telegramWorker: new TelegramOutboxWorker(
 			repository,
@@ -75,7 +82,11 @@ export function createOutboxRuntime(
 			config.messaging.telegramChatId,
 			config,
 			config.messaging.telegramSchedule,
-			telegramTiming
+			telegramTiming,
+			undefined,
+			undefined,
+			intake ? (input) => input.row.template_or_category === 'bureau.trial_intake'
+				? renderIntakeTelegram(database, input) : renderTelegramTemplate(input) : undefined
 		),
 	};
 }

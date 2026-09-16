@@ -15,6 +15,7 @@ import {
 } from './operations-repository';
 import { operationsMonitoringThresholds } from './monitoring';
 import { StorageIntentRepository } from './storage-intents';
+import { cleanupIntake } from '$lib/trial-intake/server/cleanup.server';
 
 export interface ScheduledJobResult {
 	jobName: ScheduledJobName;
@@ -37,6 +38,10 @@ export interface SchedulerOptions {
 }
 
 const FAST_JOBS: readonly ScheduledJobName[] = ['email_outbox', 'telegram_outbox'];
+const INTAKE_MAINTENANCE: readonly ScheduledJobName[] = ['email_reservation_cleanup', 'security_metadata_cleanup'];
+export function intakeJobAllowed(job: ScheduledJobName): boolean {
+	return FAST_JOBS.includes(job) || INTAKE_MAINTENANCE.includes(job);
+}
 const MAINTENANCE_JOBS: readonly ScheduledJobName[] = [
 	'price_review',
 	'document_quarantine',
@@ -94,6 +99,7 @@ function scheduledCadenceForJobs(jobNames: readonly ScheduledJobName[]): Schedul
 		jobNames.every((jobName, index) => jobName === expected[index]);
 	if (matches(FAST_JOBS)) return 'fast';
 	if (matches(MAINTENANCE_JOBS)) return 'maintenance';
+	if (matches(INTAKE_MAINTENANCE)) return 'maintenance';
 	throw new Error('SCHEDULED_CADENCE_JOB_SET_INVALID');
 }
 
@@ -286,6 +292,7 @@ async function executeJob(
 			return {
 				disabled: false,
 				result: {
+					...(config.portalMode === 'trial_intake' ? await cleanupIntake(new DatabaseBoundary(config.db), now, limit) : {}),
 					cleaned: await new AuthRepository(
 						new DatabaseBoundary(config.db)
 					).cleanupExpiredEmailReservations(now, limit),
@@ -352,6 +359,9 @@ export async function runScheduledJobs(
 	input: RunJobsInput,
 	options: SchedulerOptions = {}
 ): Promise<ScheduledJobResult[]> {
+	if (config.portalMode === 'trial_intake' && input.jobNames.some((job) => !intakeJobAllowed(job))) {
+		throw new Error('INTAKE_JOB_FORBIDDEN');
+	}
 	if (input.triggerKind === 'manual' && !input.admin) {
 		throw new Error('MANUAL_JOB_ADMIN_REQUIRED');
 	}
@@ -628,7 +638,8 @@ export async function runScheduledEvent(
 	options: SchedulerOptions = {}
 ): Promise<ScheduledJobResult[]> {
 	const scheduledAt = new Date(input.scheduledTime).toISOString();
-	const jobNames = scheduledJobNamesForCron(input.cron);
+	const jobNames = config.portalMode === 'trial_intake' && input.cron === '*/15 * * * *'
+		? INTAKE_MAINTENANCE : scheduledJobNamesForCron(input.cron);
 	if (!jobNames) throw new Error('UNKNOWN_CRON_SCHEDULE');
 	return runScheduledJobs(
 		config,

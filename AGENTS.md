@@ -53,10 +53,12 @@ origin и runtime-ресурсами. Официальный сайт `kolibri-d
 ## Приоритет результата
 
 Ближайший явно названный владельцем пользовательский milestone имеет приоритет
-над гипотетическим совершенством кода. Для текущего Stage 13 это полностью
-рабочий Access-protected preview на синтетических данных по `SYS-04` и
-`OQ-036`: обязательный MVP-контур нельзя заменять stub, fake provider,
-`feature_disabled` или одним локальным тестом.
+над гипотетическим совершенством кода. По поручению 2026-09-16 ближайший
+milestone — ограниченный production `trial-intake` по `SYS-05`,
+`docs/domain/TRIAL_INTAKE.md` и `docs/implementation/TRIAL_INTAKE_RELEASE_TZ.md`.
+Полный Access-protected preview по `SYS-04`/`OQ-036` сохраняется как последующая
+работа и не подменяет срочный scope. Обязательные контуры выбранного milestone
+нельзя заменять stub, fake provider, `feature_disabled` или одним локальным тестом.
 
 Перед исправлением или новым review-loop каждую находку нужно связать с
 ближайшим milestone и классифицировать:

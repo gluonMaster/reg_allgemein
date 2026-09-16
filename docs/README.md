@@ -17,7 +17,7 @@
 
 Owner/product decisions и ещё не закрытые вопросы отслеживаются в
 [OPEN_QUESTIONS.md](spec/OPEN_QUESTIONS.md). `full-manual-preview` по
-`SYS-04`/`OQ-036` является отдельным ближайшим milestone: production-only legal,
+`SYS-04`/`OQ-036` является отдельным milestone полного портала: production-only legal,
 privacy, training, data, custom-origin и resource approvals не задерживают
 synthetic preview. Production readiness остаётся самостоятельным последующим
 NO-GO/GO gate. Statutory checks конкретной template version описываются в
@@ -36,6 +36,11 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 
 ## Карта источников истины
 
+Срочное поручение 2026-09-16: [короткая заявка на пробное](domain/TRIAL_INTAKE.md)
+и [план реализации/деплоя](implementation/TRIAL_INTAKE_RELEASE_TZ.md).
+Это ближайший приоритет по SYS-05. Scope согласован ответами OQ-037–043/045–046 в
+OPEN_QUESTIONS; реализация не начата. OQ-044 об открытии вне рабочего окна ожидает ответа.
+
 | Тема                                        | Канонический документ                                                                                |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Состав и границы MVP                        | [spec/MVP_SPEC.md](spec/MVP_SPEC.md)                                                                 |
@@ -45,6 +50,7 @@ deployment, public origin, auth/session, D1 и R2. `kolibri-dresden.de` — вн
 | Принятые технические решения                | [architecture/DECISIONS.md](architecture/DECISIONS.md)                                               |
 | Типы занятий и вместимость                  | [domain/COURSES.md](domain/COURSES.md)                                                               |
 | Расчет и пересмотр цены                     | [domain/PRICING.md](domain/PRICING.md)                                                               |
+| Автоматическая цена и синтетический прайс preview — пакет реализации | [implementation/PREVIEW_SERVICE_PRICING_TZ.md](implementation/PREVIEW_SERVICE_PRICING_TZ.md) |
 | Договоры и шаблоны                          | [domain/CONTRACTS.md](domain/CONTRACTS.md)                                                           |
 | Privacy, удаление и retention               | [domain/PRIVACY_RETENTION.md](domain/PRIVACY_RETENTION.md)                                           |
 | Состояния и пользовательские процессы       | [domain/WORKFLOWS.md](domain/WORKFLOWS.md)                                                           |

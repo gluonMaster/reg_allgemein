@@ -15,12 +15,11 @@ export type TelegramDeliveryState =
 	| 'delivered'
 	| 'delivery_unknown';
 
-export interface EmailOutboxRow {
+interface EmailOutboxBase {
 	id: string;
 	source_kind: string;
 	source_id: string;
 	template_or_category: string;
-	recipient_address_kind: 'current' | 'pending' | 'legacy';
 	locale: string;
 	payload_json: string;
 	dedupe_key: string;
@@ -29,9 +28,13 @@ export interface EmailOutboxRow {
 	email: string;
 	token_id: string | null;
 	token_kind: 'email_verification' | 'password_reset' | 'legacy_email_claim' | null;
-	user_id: string;
 	lease_owner: string;
 }
+
+export type EmailOutboxRow = EmailOutboxBase & (
+	| { recipient_address_kind: 'current' | 'pending' | 'legacy'; user_id: string }
+	| { recipient_address_kind: 'guest'; user_id: null }
+);
 
 export interface TelegramOutboxRow {
 	id: string;

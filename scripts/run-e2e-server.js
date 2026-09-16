@@ -24,7 +24,10 @@ if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
 }
 
 const syntheticJwtSecret = randomBytes(48).toString('base64url');
-writeFileSync(run.runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n`, {
+const intakeTestEnvironment = process.env.KOLIBRI_E2E_TRIAL_INTAKE === '1'
+	? 'PORTAL_MODE=trial_intake\nTRIAL_INTAKE_ACCEPTING=false\nTRIAL_INTAKE_SCHEDULE_URL=https://schedule.example.test/\n'
+	: '';
+writeFileSync(run.runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n${intakeTestEnvironment}`, {
 	encoding: 'utf8',
 	mode: 0o600,
 });

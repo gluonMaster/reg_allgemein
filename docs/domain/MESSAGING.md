@@ -2,6 +2,14 @@
 
 Ревизия: 2026-08-14.
 
+Для limited release `trial-intake` владелец 2026-09-16 отдельно поручил
+передавать полное содержание заявки в Telegram и сохранить рабочее время.
+Это узкое исключение из минимизированного payload только для нового template:
+[TRIAL_INTAKE.md](TRIAL_INTAKE.md), `TIN-03`, `TIN-07`, `TIN-09`.
+Смысл старых templates, provider certainty/recovery и запрет PII в логах не
+меняются. Уточнение OQ-045 требует полного названия учреждения в отображаемых
+упоминаниях, включая From; короткий клиентский текст intake не описывает Telegram.
+
 ## Каналы MVP
 
 - Кабинет/D1 — каноническая история обращения.
@@ -291,7 +299,7 @@ versioned contact configuration со ссылками на официальны�
 `@`. Утверждённая identity одинакова для preview и production:
 
 ```text
-From: Kinder- und Elternzentrum Kolibri e.V. <registration@kolibri-dresden.de>
+From: "Kinder- und Elternzentrum \"KOLIBRI\" e.V." <registration@kolibri-dresden.de>
 Reply-To: registration@kolibri-dresden.de
 ```
 

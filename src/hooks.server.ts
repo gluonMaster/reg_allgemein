@@ -10,6 +10,7 @@ import { SESSION_COOKIE_NAME } from '$lib/server/auth/session';
 import { routeAccessPolicy } from '$lib/server/security/route-policy';
 import { withSecurityHeaders } from '$lib/server/security/response-headers';
 import { isPortalFormOriginAllowed } from '$lib/server/security/form-origin';
+import { intakeRouteAllowed } from '$lib/trial-intake/server/mode.server';
 
 function accessDenied(
 	event: RequestEvent,
@@ -52,6 +53,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.locale = normalizeUiLocale(event.cookies.get(UI_LOCALE_COOKIE));
 	event.locals.requestId = getOrCreateRequestId(event.request.headers.get('x-request-id'));
 	const config = loadRuntimeConfig(event.platform?.env);
+	const isIntakeRoute = event.route.id?.startsWith('/probestunde') || event.route.id?.startsWith('/admin/trial-intake');
+	const intakeLogout = event.route.id === '/account/security' && event.request.method === 'POST'
+		&& event.url.search === '?/logout';
+	if ((config.portalMode === 'trial_intake' && !intakeRouteAllowed(event.route.id) && !intakeLogout)
+		|| (config.portalMode !== 'trial_intake' && isIntakeRoute)) {
+		return withSecurityHeaders(new Response(null, { status: 404 }), {
+			requestId: event.locals.requestId, production: config.appEnvironment === 'production', noStore: true,
+		});
+	}
 	if (!isPortalFormOriginAllowed(event.request, config.portalPublicOrigin)) {
 		return accessDenied(
 			event,
@@ -96,6 +106,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 			'ui.access.parentRequired',
 			config.appEnvironment === 'production'
 		);
+	}
+	if (config.portalMode === 'trial_intake' && (event.route.id === '/' || event.route.id === '/admin')) {
+		return withSecurityHeaders(new Response(null, { status: 303,
+			headers: { location: event.route.id === '/' ? '/probestunde' : '/admin/trial-intake' } }),
+			{ production: config.appEnvironment === 'production', noStore: true });
 	}
 
 	const response = withSecurityHeaders(
