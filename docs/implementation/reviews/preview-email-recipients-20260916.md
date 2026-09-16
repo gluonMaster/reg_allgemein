@@ -36,11 +36,14 @@ independent GO не заявляется. Исторический independent b
   `tests/e2e/01-portal-ui-validation.spec.ts tests/e2e/absence-lifecycle.spec.ts`,
   2/2 passed. Все 40 разных сценариев имеют успешное evidence; это completion,
   а не единый полностью зелёный прогон. Первые traces/errors сохранены.
-- Полный Vitest: результаты дополняются после завершения. Начальный serial
-  run успешно завершил `requests-documents-d1.test.ts` (19/19). После окончания
-  полного Chromium serial run остановлен для перехода к четырём workers;
-  completion запускает все остальные файлы с exact `--exclude` этого suite.
-  Assertions и timeouts не менялись; partial незавершённый suite не засчитан.
+- Общий Vitest остановлен 2026-09-16T09:35:03Z по прямому уточнению владельца:
+  только необходимые проверки для снятия email-ограничения. Полный suite
+  не объявляется пройденным и не перезапускается. До остановки завершены
+  восемь integration suites (86 tests), observed assertion failures 0;
+  незавершённые suites не засчитаны. Этот общий запуск был избыточным для
+  узкого parser/guard diff. Gate для этой публикации: 41 affected tests,
+  check/build и exact-config dry-run; ранее выполненный Chromium сохранён
+  как дополнительное evidence, без повторения.
 - Strict Wrangler dry-run с актуальными settings и единственным var delta:
   passed; module SHA-256
   `4b3e652a21b4e2a0d3d6ce382e982511c5ad9894856226927674507ed2aab163`.

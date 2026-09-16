@@ -29,6 +29,11 @@ Roadmap, runbooks, readiness/traceability и handoff задают стабиль
 
 ## EMAIL: разрешённое снятие ограничения получателей — 2026-09-16T09:28:43Z
 
+Owner clarification 2026-09-16T09:35:03Z: тяжёлые проверки остановлены;
+разрешены только необходимые проверки email-изменения. 41 affected tests,
+check/build и strict dry-run passed; полный Vitest не заявляется пройденным.
+Protected release-gate.json фиксирует точный scope и частичный результат.
+
 Владелец 2026-09-16 прямо поручил убрать ограничение email-получателей
 в текущем preview; перечисленные три адреса были запасным вариантом.
 Scope: candidate 3638dce8be9bb0a2155860dd055112c3f5b62a43 и единственный config delta
@@ -1190,7 +1195,7 @@ next_atomic_action:
   target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
   mutation: one_preview_deploy_code_plus_exact_star_var
   preconditions:
-    - full_local_gate_clean_detached_candidate_exact_config_Access_schema_and_rollback
+    - owner_scoped_necessary_checks_clean_candidate_exact_config_Access_and_rollback
   postcondition:
     - candidate_module_and_star_mode_on_one_version_100_percent_other_settings_and_data_preserved
   containment: retain_Access_and_captured_previous_version_no_blind_repeat
