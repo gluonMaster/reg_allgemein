@@ -52,6 +52,7 @@ describe('portal shell server state and hook denials', () => {
 		async (role) => {
 			const result = await load(event('/catalog', role) as never);
 			expect(result).toEqual({
+				portalMode: 'full',
 				officialLinks: null,
 				locale: 'de',
 				portalNavigation: { pathname: '/catalog', role, csrfToken: role ? 'form-csrf' : '' },

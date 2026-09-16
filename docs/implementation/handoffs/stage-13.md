@@ -5884,3 +5884,150 @@ checkpoint не обновлялись: remote операции не было. �
 Финальные docs/artifact checks: `npm run docs:check` — 383 local links / 71 files,
 122 command lines, continuity passed; `npm run release:scan` — 650 text files,
 без запрещённых artifacts/secrets/PII; `git diff --check` passed.
+
+<a id="trial-intake-ui-20260916"></a>
+
+## 2026-09-16 — trial-intake: интерфейс и экспортер 02
+
+По прямому поручению владельца выполнен локальный `02_UI_AND_SCHEDULE.md`.
+База: `1912becbde2ecd9ec4c75772f38b618b164ce3b0`; изменения этого шага не
+закоммичены. Scope — TIN-01/02/06/08/11/12 и согласованные OQ; новых бизнес-правил
+не добавлено. Полный release gate остаётся отдельным шагом 03.
+
+### Реализованные поверхности
+
+- `/probestunde`: DE/RU, карточка исходного занятия, ближайшая допустимая дата,
+  контакты, несколько детей и занятий с отдельными датами/назначениями, поиск
+  дополнительных занятий, ошибки с фокусом, Turnstile, submit и resend countdown.
+  Переключение языка и ошибка сохраняют поля; повтор после потерянного HTTP-ответа
+  сохраняет payload/idempotency key, включая переключение языка между попытками.
+  Удаление ребёнка очищает его назначения, а пустой выбор явно требует исправления.
+  PII хранится только в состоянии формы, без browser persistence.
+- `/probestunde/verify`: GET показывает состояние; подтверждение требует явной
+  кнопки POST. Проверены старый token после resend, success и повторное открытие.
+- Admin list/detail: все согласованные фильтры/сортировки, пагинация 50,
+  контакты, все дети и назначения, даты, request-level processed/reopen,
+  техническая email queue/retry и переход в существующий Telegram recovery.
+  JSON endpoints сохранены с явным `Accept: application/json`.
+- Компоненты, словарь, styles, browser contracts и page loaders изолированы в
+  `src/lib/trial-intake/`; route wrappers тонкие. Общие изменения ограничены
+  полным названием учреждения, его переносом, intake navigation и доступными
+  auth links. Календарные функции разделяются с серверной валидацией.
+- Визуально проверены mobile form/mail/admin и desktop admin detail; browser
+  assertions проверяют отсутствие горизонтального overflow при 390 px, DE/RU,
+  сохранность формы и полное название на login/forgot/reset surfaces; anonymous
+  admin access и закрытые full-mode routes получают серверный отказ.
+
+### Редактор расписания: перенос выполнен
+
+Владелец отдельно разрешил source mirror в Git. Он находится в
+[integrations/schedule-exporter](../../../integrations/schedule-exporter/README.md)
+и содержит только Python sources, synthetic tests и пример новой config section.
+Office, рабочий config и готовые HTML в Git не добавлены.
+
+Прослежен штатный путь: `gui_services/app_actions.py::_run_visualiser_command` →
+`visualiser/example_usage_enhanced.py` → `schedule_visualizer_enhanced.main` →
+`EnhancedExportManager.export_to_html`. Полный pipeline использует ту же команду.
+Тест запускает реальный main/exporter на synthetic данных с заменой только
+Office/визуальных входных границ; отдельно проверен ненулевой exit launcher при
+ошибке. Ни GUI, ни Excel/COM/LibreOffice, ни клиентские Office-файлы не запускались.
+
+В `C:\path\to\schedule-editor` перенесены три изменённых `.py`:
+`enhanced_export_manager_html.py`, `schedule_visualizer_enhanced.py`,
+`example_usage_enhanced.py` из `visualiser/`. В существующий корневой `config.json`
+добавлена только секция `trial_intake`: `portal_origin=""`, `cta_enabled=false`.
+Остальные config values сохранены; при каждом экспорте настройки читаются заново.
+Каталог строится уже при CTA off; ссылки появятся после отдельного release gate
+и сохранения проверенного HTTPS origin/CTA on. HTML вручную не патчился.
+
+До правок сохранена одна исходная копия каждого из четырёх файлов в Git-ignored
+`tmp/trial-intake-exporter-backup/`. Unified diffs и before/after SHA-256:
+`tmp/trial-intake-exporter-evidence/`. После переноса сверено совпадение трёх
+рабочих `.py` с mirror и config с ожидаемым объектом. Rollback — восстановление
+этих четырёх файлов из backup; backup не перезаписывать.
+
+Проверены обе building keys и субботние подколонки; один нормализованный объект
+задаёт карточку, catalog record, ID и ссылку. Synthetic повторный экспорт после
+изменения занятия сохраняет origin/CTA и согласованно обновляет карточки/JSON/IDs.
+Escaping, NFC, неполный контекст, скрытые/индивидуальные строки и portal reader
+покрыты focused regression. Цвета, поиск и темы сохранены.
+
+### Проверки и evidence
+
+Затронуты intake UI/loaders, общая шапка/auth navigation, календарные helpers и
+HTML exporter. Поэтому выполнены browser intake/boundary, exporter↔reader,
+calendar/http-mode, shared i18n/shell и D1 admin query checks; полный server suite
+шага 01 не повторялся. Это локальный шаг реализации, не release/deploy gate.
+
+```bash
+npx vitest run tests/unit/trial-intake/catalog-validation.test.ts tests/unit/trial-intake/exporter-roundtrip.test.ts tests/unit/trial-intake/http-mode.test.ts --maxWorkers=2
+npx vitest run tests/unit/i18n.test.ts tests/unit/portal-shell.test.ts tests/integration/trial-intake/intake-d1.test.ts -t 'i18n|portal shell|admin filters' --maxWorkers=2
+python -X utf8 integrations/schedule-exporter/test_exporter.py
+python -X utf8 C:/Konst/2026/Kolibri/A-SchedGen_PreRelease/test_visualiser_lesson_label_utils.py
+npm run check
+npm run docs:check
+npm run release:scan
+git diff --check
+```
+
+```powershell
+$env:KOLIBRI_E2E_TRIAL_INTAKE='1'
+npm run test:e2e -- tests/e2e/trial-intake/intake-ui.spec.ts
+npm run test:e2e -- tests/e2e/trial-intake/server-boundaries.spec.ts
+```
+
+Результаты runtime checks: 8 unit/roundtrip + 16 related i18n/shell/admin checks
+passed; 16 unrelated D1 cases сознательно отфильтрованы `-t`. Python regression:
+4 passed; существующий lesson-label script passed. Два browser scenarios passed.
+Сценарий UI проходит настоящий local HTTP/D1 flow: multi-child/lesson/date,
+потерянный submit response/retry, resend, read-only GET/POST verification,
+synthetic provider rejection, штатный email recovery, filters, processed/reopen.
+Provider network в existing harness заменён только для synthetic source/Turnstile;
+реальные отправки не выполнялись. Synthetic Telegram failure проходит настоящий
+outbox engine, без обхода защитных D1 triggers.
+
+Во время проверки исправлены P1: раннее заполнение до hydration, потеря выбранного
+дня в admin select из-за несовпадения типов, проглатывание ошибки экспортера
+launcher-ом (могло разрешить GUI скопировать старый HTML). Test-only ошибки
+устранены, включая конкурентное чтение SQLite до завершения browser mutation;
+финальный browser run прошёл после ожидания UI postcondition. Failures не исключены
+из сценария. Итоговые логи: `tmp/trial-intake-ui-{unit,consumers,e2e,check}.log`;
+synthetic screenshots: `tmp/trial-intake-ui-*.png`.
+Typecheck: 0 errors / 0 warnings. Boundary scenario прошёл в общем focused
+browser запуске до последней правки admin weekday; после неё повторён UI scenario.
+Docs checks: 387 local links / 72 files, 131 command lines, continuity passed.
+Release scan: 681 text files, запрещённые artifacts/secrets/PII не обнаружены.
+`git diff --check` passed. Логи docs/scan: `tmp/trial-intake-ui-{docs,scan}.log`.
+
+`npm test`, весь E2E, `npm run build`, audit, реальный export из Office и provider
+smoke сознательно не запускались по scope шага 02. Полный gate обязателен на 03,
+так как совокупный runtime diff шагов 01–02 материален; локальные результаты
+не заменяют real inbox/Telegram и published HTML read-back.
+
+### Просмотр владельцем и передача на 03
+
+Из корня репозитория запустить existing harness с временным synthetic D1:
+
+```powershell
+$env:KOLIBRI_E2E_TRIAL_INTAKE='1'
+$env:KOLIBRI_TRIAL_INTAKE_INSPECT='1'
+npm run test:e2e -- tests/e2e/trial-intake/intake-ui.spec.ts --headed
+```
+
+Откроются Chromium и Playwright Inspector. Первая пауза — заполненная форма;
+можно изучать страницу и языки. Resume продолжает flow до второй паузы на admin
+detail. После последнего Resume временная база удаляется. Для обычных проверок
+удалить `KOLIBRI_TRIAL_INTAKE_INSPECT` из окружения. Harness сам выбирает свободный
+localhost port и не требует cloud credentials или нового preview server.
+
+Unresolved P0/P1 в реализованном локальном scope не обнаружены. Следующий шаг —
+**03 release gate**: общий suite/build, review объединённого результата,
+exact target/commands/rollback. До CTA нужны отдельно разрешённый deployment,
+реальные email/Telegram, 14-day Telegram auto-delete и published catalog read-back.
+OQ-044 остаётся открытым; реальная Telegram доставка сохраняется обязательным gate.
+
+Remote mutations: **0**; provider sends: **0**. Cloudflare/Netlify/Access и
+официальный сайт не менялись. Active state и readiness не обновлялись: remote
+postconditions не изменились. Локальная установка экспортера изменена в прямо
+разрешённом scope. `rollover_required: no`, `recommended_next_session_mode: High`:
+следующая сессия — плановый release gate, серьёзной ambiguity/recovery проблемы нет.

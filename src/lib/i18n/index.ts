@@ -1,4 +1,5 @@
 import { russianCatalog } from './ru';
+import { ORGANIZATION_NAME } from '$lib/organization';
 import { additionalGermanCatalog } from './ui-additions';
 import { russianCodeLabels } from './ui-codes';
 export const defaultLocale = 'de' as const;
@@ -8,8 +9,8 @@ export const germanCatalog = {
 	'language.label': 'Sprache der Benutzeroberfläche',
 	'language.failed': 'Die Sprache konnte nicht geändert werden. Bitte versuchen Sie es erneut.',
 	'meta.description':
-		'Online-Registrierung, Kursübersicht und Elternbereich des Kinder- und Elternzentrums Kolibri e.V.',
-	'home.title': 'Kolibri Anmeldung',
+		`Online-Registrierung · ${ORGANIZATION_NAME}`,
+	'home.title': 'Anmeldung',
 	'home.foundationNotice':
 		'Das Registrierungsportal wird vorbereitet. Verfügbare Funktionen werden hier veröffentlicht.',
 	'home.catalogLink': 'Aktuelle Kurse ansehen',

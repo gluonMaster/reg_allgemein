@@ -1,0 +1,209 @@
+.intake-shell {
+	width: min(100% - 2rem, 48rem);
+	margin: 0 auto;
+	padding: 1.5rem 0 3rem;
+}
+.intake {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.intake h1,
+.intake h2,
+.intake h3 {
+	line-height: 1.25;
+}
+.intake h1 {
+	font-size: clamp(1.7rem, 5vw, 2.3rem);
+	margin: 0.5rem 0 1rem;
+}
+.intake h2 {
+	font-size: 1.3rem;
+	margin: 0 0 1rem;
+}
+.intake p {
+	line-height: 1.55;
+}
+.intake .card {
+	border: 1px solid #d9e3e0;
+	border-radius: 1rem;
+	padding: clamp(1rem, 3vw, 1.5rem);
+	background: white;
+	margin: 1.25rem 0;
+}
+.intake .highlight {
+	background: #edf6f2;
+	border-color: #bad8c9;
+}
+.intake .kicker {
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.09em;
+	font-weight: 700;
+	color: #46675d;
+}
+.intake .fields,
+.intake .filters {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+.intake label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-weight: 600;
+	min-width: 0;
+}
+.intake input:not([type='checkbox']),
+.intake select {
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	min-height: 44px;
+	padding: 0.7rem;
+	border: 1px solid #829b92;
+	border-radius: 0.5rem;
+	background: white;
+	color: #183c37;
+	font: inherit;
+}
+.intake input[type='date'] {
+	max-width: 15rem;
+}
+.intake button,
+.intake .button {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 0.65rem 1rem;
+	border: 1px solid #176b54;
+	border-radius: 0.5rem;
+	background: white;
+	color: #176b54;
+	font: inherit;
+	font-weight: 650;
+	cursor: pointer;
+	text-decoration: none;
+}
+.intake .primary {
+	background: #176b54;
+	color: white;
+}
+.intake .submit {
+	width: 100%;
+	font-size: 1.1rem;
+}
+.intake button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+.intake :is(a, button, input, select, summary):focus-visible {
+	outline: 3px solid #d19a20;
+	outline-offset: 3px;
+}
+.intake fieldset {
+	min-width: 0;
+	padding: 1rem 0;
+	margin: 0;
+	border: 0;
+	border-top: 1px solid #d9e3e0;
+}
+.intake legend {
+	font-weight: 700;
+	padding: 0.5rem 0;
+}
+.intake .form-controls {
+	border: 0;
+	padding: 0;
+}
+.intake .checks {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1rem;
+}
+.intake .check {
+	flex-direction: row;
+	align-items: center;
+	min-height: 44px;
+	font-weight: 500;
+}
+.intake .check input {
+	width: 1.25rem;
+	height: 1.25rem;
+	accent-color: #176b54;
+}
+.intake .actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 1rem 0;
+}
+.intake .error {
+	background: #fff0ee;
+	border-left: 4px solid #af3327;
+	padding: 1rem;
+	color: #84271f;
+}
+.intake .muted {
+	color: #52665f;
+	font-size: 0.95rem;
+}
+.intake .intake-lesson {
+	display: grid;
+	gap: 0.2rem;
+}
+.intake-lesson strong {
+	font-size: 1.2rem;
+}
+.intake-lesson p {
+	margin: 0.1rem 0;
+}
+.intake .picker {
+	max-height: 24rem;
+	overflow: auto;
+	margin: 1rem 0;
+	padding: 0.25rem;
+}
+.intake .result {
+	padding: 1rem 0;
+	border-top: 1px solid #d9e3e0;
+}
+.intake .result button {
+	margin-top: 0.75rem;
+}
+.intake .badge {
+	display: inline-block;
+	border-radius: 2rem;
+	padding: 0.3rem 0.8rem;
+	background: #eaf3ee;
+	font-size: 0.9rem;
+}
+.intake .pagination {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.intake dl {
+	display: grid;
+	grid-template-columns: minmax(6rem, 1fr) minmax(0, 2fr);
+	gap: 0.7rem;
+}
+.intake dd {
+	margin: 0;
+}
+.intake summary {
+	cursor: pointer;
+	padding: 0.5rem 0;
+	min-height: 44px;
+	box-sizing: border-box;
+}
+@media (max-width: 540px) {
+	.intake .fields,
+	.intake .filters {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

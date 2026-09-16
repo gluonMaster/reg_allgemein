@@ -1,6 +1,6 @@
 // @ts-check
 import { randomBytes } from 'node:crypto';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,8 +25,24 @@ if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
 
 const syntheticJwtSecret = randomBytes(48).toString('base64url');
 const intakeTestEnvironment = process.env.KOLIBRI_E2E_TRIAL_INTAKE === '1'
-	? 'PORTAL_MODE=trial_intake\nTRIAL_INTAKE_ACCEPTING=false\nTRIAL_INTAKE_SCHEDULE_URL=https://schedule.example.test/\n'
+	? 'PORTAL_MODE=trial_intake\nTRIAL_INTAKE_ACCEPTING=true\nTRIAL_INTAKE_SCHEDULE_URL=https://schedule.example.test/\n'
 	: '';
+if (intakeTestEnvironment) {
+	// Test process only: keep production readers, HTTP validation and D1 real;
+	// replace only the two external boundaries. No provider request may escape.
+	const actualFetch = globalThis.fetch.bind(globalThis);
+	const catalog = readFileSync(join(repositoryRoot, 'tests/fixtures/trial-intake/catalog-v1.json'), 'utf8');
+	globalThis.fetch = async (input, init) => {
+		const url = new URL(input instanceof Request ? input.url : String(input));
+		if (url.href === 'https://schedule.example.test/') return new Response(`<script type="application/json" id="trial-intake-catalog">${catalog.replaceAll('<', '\\u003c')}</script>`);
+		if (url.href === 'https://challenges.cloudflare.com/turnstile/v0/siteverify') {
+			const token = new URLSearchParams(String(init?.body)).get('response');
+			return Response.json({success: token === 'synthetic-turnstile-pass', action: 'trial_intake', hostname: '127.0.0.1'});
+		}
+		if (['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) return actualFetch(input, init);
+		throw new Error('External network disabled in synthetic intake harness');
+	};
+}
 writeFileSync(run.runtimeEnvironmentFile, `JWT_SECRET=${syntheticJwtSecret}\n${intakeTestEnvironment}`, {
 	encoding: 'utf8',
 	mode: 0o600,

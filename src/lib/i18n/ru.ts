@@ -1,4 +1,5 @@
 import type { UiMessageKey } from './index';
+import { ORGANIZATION_NAME } from '$lib/organization';
 import { additionalRussianCatalog } from './ui-additions';
 
 /** UI only. Outgoing messages and contract artifacts retain their German text. */
@@ -7,8 +8,8 @@ export const russianCatalog = {
 	'language.label': 'Язык интерфейса',
 	'language.failed': 'Не удалось изменить язык. Попробуйте ещё раз.',
 	'meta.description':
-		'Регистрация, каталог занятий и личный кабинет родителей детского и родительского центра Kolibri e.V.',
-	'home.title': 'Регистрация в Kolibri',
+		`Регистрация · ${ORGANIZATION_NAME}`,
+	'home.title': 'Регистрация',
 	'home.foundationNotice':
 		'Портал регистрации готовится к работе. Доступные функции будут опубликованы здесь.',
 	'home.catalogLink': 'Посмотреть доступные занятия',

@@ -3,6 +3,7 @@
 	const uiLocale = $derived(portalPage.data.locale ?? portalPage.error?.locale ?? 'de');
 	import '../../app.css';
 	import { translate } from '$lib/i18n';
+	import IntakeNavigation from '$lib/trial-intake/components/IntakeNavigation.svelte';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
@@ -40,8 +41,9 @@
 			<p class="item-kicker">{translate(uiLocale, 'admin.kicker')}</p>
 			<h1>{translate(uiLocale, 'admin.title')}</h1>
 		</div>
-		<a href="/account/security">{translate(uiLocale, 'admin.accountSecurity')}</a>
+		{#if data.portalMode !== 'trial_intake'}<a href="/account/security">{translate(uiLocale, 'admin.accountSecurity')}</a>{/if}
 	</header>
+	{#if data.portalMode === 'trial_intake'}<IntakeNavigation admin />{:else}
 	<nav class="admin-nav" aria-label={translate(uiLocale, 'admin.navigationLabel')}>
 		{#each data.navigation.filter((item) => !groups.some( (group) => group.ids.includes(item.id) )) as item}
 			<a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}
@@ -64,5 +66,6 @@
 			</details>
 		{/each}
 	</nav>
+	{/if}
 	{@render children()}
 </main>

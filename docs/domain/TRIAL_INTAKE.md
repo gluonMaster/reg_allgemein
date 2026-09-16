@@ -1,7 +1,7 @@
 # Короткая заявка на пробное занятие
 
 Дата: 2026-09-16. Статус: **ТЗ согласовано по продуктовым решениям OQ-037–043/045–046;
-серверный срез 01 реализован локально; UI, экспортер и публикация впереди**.
+сервер 01 и UI/экспортер 02 реализованы локально; release gate и публикация впереди**.
 
 Этот документ задаёт отдельный ограниченный release `trial-intake` по срочному
 поручению владельца. Deployment требует отдельного прямого поручения.
@@ -297,7 +297,9 @@
 
 Тонкие `+server.ts` routes возвращают JSON. POST требует `application/json` и
 точный `Origin` портала; admin POST дополнительно требует session и `_csrf`.
-Для GET при добавлении UI на шаге 02 использовать `Accept: application/json`.
+Для JSON GET использовать `Accept: application/json`. Обычная браузерная навигация
+на `/probestunde`, `/probestunde/verify`, `/admin/trial-intake` и detail открывает
+HTML-страницы; route wrappers подключают UI/loaders из `src/lib/trial-intake/`.
 Ответы имеют `no-store`/`no-referrer`; ошибки содержат безопасный `code`.
 
 | Route | Контракт |

@@ -8,7 +8,7 @@ import { AuthRateLimiter, RateLimitExceededError } from '$lib/server/security/ra
 import { AuthorizationError } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestSubject } from '$lib/server/auth/http';
-import { INTAKE_BODY_LIMIT, INTAKE_PRIVACY_VERSION } from '../contracts';
+import { INTAKE_BODY_LIMIT, INTAKE_PRIVACY_VERSION, type CatalogData } from '../contracts';
 import { CatalogReader, boundedText } from './catalog.server';
 import { IntakeService } from './service.server';
 import { IntakeAdmin } from './admin.server';
@@ -121,7 +121,7 @@ export async function submit(event: RequestEvent) {
 		throw new IntakeError('INTAKE_TURNSTILE_REJECTED');
 	return r.service.create(parsed.data, () => r.catalog.read(), now);
 }
-export async function catalog(event: RequestEvent) {
+export async function catalog(event: RequestEvent): Promise<CatalogData> {
 	const r = intakeRuntime(event);
 	return {
 		lessons: await r.catalog.read(),

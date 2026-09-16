@@ -7,6 +7,7 @@ import {
 } from '$lib/server/security/authorization';
 import { IntakeService, afterSeconds, searchName } from './service.server';
 import { IntakeError } from './validation.server';
+import type { AdminListRow, DeliveryStatus, EmailJob } from '../contracts';
 
 export const adminQuerySchema = z.object({
 	status: z.enum(['verified', 'processed', 'all']).default('verified'),
@@ -83,7 +84,7 @@ export class IntakeAdmin {
 			child: childSurname,
 		}[q.sort];
 		const from = `FROM trial_intake_items i JOIN trial_intake_requests r ON r.id = i.request_id WHERE ${where.join(' AND ')}`;
-		const results = await this.db.batch([
+		const results = await this.db.batch<AdminListRow & {total: number; children_json: string}>([
 			this.audit(actor, 'trial_intake.list_read', 'list', requestId, now),
 			{ sql: `SELECT COUNT(*) AS total ${from}`, params },
 			{
@@ -112,7 +113,7 @@ export class IntakeAdmin {
 			throw new IntakeError('INTAKE_NOT_FOUND', 404);
 		const r = detail.request;
 		const delivery = (
-			await this.db.all({
+			await this.db.all<DeliveryStatus>({
 				sql: `SELECT id, status, attempts, last_error_code, sent_at FROM telegram_outbox WHERE source_kind = 'trial_intake' AND source_id = ? ORDER BY id`,
 				params: [id],
 			})
@@ -181,7 +182,7 @@ export class IntakeAdmin {
 	async emailQueue(user: App.Locals['user']) {
 		await this.actor(user);
 		return (
-			await this.db.all({
+			await this.db.all<EmailJob>({
 				sql: `SELECT id, status, attempts, max_attempts, last_error_code, created_at FROM trial_intake_email_outbox WHERE status IN ('pending','retry','dead','processing') ORDER BY created_at, id LIMIT 50`,
 			})
 		).results;

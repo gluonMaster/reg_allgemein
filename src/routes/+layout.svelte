@@ -3,6 +3,8 @@
 	const uiLocale = $derived(portalPage.error?.locale ?? portalPage.data.locale ?? 'de');
 	import '../app.css';
 	import AuthNav from '$lib/components/AuthNav.svelte';
+	import IntakeNavigation from '$lib/trial-intake/components/IntakeNavigation.svelte';
+	import { ORGANIZATION_NAME } from '$lib/organization';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import { translate } from '$lib/i18n';
 	import type { LayoutData } from './$types';
@@ -17,12 +19,12 @@
 
 <header class="site-header">
 	<div class="brand-row">
-		<a class="site-brand" href="/" aria-label={translate(uiLocale, 'home.title')}
-			>Kolibri<span>{translate(uiLocale, 'home.title')}</span></a
+		<a class="site-brand" href="/" aria-label={`${ORGANIZATION_NAME} · ${translate(uiLocale, 'home.title')}`}
+			>{ORGANIZATION_NAME}<span>{translate(uiLocale, 'home.title')}</span></a
 		>
 		<LanguageSwitcher />
 	</div>
-	<AuthNav />
+	{#if data.portalMode === 'trial_intake'}<IntakeNavigation />{:else}<AuthNav />{/if}
 </header>
 {@render children()}
 

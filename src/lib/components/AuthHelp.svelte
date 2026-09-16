@@ -6,5 +6,5 @@
 
 <nav class="auth-help" aria-label={translate(locale, 'auth.navigationLabel')}>
 	<a href="/auth/forgot">{translate(locale, 'auth.link.forgot')}</a>
-	<a href="/auth/resend">{translate(locale, 'auth.link.resend')}</a>
+	{#if page.data.portalMode !== 'trial_intake'}<a href="/auth/resend">{translate(locale, 'auth.link.resend')}</a>{/if}
 </nav>

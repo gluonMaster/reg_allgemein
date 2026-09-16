@@ -60,6 +60,18 @@ Exact commands/evidence среза находятся в
 [handoff 01](handoffs/stage-13.md#trial-intake-server-20260916).
 Полный release suite и реальные provider smoke на шаге 01 не выполняются.
 
+Локальный срез 02: `tests/e2e/trial-intake/intake-ui.spec.ts` использует тот же
+harness и настоящие HTTP/D1/auth boundaries. Проверяются несколько детей и
+занятий, удаление назначенного ребёнка, даты, DE/RU, потерянный ответ после
+сохранения и повтор с тем же ключом, resend, GET/POST verification, admin-фильтры,
+обратимый processed и доступ к recovery. Внешние source/CAPTCHA/provider границы
+только synthetic; реальные provider smoke остаются release gate.
+`integrations/schedule-exporter/test_exporter.py` покрывает обычный HTML entry
+point, сохранённый config, повторную генерацию и exit code внешнего caller при
+ошибке. `tests/unit/trial-intake/exporter-roundtrip.test.ts` читает полученный HTML
+через настоящий portal reader. Source mirror и порядок переноса описаны в
+[README экспортера](../../integrations/schedule-exporter/README.md).
+
 - Ни один automated fixture не содержит реальных имен, email, телефонов,
   адресов или документов клиентов.
 - Бизнес-правило получает unit/golden test; граница D1/R2/API — integration test;

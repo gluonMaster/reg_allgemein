@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { INTAKE_PRIVACY_VERSION, type Lesson } from '../contracts';
+import { berlinDate, weekday } from '../dates';
+export { berlinDate, weekday, nextLessonDate } from '../dates';
 
 export class IntakeError extends Error {
 	constructor(
@@ -23,23 +25,6 @@ export function calendarDate(value: string): boolean {
 		!Number.isNaN(Date.parse(value)) &&
 		new Date(value).toISOString().slice(0, 10) === value
 	);
-}
-export function berlinDate(now: string): string {
-	const parts = new Intl.DateTimeFormat('en-CA', {
-		timeZone: 'Europe/Berlin',
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-	}).formatToParts(new Date(now));
-	return ['year', 'month', 'day'].map((t) => parts.find((p) => p.type === t)!.value).join('-');
-}
-export function weekday(date: string): number {
-	return new Date(date).getUTCDay() || 7;
-}
-export function nextLessonDate(day: number, now: string): string {
-	const d = new Date(berlinDate(now));
-	d.setUTCDate(d.getUTCDate() + ((day - weekday(berlinDate(now)) + 7) % 7 || 7));
-	return d.toISOString().slice(0, 10);
 }
 const dateField = z.string().refine(calendarDate);
 export const intakeInputSchema = z
