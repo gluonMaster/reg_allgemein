@@ -2,9 +2,12 @@
 
 Дата: 2026-09-16. Статус: **ТЗ подготовлено по согласованным OQ-037–043/045–046**.
 Шаги 01–02: серверный runtime, UI и экспортер реализованы локально;
-общий gate (03) и разрешённый deployment остаются впереди. Evidence — в
+локальный gate (03) завершён, разрешённый deployment остаётся впереди. Evidence — в
 [handoff 01](handoffs/stage-13.md#trial-intake-server-20260916) и
-[handoff 02](handoffs/stage-13.md#trial-intake-ui-20260916).
+[handoff 02](handoffs/stage-13.md#trial-intake-ui-20260916) и
+[handoff 03 / deploy packet](handoffs/stage-13.md#trial-intake-release-20260916).
+Снимок ниже с 108 карточками исторический: выпускной источник с 110 карточками
+от 09.09.2026 выбран владельцем по OQ-047; старый HTML сохранён для rollback.
 Рабочий бюджет владельца: 8–12 часов на реализацию и запуск.
 
 ## Решение

@@ -6031,3 +6031,175 @@ Remote mutations: **0**; provider sends: **0**. Cloudflare/Netlify/Access и
 postconditions не изменились. Локальная установка экспортера изменена в прямо
 разрешённом scope. `rollover_required: no`, `recommended_next_session_mode: High`:
 следующая сессия — плановый release gate, серьёзной ambiguity/recovery проблемы нет.
+
+<a id="trial-intake-release-20260916"></a>
+
+## 2026-09-16: trial-intake — release gate 03 и защищённый deploy packet
+
+### Scope, candidate и решение
+
+Выполнено прямое поручение применить локальный03. Runtime candidate
+`fd17c3dbb28aa270f767592e00e9512fa234ad1a`, server ancestor
+`1912becbde2ecd9ec4c75772f38b618b164ce3b0`, cumulative review от
+`3ea46b12d077568d3fbee6fd65b9317294b8f343`. Новый runtime/config/migration/exporter
+diff на03 не вносился. Изменения03 — пять test expectations, существующий
+continuity checker и документация. Unrelated pricing docs не изменены.
+Exact test/checker commit `f570564785a3241043534e81d8db8379a7be6c54`;
+последующий docs-only checkpoint наследует runtime candidate и gate без нового
+full suite. Source diff относительно runtime candidate пуст для src/migrations/
+exporter/dependencies/build config.
+
+**Локальный gate пройден; production blocked до04.** Это bounded review по03,
+не новый independent full-preview verdict. Subagents не использовались.
+Remote mutations/provider sends/Netlify publications — **0/0/0**.
+Единственный следующий action — read-only exact-target preflight при запуске04;
+сам03 не разрешает deploy или provider send.
+
+Protected packet: `tmp/trial-intake-release-20260916/DEPLOY_PACKET.md`.
+Directory ACL ограничен текущим Windows user/SYSTEM; Git-ignore проверен.
+Exact account/origin/IDs/admin identity только в private manifest/readbacks;
+runtime и build hashes, final HEAD/patch digest — в packet. Generated artifacts
+не коммитятся. Current pointer перенесён с исторического EMAIL resend на SYS-05;
+continuity checker теперь принимает оба известных milestone, не снимая blocked
+production/full-preview статусы. Это исправляет P1 operator routing по TIN-AC-12.
+
+### Read-only preflight и решения владельца
+
+Preflight03 UTC `2026-09-16T14:36:11.970Z`: Cloudflare Workers/D1/settings/subdomain
+читаются, new Worker name свободен; создание ресурсов ещё не проверялось.
+Account fingerprint `5dbd04a4763a`, planned origin `819c92b4f09a`.
+Preview fingerprints Worker `242c1796e930`, D1 `ccdeb22bb2a1` исключены из target.
+Preview settings содержат настроенный Resend и нужные secret binding names;
+intake key владелец уже создал, защищённый ввод на04. DNS/sender/preview secrets
+не менялись. Turnstile inventory readable; existing widget не покрывает new host,
+поэтому packet предусматривает отдельный managed widget на exact hostname.
+
+Разрешённый Telegram reuse доступен: private supergroup, bot member restricted
+с разрешённой отправкой, destination совпадает; bot/chat fingerprints
+`4ba876965084`/`02e9638892ee`. Auto-delete фактически **0**, не14 дней.
+Packet задаёт штатный UI Set Custom Time→14days и read-back
+`message_auto_delete_time=1209600` до первого send. Нового bot не требуется.
+Update владельца в этой же сессии: включил2 недели и показал UI. Bounded read-only
+проверка UTC `2026-09-16T15:07:10.518Z` подтвердила exact same private chat,
+право отправки и **1209600 секунд**. Evidence `telegram-retention-safe.json` и
+protected raw record. Agent writes/sends0. Retention setting gate теперь passed;
+повторный UI write04 не нужен без drift. Исходный preflight0 сохранён как before.
+Рабочее окно Mo–Fr09–17 Europe/Berlin сохраняется. OQ-044 не закрыт, CTAoff
+до реальной доставки; provider HTTP response не подменяет видимость сообщения.
+
+Владелец подтвердил ручную публикацию папки/файлов через existing Netlify site;
+API token и новый publisher не нужны. First-admin identity указана владельцем
+и сохранена только protected; имя/фамилия/пароль вводятся локально на04.
+Preview passwords/sessions не переносятся.
+
+Обнаружен фактический drift: live108, штатный export источника09.09 даёт110.
+Владелец явно выбрал **локальный источник09.09 с110 карточками**; принято OQ-047.
+Все публичные поля сравнивались, различие не замаскировано. Saved live baseline
+и rollback bytes остаются108. Native CTAoff/on содержат110 идентичных карточек;
+фактический server reader читает110 lessons, проверены110 exact-origin links,
+обе площадки и обе субботние колонки. `artifacts-safe.json`,
+`schedule-comparison-{safe,private}.json` фиксируют результат. Off/on hashes:
+`bd51df1027b1b14d41ddd8651474f2b7538ab3ec29afeafe2a8dfaf29e6754d1` /
+`5cf5c45c1be7143133cf34533abfa89bb7dec0588e75fa1e0be66ea20daf5787`.
+Baseline/rollback hash:
+`b97901ec23709acdf936b338b00a37a0b8693605d0eae70d4bb43b50f61b3f74`.
+
+Три installed exporter/caller `.py` byte-identical tracked mirror и после-patch
+hashes02; backup/config/diff02 сохранены. HTML создан установленным native
+`EnhancedExportManager.export_to_html`, без post-processing. Источник читался
+только неисполняющим parser: sheet Schedule, явный field allowlist, bounds;
+Excel/COM/macros/другие sheets/full workbook dump не использовались. Origin/CTA
+сохранялись перед каждым export; после подготовки исходный working config
+восстановлен byte-for-byte. На04 окончательный off/on сохраняется в редакторе
+для следующих штатных экспортов. Источники вне репозитория не изменены.
+
+### Bounded review и findings
+
+Проверены guest email store/nonce/resend/confirmation и templates; multipart
+Telegram/dedupe/retry/window; HTML reader↔native exporter; item-child ownership,
+idempotency и даты Europe/Berlin; initial admin latch/audit; hooks/routes/scheduler
+mode isolation; pending/processed cleanup с email/payload relations.
+Ручной diff/import pass подтвердил TIN-11: собственный модуль/config, тонкие
+routes; browser assets не содержат intake server/storage/secret symbols.
+Отдельный architecture checker не создавался, старые подсистемы не переписывались.
+UI screenshots mobile form/check-inbox и desktop admin просмотрены: полное
+название без обрезания, DE/RU privacy сроки14/90, без checkbox/Telegram explanation.
+Templates используют то же полное название; real inbox остаётся gate04.
+
+Findings исправлены одним test-only пакетом с focused regression:
+
+| Severity / AC | Отказ gate и исправление |
+| --- | --- |
+| P1 / TIN-AC-10 | Foundation assertion перечислял26 migrations; добавлена immutable0027 в expected sequence |
+| P1 / TIN-AC-05/10 | Accessibility ожидал старое короткое имя brand link; expected обновлён на full organization name |
+| P1 / TIN-AC-08/10 | Два full-mode child label locator стали ambiguous из-за слова Kinder в полном brand aria-label; exact label selection |
+| P1 / TIN-AC-08/10 | Locale test нажимал switch после обычного form POST до hydration; ожидание existing data-enhanced перед проверкой enhanced поведения |
+| P1 / TIN-AC-12 | Operational cursor/checker оставались привязаны к full preview; current milestone и entry-point приведены к уже принятому SYS-05 |
+
+Unresolved runtime P0/P1 не найдено. Новые P2/P3 review loops не открывались.
+
+### Один общий gate и focused завершение
+
+Общий gate выбран из-за cumulative material server/shared runtime/migration/UI
+diff01–02: unit/integration покрывают бизнес-правила/consumers, full-mode E2E —
+регрессию полного портала, отдельный intake E2E — его собственный mode/guest/admin
+flow. Локальные правки03 не меняют production paths, поэтому после них повторялись
+только четыре affected browser scenarios и один migration assertion.
+
+| Команда / evidence в packet | Фактический результат |
+| --- | --- |
+| `npm run check` / check.log |0 errors/0 warnings; после изменения TS continuity checker — дополнительный final-check.log |
+| `npm test` / vitest.log |89 files,650 passed/1 failed/1 skipped; failure — exact migration expectation |
+| `npx vitest run tests/integration/foundation-d1.test.ts -t 'applies the immutable migration sequence' --maxWorkers=1` / vitest-focused.log |1 passed, остальные6 уже passed в полном run; effective651 passed/1 platform skip |
+| `npm run test:e2e` / e2e-full.log |Full mode:36 passed/4 failed/2 intake mode skips |
+| Affected4 scenarios / e2e-focused.log |4 passed после исправлений; effective40 full-mode passed |
+| Intake mode `npm run test:e2e -- tests/e2e/trial-intake` / e2e-intake.log |2 passed с KOLIBRI_E2E_TRIAL_INTAKE=1 |
+| `npm run build` / build.log |passed; browser bundle проверен; Wrangler local dry-run passed |
+| Local cold rehearsal / cold-rehearsal-safe.json |27 migrations/bootstrap/request persistence/restore/FK/cleanup passed |
+| Docs/checker gate / docs-check.log, release-scan.log, diff-check.log |passed:391links/72files,131commands/continuity; scan690files; diff check |
+
+Skip Vitest — существующий signal-termination cleanup test на Windows; это не
+интеграционный intake failure. Two full-mode E2E skips — intake tests, оба отдельно
+пройдены в intake mode. Исходные failing logs сохранены, первоначальным командам
+exit0 не приписывается. Full suites/build не повторялись после test/docs/checker
+diff; affected Python regression02 унаследован без отдельного повтора, поскольку
+exporter/callers не менялись. Dependency audit отдельно не запускался: зависимости
+не менялись и03 не требует audit. Remote real provider test не запускался по scope.
+
+Cold rehearsal UTC `2026-09-16T14:49:58.885Z`: настоящий bootstrap и27 migrations
+на synthetic Miniflare D1; после dispose persistence скопирована в отдельную
+директорию, восстановлены exact request/children/items/assignments и1admin,
+повтор bootstrap отклонён, FK violations0, expired pending/email cleanup passed.
+Это не remote backup/Time Travel/RTO evidence. В packet есть export/bookmark/
+restore commands и требование cleanup/reconciliation перед provider enablement.
+
+### TIN-AC disposition и передача04
+
+| AC | Local gate | Оставшееся remote evidence |
+| --- | --- | --- |
+|01|passed: inherited exporter regression + actual native110 off/on/reader |Published bytes/hash/native config persistence на04 |
+|02|passed: contacts/multi-child/assignments/date validation |Controlled live form smoke на04 |
+|03|passed: GET read-only/POST atomic verified+deduped jobs |Live verification/admin incoming |
+|04|passed: retries/idempotency/nonce/resend/concurrency |Не нужен новый exhaustive remote loop; bounded controlled flow |
+|05|passed locally: full name/DE templates/UI |**blocked**: настоящий inbox/sender/link до04 |
+|06|passed locally: multipart/recovery/window/full payload |**blocked**: фактическая доставка в разрешённый chat |
+|07|passed: list/detail/filters/sorts/pagination |Live admin controlled record |
+|08|passed: processed/reopen/audit/DE/RU/mobile/errors/keyboard |Live processed audit |
+|09|passed: server authorization/mode/origin/Turnstile/limits/escaping |Actual Turnstile/anonymous route smoke |
+|10|passed:27schema/upgrade/admin/cold restore/full baseline/isolation |Fresh target/schema/first-admin read-back |
+|11|passed locally: version/text/cleanup; Telegram14-day actual setting passed |Remote backup procedure/read-back на04; не повторять setting без drift |
+|12|**blocked** |Actual version/config/DB, real inbox/Telegram/admin, Netlify bytes и compatible closed rollback |
+
+Packet разбивает ресурсы/schema/publication/code/admin/controlled flow/CTAon на
+атомарные действия с exact target, precondition, read-back, containment и next
+action. Schema применяет один pending migration за checkpoint; Wrangler выполняет
+27 отдельных transitions, не обещается общая транзакция. First deploy может
+прикрепить credentials через проверенный `--secrets-file`, без stub Worker.
+Закрытый code/config этой же runtime revision совместим с27schema и сохраняет D1.
+Первую actual closed version записать после W1; до её создания rollback version
+отсутствует. Каждая04 mutation требует AGENTS checkpoint и отдельного docs-only
+commit; blanket04 scope не отменяет это правило.
+
+`rollover_required: no`, `recommended_next_session_mode: High` — далее обычный
+плановый deploy с известными targets/postconditions/containment. Не требуется
+Max: нет wrong-target, corruption, secret exposure или ambiguous remote write.

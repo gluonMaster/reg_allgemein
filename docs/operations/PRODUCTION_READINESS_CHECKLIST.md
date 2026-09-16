@@ -15,6 +15,21 @@ commands и не дают permission. Этот файл обновляется �
 
 <!-- stage-13-continuity-reviewed-candidate-compatibility-only: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3 -->
 
+## Ограниченный SYS-05: локальная готовность 2026-09-16
+
+Это отдельный trial-intake gate; статус полного production record ниже не меняется.
+Runtime candidate `fd17c3dbb28aa270f767592e00e9512fa234ad1a`, evidence:
+[handoff03](../implementation/handoffs/stage-13.md#trial-intake-release-20260916).
+
+| Gate | Статус | Факт / оставшийся выпускной шаг |
+| --- | --- | --- |
+| TIN local code/schema/UI gate | passed locally | Общий gate + focused исправления test expectations; cold27 migrations/admin/restore; runtime без новых правок |
+| Native exporter artifacts / source | passed locally | OQ-047:110 карточек; actual reader/CTA0/110; previous live108 сохранён; publication read-back впереди |
+| Exact deploy/containment packet | passed locally | Protected packet03; ручной existing Netlify publisher; new Worker/D1 ещё не созданы; closed version фиксируется после первого deploy |
+| Telegram retention setting | passed | Владелец включил2 недели; same-target read-back03 UTC15:07:10 подтвердил1209600 секунд/private/send rights |
+| Real provider/admin gates | blocked | New Turnstile, protected credentials/bootstrap; real inbox/Telegram/admin на04; retention на04 только drift check |
+| TIN-AC-12 limited production verdict | blocked | Remote mutations03=0; actual version/config/DB и published HTML подтвердить на04 |
+
 ## Production release record
 
 | Поле | Значение |

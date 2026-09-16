@@ -4,28 +4,77 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-16T09:37:46Z
+updated_utc: 2026-09-16T15:07:10Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-local_remediation_candidate: 3638dce8be9bb0a2155860dd055112c3f5b62a43
-last_completed_gate: EMAIL-preview-deploy-verified
-next_gate: EMAIL-owner-verification-resend
-nearest_milestone: full-manual-preview
+local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
+release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
+last_completed_gate: TIN03-local-release-gate
+next_gate: TIN04-authorized-deployment
+nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: EMAIL-preview-unrestricted-recipients-live
-last_atomic_action: EMAIL-preview-code-and-config-deploy
+current_phase: TIN03-local-packet-ready-no-remote-write
+last_atomic_action: TIN03-readonly-owner-telegram-retention-check
 last_atomic_result: success
-next_atomic_action: EMAIL-owner-verification-resend
+next_atomic_action: TIN04-readonly-exact-target-preflight
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Known_normal_resend_next_would_create_token_and_send_email_no_deploy_ambiguity
+mode_reason_plain: Planned_trial_intake_deploy_has_known_targets_readback_and_containment_requires_explicit_step04
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN03: локальный release gate и packet — 2026-09-16
+
+Ближайший milestone — ограниченный SYS-05, не full manual preview. Разрешённый
+scope этой сессии: локальный gate/review/исправления и read-only remote preflight.
+Remote mutations **0**, provider sends **0**, Netlify publications **0**.
+Production и full-manual-preview остаются blocked; новый независимый verdict
+не заявляется. `reviewed_candidate` сохраняет исторический full-preview baseline;
+`local_remediation_candidate` — exact runtime короткой заявки. Последующий
+release-gate diff ограничен tests/docs/continuity checker и не меняет runtime.
+Test/checker fixes сохранены в `release_gate_candidate`; docs-only checkpoint
+наследует тот же runtime gate. Final check:0 errors/0 warnings; docs391links/
+131commands/continuity passed, release scan690files passed, diff check passed.
+
+Result: success для локального gate. Before: реализованные server/UI/exporter,
+live108 без CTA. After: тот же runtime, full/focused regression и local cold
+restore пройдены; prepared110 CTAoff/on; live108 сохранён для rollback.
+Источник110 от 09.09 выбран владельцем после сравнения (OQ-047). Working config
+редактора после подготовки восстановлен, публикаций не было. Первый admin
+определён владельцем и записан только в protected manifest; publisher — ручной
+upload в существующий Netlify site, token не требуется.
+
+Sanitized planned targets: account `5dbd04a4763a`, new origin `819c92b4f09a`,
+Telegram bot `4ba876965084` / private chat `02e9638892ee`. Worker/D1 ещё не созданы,
+production candidate version отсутствует. CF read access/name availability
+подтверждены; create permission не проверялась. Existing Resend binding есть,
+новый key вводится защищённо на04. Для new origin нужен отдельный Turnstile widget;
+Владелец включил Telegram auto-delete на2 недели; read-only read-back
+`2026-09-16T15:07:10.518Z` подтвердил1209600 секунд, тот же private chat и право
+bot отправлять. Before0, after1209600, result success; agent writes/sends0.
+Evidence: `tmp/trial-intake-release-20260916/telegram-retention-safe.json` и
+protected raw getChat/getChatMember. Повторное включение на04 не требуется,
+только проверка отсутствия drift; при drift CTAoff. До CTA обязательны реальные
+inbox/Telegram/admin read-backs; OQ-044 сохраняет gate фактической доставки.
+
+Evidence и passed/blocked TIN-AC:
+[handoff03](handoffs/stage-13.md#trial-intake-release-20260916).
+Protected exact packet: `tmp/trial-intake-release-20260916/DEPLOY_PACKET.md`,
+manifest, raw readbacks, source/build hashes, off/on/rollback HTML и локальные логи.
+Containment: сохранить D1; подготовленный same-runtime closed config
+`accepting=false/jobs=false`, native CTAoff и manual republish. Первый closed
+deployment на04 станет actual compatible rollback version; сейчас её не выдумывать.
+
+Ровно следующий action: **TIN04-readonly-exact-target-preflight** при запуске04.
+Никакая инструкция03 не разрешает remote write. Исторический EMAIL resend ниже
+не является текущим действием. `rollover_required: no`,
+`recommended_next_session_mode: High` — плановый deploy с известными target,
+postcondition и containment; серьёзной ambiguity нет.
 
 ## EMAIL: снятие ограничения опубликовано — 2026-09-16T09:37:46Z
 

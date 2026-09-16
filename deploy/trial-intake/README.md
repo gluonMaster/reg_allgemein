@@ -6,11 +6,13 @@ config и не разрешение на deployment. Канонические т
 [release ТЗ](../../docs/implementation/TRIAL_INTAKE_RELEASE_TZ.md).
 Существующие preview config, Worker и D1 не используются как deployment target.
 
-На шаге 03 заполнить Git-ignored `deploy/trial-intake/wrangler.production.jsonc`
+Шаг 03 сохраняет protected draft и exact deploy packet; ID нового D1 и site key
+нового Turnstile становятся известны после создания ресурсов на разрешённом шаге 04.
+Тогда заполнить Git-ignored `deploy/trial-intake/wrangler.production.jsonc`
 рядом с [template](wrangler.example.jsonc): account, новый D1, точный workers.dev
 origin, approved official links и Turnstile host/site key. Относительные пути
 template рассчитаны именно на эту папку. Secret bindings: `JWT_SECRET`,
-`TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, позднее `TELEGRAM_BOT_TOKEN`.
+`TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
 Значения не включать в config, командную строку, handoff или Git.
 Resend использует уже проверенный account/domain/sender. Владелец сообщил,
 что создал ключ для `kolibri-trial-intake`; чтение/ввод и установка binding —

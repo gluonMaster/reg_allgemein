@@ -1,8 +1,15 @@
-# Продолжение Stage 13 до full manual preview
+# Продолжение текущего milestone Stage 13
 
 Это единственный постоянный tracked entry-point. Он не содержит current SHA,
 deployed version или next action: их всегда читать из
 [STAGE_13_ACTIVE_STATE.md](../implementation/STAGE_13_ACTIVE_STATE.md).
+
+При `nearest_milestone: trial-intake` применяется SYS-05 и
+[release ТЗ](../implementation/TRIAL_INTAKE_RELEASE_TZ.md), а outcome полного
+preview ниже откладывается. Scope и один следующий action берутся из active state;
+этот entry-point сам по себе не разрешает production/deploy/provider send.
+Для этого milestone используйте TIN-AC и записанный bounded release review;
+full-preview independent GO не является дополнительным gate короткой заявки.
 
 ## Outcome
 
@@ -15,7 +22,7 @@ quarantine/manual-AV/business-review paths. Production, официальный �
 
 1. Прочитай `AGENTS.md`, этот файл и active state полностью.
 2. Для текущего action открой только прямо названный раздел стабильного runbook,
-   соответствующие требования `SYS-04`/`OQ-036` и affected code/tests.
+   требования текущего milestone (`SYS-05`/TIN либо `SYS-04`/`OQ-036`) и affected code/tests.
 3. Не читай большой handoff либо весь readiness/traceability ledger без точной
    evidence-ссылки из active state.
 4. Read-only сверь protected target record, repository HEAD/runtime candidate и
@@ -59,7 +66,7 @@ risk, который не покрывают existing evidence и focused checks
 ## Stop conditions
 
 Немедленно остановись до mutation, если protected target не совпал, появилась
-production/CMS/real-PII surface, pending migration set отличается, recovery/
+неразрешённая production/CMS/real-PII surface, pending migration set отличается, recovery/
 rollback неизвестен, current action не имеет отдельного разрешения или результат
 предыдущей mutation ещё не доказан. Сохрани Access и affected providers
 fail-closed.
