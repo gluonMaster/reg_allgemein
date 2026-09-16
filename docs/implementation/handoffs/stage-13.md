@@ -5531,3 +5531,27 @@ HTTP DE/RU и hash-check статических ресурсов прошли; r
 inspection остаётся следующим действием по [active state](../STAGE_13_ACTIVE_STATE.md).
 Evidence и executed/skipped checks: [release verification](../reviews/pvui-deploy-20260915.md).
 Full-manual-preview и production status не повышались.
+
+
+## 2026-09-16 — Preview email: ограничение получателей снято
+
+По прямому поручению владельца опубликован candidate
+3638dce8be9bb0a2155860dd055112c3f5b62a43 с exact PREVIEW_EMAIL_RECIPIENT_HASHES=*.
+Одна deploy operation, фактические module/vars/Access/schema/HTTP и bounded
+D1 postcondition passed; checkpoint и fingerprints находятся в
+[active state](../STAGE_13_ACTIVE_STATE.md).
+[Проверка и evidence](../reviews/preview-email-recipients-20260916.md).
+
+Минимальный gate: 41 config/provider tests, check 0/0, build и strict dry-run.
+До уточнения scope были выполнены 40 разных Chromium scenarios с documented
+focused completion; общий Vitest остановлен по просьбе владельца после восьми
+завершённых integration suites (86 tests), полный suite не заявляется пройденным.
+Тяжёлые проверки для этой узкой правки больше не запускались. Independent GO
+для нового candidate не заявляется, production/manual milestone gates не повышены.
+
+Отправок и регистрации агент не выполнял. Для уже созданного unverified account
+следующее действие — обычный owner resend. Runtime config сохранена в ignored
+root config и actual-wrangler.preview.toml в новом evidence пакете; прошлые
+config snapshots остаются историческими. rollover_required: no;
+recommended_next_session_mode: High — известный normal resend изменяет token
+и отправляет письмо; новая отправка агентом этим не авторизована.

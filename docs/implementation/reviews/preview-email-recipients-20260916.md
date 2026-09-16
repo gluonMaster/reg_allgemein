@@ -65,3 +65,19 @@ Rollback — captured предыдущая версия со старым спи
 Новых аккаунтов, сессий или писем агент не создаёт.
 Фактический исход и следующее действие фиксируются в
 [active state](../STAGE_13_ACTIVE_STATE.md).
+
+
+## Фактический результат
+
+Одна разрешённая публикация завершена 2026-09-16T09:36:38.220Z: success. Before
+version fingerprint 761139c10e86, after 323a11197dcd, одна версия
+на 100% traffic. Фактический модуль совпал с dry-run и upload; wildcard
+подтверждён. Другие settings/bindings, Access, schema и bounded D1 snapshot
+сохранены; health 204, registration/resend 200. Postcondition: 137 rows read,
+zero written, operator provider sends 0. Root ignored config синхронизирована
+с actual settings; protected копия — actual-wrangler.preview.toml в evidence
+пакете. Rollback сохранён, не понадобился. Старое dead verification не повторялось.
+
+Следующий шаг — владелец запрашивает новое письмо через обычную форму resend;
+новая регистрация существующего аккаунта не нужна. Финальный status-only
+checkpoint получает только docs:check, release:scan и git diff --check.

@@ -4,28 +4,55 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-16T09:28:43Z
+updated_utc: 2026-09-16T09:37:46Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: 3638dce8be9bb0a2155860dd055112c3f5b62a43
-last_completed_gate: EMAIL-readonly-preflight-and-local-candidate
-next_gate: EMAIL-preview-code-and-config-deploy
+last_completed_gate: EMAIL-preview-deploy-verified
+next_gate: EMAIL-owner-verification-resend
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: EMAIL-preview-release-validation
-last_atomic_action: EMAIL-readonly-preflight
+current_phase: EMAIL-preview-unrestricted-recipients-live
+last_atomic_action: EMAIL-preview-code-and-config-deploy
 last_atomic_result: success
-next_atomic_action: EMAIL-preview-code-and-config-deploy
+next_atomic_action: EMAIL-owner-verification-resend
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Known_preview_target_exact_candidate_and_compatible_rollback
+mode_reason_plain: Known_normal_resend_next_would_create_token_and_send_email_no_deploy_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## EMAIL: снятие ограничения опубликовано — 2026-09-16T09:37:46Z
+
+Владелец 2026-09-16 прямо поручил убрать ограничение email-получателей
+в текущем preview; перечисленные три адреса были запасным вариантом.
+Scope: candidate 3638dce8be9bb0a2155860dd055112c3f5b62a43 и единственный config delta
+`PREVIEW_EMAIL_RECIPIENT_HASHES=*`. Новые аккаунты, provider send, D1/R2
+write, Access, production и официальный сайт в эту операцию не входят.
+Target fingerprints: account 5dbd04a4763a, Worker 242c1796e930,
+origin 88ed782ba25a, D1 ccdeb22bb2a1. Baseline version 761139c10e86.
+
+Result: success; одна deployment attempt. After version 323a11197dcd,
+100% traffic, фактический module 4b3e652a21b4e2a0d3d6ce382e982511c5ad9894856226927674507ed2aab163
+совпал с dry-run/upload. Wildcard подтверждён; остальные vars/bindings, secret
+inventory, runtime, Cron, subdomain/Access, 26 migrations и bounded D1 snapshot
+сохранены. Health 204, registration/resend HTTP 200; anonymous/invalid Access
+заблокирован. Read-only postcondition: 137 rows read, zero written;
+operator sends 0. Предыдущее verification остаётся dead и не повторялось.
+Evidence: tmp/preview-email-open-20260916/checkpoint-safe.json и protected
+before/after control/database/smoke. Compatible rollback version сохранена
+в immediate-before-rollback.json; rollback не понадобился.
+
+Новый independent verdict не заявляется: reviewed_candidate в metadata хранит
+последний независимо проверенный baseline; local_remediation_candidate и
+review.candidate задают этот узкий пакет. Production/full-manual-preview остаются
+blocked. Один следующий atomic action: EMAIL-owner-verification-resend.
+rollover_required: no; recommended_next_session_mode: High — следующий обычный resend создаёт token и письмо; target и процедура известны, нового разрешения агенту на send это не даёт.
 
 ## EMAIL: разрешённое снятие ограничения получателей — 2026-09-16T09:28:43Z
 
@@ -221,14 +248,16 @@ review:
   production_and_full_manual_preview_gates: unchanged_blocked
 preview:
   access: enforced
-  deployed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-  deployed_fingerprint: 761139c10e86
+  email_recipient_mode: unrestricted_explicit_star
+  protected_runtime_config: tmp/preview-email-open-20260916/actual-wrangler.preview.toml
+  deployed_candidate: 3638dce8be9bb0a2155860dd055112c3f5b62a43
+  deployed_fingerprint: 323a11197dcd
   traffic_percent: 100
   active_version_count: 1
   candidate_annotation_exact: true
   bindings_and_feature_gates_unchanged: expected_Telegram_secrets_and_config_enabled_original_functions_restored
-  deployment_postcondition: PVUI_actual_module_annotation_100_percent_settings_Access_schema_counts_and_DE_RU_HTTP_smoke_passed
-  latest_readonly_control_utc: 2026-09-15T17:42:50.186Z
+  deployment_postcondition: EMAIL_exact_module_star_recipient_mode_other_settings_Access_schema_and_bounded_data_preserved
+  latest_readonly_control_utc: 2026-09-16T09:36:38.220Z
   latest_anonymous_access_check: PVUI_anonymous_and_invalid_Access_blocked_302
   target_fingerprints:
     account: 5dbd04a4763a
@@ -1190,14 +1219,14 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: EMAIL-preview-code-and-config-deploy
-  permission: owner_explicit_2026_09_16_remove_preview_recipient_restriction
+  id: EMAIL-owner-verification-resend
+  permission: owner_manual_resend_no_agent_provider_send_authorized
   target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
-  mutation: one_preview_deploy_code_plus_exact_star_var
+  mutation: none_by_operator
   preconditions:
-    - owner_scoped_necessary_checks_clean_candidate_exact_config_Access_and_rollback
+    - successful_deploy_checkpoint_and_existing_unverified_account
   postcondition:
-    - candidate_module_and_star_mode_on_one_version_100_percent_other_settings_and_data_preserved
+    - owner_requests_fresh_verification_through_normal_rate_limited_route
   containment: retain_Access_and_captured_previous_version_no_blind_repeat
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
