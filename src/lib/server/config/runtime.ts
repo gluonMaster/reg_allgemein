@@ -337,7 +337,8 @@ function parseTurnstileHostnames(value: string | undefined, issues: string[]): s
 }
 
 function parsePreviewRecipientHashes(value: string | undefined, issues: string[]): string[] {
-	if (!value) return [];
+	// An exact wildcard explicitly opts the protected preview into unrestricted recipients.
+	if (!value || value === '*') return [];
 	const hashes = value.split(',').map((entry) => entry.trim().toLowerCase());
 	if (
 		hashes.length > 5 ||
@@ -534,7 +535,8 @@ export function loadRuntimeConfig(env: Partial<App.Platform['env']> | undefined)
 	if (
 		parsed.data.APP_ENV === 'preview' &&
 		emailProvider === 'resend' &&
-		previewEmailRecipientHashes.length === 0
+		previewEmailRecipientHashes.length === 0 &&
+		parsed.data.PREVIEW_EMAIL_RECIPIENT_HASHES !== '*'
 	) {
 		issues.push('PREVIEW_EMAIL_RECIPIENT_HASHES:required_for_preview_resend');
 	}

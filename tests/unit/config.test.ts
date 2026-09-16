@@ -7,6 +7,7 @@ import {
 } from '$lib/server/config/runtime';
 import { createOperationsHealthResponse } from '$lib/server/operations/monitoring';
 import { runScheduledEvent } from '$lib/server/operations/scheduler';
+import { ResendEmailProvider } from '$lib/server/email/resend';
 
 const fakeDb = { prepare() {} } as unknown as D1Database;
 const fakeArchive = { get() {}, put() {}, delete() {} } as unknown as R2Bucket;
@@ -531,6 +532,70 @@ describe('runtime configuration', () => {
 		]) {
 			expect(() => loadRuntimeConfig(invalid)).toThrow(RuntimeConfigError);
 		}
+	});
+
+	it('allows unrestricted preview email only through the explicit wildcard', async () => {
+		const base = {
+			APP_ENV: 'preview',
+			PORTAL_PUBLIC_ORIGIN: 'https://portal-preview.example.org',
+			DB: fakeDb,
+			R2_ARCHIVE: fakeArchive,
+			R2_QUARANTINE: fakeQuarantine,
+			ASSETS: fakeAssets,
+			BROWSER: fakeBrowser,
+			JWT_SECRET: 'x'.repeat(32),
+			...previewTurnstile,
+			...officialLinks,
+			SCHEDULED_JOBS_ENABLED: 'true',
+			EMAIL_PROVIDER: 'resend',
+			RESEND_API_KEY: 're_' + 'x'.repeat(32),
+			EMAIL_FROM: APPROVED_EMAIL_FROM,
+			EMAIL_REPLY_TO: APPROVED_EMAIL_REPLY_TO,
+			PREVIEW_EMAIL_RECIPIENT_HASHES: '*',
+		} as const;
+		const config = loadRuntimeConfig(base);
+		const fetcher = vi
+			.fn<typeof fetch>()
+			.mockResolvedValue(Response.json({ id: 'preview-send' }));
+		const provider = new ResendEmailProvider({
+			apiKey: config.messaging.resendApiKey!,
+			from: config.messaging.emailFrom!,
+			replyTo: config.messaging.emailReplyTo!,
+			allowedRecipientHashes: config.messaging.previewEmailRecipientHashes,
+			fetcher,
+		});
+		await expect(
+			provider.send(
+				{ to: 'new-preview-parent@example.org', subject: 'Verification', text: 'Test' },
+				{ idempotencyKey: 'preview-unrestricted-verification' }
+			)
+		).resolves.toEqual({ providerRequestId: 'preview-send' });
+		expect(fetcher).toHaveBeenCalledOnce();
+		expectRuntimeIssue(
+			{ ...base, PREVIEW_EMAIL_RECIPIENT_HASHES: undefined },
+			'PREVIEW_EMAIL_RECIPIENT_HASHES:required_for_preview_resend'
+		);
+		for (const invalid of [
+			' ',
+			' * ',
+			`*,${'a'.repeat(64)}`,
+			'all',
+			`${'a'.repeat(64)},${'a'.repeat(64)}`,
+			Array.from({ length: 6 }, (_, i) => String(i).repeat(64)).join(','),
+		]) {
+			expectRuntimeIssue(
+				{ ...base, PREVIEW_EMAIL_RECIPIENT_HASHES: invalid },
+				'PREVIEW_EMAIL_RECIPIENT_HASHES:invalid_sha256_allowlist'
+			);
+		}
+		expect(
+			loadRuntimeConfig({ ...base, PREVIEW_EMAIL_RECIPIENT_HASHES: 'a'.repeat(64) }).messaging
+				.previewEmailRecipientHashes
+		).toEqual(['a'.repeat(64)]);
+		expectRuntimeIssue(
+			{ ...base, APP_ENV: 'production' },
+			'PREVIEW_EMAIL_RECIPIENT_HASHES:preview_only'
+		);
 	});
 
 	it('allows Resend-backed public auth in production-shaped configuration', () => {

@@ -316,9 +316,16 @@ Provider остаётся `disabled` до установки environment-specifi
 
 Для рабочего preview `EMAIL_PROVIDER=resend` дополнительно требует
 `PREVIEW_EMAIL_RECIPIENT_HASHES`: comma-separated SHA-256 allowlist максимум из
-пяти нормализованных test-recipient адресов. Сами адреса не попадают в Git,
-Worker vars, audit или evidence. Проверка выполняется до HTTPS-запроса к Resend;
-адрес вне allowlist завершается permanent safe error. `contract.sent` может
+пяти нормализованных test-recipient адресов либо exact значение `*`.
+По решению владельца от 2026-09-16 `*` явно снимает ограничение получателей
+в Access-protected preview для ручных пробных регистраций и их уведомлений.
+Отсутствующее, пустое или ошибочное значение не включает этот режим; смесь
+`*` и hashes недопустима. В production эта preview-настройка запрещена.
+Сам режим не снимает Access, Turnstile, rate limits, ownership и provider
+credentials/identity checks и не повторяет ранее завершённые `dead` deliveries.
+При настроенном списке проверка выполняется до HTTPS-запроса к Resend;
+адрес вне allowlist завершается permanent safe error. Сами адреса не попадают
+в Git, Worker vars, audit или evidence. `contract.sent` может
 содержать ровно один PDF до 10 MiB: worker получает его только из private R2,
 предварительно сверяет D1 size/SHA-256, а provider передаёт Base64 attachment.
 Официальный Resend batch endpoint для этого пути не используется.

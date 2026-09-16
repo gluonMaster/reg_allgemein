@@ -110,6 +110,7 @@ jurisdiction = "eu"
 # TURNSTILE_SECRET_KEY
 # RESEND_API_KEY
 # PREVIEW_EMAIL_RECIPIENT_HASHES is a preview-only non-secret comma-separated
-# SHA-256 allowlist and must be omitted from production configuration.
+# SHA-256 allowlist, or exact "*" for unrestricted recipients in an owner-approved
+# Access-protected preview. It must be omitted from production configuration.
 # TELEGRAM_BOT_TOKEN
 # TELEGRAM_CHAT_ID (exact signed-decimal value; never @username)

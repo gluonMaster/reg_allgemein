@@ -873,6 +873,13 @@ MVP готов, когда:
   раскрывает API key, recipient, body или provider diagnostic. Fake provider в
   production отклоняется, а disabled mode не имеет внешнего fallback.
   (`MSG-03`, `SEC-02`, `REL-02`)
+- В Access-protected preview exact `PREVIEW_EMAIL_RECIPIENT_HASHES=*` разрешает
+  отправку новому получателю без предварительного добавления адреса. SHA-256
+  список сохраняет прежнюю проверку до provider request; отсутствие настройки,
+  ошибочный hash и смесь wildcard/list отклоняются. В production preview-var
+  запрещена. Переключение режима не повторяет `dead` email; пользователь
+  запрашивает новую verification через обычный rate-limited resend flow.
+  (`AUTH-04`, `SYS-04`, `MSG-03`; `domain/MESSAGING.md`)
 - `TELEGRAM_PROVIDER=bot_api` требует раздельные preview/production bot secrets,
   exact numeric private bureau destination и reviewed canonical UTC activation
   cutoff; строки до cutoff не отправляются автоматически, а configured max
