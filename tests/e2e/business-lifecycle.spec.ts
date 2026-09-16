@@ -24,7 +24,7 @@ test('completes an individual request from parent draft through admin approval',
 
 		const newRequestResponse = await parent.goto('/requests/new?kind=individual');
 		expect(newRequestResponse?.status()).toBe(200);
-		await parent.getByLabel(germanCatalog['request.child']).selectOption('e2e-child-a');
+		await parent.getByLabel(germanCatalog['request.child'], { exact: true }).selectOption('e2e-child-a');
 		await parent.getByLabel(germanCatalog['request.subjects']).fill(lifecycleSubject);
 		await parent
 			.getByLabel(germanCatalog['request.description'])

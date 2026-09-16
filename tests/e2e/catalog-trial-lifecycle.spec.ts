@@ -103,7 +103,7 @@ test('completes catalog quote and trial confirmation with owner/admin D1 re-read
 			germanCatalog['cabinet.trials.cancelFailed']
 		);
 
-		await parent.getByLabel(germanCatalog['trial.child']).selectOption('e2e-child-a');
+		await parent.getByLabel(germanCatalog['trial.child'], { exact: true }).selectOption('e2e-child-a');
 		await parent.getByLabel(germanCatalog['trial.session']).selectOption(sessionId);
 		await parent.getByLabel(germanCatalog['trial.proposedDate']).fill(requestedDate);
 		await parent.getByRole('button', { name: germanCatalog['trial.submit'] }).click();

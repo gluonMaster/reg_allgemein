@@ -88,7 +88,7 @@ const requiredMetadata: Record<string, string | undefined> = {
 	reviewed_candidate: undefined,
 	last_completed_gate: undefined,
 	next_gate: undefined,
-	nearest_milestone: 'full-manual-preview',
+	nearest_milestone: undefined,
 	manual_preview_status: 'blocked',
 	production_status: 'blocked',
 	current_review_status: undefined,
@@ -99,6 +99,11 @@ for (const [key, expected] of Object.entries(requiredMetadata)) {
 	else if (expected && actual !== expected) {
 		problems.push(`${activeStatePath}: ${key} must be ${expected}, received ${actual}`);
 	}
+}
+
+const nearestMilestone = metadata.get('nearest_milestone');
+if (nearestMilestone && !['full-manual-preview', 'trial-intake'].includes(nearestMilestone)) {
+	problems.push(`${activeStatePath}: unsupported nearest_milestone ${nearestMilestone}`);
 }
 
 const updatedUtc = metadata.get('updated_utc');

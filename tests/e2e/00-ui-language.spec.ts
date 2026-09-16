@@ -33,6 +33,8 @@ test('switches public UI, keeps preference through navigation and translates ser
 		.getByRole('button', { name: russianCatalog['auth.login.submit'], exact: true })
 		.click();
 	await expect(page.getByRole('alert')).toHaveText(russianCatalog['auth.invalidCredentials']);
+	// Login uses a document POST. Wait for hydration before testing enhanced locale preservation.
+	await expect(page.locator('.language-switcher')).toHaveAttribute('data-enhanced', 'true');
 	await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
 	await expect(page.getByRole('alert')).toHaveText(germanCatalog['auth.invalidCredentials']);
 	await russian(page);

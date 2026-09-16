@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { germanCatalog } from '../../src/lib/i18n';
+import { ORGANIZATION_NAME } from '../../src/lib/organization';
 import { installSyntheticTurnstile } from './support/turnstile';
 import { e2eOrigin, login, syntheticIdentities } from './support/authenticated';
 
@@ -32,7 +33,9 @@ async function expectVisibleKeyboardFocus(target: Locator): Promise<void> {
 async function tabThroughLanguageSwitcher(page: Page): Promise<void> {
 	await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 	await page.keyboard.press('Tab');
-	await expectVisibleKeyboardFocus(page.getByRole('link', { name: germanCatalog['home.title'], exact: true }));
+	await expectVisibleKeyboardFocus(page.getByRole('link', {
+		name: `${ORGANIZATION_NAME} · ${germanCatalog['home.title']}`, exact: true,
+	}));
 	await page.keyboard.press('Tab');
 	await expectVisibleKeyboardFocus(page.getByRole('button', { name: 'Deutsch', exact: true }));
 	await page.keyboard.press('Tab');

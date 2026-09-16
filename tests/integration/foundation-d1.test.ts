@@ -49,6 +49,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0024_contract_preview_review.sql',
 			'0025_contract_storage_intent_generations.sql',
 			'0026_background_d1_cost_controls.sql',
+			'0027_trial_intake.sql',
 		]);
 
 		const result = await context.db
