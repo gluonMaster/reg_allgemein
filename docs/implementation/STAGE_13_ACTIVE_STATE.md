@@ -1,31 +1,57 @@
 # Stage 13: current operational state
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-15T17:44:12Z
+updated_utc: 2026-09-16T09:28:43Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-local_remediation_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-last_completed_gate: PVUI-preview-publication-verified
-next_gate: PVUI-owner-parent-admin-inspection
+local_remediation_candidate: 3638dce8be9bb0a2155860dd055112c3f5b62a43
+last_completed_gate: EMAIL-readonly-preflight-and-local-candidate
+next_gate: EMAIL-preview-code-and-config-deploy
 nearest_milestone: full-manual-preview
 manual_preview_status: blocked
 production_status: blocked
-current_review_status: independent_go
-current_phase: PVUI-preview-publication-complete
-last_atomic_action: PVUI-preview-code-deploy
+current_review_status: pending_independent_review
+current_phase: EMAIL-preview-release-validation
+last_atomic_action: EMAIL-readonly-preflight
 last_atomic_result: success
-next_atomic_action: PVUI-owner-parent-admin-inspection
+next_atomic_action: EMAIL-preview-code-and-config-deploy
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Only_readonly_UI_or_owner_inspection_remains_no_unresolved_deploy_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: Known_preview_target_exact_candidate_and_compatible_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## EMAIL: разрешённое снятие ограничения получателей — 2026-09-16T09:28:43Z
+
+Владелец 2026-09-16 прямо поручил убрать ограничение email-получателей
+в текущем preview; перечисленные три адреса были запасным вариантом.
+Scope: candidate 3638dce8be9bb0a2155860dd055112c3f5b62a43 и единственный config delta
+`PREVIEW_EMAIL_RECIPIENT_HASHES=*`. Новые аккаунты, provider send, D1/R2
+write, Access, production и официальный сайт в эту операцию не входят.
+Target fingerprints: account 5dbd04a4763a, Worker 242c1796e930,
+origin 88ed782ba25a, D1 ccdeb22bb2a1. Baseline version 761139c10e86.
+
+Read-only preflight подтвердил текущие target/settings/Access, доступный
+совместимый rollback, 26 migrations, health 204 и отсутствие pending/retry/processing
+email. Одна dead verification с локальным allowlist error подтверждена; нового
+provider request не было. Чужие незакоммиченные pricing docs сохранены отдельно.
+Release gates и bounded review описаны в reviews/preview-email-recipients-20260916.md.
+Первая read-only проверка остановилась на локальном PowerShell module path;
+helper использует штатные Windows PowerShell modules, credential не менялся.
+Remote mutation attempts: 0. Rollback: сохранённая предыдущая версия с исходным
+списком получателей; при failed/ambiguous deploy сначала read-back и containment.
+
+Новый independent verdict не заявляется: reviewed_candidate в metadata хранит
+последний независимо проверенный baseline; local_remediation_candidate и
+review.candidate задают этот узкий пакет. Production/full-manual-preview остаются
+blocked. Один следующий atomic action: EMAIL-preview-code-and-config-deploy.
+rollover_required: no; recommended_next_session_mode: High — известны target, процедура, postcondition и rollback плановой публикации.
 
 ## PVUI: разрешённая публикация исправленного UI — 2026-09-15T17:41:29Z
 
@@ -177,29 +203,17 @@ state_schema: 1
 milestone: full-manual-preview
 milestone_status: blocked
 production_status: blocked
-permission_state: owner_explicit_2026_09_15_publish_completed_PVUI_and_review_fixes_to_existing_preview_preserve_actual_config
+permission_state: owner_explicit_2026_09_16_remove_preview_recipient_restriction_no_provider_send_or_account_mutation
 review:
-  status: independent_go
-  candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+  status: pending_independent_review
+  candidate: 3638dce8be9bb0a2155860dd055112c3f5b62a43
   last_independently_reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-  unresolved_candidate_p0: 0
-  unresolved_candidate_p1: 0
-  deployed_open_p1: none_found_in_PVUI_scope_other_manual_milestone_gates_remain
-  verdict_scope: PVUI_existing_preview_code_only_publication_prior_review_plus_R1_R2_closure
-  independent_reviewer: new_Codex_session_reviewed_prior_agent_fixes_no_subagent_or_second_human
-  reviewed_utc: 2026-09-15T17:41:29Z
-  report: docs/implementation/reviews/pvui-deploy-20260915.md
-  review_gate: complete
-  local_validation:
-    exact_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-    manifest: all_runtime_matches_395_unchanged_2_test_only_updates
-    check: 0_errors_0_warnings
-    full_vitest: 84_files_623_pass_1_expected_Windows_skip
-    chromium_e2e: 40_distinct_scenarios_pass_after_documented_test_only_focused_completion
-    build: passed_this_session
-    production_dependency_audit: zero_vulnerabilities
-    strict_dry_run: passed_actual_config
-  previous_reviewed_candidate: d58f9db54bede6cdf8f7cc21da93b23a6de37c72
+  verdict_scope: bounded_owner_authorized_preview_email_configuration_change
+  reviewer: same_implementing_agent_no_new_independent_verdict_claimed
+  local_review_p0: 0
+  local_review_p1: 0
+  report: docs/implementation/reviews/preview-email-recipients-20260916.md
+  production_and_full_manual_preview_gates: unchanged_blocked
 preview:
   access: enforced
   deployed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
@@ -1171,15 +1185,15 @@ telegram_parent_continuation_permission:
   preserve: actual_Access_auth_email_contracts_Cron_vars_bindings_secrets_hours_bot_destination_and_attempt_history
   production_CMS_real_client_new_send_cohort_scope: not_granted
 next_atomic_action:
-  id: PVUI-owner-parent-admin-inspection
-  permission: owner_manual_inspection_no_new_agent_remote_write
+  id: EMAIL-preview-code-and-config-deploy
+  permission: owner_explicit_2026_09_16_remove_preview_recipient_restriction
   target: Worker_242c1796e930_D1_ccdeb22bb2a1_origin_88ed782ba25a
-  mutation: none_by_operator
+  mutation: one_preview_deploy_code_plus_exact_star_var
   preconditions:
-    - successful_exact_module_deployment_checkpoint
+    - full_local_gate_clean_detached_candidate_exact_config_Access_schema_and_rollback
   postcondition:
-    - owner_observes_updated_parent_and_admin_UI
-  containment: captured_compatible_baseline_preserve_settings_and_data_no_blind_retry
+    - candidate_module_and_star_mode_on_one_version_100_percent_other_settings_and_data_preserved
+  containment: retain_Access_and_captured_previous_version_no_blind_repeat
 following_route_permission_boundaries:
   - config_permission_does_not_authorize_document_scenario_or_new_sessions
   - entire_D01a_D18b_scope_is_now_granted_no_repeat_permission_needed
@@ -8296,9 +8310,9 @@ chose separate review/deploy sessions for this known preview recovery procedure.
 
 ## Telegram Workers 9A independent review complete — 2026-09-09T10:05:21Z
 
-The new 9A Codex session independently reviewed exact runtime candidate
+The historical 9A Codex session independently reviewed exact runtime candidate
 23c3999d206ef9551f775a5dda2b30939cf746c7, its parent diff and the prepared existing-notification
-recovery packet. Verdict: **GO**, new candidate P0/P1 zero. This is an agent code
+recovery packet. Verdict: **GO**, that historical candidate P0/P1 zero. This is an agent code
 review in a separate session, not a second human or a fabricated subagent.
 See [persistent review report](reviews/telegram-workers-09a.md).
 

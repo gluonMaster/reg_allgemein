@@ -1,6 +1,6 @@
 # Production readiness checklist
 
-<!-- stage-13-current-review-status: independent_go -->
+<!-- stage-13-current-review-status: pending_independent_review -->
 
 Актуально на 2026-09-02. Это production evidence ledger, а не current Stage-13
 state и не инструкция продолжения. Production verdict: **`blocked` / NO-GO**.
