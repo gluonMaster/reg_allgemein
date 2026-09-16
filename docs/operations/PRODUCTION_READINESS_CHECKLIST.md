@@ -24,11 +24,13 @@ Runtime candidate `fd17c3dbb28aa270f767592e00e9512fa234ad1a`, evidence:
 | Gate | Статус | Факт / оставшийся выпускной шаг |
 | --- | --- | --- |
 | TIN local code/schema/UI gate | passed locally | Общий gate + focused исправления test expectations; cold27 migrations/admin/restore; runtime без новых правок |
-| Native exporter artifacts / source | passed locally | OQ-047:110 карточек; actual reader/CTA0/110; previous live108 сохранён; publication read-back впереди |
-| Exact deploy/containment packet | passed locally | Protected packet03; ручной existing Netlify publisher; new Worker/D1 ещё не созданы; closed version фиксируется после первого deploy |
+| Native exporter artifacts / source | passed for CTAoff | Owner publication04 GET200:110 cards/catalog, CTA0. Source bytes exact после изоляции только536 bytes inert hosting metadata; raw SHA и initial strict-check mismatch/reconciliation сохранены. Source/config/exporter unchanged; previous live108 rollback03 сохранён. CTAon впереди |
+| Exact deploy/containment packet | passed locally | Protected packet03; ручной existing Netlify publisher; closed Worker version фиксируется после первого deploy |
+| Separate intake resources / remote schema | passed | 04: distinct EU D1 и managed exact-host Turnstile;27 migrations/schema definitions/FK verified, requests0/users0/latch available. CRLF transport rejection0027 исправлен exact LF Git blob без изменения SQL; evidence в handoff04 |
 | Telegram retention setting | passed | Владелец включил2 недели; same-target read-back03 UTC15:07:10 подтвердил1209600 секунд/private/send rights |
-| Real provider/admin gates | blocked | New Turnstile, protected credentials/bootstrap; real inbox/Telegram/admin на04; retention на04 только drift check |
-| TIN-AC-12 limited production verdict | blocked | Remote mutations03=0; actual version/config/DB и published HTML подтвердить на04 |
+| Closed Worker / first admin | passed | 04 actual closed version/config/soleDB/5 secrets/Cron/routes verified; first admin atomic bootstrap плюс независимый users1/admins1/latch/audit read-back; protected rollback saved |
+| Real provider/admin gates | blocked | Admin login/inbox/email confirmation passed: verified1/2children/2items, email receipt1; Telegram1 pending part/attempts0, actual not_before17.09 09:00 Berlin. Actual delivery/admin processed pending. Same Telegram1209600s rechecked |
+| TIN-AC-12 limited production verdict | blocked | Core production/login/inbox/verification/queue passed. По прямому решению OQ-044 Telegram actual delivery и оставшийся operator follow-up не задерживают CTAon; editor CTAtrue сохранён, launch ждёт native CTAon publication/read-back. Delivery/remote processed не объявлены passed; cursor в active state |
 
 ## Production release record
 

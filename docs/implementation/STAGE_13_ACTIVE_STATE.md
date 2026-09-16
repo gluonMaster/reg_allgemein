@@ -4,29 +4,428 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-16T15:07:10Z
+updated_utc: 2026-09-16T18:31:24Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN03-local-release-gate
-next_gate: TIN04-authorized-deployment
+last_completed_gate: TIN04-F2-email-verified-and-queued
+next_gate: TIN04-P2-CTAon-publication
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN03-local-packet-ready-no-remote-write
-last_atomic_action: TIN03-readonly-owner-telegram-retention-check
+current_phase: TIN04-P2-waiting_owner-native-export-CTAon
+last_atomic_action: TIN04-F2-owner-confirm-email
 last_atomic_result: success
-next_atomic_action: TIN04-readonly-exact-target-preflight
+next_atomic_action: TIN04-P2-owner-native-export-CTAon
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Planned_trial_intake_deploy_has_known_targets_readback_and_containment_requires_explicit_step04
+recommended_next_session_mode: Medium
+mode_reason_plain: Next_owner_native_export_and_local_artifact_check_no_remote_write_or_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN04: текущая операция — 2026-09-16T18:31:24Z
+
+Новое прямое решение владельца: открыть запись из Stundenplan сейчас; Telegram
+важен, но задержка/сбой не блокируют запуск, actual delivery проверить завтра.
+OQ-044 закрыт, domain/TIN-AC-12/test plan/release ТЗ согласованы с решением.
+Предыдущий порядок waiting delivery → F3 → P2 больше не задерживает CTAon.
+Не заявляем delivery/remote processed passed: verified1/processed NULL остаются
+последними доказанными фактами; operator follow-up сохраняется после запуска.
+
+Local editor operation success: сохранены exact origin и CTA=true, остальные
+settings сохранены; source09.09 hash unchanged, HTML не генерировался/не патчился.
+Editor C:\path\to\schedule-editor, config.json.trial_intake;
+native output visualiser/enhanced_schedule_visualization.html ещё предыдущий CTAoff.
+Protected backup/read-back: tmp/trial-intake-deploy-20260916/
+P2-editor-config-before-private.json/P2-editor-prepared-safe.json.
+Config after SHA4871b8673752b22c6d8bce1a7d800a62b377d78b172d8155bac4d18a8c906c7b;
+source SHAd122ff8f2fa03a517276e1c60928a3dbc65f8cad22b4169d39f256430c52cfbc.
+
+Scope04 limited SYS-05: account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
+D1 658404d6566b EU/schema27; version3205a1be1730/runtime
+fd17c3dbb28aa270f767592e00e9512fa234ad1a unchanged, accepting/jobs already enabled.
+No new remote mutations/provider sends this turn; last F2 checkpoint intact:
+one verified request, one Telegram part due17.09 07:00Z (09:00 Berlin).
+Preview/official site excluded. Last verified live Netlify CTAoff; no CTAon
+publication claimed. Closed Worker rollback, P1 CTAoff artifact/config backup retained.
+
+Waiting_owner: «Только групповые» → «4. Запустить визуализатор»; новый HTML
+должен показывать CTA. Ответ «HTML CTAon экспортирован». Агент проверяет native
+artifact110 cards/catalog/links/exact origin, готовит byte-identical cta-on/index.html,
+затем даёт одну инструкцию owner manual upload existing Netlify. После публикации
+live read-back/checkpoint и переход из карточки; новую заявку не отправлять.
+Rollback: сохранить CTAfalse, штатный export/publication CTAoff; при runtime
+проблеме closed Worker config/version сохраняет D1. Telegram не отключать/не
+переносить вручную, завтра read-only receipt/owner visibility и recovery при сбое.
+Ровно следующий action: **TIN04-P2-owner-native-export-CTAon**.
+Checks: persisted config/source hash; docs:check/release:scan/diff-check only.
+No runtime/exporter code changes, no full tests/build. rollover_required:no;
+recommended_next_session_mode:Medium — next local artifact check; publication
+после него обычный High. Limited launch pending только CTA publication/read-back,
+future Telegram delivery не является блокирующим gate по решению владельца.
+
+## TIN04: confirmation checkpoint — 2026-09-16T18:24:46Z
+
+F2 confirmation success, delivery gate pending. Owner reported confirmation;
+bounded D1 read-back: before pending1/Telegram0, after verified1/requests1,
+children2/items2/assignments3, processed_at/delete_after NULL. Existing email job1/
+sent receipt1 unchanged; no duplicate email. Telegram exactly1 job/1 payload part,
+part1/total1, linkage valid/body length valid; pending, attempts0, no receipt/lease.
+Actual not_before2026-09-17T07:00:00.000Z =17.09 09:00 Europe/Berlin.
+Evidence protected tmp/trial-intake-deploy-20260916/F2-read-private.json and
+F2-postcondition-safe.json; no PII/token/body read or printed.
+Operator attempts38:37success/1failed unchanged(S27); observed email send1,
+Telegram sends0. No writes by agent this turn.
+
+Scope04 limited SYS-05: account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
+D1 658404d6566b EU/schema27. Version3205a1be1730/runtime
+fd17c3dbb28aa270f767592e00e9512fa234ad1a unchanged; accepting/jobs enabled,
+CTAoff. Preview/official site excluded. Closed rollback/private export retained.
+Waiting_owner/business window: штатный Cron должен отправить сообщение после
+17.09 09:00 Berlin. Владелец проверяет фактическое сообщение и сообщает
+«Telegram получен» либо отсутствие доставки/ошибку без PII. Агент после окна
+проверяет status/attempt/receipt всех частей read-only и checkpoint; затем F3.
+Сейчас не polling/sleep, не менять окно/not_before, не отправлять вручную.
+OQ-044 не решён: CTAoff до actual delivery/admin processed; limited GO pending.
+Containment: сохранить request/queue, при неизвестном результате reconcile
+receipt/lease без blind retry; emergency closed flags/version сохраняют D1.
+Ровно следующий action: **TIN04-F2-read-delivery-after-window**.
+Checks: D1 aggregates, docs:check/release:scan/diff-check; no build/full suites.
+rollover_required:no; recommended_next_session_mode:Medium — next only
+read-only delivery evidence/manual observation, no unresolved ambiguity/write.
+
+## TIN04: submit checkpoint — 2026-09-16T18:19:49Z
+
+F1 success: owner submitted once and confirmed actual inbox. Before requests/jobs0;
+read-back requests1/pending_email1, children2/items2/assignments3, distinct child
+assignment sets2/unassigned items0; privacy version/14-day pending retention exact.
+Email jobs1, sent1/attempts1 with non-null provider receipt/sent_at and cleared lease.
+Telegram jobs/payloads/attempts0 before confirmation. No duplicate submit/resend.
+Initial verifier compared recipient with adminEmail and found mismatch. Manifest
+only stores admin identity; equality with request recipient is not a product rule.
+Owner manually chose actual mailbox and explicitly confirmed receiving its email;
+this owner action authorizes the selected controlled recipient. No address printed,
+no automatic recipient change/send. Recorded as verifier-assumption reconciliation,
+not silently claimed equal. Exact F2 token confirmation remains required.
+Evidence protected tmp/trial-intake-deploy-20260916/F1-read-private.json,
+F1-postcondition-safe.json and F1-reconciliation-safe.json. Operator attempts37:
+36success/1failed unchanged(S27), plus observed provider email send1; Telegram sends0.
+
+Scope04 limited SYS-05; account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
+D1 658404d6566b EU/schema27; production version3205a1be1730/runtime
+fd17c3dbb28aa270f767592e00e9512fa234ad1a unchanged. Preview/official site excluded.
+Accepting/jobs true, CTAoff. Compatible closed rollback/private export retained.
+Waiting_owner F2: open received verification email, check German institution name
+and lessons/dates, follow its link and explicitly confirm email on portal page.
+Expected clear success result. Report «Email подтверждён» or exact error without
+PII/token. Agent then reads verified/outbox/all-parts/due-time and commits checkpoint
+before any further mutation. No agent browser automation/confirmation/resend.
+Current time outside Mo–Fr09–17 Europe/Berlin; expected earliest Telegram dispatch
+2026-09-17T07:00:00Z (09:00 Berlin), actual not_before must be read after F2.
+No long polling or bypass; OQ-044 remains unresolved, CTAoff until actual delivery.
+Containment: preserve request/receipt, reconcile unknown results before retry;
+emergency closed flags/version preserve D1. F3/CTAon and limited GO pending.
+Ровно следующий action: **TIN04-F2-owner-confirm-email**.
+Checks: bounded D1 aggregates; docs:check/release:scan/diff-check. Full suites/build
+not repeated, no runtime changes. rollover_required:no;
+recommended_next_session_mode:High — known confirmation/outbox flow and rollback.
+
+## TIN04: enablement checkpoint — 2026-09-16T18:08:59Z
+
+W2 result success: production version fingerprint3205a1be1730/100% traffic;
+before closed bd6237d3d99f, after accepting/jobs true, Telegram bot_api,
+activationAt2026-09-16T18:06:03.000Z. Actual vars/5 secrets/soleDB/2crons/logs
+disabled read-back exact; public form/catalog200 with110 lessons, admin401 without
+session/full-mode cabinet404. Admin owner login previously confirmed/read back.
+Scope04 limited SYS-05: account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
+D1 658404d6566b EU/schema27. Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a
+unchanged, gate03 inherited; preview/official site excluded. No new build/dry-run/
+full tests; actual-input validation covered only4 operational vars changed.
+Read-back requests0/intakeEmailJobs0/telegramJobs0/telegramAttempts0/admins1/
+migrations27; Cron enabled, no provider work/send observed. Operator attempts36:
+35success/1failed unchanged(S27), ambiguous0. CTAoff still published.
+Protected evidence tmp/trial-intake-deploy-20260916/W2-* and open-version-private.json;
+closed-version-private.json preserved as compatible rollback. D1 export310399 bytes
+retains admin/session; Time Travel read failed7500, no bookmark claimed (no write).
+
+Waiting_owner F1: https://intake.example.com/probestunde.
+Check DE/RU on normal device; synthetic names/birthdates, agreed real email,
+two children/two lessons with different child assignments and valid dates from
+tomorrow onwards. Submit exactly once; check actual German inbox, full institution
+name and lessons/dates. Report «Заявка отправлена, письмо получено» or exact error
+without PII/token. Do not confirm email yet: F1 pending/outbox/receipt/no-premature-
+Telegram read-back plus checkpoint must precede F2 confirmation mutation.
+No browser automation or duplicate submit by agent. F2/F3/CTAon remain pending;
+OQ-044 still requires actual Telegram delivery in normal business window.
+Containment: preserve D1/request; at failure reconcile receipt/queue, no blind
+resend. Emergency same runtime closed flags or saved closed version; owner CTAoff
+already active. Limited GO not declared.
+Ровно следующий action: **TIN04-F1-owner-submit-once**.
+Checkpoint checks docs:check/release:scan/diff-check. rollover_required:no;
+recommended_next_session_mode:High — controlled provider flow with known target,
+postcondition and compatible rollback; no unresolved ambiguity.
+
+## TIN04: login checkpoint — 2026-09-16T18:06:38Z
+
+A2 owner login success, independent read-back18:06:03Z: admin1/active session1,
+admin audit event1/bootstrap assertion1, requests0/emailOutbox0. Before session0;
+owner confirmed visible login. Credentials/cookies not printed; plaintext
+admin-input-private.json removed, encrypted owner input preserved.
+Evidence protected tmp/trial-intake-deploy-20260916/A2-read-private.json,
+A2-postcondition-safe.json. Remote attempts35:34success/1failed unchanged(S27),
+ambiguous0, provider sends0. Scope04 limited SYS-05, preview/official site excluded.
+Account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/D1 658404d6566b/schema27.
+Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a, closed version bd6237d3d99f,
+gate03 unchanged. Same Telegram private destination/can-send/1209600s rechecked.
+
+Planned W2: deploy unchanged runtime with accepting/jobs true, Telegram bot_api,
+activationAt2026-09-16T18:06:03.000Z. Only these4 vars differ; actual-input runtime
+validation passed. No new build/full suite/dry-run: prior closed deploy proved
+same artifact, only validated operational vars change; owner requested economy.
+Before deploy retain D1 Time Travel/export privately because admin/session exist.
+Pre-write export completed:310399 bytes, protected W2-before-change-private.sql.
+Time Travel read returned provider internal error7500 (no mutation); bookmark
+не заявляется. Closed compatible Worker rollback плюс exact D1 export сохраняют
+recovery; W2 не меняет schema/data, этот read-only provider отказ не блокирует deploy.
+Expected exact version100%/vars/DB/secrets/crons, public catalog110, no queued
+requests/provider sends; count Cron effects in read-back. CTAoff remains.
+Rollback: closed-version-private.json compatible version; preserve D1/admin/session,
+or emergency config accepting/jobs false. Failed/ambiguous requires reconcile,
+no blind deploy retry. Postcondition/checkpoint before owner submit.
+Ровно следующий action: **TIN04-W2-enable-controlled-flow**.
+Status-only docs:check/release:scan/diff-check. rollover_required:no;
+recommended_next_session_mode:High — normal flag deployment, exact target and rollback.
+
+## TIN04: bootstrap checkpoint — 2026-09-16T17:59:16Z
+
+A1 result success. Before users0/admins0/latch available; after existing atomic
+CLI plus independent read-only D1 query: users1/active admins1/latch consumed,
+bootstrap action1/assertion1, requests0. UTC17:59:16Z, CLI exit0; provider sends0.
+Scope04 limited SYS-05 unchanged: account5dbd04a4763a/Worker53bbcae12769/
+origin819c92b4f09a/D1 658404d6566b EU/schema27. Production version bd6237d3d99f
+closed/100%, runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a, gate03 inherited.
+Preview/Access/official site excluded. Remote attempts34:33success/1failed
+unchanged(S27), ambiguous0; Netlify1/Worker1/bootstrap1/provider sends0.
+Evidence protected: tmp/trial-intake-deploy-20260916/A1-intent-private.json,
+A1-apply-private.log, A1-after-private.json, A1-postcondition-safe.json;
+identity/password/UUID only ignored. Owner DPAPI input preserved; plaintext
+admin-input-private.json удаляется после подтверждённого owner login по packet.
+
+Waiting_owner: открыть https://intake.example.com/auth/login,
+войти с согласованным email и сохранённым в локальном окне паролем, сообщить
+«Вход выполнен» либо точную ошибку без credentials. Expected: admin session and
+admin page; agent checks session/audit read-only, checkpoint before W2 enablement.
+Owner login is one separate mutation; agent does not perform/duplicate it.
+Containment: intake/jobs/Telegram/CTA remain off, D1 preserved; compatible closed
+version/config saved in closed-version-private.json. Real inbox/confirmation/
+Telegram/admin processed/CTAon gates pending, limited GO not declared.
+Ровно следующий action: **TIN04-A2-owner-admin-login**.
+Status-only docs:check/release:scan/diff-check; full suite/E2E/build not repeated.
+rollover_required:no; recommended_next_session_mode:High — owner login/read-back
+then planned controlled flow enablement, exact context and rollback preserved.
+
+## TIN04: closed Worker checkpoint — 2026-09-16T17:57:03Z
+
+W1 result success: production closed version fingerprint bd6237d3d99f,100% traffic;
+before Worker absent. Scope04 limited SYS-05: account5dbd04a4763a,
+Worker53bbcae12769/origin819c92b4f09a/D1 658404d6566b EU/schema27.
+Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a/gate03 unchanged;308 source/147 build
+hashes match, actual-input validation/dry-run passed. Preview/official site excluded.
+After read-back: exact vars/soleDB/5secret names/2crons, logs disabled,
+accepting/jobs false, Telegram disabled. Public form200 closed/login200,
+unauthenticated admin401, full-mode cabinet404, no Access redirect.
+Initial verifier expected redirect;401 is correct authorization denial, no runtime
+defect or write retry. Remote content4077027 bytes preserved. Protected evidence:
+tmp/trial-intake-deploy-20260916/W1-* and closed-version-private.json.
+Actual closed version/config saved as compatible rollback. Remote attempts33:
+32success/1failed unchanged(S27), ambiguous0; Netlify1/Worker1/provider sends0.
+
+Planned A1: existing bootstrap CLI, one atomic batch into same empty new D1,
+owner-attested identity from protected input; exact UUID/confirmation kept private.
+Expected users1/active admins1/latch consumed/audit action and assertion1;
+CLI read-back plus independent aggregate check before next mutation.
+Containment: accepting/jobs/CTA remain off, preserve DB; if failed/ambiguous
+reconcile identity/latch/audit, no blind retry. Login/send are later separate actions.
+Ровно следующий action: **TIN04-A1-bootstrap-admin**.
+Status-only docs:check/release:scan/diff-check; full suites/build not repeated.
+rollover_required:no; recommended_next_session_mode:High — known bootstrap
+target/procedure/read-back, compatible closed rollback saved.
+
+## TIN04: publication checkpoint — 2026-09-16T17:48:55Z
+
+Scope04 сохраняется: отдельный limited SYS-05 Worker/D1, providers/admin;
+preview/Access/официальный сайт исключены. Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a,
+gate f570564785a3241043534e81d8db8379a7be6c54 без material diff.
+Fingerprints: account5dbd04a4763a, Worker53bbcae12769, origin819c92b4f09a,
+D1 658404d6566b EU/schema27, managed widget892e52d5410d. Worker/version ещё отсутствуют.
+
+P1 owner publication: result success после read-only reconciliation UTC17:48:55Z.
+Exact target https://stalwart-gumption-9545e9.netlify.app/. Before live108/CTA0;
+after GET200 без redirect,110 cards/catalog/CTA0. Owner подтвердил Published.
+Initial strict byte check failed: hosting добавил536 bytes — один комментарий
+Netlify и ровно два inert meta tags hosting-provider/netlify-deploy, без scripts.
+Reconciliation доказал: removed bytes0, после изоляции только этой вставки
+исходные102058 bytes совпадают полностью; повторный GET вернул те же raw bytes.
+Исходный SHA159df2429eb5d2587a305c27031f4037777daaf10d58a85a8879c00e7a077024;
+live SHA2fbabd773fc82a9ee3ec9c12910d55a46dd6b594a7caa57a7b937ed243e22c4d.
+Raw byte equality не заявляется. P2 hosting-metadata-only не ломает текущий flow
+и не блокирует milestone. Backlog: учитывать эту exact inert insertion при P2
+publication read-back, не разрешать произвольные HTML changes. HTML агент не
+патчил; повторной публикации не было. Source/exporter/config unchanged.
+Protected evidence tmp/trial-intake-deploy-20260916/: P1-postcondition-safe.json
+(первый failed check), P1-live-after.html/response-private/difference-private,
+P1-reconciliation-safe.json. Полные IDs, headers и source bytes только ignored.
+Накопленные remote attempts32:31success/1failed unchanged(S27), ambiguous0;
+Netlify publications1, Worker deploy0, provider sends0.
+
+Planned W1: единственный следующий remote write — deploy closed candidate с
+пятью secrets через exact deploy/trial-intake/wrangler.production.jsonc.
+До него локально actual-input loadRuntimeConfig и actual-config dry-run;
+Worker absence/new sole DB/schema27 проверяются read-only. Ожидается version100%,
+точные vars/DB/secrets names/Cron, logs disabled, accepting/jobs false,
+Telegram disabled; public intake закрыт, login доступен, admin защищён,
+full-mode routes запрещены. Read-back settings/deployments/modules/public routes
+предшествует checkpoint/commit и следующему admin bootstrap write.
+Containment до W1: D1/schema27 сохранить, CTAoff, Worker отсутствует.
+После успеха W1 сохранить actual closed version как compatible rollback;
+при failed/ambiguous не повторять deploy вслепую, сначала actual reconciliation.
+Rollback P1: owner отдельной публикацией возвращает protected rollback03/108
+с новым read-back/checkpoint при необходимости. Повторный export сейчас не нужен.
+
+Ровно следующий action: **TIN04-W1-deploy-closed-worker**.
+Проверки checkpoint: docs:check, release:scan, git diff --check; full runtime/E2E/
+build/exporter/cold restore03 не повторяются без material diff.
+rollover_required:no; recommended_next_session_mode:High — обычный закрытый
+deploy с известными target/read-back/containment, ambiguity разрешена.
+
+## TIN04: owner export и planned publication — 2026-09-16T17:39:59Z
+
+Разрешён scope04: отдельный limited SYS-05 target, ресурсы/schema/code/admin/
+providers; preview/Access/официальный сайт исключены. Owner inputs DPAPI verified.
+Runtime candidate fd17c3dbb28aa270f767592e00e9512fa234ad1a; gate
+f570564785a3241043534e81d8db8379a7be6c54 унаследован без material diff.
+Account 5dbd04a4763a, Worker 53bbcae12769, origin 819c92b4f09a;
+D1 658404d6566b, EU; managed widget 892e52d5410d. Worker/version отсутствуют.
+
+Последняя remote операция S27-LF: result success, UTC16:46:13Z, одна corrective
+attempt после сохранённого failed checkpoint. Before: подтверждённая schema26,
+ровно одна pending0027. After: exact prefix27, schema objects556, полная schema
+совпала с локальным immutable prefix27; foreign-key violations0, read-back
+rows_written0. Intake requests0, users0; first-admin latch available/admins0.
+Всего remote mutation attempts31:30 success и1 failed; ambiguous0.
+Provider sends0, Worker deploy0, Netlify publication0; пользовательских данных нет.
+
+S27 первая попытка была rejected с incomplete input/SQLITE_ERROR7500;
+reconciliation подтвердил unchanged prefix26. Причина:478 CRLF в working file0027,
+совпавшая с [upstream issue14991](https://github.com/cloudflare/workers-sdk/issues/14991).
+Corrective staging schema-prefix-27-lf содержит exact LF Git blob runtime
+candidate. Изменены только окончания строк transport copy; tracked migration,
+её SQL semantics, runtime и dependencies не менялись. Focused local execution
+CRLF/LF дал одинаковую schema/FK0; remote corrective apply и read-back passed.
+P1 / TIN-AC-10/12 закрыт. Failed evidence сохранено, blind retry не было.
+
+Evidence: tmp/trial-intake-deploy-20260916/S27-lf-apply-private.log,
+S27-lf-after-read-private.json, S27-lf-after-safe.json, S27-latch-private.json,
+S27-lf-preparation-safe.json, S27-lf-focused-safe.json и failed/reconcile S27
+records. Каждый S0–S26 также имеет отдельный read-back и docs-only commit.
+R1/R2 readbacks сохранены там же; baseline03 цел. Ключи/identity/full IDs только
+в protected ignored evidence, owner inputs остаются зашифрованными DPAPI.
+
+Локально подготовлен editor config: exact origin из manifest, CTA=false;
+backup P1-editor-config-before-private.json, read-back P1-editor-prepared-safe.json.
+Остальные settings сохранены. Source09.09 hash прежний; HTML агент не генерировал
+и не патчил. Native output: visualiser/enhanced_schedule_visualization.html в
+редакторе C:\path\to\schedule-editor. Его before hash/mtime сохранены.
+
+Владелец сообщил «HTML экспортирован» и отсутствие видимых кнопок записи.
+Это ожидаемый CTAoff до обязательного real provider/admin flow, не дефект экспорта.
+Actual native output mtime17:33:04Z проверен17:39:59Z: existing server reader
+принял110 lessons;110 карточек/CTA0, IDs и отображаемые card attributes согласованы.
+Полный каталог совпал с approved03/source09.09; source/config/exporter hashes
+не изменились. Agent export0, HTML patch0;102058 bytes скопированы без изменений.
+Fresh artifact SHA256:159df2429eb5d2587a305c27031f4037777daaf10d58a85a8879c00e7a077024.
+Upload folder out/trial-intake-publication-20260916/cta-off содержит только index.html.
+Protected evidence: P1-owner-export-safe.json, P1-owner-native-cta-off.html,
+P1-live-before.html и bounded verifier в tmp/trial-intake-deploy-20260916/.
+
+P1 planned remote operation: владелец загружает эту папку в существующий
+Netlify site https://stalwart-gumption-9545e9.netlify.app/, через его Deploys,
+и дожидается Published. Ожидаемый результат: live110 с доступным JSON catalog,
+CTA0; приём заявок ещё не открыт. Read-only before GET200: live108/CTA0,
+SHA совпал с rollback03 b97901ec23709acdf936b338b00a37a0b8693605d0eae70d4bb43b50f61b3f74.
+Публикация пока pending; новых remote mutation attempts в этой сессии0.
+После отчёта владельца агент сверяет GET exact URL без redirect, byte SHA,
+server catalog/card/CTA counts; checkpoint/commit до любого следующего write.
+При failed/ambiguous publication сначала reconcile; при необходимости owner
+отдельно перепубликует saved rollback03 folder108 с read-back/checkpoint.
+
+Статус waiting_owner: загрузить подготовленную CTAoff папку, дождаться Published,
+сообщить «CTAoff опубликован». Не создавать новый site; не запускать exporter/UI
+вместо владельца. Production/CTA GO ещё не заявляется; CTAon появится после
+реального письма, подтверждения, Telegram и admin/processed flow по04.
+
+Containment: сохранить D1/schema27; Worker отсутствует, приём/jobs выключены,
+live Netlify не менялся. Полный compatible closed rollback будет записан после
+первого Worker deploy; сейчас version не существует. Rollback расписания03 цел.
+Ровно следующий action: **TIN04-P1-owner-publish-CTAoff**.
+Status-only checks: docs:check, release:scan, git diff --check; отдельный commit
+до следующей remote mutation. Полный runtime/E2E/build gate03 не повторяется.
+rollover_required: no; recommended_next_session_mode: High — плановая публикация
+в existing site с exact artifact/read-back/rollback, затем обычный deploy;
+unresolved ambiguity нет. Новый permission gate не требуется.
+
+## TIN04: preflight пройден; waiting_owner — 2026-09-16T16:12:19Z
+
+Владелец прямо запустил `04_DEPLOY.md`. Разрешён production deployment только
+ограниченного SYS-05 по packet03: отдельные Worker/D1/Turnstile, secrets/config/
+Cron, первый admin и один controlled provider flow. Публикации existing Netlify
+и ручной flow выполняет владелец по шагам04. Preview/Access, официальный сайт,
+legacy import и другие sites исключены. Это действующее разрешение; ответ о
+локальном сохранении inputs не требует нового разрешения на deploy.
+
+Result: success для read-only preflight. Before/after: новый Worker/D1 отсутствуют,
+имена свободны; remote mutation attempts **0**, provider sends **0**, публикации **0**.
+Sanitized target fingerprints: account `5dbd04a4763a`, Worker `53bbcae12769`,
+origin `819c92b4f09a`; D1 ID/deployed version ещё не существуют. Telegram bot
+`4ba876965084` / private chat `02e9638892ee`: тот же target, право отправки и
+auto-delete `1209600` подтверждены. Live расписание по-прежнему108 без каталога/CTA,
+byte hash совпал с сохранённым rollback03; выбранный источник110 не изменился.
+Отдельный Turnstile widget ещё нужен, existing widget новый hostname не покрывает.
+
+Runtime `fd17c3dbb28aa270f767592e00e9512fa234ad1a` и gate
+`f570564785a3241043534e81d8db8379a7be6c54` наследуются:308 source hashes,
+147 build hashes и installed exporter совпали с evidence03; исходный HEAD04
+`ffdead5` содержит только последующие docs/checker/tests изменения. Полный suite,
+E2E, exporter regression, cold restore и новая сборка не повторялись: material
+diff отсутствует. Source Office-файл проверен только по byte hash, не открывался.
+
+Protected evidence: `tmp/trial-intake-deploy-20260916/` — preflight-safe,
+target-lock-safe, candidate-check-safe, Turnstile и raw readbacks. ACL только
+текущий Windows user/SYSTEM; Git-ignore проверен; baseline03 не перезаписан.
+Локально отсутствуют сохранённый intake Resend key и новые first-admin inputs.
+Telegram credential доступен; его повторный ввод/ротация не нужны.
+Подготовлен `owner-input.ps1`: одно локальное окно для уже созданного Resend key,
+имени/фамилии, нового пароля и attestation согласованной identity из manifest.
+Сохранение — `owner-input.dpapi`, Windows DPAPI, без network/provider requests;
+script syntax/empty-input verification passed. Ключи/пароль/identity в чат не вводить.
+
+Containment: до закрытия input gate новые remote ресурсы не создавать; intake
+и CTA не открыты, существующие системы сохранены. Затем план R1 из packet03
+требует planned docs-only checkpoint до первой mutation. Full MVP/manual preview
+и production GO не заявляются; OQ-044 сохраняет actual Telegram delivery gate.
+
+Ровно следующий action: **TIN04-owner-save-protected-input**. Статус
+`waiting_owner`: владелец заполняет локальное окно, нажимает «Сохранить» и сообщает
+«Данные сохранены» без секретов. После ответа проверить только safe status/DPAPI
+доступность; не запускать окно повторно и не перезаписывать уже сохранённый файл.
+`rollover_required: no`, `recommended_next_session_mode: High` — продолжение
+разрешённого планового deploy с известными target/read-back/containment.
+Session handoff: [TIN04 preflight](handoffs/stage-13.md#trial-intake-deploy-input-20260916).
 
 ## TIN03: локальный release gate и packet — 2026-09-16
 
@@ -71,6 +470,10 @@ Containment: сохранить D1; подготовленный same-runtime cl
 deployment на04 станет actual compatible rollback version; сейчас её не выдумывать.
 
 Ровно следующий action: **TIN04-readonly-exact-target-preflight** при запуске04.
+Owner execution preference перед04: инфраструктура/Wrangler/read-backs у агента;
+export/Netlify и ручной browser flow у владельца по коротким шагам. См.
+[разделение работы](TRIAL_INTAKE_RELEASE_TZ.md#разделение-работы-с-владельцем-на-шаге-04).
+Пересмотр промпта не запустил04; никаких новых remote действий не было.
 Никакая инструкция03 не разрешает remote write. Исторический EMAIL resend ниже
 не является текущим действием. `rollover_required: no`,
 `recommended_next_session_mode: High` — плановый deploy с известными target,

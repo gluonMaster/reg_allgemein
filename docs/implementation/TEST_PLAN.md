@@ -26,6 +26,12 @@
 между шагами только affected tests. Полный contract/upload manual lifecycle
 не является проверкой этого limited release.
 
+TIN-AC-12/OQ-044: при запуске вне рабочего окна проверить verified-заявку,
+целостность всех Telegram parts, отсутствие преждевременных попыток и корректный
+not_before. CTAon разрешён до фактической доставки; следующим рабочим утром
+проверяются provider receipts и видимость сообщения. Pending/failed delivery
+не помечается passed и сама по себе не блокирует приём через admin UI.
+
 Уточнения TIN-02/11/12 проверяются в том же intake browser/release pass:
 полное название учреждения (включая From и доступные auth/reset экраны), перенос
 на mobile, короткий текст сроков без Telegram и дополнительной галочки.

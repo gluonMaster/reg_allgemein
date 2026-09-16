@@ -200,7 +200,7 @@ OQ-040 уже выбран; до фазы 1 владелец прямо запу
 | 2. Schema | baseline migrations и новая intake migration в новой D1 | actual migration list, таблицы/indexes/FK, небольшой local restore rehearsal уже в release evidence | новый target закрыт; forward repair, не down-migration с потерей заявок |
 | 3. Источник выбора | штатно сгенерировать HTML исправленным редактором с сохранённым CTA=off и опубликовать результат обычным способом в exact target | опубликованный artifact совпадает с экспортом; карточки совпали с актуальным live baseline; JSON соответствует им | возврат предыдущей публикации; исправленный экспортер сохраняется |
 | 4. Код/admin | exact candidate, intake mode, login и контролируемый первый admin | actual version/config; public form доступна, чужие/admin routes защищены; audit bootstrap | известная совместимая версия либо intake maintenance; D1 сохраняется |
-| 5. Живой flow | controlled request с synthetic именами и разрешённой почтой, verification, один Telegram event со всеми items | inbox + D1/outbox receipt + видимость у admin; публичная форма читает реальный JSON, без Access у родителя | при provider failure сохранить заявку/очередь, устранить/reconcile; CTA=off остаётся в exporter config |
+| 5. Живой flow | controlled request с synthetic именами и разрешённой почтой, verification, один Telegram event со всеми items | inbox + D1/outbox receipt + видимость у admin; вне рабочего окна Telegram queue/not_before по OQ-044 достаточны для перехода к CTA | при provider failure сохранить заявку/очередь, устранить/reconcile; Telegram сам по себе не блокирует приём, actual delivery проверить следующим рабочим утром |
 | 6. CTA | сохранить CTA=on и проверенный portal origin в конфигурации редактора, повторно штатно экспортировать и опубликовать результат | опубликованный artifact совпадает с экспортом; карточки/JSON/CTA согласованы, оба здания и суббота; последующие обычные экспорты сохраняют ссылки | сохранить CTA=off, экспортировать и опубликовать вариант без ссылок либо вернуть предыдущую публикацию; новые заявки не удалять |
 
 Каждая строка содержит несколько возможных атомарных операций. Между ними
@@ -226,10 +226,39 @@ backup/restore для новой D1 и действие «закрыть при�
 Работа с Office допускается только неисполняющим parser с явным allowlist
 schedule sheets/fields, без полного workbook dump. Тесты используют synthetic data.
 
+### Разделение работы с владельцем на шаге 04
+
+Уточнение владельца 2026-09-16: экономить лимиты агента, передав обычные UI-действия
+владельцу. Это изменение исполнителя приёмки, не ослабление TIN-AC и не запуск deploy.
+
+| Агент | Владелец по короткой инструкции |
+| --- | --- |
+| Cloudflare/Wrangler, ресурсы, D1/schema, secrets/Turnstile/Cron, deploy, bootstrap и recovery | Защищённый ввод недостающих credentials |
+| Backup и сохранение exact origin/CTA off/on в editor config; проверка artifact и live GET/hash/catalog/links | Штатная генерация HTML и ручная публикация в existing Netlify site, сначала off, затем on |
+| Actual version/config/schema/auth boundaries и aggregate D1/outbox/audit/receipt read-backs | Login, одна controlled multi-child/multi-lesson заявка, просмотр реального письма, confirmation, Telegram, admin filters/detail/processed |
+| Checkpoints и решение о завершении обязательных gates | Финальный переход из live карточки и проверка предвыбора без новой отправки |
+
+Агент заранее сообщает URL/путь, простое действие, ожидаемый результат и короткую
+форму ответа. Не требует от владельца SQL/CLI, разбора logs/IDs, правки JSON/HTML.
+Не дублирует его UI-сценарий через Computer Use/E2E; при конкретном отказе делает
+focused диагностику. Базовый regression03 наследуется, новый полный run без
+material diff не нужен. Человек подтверждает видимость/удобство, агент — technical
+postconditions; ни один из этих видов evidence не подменяет другой.
+
+Ручные mutations login/submit/confirmation/processed/Netlify publish выполняются
+по отдельным инструкциям с existing checkpoint перед следующей mutation;
+read-only наблюдения можно объединять. Пока владелец занят, записать waiting_owner
+и ровно следующее действие в active state, завершить ответ без polling. При выходе
+за Telegram window применить OQ-044: подтвердить queue/not_before и продолжить
+CTAon, actual delivery проверить следующим рабочим утром без обхода окна.
+Фактически пройденные gates не переоткрывать без drift; auto-delete14 дней уже
+подтверждён03, повторная настройка не нужна. Один controlled flow достаточен:
+не повторять на production все combinations/negative cases локальных tests.
+
 ## Параметры выпуска
 
-Продуктовые OQ-037–043/045–046 закрыты; OQ-044 об открытии вне рабочего окна остаётся
-отдельным вопросом. Перед deploy выбрать свободное имя workers.dev,
+Продуктовые OQ-037–047 закрыты, включая запуск до доставки по OQ-044.
+Перед deploy выбрать свободное имя workers.dev,
 сверить реальные доступы/provider targets, назначить первого admin и проверить
 показ согласованного текста TIN-12. Provider IDs и admin
 credentials остаются в protected manifest. Рекомендуемое имя нового Worker —
