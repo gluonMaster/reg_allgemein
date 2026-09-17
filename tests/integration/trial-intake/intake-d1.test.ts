@@ -151,6 +151,26 @@ describe('intake D1 lifecycle', () => {
 			(await db.first<{ n: number }>({ sql: 'SELECT COUNT(*) AS n FROM telegram_outbox' }))?.n
 		).toBe(0);
 	});
+	it('rejects a desired date on another weekday, today or in the past', async () => {
+		const input = data();
+		// The form offers only the lesson's own weekday; the server stays the authority.
+		for (const desiredDate of ['2026-09-18', '2026-09-16', '2026-09-10']) {
+			await expect(
+				service.create(
+					{ ...input, items: [{ ...input.items[0], desiredDate }] },
+					async () => lessons,
+					NOW
+				)
+			).rejects.toMatchObject({ code: 'INTAKE_DATE_INVALID' });
+		}
+		expect(
+			(
+				await db.first<{ n: number }>({
+					sql: 'SELECT COUNT(*) AS n FROM trial_intake_requests',
+				})
+			)?.n
+		).toBe(0);
+	});
 	it('rolls back the whole create if a child insert fails and rejects cross-request assignments', async () => {
 		await db.run({
 			sql: `CREATE TRIGGER synthetic_reject_child BEFORE INSERT ON trial_intake_children BEGIN SELECT RAISE(ABORT,'synthetic failure'); END`,

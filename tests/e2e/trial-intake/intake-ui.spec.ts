@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlatformProxy } from 'wrangler';
 import fixture from '../../fixtures/trial-intake/catalog-v1.json' with { type: 'json' };
-import { nextLessonDate } from '../../../src/lib/trial-intake/dates';
+import { nextLessonDate, weekday } from '../../../src/lib/trial-intake/dates';
 import { ORGANIZATION_NAME } from '../../../src/lib/organization';
 import { newE2eContext, syntheticIdentities, syntheticPassword } from '../support/authenticated';
 import { installSyntheticTurnstile } from '../support/turnstile';
@@ -85,6 +85,8 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 			page.getByRole('heading', { name: 'Probestunde anfragen', exact: true })
 		).toBeVisible();
 		await expect(page.locator('.site-brand')).toContainText(ORGANIZATION_NAME);
+		await expect(page.locator('.auth-nav')).toHaveCount(0);
+		await expect(page.locator('.site-footer a[href="/auth/login"]')).toBeVisible();
 		await noOverflow(page);
 		await page.locator('[name=parentFirstName]').fill('Synthetic');
 		await page.locator('[name=parentLastName]').fill('ParentAlpha');
@@ -93,18 +95,18 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 		await page.locator('[name=first-child-1]').fill('ChildOne');
 		await page.locator('[name=last-child-1]').fill('ZuluSynthetic');
 		await page.locator('[name=birth-child-1]').fill('2018-01-02');
-		await page.getByRole('button', { name: 'Kind hinzufügen' }).click();
+		await page.getByRole('button', { name: 'Weiteres Kind hinzufügen' }).click();
 		await page.locator('[name=first-child-2]').fill('ChildTwo');
 		await page.locator('[name=last-child-2]').fill('AlphaSynthetic');
 		await page.locator('[name=birth-child-2]').fill('2020-02-29');
-		await page.getByRole('button', { name: 'Angebot hinzufügen' }).click();
+		await page.getByRole('button', { name: 'Weiteres Angebot hinzufügen' }).click();
 		await page.getByLabel('Angebot suchen').fill('Kunst');
 		await page.getByRole('button', { name: 'Auswählen · Kunst' }).click();
 		const chosen = page.locator('.chosen-lesson');
 		await chosen.nth(0).getByLabel('ChildTwo AlphaSynthetic').check();
 		await chosen.nth(1).getByLabel('ChildOne ZuluSynthetic').uncheck();
 		await chosen.nth(1).getByLabel('ChildTwo AlphaSynthetic').check();
-		await page.getByRole('button', { name: 'Kind hinzufügen' }).click();
+		await page.getByRole('button', { name: 'Weiteres Kind hinzufügen' }).click();
 		await chosen.nth(1).getByLabel('ChildTwo AlphaSynthetic').uncheck();
 		await chosen.nth(1).getByLabel('Kind 3', { exact: true }).check();
 		await page.getByRole('button', { name: 'Entfernen · Kind 3', exact: true }).click();
@@ -115,7 +117,14 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 		const now = new Date().toISOString();
 		const dates = fixture.lessons.map((l) => nextLessonDate(l.weekday, now));
 		await expect(chosen.nth(0).getByLabel('Wunschdatum')).toHaveValue(dates[0]);
-		await chosen.nth(1).getByLabel('Wunschdatum').fill(dates[1]);
+		await chosen.nth(1).getByLabel('Wunschdatum').selectOption(dates[1]);
+		const offered = await chosen
+			.nth(1)
+			.locator('select option')
+			.evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
+		expect(offered).toHaveLength(6);
+		expect(offered[0]).toBe(dates[1]);
+		expect(offered.every((date) => weekday(date) === fixture.lessons[1].weekday)).toBe(true);
 		await page.getByRole('button', { name: 'Русский', exact: true }).click();
 		await expect(
 			page.getByRole('heading', { name: 'Запросить пробное занятие', exact: true })
@@ -130,13 +139,6 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 		await page.screenshot({ path: 'tmp/trial-intake-ui-form-mobile.png', fullPage: true });
 		if (process.env.KOLIBRI_TRIAL_INTAKE_INSPECT === '1') await page.pause();
 		await expect(page.getByText('Telegram', { exact: false })).toHaveCount(0);
-		const wrong = new Date(dates[0]);
-		wrong.setUTCDate(wrong.getUTCDate() + 1);
-		await chosen.nth(0).getByLabel('Желаемая дата').fill(wrong.toISOString().slice(0, 10));
-		await page.getByRole('button', { name: 'Подать запрос', exact: true }).click();
-		await expect(page.getByRole('alert')).toContainText('нужного дня недели');
-		await expect(page.getByRole('alert')).toBeFocused();
-		await chosen.nth(0).getByLabel('Желаемая дата').fill(dates[0]);
 		let submitted: { id: string; receipt: string };
 		const payloads: Record<string, unknown>[] = [];
 		await page.route('**/probestunde/submit', async (route) => {
@@ -149,11 +151,15 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 		});
 		await page.getByRole('button', { name: 'Подать запрос', exact: true }).click();
 		await expect(page.getByRole('alert')).toContainText('Введённые данные сохранены');
+		await expect(page.getByRole('alert')).toBeFocused();
 		await expect(chosen.nth(0).getByLabel('Желаемая дата')).toHaveValue(dates[0]);
 		await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
 		await page.getByRole('button', { name: 'Anfrage absenden', exact: true }).click();
 		await expect(
 			page.getByRole('heading', { name: 'Bitte prüfen Sie Ihr Postfach' })
+		).toBeVisible();
+		await expect(
+			page.getByText('Die Zustellung kann bis zu 5 Minuten dauern', { exact: false })
 		).toBeVisible();
 		expect(payloads).toHaveLength(2);
 		expect(payloads[1]).toEqual(payloads[0]);

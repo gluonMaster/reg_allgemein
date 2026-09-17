@@ -19,6 +19,41 @@ ORGANIZATION_NAME = 'Kinder- und Elternzentrum "KOLIBRI" e.V.'
 WEEKDAYS = {day: index for index, day in enumerate(('Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'), 1)}
 
 
+def _hex_to_rgb(value):
+    return tuple(int(value[index:index + 2], 16) / 255 for index in (1, 3, 5))
+
+
+def _hsv_to_hex(hue, saturation, value):
+    r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
+    return f'#{round(r * 255):02x}{round(g * 255):02x}{round(b * 255):02x}'
+
+
+def _relative_luminance(rgb):
+    linear = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def _contrast_ratio(first, second):
+    lighter, darker = sorted((_relative_luminance(first), _relative_luminance(second)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def cta_palette(bg_color, border_color):
+    """Tint the CTA to the card it sits on; a white card borrows the building outline hue."""
+    hue, saturation, _ = colorsys.rgb_to_hsv(*_hex_to_rgb(bg_color))
+    if saturation < 0.05:
+        hue = colorsys.rgb_to_hsv(*_hex_to_rgb(border_color))[0]
+    fill = _hsv_to_hex(hue, 0.28, 0.93)
+    line = _hsv_to_hex(hue, 0.60, 0.55)
+    # Darken the label until the tinted chip keeps a readable contrast on every fill.
+    value = 0.34
+    text = _hsv_to_hex(hue, 0.85, value)
+    while value > 0.04 and _contrast_ratio(_hex_to_rgb(fill), _hex_to_rgb(text)) < 4.5:
+        value -= 0.02
+        text = _hsv_to_hex(hue, 0.85, value)
+    return fill, line, text
+
+
 def trial_intake_settings():
     """Read the editor's existing persisted configuration on EVERY export."""
     path = Path(__file__).resolve().parents[1] / 'config.json'
@@ -209,10 +244,19 @@ class HtmlExportMixin:
             }
             .lesson-location, .organization-name { overflow-wrap: anywhere; }
             .organization-name { text-align: center; margin: 0 0 20px; }
-            .trial-intake-link { display: block; margin-top: 12px; padding: 10px; min-height: 44px;
-                border: 1px solid #176b54; border-radius: 6px; color: #fff; background: #176b54;
-                text-align: center; text-decoration: none; line-height: 1.4; }
-            .trial-intake-link:focus-visible { outline: 3px solid #c17800; outline-offset: 3px; }
+            .trial-intake-link { display: flex; flex-direction: column; align-items: center;
+                margin-top: 10px; padding: 7px 10px; min-height: 36px;
+                border: 1px solid var(--cta-line, #176b54); border-radius: 8px;
+                background: var(--cta-bg, #eef6f2); color: var(--cta-fg, #10503f);
+                font-size: 0.74rem; font-weight: 600; line-height: 1.25; letter-spacing: 0.01em;
+                text-align: center; text-decoration: none; text-wrap: balance;
+                transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
+            .trial-intake-link .cta-ru { font-weight: 500; }
+            @media (hover: hover) {
+                .trial-intake-link:hover { background: var(--cta-fg, #10503f);
+                    border-color: var(--cta-fg, #10503f); color: var(--cta-bg, #eef6f2); }
+            }
+            .trial-intake-link:focus-visible { outline: 3px solid #c17800; outline-offset: 2px; }
 
             .footer {
                 text-align: center;
@@ -239,6 +283,12 @@ class HtmlExportMixin:
                 .lesson-block {
                     min-height: auto;
                     padding: 12px;
+                }
+
+                .trial-intake-link {
+                    min-height: 42px;
+                    padding: 9px 12px;
+                    font-size: 0.8rem;
                 }
             }
 
@@ -592,11 +642,19 @@ class HtmlExportMixin:
         )
         if model:
             data_attributes += f' data-lesson-id="{model["id"]}"'
-        group_name, teacher_name, room_name, start_time, end_time = map(escape, (group_name, teacher_name, room_name, start_time, end_time))
-        building_name = escape(ORGANIZATION_NAME if building_name == 'Kolibri' else building_name)
+        # Здание рядом с номером комнаты остаётся коротким маркером Kolibri/Villa,
+        # полное название учреждения стоит один раз в шапке документа.
+        group_name, teacher_name, room_name, start_time, end_time, building_name = map(
+            escape, (group_name, teacher_name, room_name, start_time, end_time, building_name))
+
+        # Палитра CTA выводится из заливки карточки, поэтому кнопка всегда в её тоне
+        cta_style = ''
+        if model and cta_enabled:
+            cta_bg, cta_line, cta_fg = cta_palette(bg_color, border_color)
+            cta_style = f' --cta-bg: {cta_bg}; --cta-line: {cta_line}; --cta-fg: {cta_fg};'
 
         # Формируем HTML для блока занятия с улучшенным дизайном
-        block_html.append(f'            <div class="lesson-block" {data_attributes} style="background-color: {bg_color}; border-color: {border_color}; color: {text_color};">')
+        block_html.append(f'            <div class="lesson-block" {data_attributes} style="background-color: {bg_color}; border-color: {border_color}; color: {text_color};{cta_style}">')
         block_html.append(f'                <div class="lesson-time">{start_time}-{end_time}</div>')
         if should_show_subject_line(lesson):
             subject_html = html_lib.escape(subject_val, quote=True)
@@ -606,7 +664,7 @@ class HtmlExportMixin:
         block_html.append(f'                <div class="lesson-location">{room_name}, {building_name}</div>')
         if model and cta_enabled:
             url = escape(f'{portal_origin}/probestunde?lesson={model["id"]}')
-            block_html.append(f'                <a class="trial-intake-link" href="{url}">Probestunde anfragen / Запросить пробное</a>')
+            block_html.append(f'                <a class="trial-intake-link" href="{url}"><span class="cta-de">Probestunde anfragen /</span><span class="cta-ru">Запросить пробное</span></a>')
         block_html.append('            </div>')
 
         return '\n'.join(block_html)

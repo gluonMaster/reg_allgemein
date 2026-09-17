@@ -2,15 +2,7 @@
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import {
-		t,
-		dayLabel,
-		buildingLabel,
-		formatDate,
-		formatTimestamp,
-		errorKey,
-		type TextKey,
-	} from '../i18n';
+	import { t, dayLabel, formatDate, formatTimestamp, errorKey, type TextKey } from '../i18n';
 	import { itemLesson, type AdminListData, type EmailJob } from '../contracts';
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
@@ -92,7 +84,7 @@
 						aria-label={t(locale, 'building')}
 						value={query.building}
 						><option value="">{t(locale, 'all')}</option><option value="Kolibri"
-							>{buildingLabel('Kolibri')}</option
+							>Kolibri</option
 						><option value="Villa">Villa</option></select
 					></label
 				>

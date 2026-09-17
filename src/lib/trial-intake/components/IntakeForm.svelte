@@ -11,8 +11,8 @@
 		type IntakeInput,
 		type IntakeReceipt,
 	} from '../contracts';
-	import { berlinDate, nextLessonDate, tomorrow, weekday } from '../dates';
-	import { t, errorKey, type TextKey } from '../i18n';
+	import { berlinDate, lessonDates, nextLessonDate, weekday } from '../dates';
+	import { dayLabel, formatDate, t, errorKey, type TextKey } from '../i18n';
 	import { requestJson } from '../client';
 	import '../intake.css';
 	let { data }: { data: IntakeFormData } = $props();
@@ -96,6 +96,25 @@
 		search = '';
 		feedback = null;
 	}
+	/** Six upcoming dates keep the choice short while staying on the lesson's own weekday. */
+	const LESSON_DATE_CHOICES = 6;
+	const today = $derived(berlinDate(now));
+	function dateChoices(day: number | undefined, chosen: string): string[] {
+		if (!day) return chosen ? [chosen] : [];
+		const dates = lessonDates(day, today, LESSON_DATE_CHOICES);
+		return chosen && !dates.includes(chosen) ? [...dates, chosen].sort() : dates;
+	}
+	$effect(() => {
+		// A new Berlin day retires the earliest choice, so move any stale date forward.
+		const day = today;
+		untrack(() => {
+			for (const item of items) {
+				const lesson = lessons.find((l) => l.id === item.lessonId);
+				if (lesson && item.desiredDate <= day)
+					item.desiredDate = nextLessonDate(lesson.weekday, day);
+			}
+		});
+	});
 	function removeChild(key: string) {
 		children = children.filter((c) => c.key !== key);
 		items = items.map((i) => ({ ...i, childKeys: i.childKeys.filter((k) => k !== key) }));
@@ -349,13 +368,18 @@
 							{#if lesson}<LessonCard {lesson} {locale} />{/if}
 							<div class="actions">
 								<label
-									>{t(locale, 'date')}<input
-										type="date"
+									>{t(locale, 'date')}<select
 										bind:value={item.desiredDate}
-										min={tomorrow(now)}
 										required
 										aria-invalid={feedback === 'dateError' ? true : undefined}
-									/></label
+									>
+										{#each dateChoices(lesson?.weekday, item.desiredDate) as choice (choice)}
+											<option value={choice}
+												>{dayLabel(weekday(choice), locale)},
+												{formatDate(choice, locale)}</option
+											>
+										{/each}
+									</select></label
 								>
 							</div>
 							<fieldset>
@@ -389,7 +413,8 @@
 						type="button"
 						disabled={items.length >= 10 || pending || catalogFailed}
 						onclick={() => (picker = !picker)}
-						aria-expanded={picker}>+ {t(locale, 'addLesson')}</button
+						aria-expanded={picker}
+						>+ {t(locale, items.length ? 'addAnotherLesson' : 'addLesson')}</button
 					>
 					{#if picker}<div class="picker">
 							<label

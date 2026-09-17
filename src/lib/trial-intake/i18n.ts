@@ -1,4 +1,3 @@
-import { ORGANIZATION_NAME } from '$lib/organization';
 export type Locale = 'de' | 'ru';
 const text = {
 	title: ['Probestunde anfragen', 'Запросить пробное занятие'],
@@ -19,10 +18,11 @@ const text = {
 	children: ['Kinder', 'Дети'],
 	child: ['Kind', 'Ребёнок'],
 	birthDate: ['Geburtsdatum', 'Дата рождения'],
-	addChild: ['Kind hinzufügen', 'Добавить ребёнка'],
+	addChild: ['Weiteres Kind hinzufügen', 'Ещё один ребёнок'],
 	remove: ['Entfernen', 'Удалить'],
 	lessons: ['Angebote und Wunschtermine', 'Занятия и желаемые даты'],
-	addLesson: ['Angebot hinzufügen', 'Добавить занятие'],
+	addLesson: ['Angebot auswählen', 'Выбрать занятие'],
+	addAnotherLesson: ['Weiteres Angebot hinzufügen', 'Ещё одно занятие'],
 	search: ['Angebot suchen', 'Найти занятие'],
 	choose: ['Auswählen', 'Выбрать'],
 	noResults: ['Keine passenden Angebote gefunden.', 'Подходящих занятий не найдено.'],
@@ -48,8 +48,8 @@ const text = {
 	],
 	checkMail: ['Bitte prüfen Sie Ihr Postfach', 'Проверьте почту'],
 	mailHint: [
-		'Bestätigen Sie Ihre Anfrage über den Link in der E-Mail. Bitte prüfen Sie auch Ihren Spam-Ordner.',
-		'Подтвердите заявку по ссылке в письме. Проверьте также папку «Спам».',
+		'Bestätigen Sie Ihre Anfrage über den Link in der E-Mail. Die Zustellung kann bis zu 5 Minuten dauern. Bitte prüfen Sie auch Ihren Spam-Ordner.',
+		'Подтвердите заявку по ссылке в письме. Доставка письма может занять до 5 минут. Проверьте также папку «Спам».',
 	],
 	resend: ['E-Mail erneut senden', 'Отправить письмо повторно'],
 	wait: ['Erneut senden in', 'Повторная отправка через'],
@@ -184,9 +184,6 @@ const text = {
 export type TextKey = keyof typeof text;
 export function t(locale: Locale, key: TextKey): string {
 	return text[key][locale === 'ru' ? 1 : 0];
-}
-export function buildingLabel(value: string): string {
-	return value === 'Kolibri' ? ORGANIZATION_NAME : value;
 }
 export function dayLabel(day: number, locale: Locale): string {
 	return (

@@ -109,6 +109,10 @@ class ExportTests(unittest.TestCase):
                 self.assertEqual(json.loads(config.read_text('utf-8')), cfg)
                 self.assertIn(html_export.html_lib.escape(html_export.ORGANIZATION_NAME), repeated)
                 self.assertIn('data-building="Kolibri"', repeated)
+                # The full name belongs to the header alone; the card keeps the short building marker.
+                self.assertEqual(repeated.count(html_export.html_lib.escape(html_export.ORGANIZATION_NAME)), 1)
+                self.assertIn('<div class="lesson-location">R3, Kolibri</div>', repeated)
+                self.assertIn('<div class="lesson-location">R2, Villa</div>', repeated)
                 # Optional synthetic artifact for the TypeScript portal-reader round trip.
                 if os.environ.get('TRIAL_EXPORT_TEST_OUTPUT'):
                     Path(os.environ['TRIAL_EXPORT_TEST_OUTPUT']).write_text(repeated, 'utf-8')
@@ -151,6 +155,40 @@ class ExportTests(unittest.TestCase):
                     export_synthetic(main, output, {'Sa': [{**lesson, 'subject': ''}]})
                 for day in (None, 'Samstag (2/2)'):
                     with self.assertRaises(ValueError): html_export.catalog_lesson(lesson, day)
+
+    def test_cta_is_tinted_to_its_card_and_stays_readable(self):
+        for bg, border in [(fill, outline) for fill in ('#ccffcc', '#ccf2ff', '#ffffcc', '#ffffff')
+                           for outline in ('#2db223', '#8a23b2')]:
+            chip, line, label = html_export.cta_palette(bg, border)
+            source = bg if bg != '#ffffff' else border
+            for tone in (chip, line, label):
+                self.assertRegex(tone, r'^#[0-9a-f]{6}$')
+                self.assertAlmostEqual(html_export.colorsys.rgb_to_hsv(*html_export._hex_to_rgb(tone))[0],
+                                       html_export.colorsys.rgb_to_hsv(*html_export._hex_to_rgb(source))[0], places=2)
+            contrast = lambda first, second: html_export._contrast_ratio(
+                html_export._hex_to_rgb(first), html_export._hex_to_rgb(second))
+            # The label reads on the chip, and the chip edge stays visible on the card.
+            self.assertGreaterEqual(contrast(chip, label), 4.5)
+            self.assertGreaterEqual(contrast(bg, line), 3.0)
+
+    def test_link_carries_the_card_palette_and_both_label_lines(self):
+        main = ordinary_entrypoint()
+        lesson = source(fixture()['lessons'][1])
+        with tempfile.TemporaryDirectory(prefix='intake-export-') as folder:
+            root = Path(folder)
+            (root / 'config.json').write_text(json.dumps({'trial_intake': {'portal_origin': 'https://portal.example.test', 'cta_enabled': True}}), 'utf-8')
+            with patch.object(html_export, '__file__', str(root / 'visualiser' / 'enhanced_export_manager_html.py')):
+                output = root / 'schedule.html'
+                html = export_synthetic(main, output, {'Sa': [lesson, {**lesson, 'group': 'Kunst Sa 1'}]})
+        self.assertIn('<span class="cta-de">Probestunde anfragen /</span><span class="cta-ru">Запросить пробное</span></a>', html)
+        self.assertEqual(html.count('class="trial-intake-link" href='), 2)
+        chips = re.findall(r'background-color: (#[0-9a-f]{6});[^"]*--cta-bg: (#[0-9a-f]{6}); --cta-line: (#[0-9a-f]{6}); --cta-fg: (#[0-9a-f]{6});', html)
+        self.assertEqual(len(chips), 2)
+        for card, chip, line, label in chips:
+            self.assertEqual((chip, line, label), html_export.cta_palette(card, '#8a23b2'))
+        self.assertNotEqual(chips[0][1], chips[1][1])
+        self.assertIn('var(--cta-bg', html)
+        self.assertNotIn('background: #176b54', html)
 
     def test_invalid_configuration_never_creates_a_link(self):
         with tempfile.TemporaryDirectory(prefix='intake-export-') as folder:
