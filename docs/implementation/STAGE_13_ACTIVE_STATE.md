@@ -404,6 +404,11 @@ Runtime `fd17c3dbb28aa270f767592e00e9512fa234ad1a` и gate
 E2E, exporter regression, cold restore и новая сборка не повторялись: material
 diff отсутствует. Source Office-файл проверен только по byte hash, не открывался.
 
+Короткие хеши checkpoint-коммитов фазы TIN04, записанные ниже, относятся к
+состояниям, которые перед push объединены в один коммит по правилу AGENTS.md.
+Утверждения о фактах не менялись; каждый прежний хеш найдётся в теле
+объединяющего коммита: `git log --grep=<хеш>`.
+
 Protected evidence: `tmp/trial-intake-deploy-20260916/` — preflight-safe,
 target-lock-safe, candidate-check-safe, Turnstile и raw readbacks. ACL только
 текущий Windows user/SYSTEM; Git-ignore проверен; baseline03 не перезаписан.

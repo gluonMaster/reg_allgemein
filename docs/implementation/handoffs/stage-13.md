@@ -6460,3 +6460,8 @@ Waiting_owner native export CTAon; затем actual artifact validation/upload 
 Rollback existing CTAoff/native config и closed Worker сохраняют данные.
 Docs/config checks only, no build/full tests; rollover no/next mode Medium для
 локальной проверки artifact. Current next action solely active state.
+
+Короткие хеши checkpoint-коммитов фазы TIN04, записанные ниже, относятся к
+состояниям, которые перед push объединены в один коммит по правилу AGENTS.md.
+Утверждения о фактах не менялись; каждый прежний хеш найдётся в теле
+объединяющего коммита: `git log --grep=<хеш>`.
