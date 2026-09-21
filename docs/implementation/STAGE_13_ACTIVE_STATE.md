@@ -4,29 +4,69 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-21T14:14:00Z
+updated_utc: 2026-09-21T16:41:00Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN05-UI-refinements-deployed-and-published
-next_gate: TIN05-owner-next-scope
+last_completed_gate: TIN06-schedule-domain-config-live
+next_gate: TIN06-wordpress-links
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN05-UI-refinements-live-waiting_owner-next-scope
-last_atomic_action: TIN05-worker-deploy-UI-refinements
+current_phase: TIN06-schedule-domain-config-live
+last_atomic_action: TIN06-worker-schedule-url-config
 last_atomic_result: success
-next_atomic_action: TIN05-owner-next-scope
+next_atomic_action: TIN06-wordpress-navigation-url
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Next_step_is_owner_defining_scope_no_remote_write_and_no_unresolved_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: Authorized_WordPress_URL_update_with_backup_and_known_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN06: адрес расписания в Worker обновлён — 2026-09-21T16:41:00Z
+
+Scope прямо разрешён владельцем: собственный поддомен расписания на existing
+Netlify; единственная переменная источника каталога/возвратной ссылки Worker;
+ссылки Stundenplan в навигации и блоке курсов главной WordPress. Отдельное
+поручение на WordPress дано явно. Origin регистрации остаётся workers.dev.
+
+Atomic result: **success**. Dashboard config-only deploy target
+account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a:
+version8ad015a5528f → version092ea871, deployment history подтверждает 100%.
+Изменена только TRIAL_INTAKE_SCHEDULE_URL: прежний Netlify URL →
+https://stundenplan.kolibri-dresden.de/. Таблица vars/secret names совпала
+с исходной после ровно этой подстановки. Код не загружался/не пересобирался;
+runtime tree остаётся e2252c6ae83c (204249b). D1 write/migration, provider send,
+изменение origin, Turnstile, accepting/jobs flags не выполнялись.
+
+Prerequisites: IONOS CNAME поддомена указывает на existing Netlify project;
+основные DNS и mail records не изменялись. Netlify выдал Let's Encrypt
+сертификат в 16:36 UTC, auto-renew включён. Новый и старый HTTPS URL дают
+прямой 200 без redirect и одинаковый HTML; каталог version1/110 занятий
+совпадает с исходным backup. После deploy публичный GET /probestunde?lesson=…
+дал 200, selectedId сохранён, catalogError:false, две ссылки/ссылочных
+конфигурации на новый адрес и ноль на старый. Реальная заявка не отправлялась.
+
+Evidence: protected tmp/stundenplan-domain-20260921/form-after.html и
+wrangler.production.before.jsonc; Web/stundenplan-domain-2026-09-21/domain-qa.json,
+HTML backups и read-back UI. Локальный ignored production config синхронизирован
+с одной изменённой переменной. Secret values не читались.
+
+Rollback: вернуть прежнее значение TRIAL_INTAKE_SCHEDULE_URL через Dashboard
+config-only deploy (значение в ignored backup); либо вернуть version8ad015a5528f.
+Оба URL доступны; данные заявок и код не затронуты. Полный runtime suite/build
+не запускались: изменение ограничено URL, проверены direct HTTPS/catalog и
+фактический публичный consumer. Для checkpoint — docs:check, release:scan,
+git diff --check.
+
+Ровно следующий action: **TIN06-wordpress-navigation-url**. rollover_required:
+no; recommended_next_session_mode: High — обычная разрешённая публикация ссылки
+с готовыми резервной копией, проверкой и откатом.
 
 ## TIN05: UI-правки задеплоены и опубликованы — 2026-09-21T14:14:00Z
 
