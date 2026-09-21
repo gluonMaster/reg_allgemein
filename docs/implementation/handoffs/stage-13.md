@@ -19,6 +19,19 @@
 
 ## Append-only evidence history
 
+### Schedule custom domain and navigation completed — 2026-09-21T16:50:00Z
+
+Owner-authorized limited domain scope completed. Existing Netlify schedule now
+serves the Kolibri schedule subdomain over valid automatically renewed HTTPS.
+Both old and new URLs remain direct200 with the same version1/110 lesson catalog.
+Dashboard config-only Worker version092ea871 changes only schedule URL; public
+form loads its selected lesson and returns to the new schedule URL. WordPress
+desktop/mobile quick links, native menu fallback and homepage course callout
+were updated and verified. No request submission/provider send occurred.
+Active state holds current fingerprints and next action; protected config backup
+is under tmp/stundenplan-domain-20260921. WordPress rollback/evidence is in the
+separate Web/stundenplan-domain-2026-09-21 task package.
+
 ### Exact next 23-action lifecycle scope prepared — 2026-09-07T14:41:12Z
 
 New L plan binds actual OY hash, all four PDF artifacts, and A/P2/P1 identities.

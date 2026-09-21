@@ -4,29 +4,55 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-21T16:41:00Z
+updated_utc: 2026-09-21T16:50:00Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN06-schedule-domain-config-live
-next_gate: TIN06-wordpress-links
+last_completed_gate: TIN06-schedule-domain-and-links-verified
+next_gate: TIN06-owner-next-scope
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN06-schedule-domain-config-live
-last_atomic_action: TIN06-worker-schedule-url-config
+current_phase: TIN06-schedule-domain-and-links-verified
+last_atomic_action: TIN06-wordpress-links-publication
 last_atomic_result: success
-next_atomic_action: TIN06-wordpress-navigation-url
+next_atomic_action: TIN06-owner-next-scope
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Authorized_WordPress_URL_update_with_backup_and_known_rollback
+recommended_next_session_mode: Medium
+mode_reason_plain: Authorized_domain_scope_completed_no_pending_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN06: поддомен и ссылки опубликованы — 2026-09-21T16:50:00Z
+
+Phase result: **success**. На WordPress опубликована ровно замена URL в
+существующем Divi Integration/head navigation script, Text Module Page96
+3.0.0.0 и исходном меню Angebote mit Subsites, item16637 (штатный fallback).
+Поле head после reload точно совпало с подготовленным текстом. Public GET
+главной дал 200, три новых URL и ноль прежних; остальные ссылки/тексты/CSS
+не редактировались. Обновлён локальный source menu-redesign/kolibri-navigation.js.
+
+Browser QA: desktop Angebote → Stundenplan, mobile quick link (actual viewport
+488 CSS px, no page overflow), homepage Stundenplan öffnen → новый HTTPS;
+расписание → выбранная Mathe → форма с правильным занятием и датами →
+Zurück zum Stundenplan → новый HTTPS. Никакие заявки/письма не отправлялись.
+Viewport override сброшен. Старый Netlify URL остаётся прямым 200.
+
+Domain/certificate и config-only Worker deployment ниже остаются актуальны.
+Evidence и URL-level rollback для WordPress: Web/stundenplan-domain-2026-09-21/
+README-RU.md, theme-head-before/after.html, home-module-before/after.html,
+domain-qa.json, home-public-after.html. Исходная меню-ссылка item16637 —
+прежний Netlify URL. Полные поля не восстанавливать поверх поздних чужих правок.
+Для phase-boundary docs commit пройдены docs:check, release:scan, diff-check.
+
+Ровно следующий action: **TIN06-owner-next-scope**. rollover_required: no;
+recommended_next_session_mode: Medium — разрешённый scope завершён,
+ожидающих remote writes нет; дальнейшая работа начинается с нового scope.
 
 ## TIN06: адрес расписания в Worker обновлён — 2026-09-21T16:41:00Z
 
