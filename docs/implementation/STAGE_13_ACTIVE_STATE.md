@@ -4,29 +4,80 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-16T18:31:24Z
+updated_utc: 2026-09-21T14:14:00Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN04-F2-email-verified-and-queued
-next_gate: TIN04-P2-CTAon-publication
+last_completed_gate: TIN05-UI-refinements-deployed-and-published
+next_gate: TIN05-owner-next-scope
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN04-P2-waiting_owner-native-export-CTAon
-last_atomic_action: TIN04-F2-owner-confirm-email
+current_phase: TIN05-UI-refinements-live-waiting_owner-next-scope
+last_atomic_action: TIN05-worker-deploy-UI-refinements
 last_atomic_result: success
-next_atomic_action: TIN04-P2-owner-native-export-CTAon
+next_atomic_action: TIN05-owner-next-scope
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Next_owner_native_export_and_local_artifact_check_no_remote_write_or_unresolved_ambiguity
+mode_reason_plain: Next_step_is_owner_defining_scope_no_remote_write_and_no_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN05: UI-правки задеплоены и опубликованы — 2026-09-21T14:14:00Z
+
+Scope: presentation-only. Экспортёр — CTA в тон заливки карточки, двухстрочная
+подпись, короткий маркер здания; портал — шапка/подвал intake-навигации, названия
+кнопок добавления, выбор желаемой даты только по дню недели занятия, предупреждение
+о доставке письма до 5 минут. Канонические требования обновлены в
+[TRIAL_INTAKE](../domain/TRIAL_INTAKE.md) и критерий TIN-AC-01/02 в
+[ACCEPTANCE_CRITERIA](../spec/ACCEPTANCE_CRITERIA.md). D1-модель, миграции,
+контракты каталога и ID занятий не затронуты.
+
+Worker deploy success 2026-09-17T12:42:54Z, exact config deploy/trial-intake/
+wrangler.production.jsonc: previous version1b765845f527 → new version8ad015a5528f,
+одна версия на100%. Message ссылается на runtime86d33d0; после docs-only
+перегруппировки тот же tree e2252c6ae83c достижим как 204249b, 86d33d0 остаётся
+локально. Оба Cron `* * * * *` и `*/15 * * * *` сохранены; пять secret names
+неизменны (deploy без `--secrets-file`, флаг additive, omitted secrets не
+удаляются); vars и D1 binding прежние. D1 write, migration, provider send,
+Access/flag/var/secret change в этой операции отсутствуют. Публикацию нового
+HTML расписания на existing Netlify владелец выполнил сам.
+
+Read-back 2026-09-21, read-only, оба контура. Worker: version8ad015a5528f на100%;
+GET /probestunde?lesson=… →200, auth-nav в шапке0, office login в подвале1,
+шесть вариантов даты, все Montag, маркер здания «Villa · Raum 2.04», кнопки
+Weiteres Kind/Angebot hinzufügen. Schedule: GET200, 143675 bytes, 110 CTA links,
+110 палитр, 110 двухстрочных подписей, legacy тёмный CTA css0, полное название
+учреждения в карточках0, маркеры Kolibri17/Villa93, каталог110 записей version1,
+единственный origin ссылок совпадает с actual worker origin. Экран «проверьте
+почту» на production не наблюдался: это потребовало бы реальной заявки и письма;
+его текст проверен e2e-скриншотом на том же tree.
+
+Evidence protected tmp/trial-intake-ui-deploy-20260917/deploy-readback-private.json
+(полные version IDs и rollback-команда) и tmp/trial-intake-ui-*.log/*.png.
+Secrets, PII и полные resource IDs в tracked state не записаны.
+
+Rollback/containment: `wrangler rollback` на previous version1b765845f527 с exact
+config; D1 и принятые заявки сохраняются. Для расписания — повторная публикация
+предыдущего HTML. Правки презентационные, старые ссылки и сохранённые snapshot
+остаются валидными.
+
+Checks risk-proportional: на этом же tree пройдены check:src, unit trial-intake,
+integration intake-d1 с новым правилом даты, обе intake e2e-спеки с
+`KOLIBRI_E2E_TRIAL_INTAKE=1`, docs:check; перед деплоем `npm run build` и
+`wrangler deploy --dry-run`. Полный suite не повторяется: diff ограничен UI,
+тестами и документами. Для этого status-only commit — docs:check, release:scan,
+git diff --check.
+
+Ровно следующий action: **TIN05-owner-next-scope** — владелец формулирует
+следующие цели. rollover_required: no; recommended_next_session_mode: Medium —
+следующий шаг начинается с формулирования scope владельцем, без remote write и
+без unresolved ambiguity.
 
 ## TIN04: текущая операция — 2026-09-16T18:31:24Z
 
