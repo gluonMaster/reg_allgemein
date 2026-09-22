@@ -4,29 +4,90 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-21T16:50:00Z
+updated_utc: 2026-09-22T11:56:42Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN06-schedule-domain-and-links-verified
-next_gate: TIN06-owner-next-scope
+last_completed_gate: TIN07-closed-lessons-confirmation-email-returning-parent-deployed
+next_gate: TIN07-owner-manual-acceptance
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN06-schedule-domain-and-links-verified
-last_atomic_action: TIN06-wordpress-links-publication
+current_phase: TIN07-features-live-waiting_owner-manual-acceptance
+last_atomic_action: TIN07-worker-deploy-features-and-route-gate-fix
 last_atomic_result: success
-next_atomic_action: TIN06-owner-next-scope
+next_atomic_action: TIN07-owner-manual-acceptance
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Authorized_domain_scope_completed_no_pending_remote_write
+mode_reason_plain: Next_step_is_owner_manual_acceptance_no_pending_remote_write_and_no_unresolved_ambiguity
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN07: закрытые занятия, письмо-подтверждение и повторная заявка — 2026-09-22T11:56:42Z
+
+Scope: три доработки по промптам out/trial-intake-improvements-prompts-2026-09-22.
+Админ закрывает укомплектованное занятие, и портал отказывает вместо формы;
+после подтверждения email клиент получает второе письмо с адресом здания и
+телефоном; повторная заявка с того же устройства принимается без новой
+верификации, контакты подставляются с устройства. Смена источника расписания в
+этот scope не входила: она уже выполнена 2026-09-21. Requirements обновлены в
+[TRIAL_INTAKE](../domain/TRIAL_INTAKE.md), [MESSAGING](../domain/MESSAGING.md),
+TIN-AC-02/03 и OQ-042.
+
+Migrations applied по процедуре packet, ровно одна pending на вызов через
+staged config: 0028 closed lessons, затем 0029 email kind; before27 → after29.
+Обе аддитивные. D1 before/after: requests5/5, emails5/5, telegram5,
+users1; после 0029 все пять существующих писем kind='verification';
+closed_lessons0; `PRAGMA foreign_key_check` пуст до и после каждой миграции.
+
+Worker deploy success, exact config deploy/trial-intake/wrangler.production.jsonc:
+previous version092ea8716f38 → e9fbfd056217 → активная ac88ae8c0df1 на100%.
+Два деплоя, потому что read-back нашёл дефект: intake route allowlist не
+содержал /admin/trial-intake/groups, и новая админ-страница отвечала404 всем.
+Исправлено (runtime c2216de), покрыто unit-тестом, передеплоено. Оба Cron
+`* * * * *` и `*/15 * * * *` сохранены; пять secret names неизменны (deploy без
+`--secrets-file`); vars и D1 binding прежние. Provider send, Access/flag change
+и правка расписания в этой операции отсутствуют.
+
+HTTP read-back после исправления: /probestunde200, /probestunde/catalog200 с
+полем closedLessonIds, /admin/trial-intake401, /admin/trial-intake/groups401
+(было404), /auth/login200; закрытые маршруты полного портала /catalog,
+/admin/users, /auth/register остаются404. Форма живого занятия: шесть вариантов
+даты, маркер «Villa · Raum 2.04», кнопки Weiteres Kind/Angebot hinzufügen,
+вход для бюро в подвале, ссылка «это не мои данные» на месте.
+
+Checks перед деплоем: полный `npm test` — 659 passed, 2 failed. Одно падение —
+известное средовое `CLI_PROTECTED_ARTIFACT_ACL_FAILED` в legacy-release CLI, к
+порталу отношения не имеет. Второе — настоящее следствие новых миграций:
+foundation-d1 охраняет неизменную последовательность и заканчивался на 0027;
+список дополнен (runtime e1a8fa1), файл перепроверен, 7 тестов зелёные. Обе
+intake e2e-спеки с `KOLIBRI_E2E_TRIAL_INTAKE=1` — 2 passed, не skipped. Затем
+`npm run build` и `wrangler deploy --dry-run`.
+
+Evidence protected tmp/trial-intake-features-deploy-20260922/
+deploy-readback-private.json (полные version IDs, rollback, staged configs) и
+S28/S29-apply.log. Secrets, PII и полные resource IDs в tracked state не записаны.
+
+Не наблюдалось на production: тело подтверждающего письма и освобождение от
+верификации на устройстве — для этого нужна настоящая заявка и письмо; покрыто
+integration-тестами и e2e на том же дереве. Это ручная приёмка владельца.
+
+Rollback/containment: `wrangler rollback` на previous version092ea8716f38 с exact
+config. Миграции обратно не откатывать: обе аддитивные, предыдущая версия кода с
+ними совместима — новая таблица не читается, у колонки есть значение по
+умолчанию. Быстрое смягчение без отката: открыть все занятия в админке;
+`TRIAL_INTAKE_ACCEPTING=false` закрывает приём, сохраняя данные.
+
+Ровно следующий action: **TIN07-owner-manual-acceptance** — владелец закрывает
+одно реально укомплектованное занятие и проверяет отказ по ссылке, затем подаёт
+одну контрольную заявку и проверяет оба письма и повторную заявку с того же
+устройства. rollover_required: no; recommended_next_session_mode: Medium —
+следующий шаг ручной, без remote write и без unresolved ambiguity.
 
 ## TIN06: поддомен и ссылки опубликованы — 2026-09-21T16:50:00Z
 
