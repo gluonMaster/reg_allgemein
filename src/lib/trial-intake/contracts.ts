@@ -25,10 +25,24 @@ export interface IntakeInput {
 }
 export interface CatalogData {
 	lessons: Lesson[];
+	/** Lessons of a full group: the portal refuses them instead of taking a request. */
+	closedLessonIds: string[];
 	privacyVersion: typeof INTAKE_PRIVACY_VERSION;
 	accepting: boolean;
 	turnstileSiteKey?: string;
 	now: string;
+}
+export interface ClosedLessonRow {
+	match_key: string;
+	subject: string;
+	group_name: string;
+	weekday: number;
+	closed_at: string;
+}
+export interface AdminGroupsData {
+	lessons: Lesson[];
+	closed: ClosedLessonRow[];
+	catalogError: boolean;
 }
 export interface IntakeFormData extends CatalogData {
 	selectedId: string;

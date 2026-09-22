@@ -77,7 +77,12 @@ export const intakeInputSchema = z
 			ctx.addIssue({ code: 'custom', message: 'Invalid assignments.' });
 		}
 	});
-export function validateSubmission(value: unknown, lessons: readonly Lesson[], now: string) {
+export function validateSubmission(
+	value: unknown,
+	lessons: readonly Lesson[],
+	now: string,
+	closedIds: readonly string[] = []
+) {
 	const parsed = intakeInputSchema.safeParse(value);
 	if (!parsed.success) throw new IntakeError('INTAKE_INPUT_INVALID');
 	const data = parsed.data;
@@ -87,6 +92,8 @@ export function validateSubmission(value: unknown, lessons: readonly Lesson[], n
 	const items = data.items.map((item) => {
 		const lesson = lessons.find((l) => l.id === item.lessonId);
 		if (!lesson) throw new IntakeError('INTAKE_LESSON_UNAVAILABLE', 409);
+		// The form hides a full group; a direct POST is refused here.
+		if (closedIds.includes(item.lessonId)) throw new IntakeError('INTAKE_LESSON_CLOSED', 409);
 		if (item.desiredDate <= today || weekday(item.desiredDate) !== lesson.weekday) {
 			throw new IntakeError('INTAKE_DATE_INVALID');
 		}

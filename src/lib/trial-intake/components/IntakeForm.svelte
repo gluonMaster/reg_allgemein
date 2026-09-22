@@ -18,6 +18,8 @@
 	let { data }: { data: IntakeFormData } = $props();
 	const locale = $derived(page.data.locale ?? 'de');
 	let lessons = $state(untrack(() => data.lessons));
+	let closedIds = $state(untrack(() => data.closedLessonIds));
+	let showPicker = $state(false);
 	let catalogFailed = $state(untrack(() => data.catalogError));
 	let accepting = $state(untrack(() => data.accepting));
 	let ready = $state(false),
@@ -38,7 +40,9 @@
 	let childSequence = 1;
 	let items = $state<IntakeInput['items']>(
 		untrack(() => {
-			const selected = data.lessons.find((l) => l.id === data.selectedId);
+			const selected = data.lessons.find(
+				(l) => l.id === data.selectedId && !data.closedLessonIds.includes(l.id)
+			);
 			return selected
 				? [
 						{
@@ -56,10 +60,13 @@
 	let errorElement = $state<HTMLDivElement>();
 	let lastAttempt: { fingerprint: string; payload: IntakeInput } | undefined;
 	const initialLesson = $derived(lessons.find((l) => l.id === data.selectedId));
+	const initialClosed = $derived(!!initialLesson && closedIds.includes(initialLesson.id));
+	const closedSelection = $derived(!showPicker && initialClosed);
 	const available = $derived(
 		lessons.filter(
 			(l) =>
 				!items.some((i) => i.lessonId === l.id) &&
+				!closedIds.includes(l.id) &&
 				[l.subject, l.group, l.teacher, l.room, l.building]
 					.join(' ')
 					.toLocaleLowerCase()
@@ -86,7 +93,13 @@
 	}
 	function addLesson(id: string) {
 		const lesson = lessons.find((l) => l.id === id);
-		if (!lesson || items.length >= 10 || items.some((i) => i.lessonId === id)) return;
+		if (
+			!lesson ||
+			closedIds.includes(id) ||
+			items.length >= 10 ||
+			items.some((i) => i.lessonId === id)
+		)
+			return;
 		items.push({
 			lessonId: id,
 			desiredDate: nextLessonDate(lesson.weekday, now),
@@ -124,6 +137,7 @@
 		try {
 			const result = await requestJson<CatalogData>('/probestunde/catalog');
 			lessons = result.lessons;
+			closedIds = result.closedLessonIds;
 			accepting = result.accepting;
 			catalogFailed = false;
 			if (!items.length && !lastAttempt && initialLesson) addLesson(initialLesson.id);
@@ -244,10 +258,22 @@
 		</section>
 	{:else if !accepting}
 		<p class="card" role="status">{t(locale, 'maintenance')}</p>
+	{:else if closedSelection}
+		<section class="card highlight" role="status">
+			<h2>{t(locale, 'closedTitle')}</h2>
+			{#if initialLesson}<LessonCard lesson={initialLesson} {locale} />{/if}
+			<p>{t(locale, 'closedText')}</p>
+			<div class="actions">
+				<a class="button primary" href={data.scheduleUrl}>{t(locale, 'closedBack')}</a>
+				<button type="button" onclick={() => (showPicker = true)}
+					>{t(locale, 'closedChoose')}</button
+				>
+			</div>
+		</section>
 	{:else}
 		<p>{t(locale, 'intro')}</p>
 		<noscript><p class="error">{t(locale, 'noScript')}</p></noscript>
-		{#if initialLesson}<section class="card highlight">
+		{#if initialLesson && !initialClosed}<section class="card highlight">
 				<p class="kicker">{t(locale, 'selected')}</p>
 				<LessonCard lesson={initialLesson} {locale} />
 			</section>

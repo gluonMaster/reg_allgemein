@@ -1,6 +1,6 @@
 import { error, type RequestEvent } from '@sveltejs/kit';
 import { catalog, intakeRuntime, adminList, adminDetail, verify } from './http.server';
-import { INTAKE_PRIVACY_VERSION, type IntakeFormData } from '../contracts';
+import { INTAKE_PRIVACY_VERSION, type AdminGroupsData, type IntakeFormData } from '../contracts';
 import { t } from '../i18n';
 
 export async function loadIntakeForm(event: RequestEvent): Promise<IntakeFormData> {
@@ -12,12 +12,22 @@ export async function loadIntakeForm(event: RequestEvent): Promise<IntakeFormDat
 		turnstileSiteKey: config.turnstileSiteKey,
 		privacyVersion: INTAKE_PRIVACY_VERSION,
 		now: new Date().toISOString(),
-	} satisfies Omit<IntakeFormData, 'lessons' | 'catalogError'>;
-	if (!base.accepting) return { ...base, lessons: [], catalogError: false };
+	} satisfies Omit<IntakeFormData, 'lessons' | 'closedLessonIds' | 'catalogError'>;
+	if (!base.accepting) return { ...base, lessons: [], closedLessonIds: [], catalogError: false };
 	try {
 		return { ...base, ...(await catalog(event)), catalogError: false };
 	} catch {
-		return { ...base, lessons: [], catalogError: true };
+		return { ...base, lessons: [], closedLessonIds: [], catalogError: true };
+	}
+}
+export async function loadIntakeGroups(event: RequestEvent): Promise<AdminGroupsData> {
+	const runtime = intakeRuntime(event);
+	// The admin check runs first; a missing schedule must still show what is stored.
+	const closed = await runtime.admin.closedLessons(event.locals.user);
+	try {
+		return { lessons: [...(await runtime.catalog.read())], closed, catalogError: false };
+	} catch {
+		return { lessons: [], closed, catalogError: true };
 	}
 }
 export async function loadIntakeVerification(event: RequestEvent) {

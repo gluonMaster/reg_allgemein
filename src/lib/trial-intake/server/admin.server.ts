@@ -7,7 +7,8 @@ import {
 } from '$lib/server/security/authorization';
 import { IntakeService, afterSeconds, searchName } from './service.server';
 import { IntakeError } from './validation.server';
-import type { AdminListRow, DeliveryStatus, EmailJob } from '../contracts';
+import { closedKey } from './closed.server';
+import type { AdminListRow, ClosedLessonRow, DeliveryStatus, EmailJob, Lesson } from '../contracts';
 
 export const adminQuerySchema = z.object({
 	status: z.enum(['verified', 'processed', 'all']).default('verified'),
@@ -84,7 +85,9 @@ export class IntakeAdmin {
 			child: childSurname,
 		}[q.sort];
 		const from = `FROM trial_intake_items i JOIN trial_intake_requests r ON r.id = i.request_id WHERE ${where.join(' AND ')}`;
-		const results = await this.db.batch<AdminListRow & {total: number; children_json: string}>([
+		const results = await this.db.batch<
+			AdminListRow & { total: number; children_json: string }
+		>([
 			this.audit(actor, 'trial_intake.list_read', 'list', requestId, now),
 			{ sql: `SELECT COUNT(*) AS total ${from}`, params },
 			{
@@ -178,6 +181,77 @@ export class IntakeAdmin {
 		if (!result || result.state !== desired)
 			throw new IntakeError('INTAKE_STATUS_CONFLICT', 409);
 		return { state: desired, deleteAfter: result.delete_after };
+	}
+	async closedLessons(user: App.Locals['user']): Promise<ClosedLessonRow[]> {
+		await this.actor(user);
+		return (
+			await this.db.all<ClosedLessonRow>({
+				sql: `SELECT match_key, subject, group_name, weekday, closed_at FROM trial_intake_closed_lessons
+			 ORDER BY subject, group_name, weekday`,
+			})
+		).results;
+	}
+	async setLessonClosed(
+		user: App.Locals['user'],
+		lesson: Lesson,
+		closed: boolean,
+		requestId: string,
+		now: string
+	) {
+		const actor = await this.actor(user);
+		const key = closedKey(lesson);
+		// The catalog supplies subject/group/weekday, so no arbitrary row can be written.
+		await this.db.batch([
+			this.audit(
+				actor,
+				closed ? 'trial_intake.lesson_closed' : 'trial_intake.lesson_reopened',
+				key.slice(0, 200),
+				requestId,
+				now
+			),
+			closed
+				? {
+						sql: `INSERT INTO trial_intake_closed_lessons(match_key, subject, group_name, weekday, closed_by, closed_at)
+				 SELECT ?, ?, ?, ?, ?, ? WHERE ${ACTIVE} ON CONFLICT(match_key) DO NOTHING`,
+						params: [
+							key,
+							lesson.subject,
+							lesson.group,
+							lesson.weekday,
+							actor.id,
+							now,
+							actor.id,
+						],
+					}
+				: {
+						sql: `DELETE FROM trial_intake_closed_lessons WHERE match_key = ? AND ${ACTIVE}`,
+						params: [key, actor.id],
+					},
+		]);
+		return { closed };
+	}
+	async removeClosedLesson(
+		user: App.Locals['user'],
+		matchKey: string,
+		requestId: string,
+		now: string
+	) {
+		const actor = await this.actor(user);
+		// A schedule edit can leave a record that matches no current lesson; the admin clears it.
+		await this.db.batch([
+			this.audit(
+				actor,
+				'trial_intake.lesson_reopened',
+				matchKey.slice(0, 200),
+				requestId,
+				now
+			),
+			{
+				sql: `DELETE FROM trial_intake_closed_lessons WHERE match_key = ? AND ${ACTIVE}`,
+				params: [matchKey, actor.id],
+			},
+		]);
+		return { closed: false };
 	}
 	async emailQueue(user: App.Locals['user']) {
 		await this.actor(user);

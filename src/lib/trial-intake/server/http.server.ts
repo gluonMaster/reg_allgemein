@@ -10,6 +10,7 @@ import { requireCsrf } from '$lib/server/security/csrf';
 import { requestSubject } from '$lib/server/auth/http';
 import { INTAKE_BODY_LIMIT, INTAKE_PRIVACY_VERSION, type CatalogData } from '../contracts';
 import { CatalogReader, boundedText } from './catalog.server';
+import { closedLessonIds } from './closed.server';
 import { IntakeService } from './service.server';
 import { IntakeAdmin } from './admin.server';
 import { IntakeError, intakeInputSchema } from './validation.server';
@@ -119,12 +120,19 @@ export async function submit(event: RequestEvent) {
 	);
 	if (!(await verifier.verify({ token: turnstileToken, remoteIp: subject })))
 		throw new IntakeError('INTAKE_TURNSTILE_REJECTED');
-	return r.service.create(parsed.data, () => r.catalog.read(), now);
+	return r.service.create(
+		parsed.data,
+		() => r.catalog.read(),
+		now,
+		(lessons) => closedLessonIds(r.service.db, lessons)
+	);
 }
 export async function catalog(event: RequestEvent): Promise<CatalogData> {
 	const r = intakeRuntime(event);
+	const lessons = await r.catalog.read();
 	return {
-		lessons: await r.catalog.read(),
+		lessons,
+		closedLessonIds: await closedLessonIds(r.service.db, lessons),
 		privacyVersion: INTAKE_PRIVACY_VERSION,
 		accepting: r.config.trialIntake!.accepting,
 		turnstileSiteKey: r.config.turnstileSiteKey,
@@ -184,6 +192,27 @@ export async function adminStatus(event: RequestEvent) {
 		event.locals.requestId,
 		new Date().toISOString()
 	);
+}
+export async function adminClosed(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	if (event.request.method === 'GET') return r.admin.closedLessons(event.locals.user);
+	const body = await adminBody(event);
+	const closed = z.boolean().parse(body.closed);
+	const now = new Date().toISOString();
+	if (typeof body.matchKey === 'string' && !closed)
+		return r.admin.removeClosedLesson(
+			event.locals.user,
+			z.string().max(400).parse(body.matchKey),
+			event.locals.requestId,
+			now
+		);
+	const lessonId = z
+		.string()
+		.regex(/^[a-f0-9]{64}$/u)
+		.parse(body.lessonId);
+	const lesson = (await r.catalog.read()).find((l) => l.id === lessonId);
+	if (!lesson) throw new IntakeError('INTAKE_LESSON_UNAVAILABLE', 409);
+	return r.admin.setLessonClosed(event.locals.user, lesson, closed, event.locals.requestId, now);
 }
 export async function adminEmail(event: RequestEvent) {
 	const r = intakeRuntime(event);

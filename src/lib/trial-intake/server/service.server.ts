@@ -89,7 +89,12 @@ export class IntakeService {
 			],
 		};
 	}
-	async create(value: unknown, catalog: () => Promise<readonly Lesson[]>, now: string) {
+	async create(
+		value: unknown,
+		catalog: () => Promise<readonly Lesson[]>,
+		now: string,
+		closed: (lessons: readonly Lesson[]) => Promise<readonly string[]> = async () => []
+	) {
 		const parsed = intakeInputSchema.safeParse(value);
 		if (!parsed.success) throw new IntakeError('INTAKE_INPUT_INVALID');
 		const data = parsed.data;
@@ -100,7 +105,8 @@ export class IntakeService {
 			params: [data.idempotencyKey],
 		});
 		if (existing) return this.createdResult(existing, hash, now);
-		const { items } = validateSubmission(data, await catalog(), now);
+		const lessons = await catalog();
+		const { items } = validateSubmission(data, lessons, now, await closed(lessons));
 		const id = crypto.randomUUID();
 		const nonce = createRandomToken();
 		const token = await verificationToken(this.secret, {

@@ -14,6 +14,7 @@ import {
 import { parseBusinessHours } from '$lib/server/outbox/business-hours';
 import { INTAKE_PRIVACY_VERSION, type Lesson } from '$lib/trial-intake/contracts';
 import { IntakeAdmin } from '$lib/trial-intake/server/admin.server';
+import { closedLessonIds } from '$lib/trial-intake/server/closed.server';
 import { cleanupIntake } from '$lib/trial-intake/server/cleanup.server';
 import { buildIntakeBootstrap } from '$lib/trial-intake/server/bootstrap.server';
 import { createAuthRuntime } from '$lib/server/auth/runtime';
@@ -446,6 +447,46 @@ describe('intake D1 lifecycle', () => {
 				chatId: 'test',
 			})
 		).rejects.toThrow();
+	});
+	it('an admin closes a full lesson, the portal refuses it and reopening is audited', async () => {
+		await seedAdmin();
+		const admin = new IntakeAdmin(service);
+		const closedIds = () => closedLessonIds(db, lessons);
+		expect(await closedIds()).toEqual([]);
+		await admin.setLessonClosed(actor, lessons[0], true, 'test', NOW);
+		expect(await closedIds()).toEqual([lessons[0].id]);
+		// Repeating the same closure stays a no-op instead of failing the admin action.
+		await admin.setLessonClosed(actor, lessons[0], true, 'test', NOW);
+		expect((await admin.closedLessons(actor)).length).toBe(1);
+		await expect(
+			service.create(data(), async () => lessons, NOW, closedIds)
+		).rejects.toMatchObject({ code: 'INTAKE_LESSON_CLOSED', status: 409 });
+		expect(
+			(
+				await db.first<{ n: number }>({
+					sql: 'SELECT COUNT(*) AS n FROM trial_intake_requests',
+				})
+			)?.n
+		).toBe(0);
+		await expect(
+			admin.setLessonClosed(undefined, lessons[0], false, 'test', NOW)
+		).rejects.toThrow();
+		await admin.setLessonClosed(actor, lessons[0], false, 'test', NOW);
+		expect(await closedIds()).toEqual([]);
+		// The other lesson stays available throughout, and both actions are audited.
+		expect((await service.create(data(), async () => lessons, NOW, closedIds)).state).toBe(
+			'pending_email'
+		);
+		const audited = (
+			await db.all<{ action: string }>({
+				sql: `SELECT action FROM audit_events WHERE action LIKE 'trial_intake.lesson_%' ORDER BY created_at, action`,
+			})
+		).results.map((row) => row.action);
+		expect(audited).toEqual([
+			'trial_intake.lesson_closed',
+			'trial_intake.lesson_closed',
+			'trial_intake.lesson_reopened',
+		]);
 	});
 	it('admin filters any assigned child, pagination/sorts and idempotent reversible processing are audited', async () => {
 		await seedAdmin();

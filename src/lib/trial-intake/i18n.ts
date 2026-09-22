@@ -116,7 +116,34 @@ const text = {
 		'Bitte aktivieren Sie JavaScript, um diese Anfrage auszufüllen.',
 		'Для заполнения заявки включите JavaScript.',
 	],
+	closedTitle: ['Diese Gruppe ist bereits belegt', 'Эта группа уже укомплектована'],
+	closedText: [
+		'Für dieses Angebot nehmen wir zurzeit keine Anfragen an. Bitte wählen Sie ein anderes Angebot.',
+		'Запись на это занятие сейчас закрыта. Пожалуйста, выберите другое занятие.',
+	],
+	closedBack: ['Zurück zum Stundenplan', 'Вернуться к расписанию'],
+	closedChoose: ['Anderes Angebot wählen', 'Выбрать другое занятие'],
+	closedError: [
+		'Dieses Angebot ist belegt. Bitte wählen Sie ein anderes.',
+		'Это занятие укомплектовано. Выберите другое.',
+	],
 	adminTitle: ['Anfragen für Probestunden', 'Заявки на пробные занятия'],
+	adminGroups: ['Belegte Angebote', 'Укомплектованные занятия'],
+	adminGroupsIntro: [
+		'Ein belegtes Angebot nimmt keine Anfragen mehr an. Die Sperre gilt für Fach, Gruppe und Wochentag und bleibt auch nach einer Zeit- oder Raumänderung bestehen.',
+		'Укомплектованное занятие больше не принимает заявки. Отметка действует на предмет, группу и день недели и сохраняется при смене времени или кабинета.',
+	],
+	adminGroupsClosed: ['Belegt', 'Укомплектовано'],
+	adminGroupsStale: [
+		'Diese Sperren passen zu keinem Angebot des aktuellen Stundenplans.',
+		'Эти отметки не совпадают ни с одним занятием текущего расписания.',
+	],
+	adminGroupsRemove: ['Eintrag entfernen', 'Удалить отметку'],
+	adminGroupsCatalogError: [
+		'Der Stundenplan ist gerade nicht erreichbar; unten stehen nur die gespeicherten Sperren.',
+		'Расписание сейчас недоступно; ниже показаны только сохранённые отметки.',
+	],
+	adminGroupsMatches: ['Betroffene Angebote', 'Затронуто занятий'],
 	adminIntro: [
 		'Bestätigte Anfragen. Eine Zeile je Angebot; die Bearbeitung gilt für die gesamte Anfrage.',
 		'Подтверждённые заявки. Одна строка на занятие; отметка обработки относится ко всей заявке.',
@@ -215,6 +242,7 @@ export function errorKey(code: string): TextKey {
 				INTAKE_DATE_INVALID: 'dateError',
 				INTAKE_BIRTH_DATE_INVALID: 'birthError',
 				INTAKE_LESSON_UNAVAILABLE: 'stale',
+				INTAKE_LESSON_CLOSED: 'closedError',
 				INTAKE_CATALOG_UNAVAILABLE: 'unavailable',
 				INTAKE_MAINTENANCE: 'maintenance',
 				INTAKE_INPUT_INVALID: 'inputError',
