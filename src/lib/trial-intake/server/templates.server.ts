@@ -6,7 +6,35 @@ import type { TelegramOutboxRow } from '$lib/server/outbox/contracts';
 import type { DatabaseBoundary } from '$lib/server/db/database';
 
 export const buildingLabel = (key: string) => (key === 'Kolibri' ? ORGANIZATION_NAME : key);
+/** A guest reads the letter away from the portal, so the building carries its street address. */
+export const BUILDING_ADDRESS: Record<string, string> = {
+	Kolibri: 'Ritzenbergstraße 3 • 01067 Dresden',
+	Villa: 'Kraftwerk Mitte 2 • 01067 Dresden',
+};
+export const ORGANIZATION_PHONE = '+49 179 9474938';
 const DAYS = ['', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const germanDate = (date: string) => date.split('-').reverse().join('.');
+const escapeHtml = (value: string) =>
+	value
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&#39;');
+function htmlMessage(text: string, button?: { label: string; link: string }): string {
+	return (
+		'<!doctype html><html lang="de"><body>' +
+		text
+			.split('\n\n')
+			.map((paragraph) =>
+				button && paragraph === `${button.label}: ${button.link}`
+					? `<p><a href="${escapeHtml(button.link)}" style="display:inline-block;padding:12px 18px;background:#176b4a;color:white;border-radius:6px">${escapeHtml(button.label)}</a></p>`
+					: `<p>${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`
+			)
+			.join('') +
+		'</body></html>'
+	);
+}
 export function verificationEmail(detail: IntakeDetail, link: string): EmailMessage {
 	const message: EmailMessage = {
 		to: detail.request.email,
@@ -16,30 +44,35 @@ export function verificationEmail(detail: IntakeDetail, link: string): EmailMess
 			detail.items
 				.map(
 					(i) =>
-						`${i.subject} — ${i.desired_date}, ${i.start_time}–${i.end_time}, ${buildingLabel(i.building)}`
+						`${i.subject} — ${germanDate(i.desired_date)}, ${i.start_time}–${i.end_time}, ${buildingLabel(i.building)}`
 				)
 				.join('\n') +
 			'\n\nBitte bestätigen Sie Ihre E-Mail-Adresse über die Schaltfläche „Anfrage bestätigen“, damit Ihre Anfrage an unser Büro weitergeleitet wird.\n\n' +
-			`Anfrage bestätigen: ${link}\n\nNach der Bestätigung melden wir uns telefonisch bei Ihnen, um den Besuch abzustimmen. Ihre Anfrage ist noch keine Zusage für einen Platz.\n\n${ORGANIZATION_NAME}`,
+			`Anfrage bestätigen: ${link}\n\nNach der Bestätigung erhalten Sie eine E-Mail mit allen Angaben zu Ihrer Anmeldung. Ihre Anfrage ist noch keine Zusage für einen Platz.\n\n${ORGANIZATION_NAME}`,
 	};
-	const escape = (v: string) =>
-		v
-			.replaceAll('&', '&amp;')
-			.replaceAll('<', '&lt;')
-			.replaceAll('>', '&gt;')
-			.replaceAll('"', '&quot;')
-			.replaceAll("'", '&#39;');
-	message.html =
-		'<!doctype html><html lang="de"><body>' +
-		message.text
-			.split('\n\n')
-			.map((p) =>
-				p === `Anfrage bestätigen: ${link}`
-					? `<p><a href="${escape(link)}" style="display:inline-block;padding:12px 18px;background:#176b4a;color:white;border-radius:6px">Anfrage bestätigen</a></p>`
-					: `<p>${escape(p).replaceAll('\n', '<br>')}</p>`
-			)
-			.join('') +
-		'</body></html>';
+	message.html = htmlMessage(message.text, { label: 'Anfrage bestätigen', link });
+	return message;
+}
+/** Sent once the address is confirmed: what is registered, where it happens, how to reach us. */
+export function confirmationEmail(detail: IntakeDetail): EmailMessage {
+	const message: EmailMessage = {
+		to: detail.request.email,
+		subject: `Ihre Anmeldung für Probestunden beim ${ORGANIZATION_NAME}`,
+		text:
+			'Ihre Anmeldung ist bei uns eingegangen. Wir haben folgende Probestunden notiert:\n\n' +
+			detail.items
+				.map((i) =>
+					[
+						`${i.children.map((c) => `${c.first_name} ${c.last_name}`).join(', ')}: ${i.subject} — ${i.group_name}`,
+						`${DAYS[i.weekday]}, ${germanDate(i.desired_date)}, ${i.start_time}–${i.end_time}`,
+						`${buildingLabel(i.building)}, ${BUILDING_ADDRESS[i.building] ?? ''}, Raum ${i.room}`,
+					].join('\n')
+				)
+				.join('\n\n') +
+			'\n\nBei Bedarf melden wir uns bei Ihnen.\n\n' +
+			`Tel. ${ORGANIZATION_PHONE}\n${ORGANIZATION_NAME}`,
+	};
+	message.html = htmlMessage(message.text);
 	return message;
 }
 export function telegramParts(detail: IntakeDetail): string[] {

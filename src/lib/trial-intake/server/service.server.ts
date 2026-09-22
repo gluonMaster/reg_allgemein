@@ -75,8 +75,8 @@ export class IntakeService {
 	private emailStatement(id: string, version: number, now: string): StatementSpec {
 		return {
 			sql: `INSERT OR IGNORE INTO trial_intake_email_outbox
-		 (id, request_id, verification_version, dedupe_key, max_attempts, created_at, updated_at)
-		 SELECT ?, id, verification_version, ?, ?, ?, ? FROM trial_intake_requests
+		 (id, request_id, verification_version, kind, dedupe_key, max_attempts, created_at, updated_at)
+		 SELECT ?, id, verification_version, 'verification', ?, ?, ?, ? FROM trial_intake_requests
 		 WHERE id = ? AND state = 'pending_email' AND verification_version = ?`,
 			params: [
 				`intake-email:${id}:${version}`,
@@ -263,8 +263,25 @@ export class IntakeService {
 		});
 		statements.push({
 			sql: `UPDATE trial_intake_email_outbox SET status = 'cancelled', updated_at = ?
-		 WHERE request_id = ? AND status IN ('pending','retry') AND EXISTS (SELECT 1 FROM trial_intake_requests WHERE id = ? AND state <> 'pending_email')`,
+		 WHERE request_id = ? AND kind = 'verification' AND status IN ('pending','retry')
+		 AND EXISTS (SELECT 1 FROM trial_intake_requests WHERE id = ? AND state <> 'pending_email')`,
 			params: [now, r.id, r.id],
+		});
+		// Version 0 is reserved for this row, so UNIQUE(request_id, verification_version) holds.
+		statements.push({
+			sql: `INSERT OR IGNORE INTO trial_intake_email_outbox
+		 (id, request_id, verification_version, kind, dedupe_key, max_attempts, created_at, updated_at)
+		 SELECT ?, id, 0, 'confirmation', ?, ?, ?, ? FROM trial_intake_requests
+		 WHERE id = ? AND state = 'verified' AND verification_hash = ?`,
+			params: [
+				`intake-email:${r.id}:confirm`,
+				`trial-intake:confirm:${r.id}`,
+				this.emailMaxAttempts,
+				now,
+				now,
+				r.id,
+				hash,
+			],
 		});
 		await this.db.batch(statements);
 		if ((await this.inspectToken(token, now)).state !== 'accepted')

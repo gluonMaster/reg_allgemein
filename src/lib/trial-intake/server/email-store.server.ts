@@ -7,10 +7,12 @@ import type {
 } from '$lib/server/outbox/contracts';
 import { renderEmailTemplate, OutboxTemplateError } from '$lib/server/outbox/templates';
 import { IntakeService, verificationToken } from './service.server';
-import { verificationEmail } from './templates.server';
+import { confirmationEmail, verificationEmail } from './templates.server';
 import { ORGANIZATION_NAME } from '$lib/organization';
 
-const valid = `r.state = 'pending_email' AND r.pending_expires_at > ? AND r.verification_expires_at > ? AND r.verification_version = o.verification_version`;
+const valid = `((o.kind = 'verification' AND r.state = 'pending_email' AND r.pending_expires_at > ?
+ AND r.verification_expires_at > ? AND r.verification_version = o.verification_version)
+ OR (o.kind = 'confirmation' AND r.state IN ('verified','processed') AND (r.delete_after IS NULL OR r.delete_after > ?)))`;
 export class IntakeEmailStore extends OutboxRepository {
 	constructor(private readonly intakeDb: DatabaseBoundary) {
 		super(intakeDb);
@@ -43,7 +45,7 @@ export class IntakeEmailStore extends OutboxRepository {
 			sql: `UPDATE trial_intake_email_outbox SET status = 'cancelled', lease_owner = NULL, lease_until = NULL, updated_at = ?
 		 WHERE id IN (SELECT o.id FROM trial_intake_email_outbox o JOIN trial_intake_requests r ON r.id = o.request_id
 		 WHERE (o.status IN ('pending','retry') OR (o.status = 'processing' AND o.lease_until <= ?)) AND NOT (${valid}) LIMIT ?)`,
-			params: [now, now, now, now, limit],
+			params: [now, now, now, now, now, limit],
 		});
 		return old + changed.meta.changes;
 	}
@@ -57,6 +59,7 @@ export class IntakeEmailStore extends OutboxRepository {
 			dedupe_key: string;
 			attempts: number;
 			max_attempts: number;
+			kind: 'verification' | 'confirmation';
 		}>({
 			sql: `UPDATE trial_intake_email_outbox SET status = 'processing', lease_owner = ?, lease_until = ?, updated_at = ?
 		 WHERE id = (SELECT o.id FROM trial_intake_email_outbox o JOIN trial_intake_requests r ON r.id = o.request_id
@@ -65,6 +68,7 @@ export class IntakeEmailStore extends OutboxRepository {
 			params: [
 				input.leaseOwner,
 				input.leaseUntil,
+				input.now,
 				input.now,
 				input.now,
 				input.now,
@@ -82,7 +86,7 @@ export class IntakeEmailStore extends OutboxRepository {
 			...row,
 			source_kind: 'trial_intake',
 			source_id: row.request_id,
-			template_or_category: 'intake.verify',
+			template_or_category: row.kind === 'confirmation' ? 'intake.confirm' : 'intake.verify',
 			recipient_address_kind: 'guest',
 			user_id: null,
 			locale: 'de',
@@ -148,21 +152,22 @@ export async function renderIntakeEmail(
 		};
 	}
 	const row = input.row;
+	const confirmation = row.template_or_category === 'intake.confirm';
 	if (
-		!input.secret ||
 		row.source_kind !== 'trial_intake' ||
-		row.template_or_category !== 'intake.verify'
+		(!confirmation && (!input.secret || row.template_or_category !== 'intake.verify'))
 	)
 		throw new OutboxTemplateError('INTAKE_EMAIL_INVALID');
 	const current = await service.db.first<{ id: string }>({
 		sql: `SELECT o.id FROM trial_intake_email_outbox o
 	 JOIN trial_intake_requests r ON r.id = o.request_id WHERE o.id = ? AND o.request_id = ?
 	 AND o.status = 'processing' AND o.lease_owner = ? AND ${valid}`,
-		params: [row.id, row.source_id, row.lease_owner, input.now, input.now],
+		params: [row.id, row.source_id, row.lease_owner, input.now, input.now, input.now],
 	});
 	const detail = current ? await service.detail(row.source_id) : null;
 	if (!detail) throw new OutboxTemplateError('INTAKE_EMAIL_EXPIRED');
-	const token = await verificationToken(input.secret, detail.request);
+	if (confirmation) return confirmationEmail(detail);
+	const token = await verificationToken(input.secret!, detail.request);
 	return verificationEmail(
 		detail,
 		new URL(`/probestunde/verify?token=${token}`, input.config.portalPublicOrigin).toString()

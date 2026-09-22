@@ -66,8 +66,8 @@ const text = {
 	],
 	successTitle: ['Vielen Dank für Ihre Anfrage', 'Спасибо за вашу заявку'],
 	success: [
-		'Ihre E-Mail-Adresse wurde bestätigt. Ihre Anfrage wurde an unser Büro weitergeleitet. Wir melden uns bei Ihnen.',
-		'Email подтверждён. Заявка передана в бюро. Мы свяжемся с вами.',
+		'Ihre E-Mail-Adresse wurde bestätigt und Ihre Anmeldung ist bei uns eingegangen. Die Angaben zu Ihren Probestunden haben wir Ihnen per E-Mail geschickt. Bei Bedarf melden wir uns bei Ihnen.',
+		'Email подтверждён, заявка принята. Детали записи отправлены вам письмом. При необходимости мы свяжемся с вами.',
 	],
 	already: ['Ihre Anfrage wurde bereits angenommen.', 'Ваша заявка уже принята.'],
 	invalid: [

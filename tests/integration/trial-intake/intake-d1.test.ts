@@ -356,6 +356,18 @@ describe('intake D1 lifecycle', () => {
 		expect(email.messages[0].html).toContain('>Anfrage bestätigen</a>');
 		await service.resend(r.id, r.receipt, afterSeconds(NOW, 61));
 		await service.verify(await token(r.id), afterSeconds(NOW, 62));
+		// The cancelled verification letter is replaced by the confirmation letter.
+		expect(
+			await createOutboxRuntime(config(), { emailProvider: email }).emailWorker.dispatchNext(
+				afterSeconds(NOW, 63)
+			)
+		).toBe('sent');
+		const confirmation = email.messages[email.messages.length - 1];
+		expect(confirmation.subject).toContain('Ihre Anmeldung');
+		expect(confirmation.text).toContain('Ritzenbergstraße 3 • 01067 Dresden');
+		expect(confirmation.text).toContain('+49 179 9474938');
+		expect(confirmation.text).toContain('Kind Zulu');
+		expect(confirmation.text).not.toContain('/probestunde/verify');
 		expect(
 			await createOutboxRuntime(config(), { emailProvider: email }).emailWorker.dispatchNext(
 				afterSeconds(NOW, 63)
@@ -376,6 +388,26 @@ describe('intake D1 lifecycle', () => {
 		);
 		expect(await runtime.emailWorker.dispatchNext(afterSeconds(NOW, 67))).toBe('sent');
 		expect(await admin.emailQueue(actor)).toEqual([]);
+	});
+	it('confirmation is queued once per verified request and survives the verification cancel', async () => {
+		const r = await service.create(data(), async () => lessons, NOW);
+		const rows = async () =>
+			(
+				await db.all<{ kind: string; status: string; verification_version: number }>({
+					sql: 'SELECT kind, status, verification_version FROM trial_intake_email_outbox WHERE request_id = ? ORDER BY kind',
+					params: [r.id],
+				})
+			).results;
+		expect(await rows()).toEqual([
+			{ kind: 'verification', status: 'pending', verification_version: 1 },
+		]);
+		const t = await token(r.id);
+		await service.verify(t, NOW);
+		await service.verify(t, afterSeconds(NOW, 1));
+		expect(await rows()).toEqual([
+			{ kind: 'confirmation', status: 'pending', verification_version: 0 },
+			{ kind: 'verification', status: 'cancelled', verification_version: 1 },
+		]);
 	});
 	it('uses business hours and durable unknown/recovery without hiding a verified request', async () => {
 		const friday = '2026-09-18T18:00:00.000Z';
