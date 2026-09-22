@@ -14,6 +14,12 @@ import { closedLessonIds } from './closed.server';
 import { IntakeService } from './service.server';
 import { IntakeAdmin } from './admin.server';
 import { IntakeError, intakeInputSchema } from './validation.server';
+import {
+	matchesVerifiedDevice,
+	verifiedDeviceValue,
+	VERIFIED_DEVICE_COOKIE,
+	VERIFIED_DEVICE_MAX_AGE,
+} from './device.server';
 
 export function intakeRuntime(event: RequestEvent) {
 	const config = loadRuntimeConfig(event.platform?.env);
@@ -124,7 +130,12 @@ export async function submit(event: RequestEvent) {
 		parsed.data,
 		() => r.catalog.read(),
 		now,
-		(lessons) => closedLessonIds(r.service.db, lessons)
+		(lessons) => closedLessonIds(r.service.db, lessons),
+		await matchesVerifiedDevice(
+			r.config.jwtSecret!,
+			event.cookies.get(VERIFIED_DEVICE_COOKIE),
+			parsed.data.email
+		)
 	);
 }
 export async function catalog(event: RequestEvent): Promise<CatalogData> {
@@ -146,7 +157,19 @@ export async function verify(event: RequestEvent) {
 		return r.service.inspectToken(event.url.searchParams.get('token') ?? '', now);
 	const body = await readJson(event);
 	await r.limiter.consume('intake-verify-ip', requestSubject(event), now);
-	return r.service.verify(z.string().max(128).parse(body.token), now);
+	const result = await r.service.verify(z.string().max(128).parse(body.token), now);
+	event.cookies.set(
+		VERIFIED_DEVICE_COOKIE,
+		await verifiedDeviceValue(r.config.jwtSecret!, result.email),
+		{
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			path: '/probestunde',
+			maxAge: VERIFIED_DEVICE_MAX_AGE,
+		}
+	);
+	return { state: result.state };
 }
 export async function resend(event: RequestEvent) {
 	const r = intakeRuntime(event);

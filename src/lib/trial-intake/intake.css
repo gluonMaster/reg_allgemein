@@ -91,6 +91,12 @@
 	background: #176b54;
 	color: white;
 }
+.intake .text-link {
+	border: 0;
+	background: transparent;
+	padding-inline: 0;
+	text-decoration: underline;
+}
 .intake .submit {
 	width: 100%;
 	font-size: 1.1rem;

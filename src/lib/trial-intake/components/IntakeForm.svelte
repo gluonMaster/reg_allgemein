@@ -34,6 +34,15 @@
 		parentLastName = $state(''),
 		email = $state(''),
 		phone = $state('');
+	const parentStorageKey = 'trial-intake:parent:v1';
+	function forgetParent() {
+		try {
+			localStorage.removeItem(parentStorageKey);
+		} catch {
+			// Storage can be unavailable in private or restricted browsers.
+		}
+		parentFirstName = parentLastName = email = phone = '';
+	}
 	let children = $state<IntakeInput['children']>([
 		{ key: 'child-1', firstName: '', lastName: '', birthDate: '' },
 	]);
@@ -80,6 +89,19 @@
 	);
 	onMount(() => {
 		enhanced = true;
+		try {
+			const saved = JSON.parse(localStorage.getItem(parentStorageKey) ?? 'null');
+			if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+				if (!parentFirstName && typeof saved.parentFirstName === 'string')
+					parentFirstName = saved.parentFirstName;
+				if (!parentLastName && typeof saved.parentLastName === 'string')
+					parentLastName = saved.parentLastName;
+				if (!email && typeof saved.email === 'string') email = saved.email;
+				if (!phone && typeof saved.phone === 'string') phone = saved.phone;
+			}
+		} catch {
+			// Prefill is optional; invalid or blocked storage must not break the form.
+		}
 		now = new Date().toISOString();
 		const timer = setInterval(() => {
 			now = new Date().toISOString();
@@ -193,6 +215,14 @@
 				...lastAttempt.payload,
 				turnstileToken: token,
 			});
+			try {
+				localStorage.setItem(
+					parentStorageKey,
+					JSON.stringify({ parentFirstName, parentLastName, email, phone })
+				);
+			} catch {
+				// A successful request stays successful when browser storage is blocked.
+			}
 		} catch (e) {
 			await showError(errorKey(e instanceof Error ? e.message : ''));
 		} finally {
@@ -329,6 +359,9 @@
 							/></label
 						>
 					</div>
+					<button class="text-link" type="button" onclick={forgetParent}
+						>{t(locale, 'notMyDetails')}</button
+					>
 				</section>
 				<section class="card">
 					<h2>2. {t(locale, 'children')}</h2>

@@ -11,6 +11,7 @@ const text = {
 	],
 	selected: ['Ihr ausgewähltes Angebot', 'Выбранное занятие'],
 	contacts: ['Ihre Kontaktdaten', 'Ваши контактные данные'],
+	notMyDetails: ['Das sind nicht meine Daten', 'Это не мои данные'],
 	firstName: ['Vorname', 'Имя'],
 	lastName: ['Nachname', 'Фамилия'],
 	email: ['E-Mail-Adresse', 'Email'],

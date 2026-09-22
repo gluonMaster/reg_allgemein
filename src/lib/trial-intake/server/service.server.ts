@@ -93,7 +93,8 @@ export class IntakeService {
 		value: unknown,
 		catalog: () => Promise<readonly Lesson[]>,
 		now: string,
-		closed: (lessons: readonly Lesson[]) => Promise<readonly string[]> = async () => []
+		closed: (lessons: readonly Lesson[]) => Promise<readonly string[]> = async () => [],
+		preVerified = false
 	) {
 		const parsed = intakeInputSchema.safeParse(value);
 		if (!parsed.success) throw new IntakeError('INTAKE_INPUT_INVALID');
@@ -104,7 +105,7 @@ export class IntakeService {
 			sql: 'SELECT * FROM trial_intake_requests WHERE idempotency_key = ?',
 			params: [data.idempotencyKey],
 		});
-		if (existing) return this.createdResult(existing, hash, now);
+		if (existing) return this.createdResult(existing, hash, now, preVerified);
 		const lessons = await catalog();
 		const { items } = validateSubmission(data, lessons, now, await closed(lessons));
 		const id = crypto.randomUUID();
@@ -185,19 +186,26 @@ export class IntakeService {
 		 FROM trial_intake_requests r, json_each(?) j WHERE r.id = ?`,
 			params: [JSON.stringify(links), id],
 		});
-		statements.push(this.emailStatement(id, 1, now));
+		if (!preVerified) statements.push(this.emailStatement(id, 1, now));
 		await this.db.batch(statements);
 		const result = await this.db.first<IntakeRequest>({
 			sql: 'SELECT * FROM trial_intake_requests WHERE idempotency_key = ?',
 			params: [data.idempotencyKey],
 		});
 		if (!result) throw new IntakeError('INTAKE_SAVE_FAILED', 503);
-		return this.createdResult(result, hash, now);
+		return this.createdResult(result, hash, now, preVerified);
 	}
-	private async createdResult(r: IntakeRequest, hash: string, now: string) {
+	private async createdResult(r: IntakeRequest, hash: string, now: string, preVerified = false) {
 		if (r.payload_hash !== hash) throw new IntakeError('INTAKE_IDEMPOTENCY_CONFLICT', 409);
 		if (r.state === 'pending_email' && r.pending_expires_at <= now)
 			throw new IntakeError('INTAKE_EXPIRED', 410);
+		// Retry also completes acceptance if the first attempt saved the form but its
+		// acceptance transaction failed. Never return success for that partial attempt.
+		if (preVerified && r.state === 'pending_email') {
+			await this.accept(r.id, now);
+			r = (await this.get(r.id))!;
+			if (!r || r.state === 'pending_email') throw new IntakeError('INTAKE_SAVE_FAILED', 503);
+		}
 		return {
 			id: r.id,
 			receipt: await receiptToken(this.secret, r),
@@ -220,22 +228,31 @@ export class IntakeService {
 	}
 	async verify(token: string, now: string) {
 		const inspection = await this.inspectToken(token, now);
-		if (inspection.state === 'accepted') return inspection;
-		if (inspection.state !== 'confirm') throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
+		if (inspection.state !== 'confirm' && inspection.state !== 'accepted')
+			throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
 		const hash = await sha256Hex(token);
 		const r = await this.db.first<IntakeRequest>({
 			sql: 'SELECT * FROM trial_intake_requests WHERE verification_hash = ?',
 			params: [hash],
 		});
 		if (!r) throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
-		const detail = await this.detail(r.id);
+		if (inspection.state === 'confirm') await this.accept(r.id, now, hash);
+		if ((await this.inspectToken(token, now)).state !== 'accepted')
+			throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
+		return { state: 'accepted' as const, email: r.email };
+	}
+	private async accept(requestId: string, now: string, verificationHash?: string) {
+		const detail = await this.detail(requestId);
 		if (!detail) throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
+		const r = detail.request;
+		const hash = verificationHash ?? r.verification_hash;
 		const parts = telegramParts(detail);
 		const statements: StatementSpec[] = [
 			{
 				sql: `UPDATE trial_intake_requests SET state = 'verified', verified_at = ?
-		 WHERE id = ? AND verification_hash = ? AND state = 'pending_email' AND verification_expires_at > ? AND pending_expires_at > ?`,
-				params: [now, r.id, hash, now, now],
+			 WHERE id = ? AND verification_hash = ? AND state = 'pending_email'
+			 AND (? = 1 OR verification_expires_at > ?) AND pending_expires_at > ?`,
+				params: [now, r.id, hash, verificationHash === undefined ? 1 : 0, now, now],
 			},
 		];
 		parts.forEach((body, index) => {
@@ -284,9 +301,6 @@ export class IntakeService {
 			],
 		});
 		await this.db.batch(statements);
-		if ((await this.inspectToken(token, now)).state !== 'accepted')
-			throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
-		return { state: 'accepted' as const };
 	}
 	async resend(id: string, receipt: string, now: string) {
 		const r = await this.get(id);

@@ -202,11 +202,24 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 		).toBe('pending_email');
 		await page.getByRole('button', { name: 'Anfrage bestätigen', exact: true }).click();
 		await expect(
-			page.getByText('Ihre E-Mail-Adresse wurde bestätigt.', { exact: false })
+			page.getByText(
+				'Ihre E-Mail-Adresse wurde bestätigt und Ihre Anmeldung ist bei uns eingegangen.',
+				{ exact: false }
+			)
 		).toBeVisible();
 		await noOverflow(page);
 		await page.reload();
 		await expect(page.getByText('Ihre Anfrage wurde bereits angenommen.')).toBeVisible();
+		const deviceCookie = (await context.cookies()).find(
+			(cookie) => cookie.name === 'ti_verified'
+		);
+		expect(deviceCookie).toMatchObject({
+			httpOnly: true,
+			secure: true,
+			sameSite: 'Lax',
+			path: '/probestunde',
+		});
+		expect(deviceCookie!.expires - Date.now() / 1000).toBeGreaterThan(179 * 86400);
 		const telegram = new FakeTelegramProvider();
 		telegram.failNext(
 			new TelegramProviderError('SYNTHETIC_REJECTION', false, { delivery: 'not_delivered' })
@@ -310,6 +323,84 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 		await page.screenshot({ path: 'tmp/trial-intake-ui-admin-desktop.png', fullPage: true });
 		if (process.env.KOLIBRI_TRIAL_INTAKE_INSPECT === '1') await page.pause();
 		await noOverflow(page);
+		// Return on the same device: only parent contacts persist, never child data.
+		await page.unroute('**/probestunde/submit');
+		await page.goto(`/probestunde?lesson=${fixture.lessons[0].id}`);
+		await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+		await expect(page.locator('[name=parentFirstName]')).toHaveValue('Synthetic');
+		await expect(page.locator('[name=parentLastName]')).toHaveValue('ParentAlpha');
+		await expect(page.locator('[name=email]')).toHaveValue('intake-ui@example.test');
+		await expect(page.locator('[name=phone]')).toHaveValue('+49 000 123456');
+		await expect(page.locator('[name=first-child-1]')).toHaveValue('');
+		await expect(page.locator('[name=last-child-1]')).toHaveValue('');
+		await expect(page.locator('[name=birth-child-1]')).toHaveValue('');
+		expect(
+			await page.evaluate(() => JSON.parse(localStorage.getItem('trial-intake:parent:v1')!))
+		).toEqual({
+			parentFirstName: 'Synthetic',
+			parentLastName: 'ParentAlpha',
+			email: 'intake-ui@example.test',
+			phone: '+49 000 123456',
+		});
+		await page.locator('[name=first-child-1]').fill('ReturningChild');
+		await page.locator('[name=last-child-1]').fill('Synthetic');
+		await page.locator('[name=birth-child-1]').fill('2020-01-01');
+		const returningResponse = page.waitForResponse((response) =>
+			response.url().endsWith('/probestunde/submit')
+		);
+		await page.getByRole('button', { name: 'Подать запрос', exact: true }).click();
+		const returning = await (await returningResponse).json();
+		expect(returning.state).toBe('verified');
+		await expect(page.getByRole('heading', { name: 'Спасибо за вашу заявку' })).toBeVisible();
+		await expect(
+			page.getByText('Детали записи отправлены вам письмом.', { exact: false })
+		).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Отправить письмо повторно' })).toHaveCount(
+			0
+		);
+		await expect(page.getByRole('button', { name: 'Исправить email' })).toHaveCount(0);
+		expect(
+			(
+				await db
+					.prepare('SELECT kind FROM trial_intake_email_outbox WHERE request_id=?')
+					.bind(returning.id)
+					.all<{ kind: string }>()
+			).results
+		).toEqual([{ kind: 'confirmation' }]);
+		await page.goto('/probestunde');
+		await page.getByRole('button', { name: 'Это не мои данные' }).click();
+		expect(
+			await page.evaluate(() => localStorage.getItem('trial-intake:parent:v1'))
+		).toBeNull();
+		await expect(page.locator('[name=email]')).toHaveValue('');
+		await page.reload();
+		await expect(page.locator('[name=parentFirstName]')).toHaveValue('');
+		await expect(page.locator('[name=parentLastName]')).toHaveValue('');
+		await expect(page.locator('[name=phone]')).toHaveValue('');
+		expect(
+			(await context.cookies()).find((cookie) => cookie.name === 'ti_verified')?.value
+		).toBe(deviceCookie!.value);
+		// Restricted storage must not prevent rendering or successful submission.
+		await page.addInitScript(() => {
+			for (const method of ['getItem', 'setItem', 'removeItem'])
+				Object.defineProperty(Storage.prototype, method, {
+					value: () => {
+						throw new DOMException('Blocked', 'SecurityError');
+					},
+				});
+		});
+		await page.goto(`/probestunde?lesson=${fixture.lessons[0].id}`);
+		await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+		await page.getByRole('button', { name: 'Это не мои данные' }).click();
+		await page.locator('[name=parentFirstName]').fill('Other');
+		await page.locator('[name=parentLastName]').fill('Synthetic');
+		await page.locator('[name=email]').fill('different-parent@example.test');
+		await page.locator('[name=phone]').fill('+49 000 123456');
+		await page.locator('[name=first-child-1]').fill('OtherChild');
+		await page.locator('[name=last-child-1]').fill('Synthetic');
+		await page.locator('[name=birth-child-1]').fill('2020-01-01');
+		await page.getByRole('button', { name: 'Подать запрос', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Проверьте почту' })).toBeVisible();
 	} finally {
 		await context.close().catch(() => {});
 		await proxy.dispose();
