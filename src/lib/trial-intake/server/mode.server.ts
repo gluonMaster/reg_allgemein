@@ -14,6 +14,7 @@ const EXACT = new Set([
 	'/admin',
 	'/admin/trial-intake',
 	'/admin/trial-intake/email',
+	'/admin/trial-intake/groups',
 	'/admin/trial-intake/[id]',
 	'/admin/outbox',
 	'/admin/operations',

@@ -76,6 +76,7 @@ describe('trial intake mode and HTTP boundaries', () => {
 			'/auth/reset',
 			'/admin/outbox',
 			'/admin/trial-intake/[id]',
+			'/admin/trial-intake/groups',
 			'/admin/operations',
 		])
 			expect(intakeRouteAllowed(route)).toBe(true);
