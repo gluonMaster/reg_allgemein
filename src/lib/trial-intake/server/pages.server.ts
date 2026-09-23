@@ -38,9 +38,11 @@ export async function loadIntakeVerification(event: RequestEvent) {
 }
 export async function loadIntakeList(event: RequestEvent) {
 	try {
+		const { admin } = intakeRuntime(event);
 		return {
 			intakeList: await adminList(event),
-			emailQueue: await intakeRuntime(event).admin.emailQueue(event.locals.user),
+			emailQueue: await admin.emailQueue(event.locals.user),
+			deliveryAttention: await admin.deliveryAttention(event.locals.user),
 		};
 	} catch (e) {
 		if (e instanceof Error && e.name === 'ZodError')
@@ -51,6 +53,18 @@ export async function loadIntakeList(event: RequestEvent) {
 			});
 		throw e;
 	}
+}
+/** Request context for the shared delivery page; only rows produced by trial intake. */
+export async function loadIntakeOutboxContext(
+	event: RequestEvent,
+	rows: { sourceKind: string; sourceId: string }[]
+) {
+	return intakeRuntime(event).admin.outboxContext(
+		event.locals.user,
+		rows.filter((row) => row.sourceKind === 'trial_intake').map((row) => row.sourceId),
+		event.locals.requestId,
+		new Date().toISOString()
+	);
 }
 export async function loadIntakeDetail(event: RequestEvent) {
 	try {

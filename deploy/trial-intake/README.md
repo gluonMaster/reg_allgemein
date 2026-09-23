@@ -24,6 +24,10 @@ Template начинает с `TRIAL_INTAKE_ACCEPTING=false`,
 При включении Telegram нужны согласованные destination, bot identity и
 activation cutoff согласно существующему outbox config. Для выпуска с открытым
 приёмом нужны реальные Resend/Turnstile/Telegram и работающий scheduler.
+`TELEGRAM_BOT_API_TIMEOUT_MS=25000`: при штатных 10 с медленный ответ Bot API
+уже давал `delivery_unknown` на фактически доставленном сообщении. Значение
+остаётся ниже потолка 30 000 мс и аренды `OUTBOX_LEASE_SECONDS` (60 с). Оно
+делает неоднозначность реже, но не устраняет её.
 Минимальные batch limits 1/5 ограничивают одну cron invocation; увеличение
 проверять по D1 query budget фактического плана. Create использует постоянное
 число запросов даже для 10×10 назначений.

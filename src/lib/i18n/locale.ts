@@ -41,3 +41,15 @@ export function formatTimestamp(locale: string | undefined, value: string): stri
 		dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin',
 	}).format(date);
 }
+
+/** Operational timestamps name their zone: "22.09.2026, 14:09 (Berlin)". */
+export function formatBerlinTime(locale: string | undefined, value: string): string {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return value;
+	const ru = normalizeUiLocale(locale) === 'ru';
+	const time = new Intl.DateTimeFormat(ru ? 'ru-RU' : 'de-DE', {
+		day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+		timeZone: 'Europe/Berlin',
+	}).format(date);
+	return `${time} (${ru ? 'Берлин' : 'Berlin'})`;
+}

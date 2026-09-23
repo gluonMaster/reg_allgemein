@@ -5,10 +5,20 @@ import {
 	AuthorizationError,
 	type AdminActor,
 } from '$lib/server/security/authorization';
+import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
+import { outboxWaitReason } from '$lib/outbox-wait';
 import { IntakeService, afterSeconds, searchName } from './service.server';
 import { IntakeError } from './validation.server';
 import { closedKey } from './closed.server';
-import type { AdminListRow, ClosedLessonRow, DeliveryStatus, EmailJob, Lesson } from '../contracts';
+import type {
+	AdminListRow,
+	ClosedLessonRow,
+	DeliveryAttention,
+	DeliveryStatus,
+	EmailJob,
+	IntakeOutboxContext,
+	Lesson,
+} from '../contracts';
 
 export const adminQuerySchema = z.object({
 	status: z.enum(['verified', 'processed', 'all']).default('verified'),
@@ -115,12 +125,24 @@ export class IntakeAdmin {
 		if (!detail || detail.request.state === 'pending_email')
 			throw new IntakeError('INTAKE_NOT_FOUND', 404);
 		const r = detail.request;
-		const delivery = (
-			await this.db.all<DeliveryStatus>({
-				sql: `SELECT id, status, attempts, last_error_code, sent_at FROM telegram_outbox WHERE source_kind = 'trial_intake' AND source_id = ? ORDER BY id`,
-				params: [id],
-			})
-		).results;
+		// The shared admin listing owns the rule for which ambiguity holds a part back.
+		const outbox = new OutboxRepository(this.db);
+		const laneStopped = (await outbox.countTerminalTelegramFailures()) > 0;
+		const parts = (await outbox.listAdmin({ channel: 'telegram', q: `ti:${id}:` }))
+			.filter((row) => row.sourceKind === 'trial_intake' && row.sourceId === id)
+			.map((row) => ({ row, part: Number(row.id.slice(row.id.lastIndexOf(':') + 1)) }))
+			.sort((a, b) => a.part - b.part);
+		const delivery: DeliveryStatus[] = parts.map(({ row, part }) => ({
+			id: row.id,
+			part,
+			total: parts.length,
+			status: row.status,
+			attempts: row.attempts,
+			lastErrorCode: row.lastErrorCode,
+			deliveryReference: row.deliveryReference ?? null,
+			sentAt: row.sentAt,
+			wait: outboxWaitReason(row, now, laneStopped) ?? null,
+		}));
 		return {
 			request: {
 				id: r.id,
@@ -252,6 +274,60 @@ export class IntakeAdmin {
 			},
 		]);
 		return { closed: false };
+	}
+	/** Minimal request context for the delivery page: surname and subjects, not the full card. */
+	async outboxContext(
+		user: App.Locals['user'],
+		requestIds: string[],
+		requestId: string,
+		now: string
+	): Promise<Record<string, IntakeOutboxContext>> {
+		const actor = await this.actor(user);
+		const ids = [...new Set(requestIds)];
+		if (ids.length === 0) return {};
+		const [, found] = await this.db.batch<{
+			id: string;
+			parent_last_name: string;
+			received_at: string;
+			subjects_json: string;
+		}>([
+			this.audit(actor, 'trial_intake.outbox_context_read', 'outbox', requestId, now),
+			{
+				// One JSON parameter keeps the lookup below D1's bound-parameter limit.
+				sql: `SELECT r.id, r.parent_last_name, COALESCE(r.verified_at, r.created_at) AS received_at,
+			 (SELECT json_group_array(subject) FROM (SELECT DISTINCT i.subject FROM trial_intake_items i
+			 WHERE i.request_id = r.id ORDER BY i.subject)) AS subjects_json
+			 FROM trial_intake_requests r WHERE r.id IN (SELECT value FROM json_each(?))
+			 AND r.state IN ('verified','processed') AND ${ACTIVE}`,
+				params: [JSON.stringify(ids), actor.id],
+			},
+		]);
+		const rows = new Map(found.results.map((row) => [row.id, row]));
+		return Object.fromEntries(
+			ids.map((id) => {
+				const row = rows.get(id);
+				return [
+					id,
+					row
+						? {
+								deleted: false,
+								parentLastName: row.parent_last_name,
+								subjects: JSON.parse(row.subjects_json) as string[],
+								receivedAt: row.received_at,
+							}
+						: { deleted: true },
+				];
+			})
+		);
+	}
+	/** Bureau notifications that wait for an admin decision; shown on the request list. */
+	async deliveryAttention(user: App.Locals['user']): Promise<DeliveryAttention> {
+		await this.actor(user);
+		const row = await this.db.first<{ unknown: number; dead: number }>({
+			sql: `SELECT EXISTS(SELECT 1 FROM telegram_outbox WHERE source_kind = 'trial_intake' AND status = 'delivery_unknown') AS unknown,
+			 EXISTS(SELECT 1 FROM telegram_outbox WHERE source_kind = 'trial_intake' AND status = 'dead') AS dead`,
+		});
+		return { unknown: Boolean(row?.unknown), dead: Boolean(row?.dead) };
 	}
 	async emailQueue(user: App.Locals['user']) {
 		await this.actor(user);

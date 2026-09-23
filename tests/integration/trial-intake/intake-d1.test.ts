@@ -26,7 +26,7 @@ import {
 	EmailProviderError,
 	TelegramProviderError,
 } from '$lib/server/outbox/providers';
-import { runScheduledEvent } from '$lib/server/operations/scheduler';
+import { runScheduledEvent, runScheduledJobs } from '$lib/server/operations/scheduler';
 import { ORGANIZATION_NAME } from '$lib/organization';
 import { renderTelegramTemplate } from '$lib/server/outbox/templates';
 import { lessonIdentity } from '$lib/trial-intake/server/catalog.server';
@@ -70,6 +70,44 @@ function data() {
 				childKeys: ['child-a', 'child-b'],
 			},
 			{ lessonId: lessons[1].id, desiredDate: '2026-09-19', childKeys: ['child-a'] },
+		],
+	};
+}
+/** Long names split the Telegram notification into several parts. */
+function multiPartData() {
+	const input = data();
+	input.children = Array.from({ length: 10 }, (_, i) => ({
+		key: `c${i}`,
+		firstName: 'F'.repeat(160),
+		lastName: `Child-${i}` + 'Z'.repeat(140),
+		birthDate: '2020-01-01',
+	}));
+	input.items = input.items.map((i) => ({
+		...i,
+		childKeys: input.children.map((c) => c.key),
+	}));
+	return input;
+}
+function supportRow(id: string, createdAt: string) {
+	const reference = crypto.randomUUID();
+	return {
+		sql: `INSERT INTO telegram_outbox
+		 (id, source_kind, source_id, template_or_category, destination_ref, locale, payload_json,
+		 dedupe_key, not_before, status, attempts, max_attempts, created_at, updated_at)
+		 VALUES (?, 'support_thread', ?, 'bureau.support', 'bureau', 'de', ?, ?, ?, 'pending', 0, 5, ?, ?)`,
+		params: [
+			id,
+			reference,
+			JSON.stringify({
+				category: 'technical',
+				reference,
+				receivedAt: createdAt,
+				adminPath: `/admin/messages/${reference}`,
+			}),
+			`dedupe:${id}`,
+			createdAt,
+			createdAt,
+			createdAt,
 		],
 	};
 }
@@ -607,18 +645,180 @@ describe('intake D1 lifecycle', () => {
 		expect(await runtime.repository.countUnresolvedTelegramDeliveries()).toBe(1);
 		expect(await runtime.telegramWorker.dispatchNext('2026-09-21T08:01:00.000Z')).toBe('empty');
 	});
+	it('an unknown delivery holds back only the parts of its own request; the admin sees why', async () => {
+		await seedAdmin();
+		const a = await verified(multiPartData());
+		const at = (seconds: number) => afterSeconds(NOW, seconds);
+		const b = await service.create(data(), async () => lessons, at(60));
+		await service.verify(await token(b.id), at(60));
+		const provider = new FakeTelegramProvider();
+		provider.failNext(
+			new TelegramProviderError('TELEGRAM_DELIVERY_UNKNOWN', false, { delivery: 'unknown' })
+		);
+		const runtime = createOutboxRuntime(config(), { telegramProvider: provider });
+		expect(await runtime.telegramWorker.dispatchNext(at(120))).toBe('delivery_unknown');
+		expect(await runtime.telegramWorker.dispatchNext(at(180))).toBe('sent');
+		expect(provider.messages.map((m) => m.text.split('\n')[0])).toEqual([
+			`Anfrage ${b.id} — Teil 1/1`,
+		]);
+		expect(await runtime.telegramWorker.dispatchNext(at(240))).toBe('empty');
+		const parts = (
+			await db.all<{ id: string; status: string }>({
+				sql: `SELECT id, status FROM telegram_outbox WHERE source_id = ? ORDER BY id`,
+				params: [a.id],
+			})
+		).results;
+		expect(parts.length).toBeGreaterThan(1);
+		expect(parts.map((p) => p.status)).toEqual([
+			'delivery_unknown',
+			...parts.slice(1).map(() => 'pending'),
+		]);
+
+		// Other sources keep the destination-wide block, including behind an intake ambiguity.
+		await db.run(supportRow('support-held', at(240)));
+		expect(await runtime.telegramWorker.dispatchNext(at(300))).toBe('empty');
+
+		// The production path is Cron: it keeps draining later requests and keeps the alert open.
+		const d = await service.create(data(), async () => lessons, at(300));
+		await service.verify(await token(d.id), at(300));
+		expect(
+			await runScheduledJobs(config(), {
+				triggerKind: 'scheduled',
+				dedupeKey: 'intake-request-scoped-ambiguity',
+				jobNames: ['email_outbox', 'telegram_outbox'],
+				now: at(360),
+			})
+		).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					jobName: 'telegram_outbox',
+					errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
+				}),
+			])
+		);
+		const statusOf = async (id: string) =>
+			(
+				await db.first<{ status: string }>({
+					sql: 'SELECT status FROM telegram_outbox WHERE id = ?',
+					params: [id],
+				})
+			)?.status;
+		expect(await statusOf(`ti:${d.id}:1`)).toBe('sent');
+		expect(await statusOf(`ti:${a.id}:2`)).toBe('pending');
+		expect(await statusOf('support-held')).toBe('pending');
+
+		// The admin sees the request context, the code to look for and why the next part waits.
+		const admin = new IntakeAdmin(service);
+		expect(await admin.deliveryAttention(actor)).toEqual({ unknown: true, dead: false });
+		const context = await admin.outboxContext(
+			actor,
+			[a.id, a.id, 'removed-by-retention'],
+			'context-read',
+			at(360)
+		);
+		expect(context).toEqual({
+			[a.id]: {
+				deleted: false,
+				parentLastName: 'Parent',
+				subjects: [...new Set([lessons[0].subject, lessons[1].subject])].sort(),
+				receivedAt: NOW,
+			},
+			'removed-by-retention': { deleted: true },
+		});
+		expect(
+			await db.first({
+				sql: `SELECT target_id FROM audit_events WHERE action = 'trial_intake.outbox_context_read'`,
+			})
+		).toEqual({ target_id: 'outbox' });
+		const delivery = (await admin.detail(actor, a.id, 'detail', at(360))).delivery;
+		const reference = delivery[0].deliveryReference!;
+		expect(reference).toMatch(/^TG-[0-9A-F]{12}$/);
+		expect(delivery[0]).toMatchObject({ part: 1, total: parts.length, status: 'delivery_unknown' });
+		expect(delivery[1]).toMatchObject({
+			part: 2,
+			status: 'pending',
+			wait: { kind: 'unknown_decision', reference },
+		});
+		const ledger = await runtime.repository.listAdmin({ channel: 'telegram' });
+		expect(ledger.find((row) => row.id === 'support-held')?.blockedByReference).toBe(reference);
+		expect(ledger.find((row) => row.id === `ti:${d.id}:1`)?.blockedByReference).toBeUndefined();
+
+		// The 0030 trigger enforces the same rule on any claim, not only on the repository SQL.
+		const claimPart = (id: string, now: string) =>
+			db.run({
+				sql: `UPDATE telegram_outbox SET status = 'processing', locked_at = ?, lease_owner = 'direct-claim',
+				 lease_until = ?, updated_at = ? WHERE id = ?`,
+				params: [now, afterSeconds(now, 60), now, id],
+			});
+		await expect(claimPart(`ti:${a.id}:2`, at(420))).rejects.toThrow(
+			'invalid telegram outbox transition'
+		);
+		await expect(claimPart('support-held', at(420))).rejects.toThrow(
+			'invalid telegram outbox transition'
+		);
+		const unknownRow = ledger.find((row) => row.id === `ti:${a.id}:1`)!;
+		await runtime.repository.resolveTelegramUnknown({
+			admin: requireAdmin(actor),
+			outboxId: unknownRow.id,
+			attemptId: unknownRow.deliveryAttemptId!,
+			action: 'confirm_sent',
+			reasonCode: 'message_found_in_destination',
+			idempotencyKey: 'confirm-found',
+			requestId: 'confirm-found',
+			now: at(480),
+			additionalAttempts: 1,
+		});
+		await claimPart(`ti:${a.id}:2`, at(540));
+		expect(await statusOf(`ti:${a.id}:2`)).toBe('processing');
+	});
+	it('an unknown delivery outside trial intake still stops the whole Telegram lane', async () => {
+		await db.run(supportRow('support-unknown', NOW));
+		const provider = new FakeTelegramProvider();
+		provider.failNext(
+			new TelegramProviderError('TELEGRAM_DELIVERY_UNKNOWN', false, { delivery: 'unknown' })
+		);
+		const runtime = createOutboxRuntime(config(), { telegramProvider: provider });
+		expect(await runtime.telegramWorker.dispatchNext(afterSeconds(NOW, 10))).toBe(
+			'delivery_unknown'
+		);
+		const a = await service.create(data(), async () => lessons, afterSeconds(NOW, 60));
+		await service.verify(await token(a.id), afterSeconds(NOW, 60));
+		expect(
+			await runtime.repository.claimTelegram({
+				now: afterSeconds(NOW, 120),
+				leaseOwner: 'direct-claim',
+				leaseUntil: afterSeconds(NOW, 180),
+			})
+		).toBeNull();
+		expect(
+			await runScheduledJobs(config(), {
+				triggerKind: 'scheduled',
+				dedupeKey: 'intake-lane-blocked',
+				jobNames: ['email_outbox', 'telegram_outbox'],
+				now: afterSeconds(NOW, 120),
+			})
+		).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					jobName: 'telegram_outbox',
+					errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
+				}),
+			])
+		);
+		expect(
+			await db.first({
+				sql: 'SELECT status FROM telegram_outbox WHERE id = ?',
+				params: [`ti:${a.id}:1`],
+			})
+		).toEqual({ status: 'pending' });
+		expect(
+			await db.first<{ safe_result_json: string }>({
+				sql: `SELECT safe_result_json FROM scheduled_cadence_state WHERE cadence = 'fast'`,
+			})
+		).toMatchObject({ safe_result_json: expect.stringContaining('delivery_unknown_open') });
+	});
 	it('splits long Telegram data without truncation; every part uses same existing provider and opaque queue payload', async () => {
-		const input = data();
-		input.children = Array.from({ length: 10 }, (_, i) => ({
-			key: `c${i}`,
-			firstName: 'F'.repeat(160),
-			lastName: `Child-${i}` + 'Z'.repeat(140),
-			birthDate: '2020-01-01',
-		}));
-		input.items = input.items.map((i) => ({
-			...i,
-			childKeys: input.children.map((c) => c.key),
-		}));
+		const input = multiPartData();
 		await verified(input);
 		const provider = new FakeTelegramProvider();
 		const runtime = createOutboxRuntime(config(), { telegramProvider: provider });

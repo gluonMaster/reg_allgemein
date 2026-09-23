@@ -3,7 +3,12 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { t, dayLabel, formatDate, formatTimestamp, errorKey, type TextKey } from '../i18n';
-	import { itemLesson, type AdminListData, type EmailJob } from '../contracts';
+	import {
+		itemLesson,
+		type AdminListData,
+		type DeliveryAttention,
+		type EmailJob,
+	} from '../contracts';
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
 	import { ORGANIZATION_NAME } from '$lib/organization';
@@ -11,8 +16,15 @@
 	import '../intake.css';
 	let {
 		data,
-	}: { data: { intakeList: AdminListData; emailQueue: EmailJob[]; csrfToken: string } } =
-		$props();
+	}: {
+		data: {
+			intakeList: AdminListData;
+			emailQueue: EmailJob[];
+			deliveryAttention: DeliveryAttention;
+			csrfToken: string;
+		};
+	} = $props();
+	const attention = $derived(data.deliveryAttention);
 	const locale = $derived(page.data.locale ?? 'de');
 	const list = $derived(data.intakeList);
 	const query = $derived(list.query);
@@ -49,6 +61,18 @@
 <section class="intake">
 	<h2>{t(locale, 'adminTitle')}</h2>
 	<p>{t(locale, 'adminIntro')}</p>
+	{#if attention.unknown || attention.dead}
+		<section class="card error" role="status">
+			<h3>{t(locale, 'deliveryAttention')}</h3>
+			{#if attention.unknown}<p>{t(locale, 'deliveryAttentionUnknown')}</p>{/if}
+			{#if attention.dead}<p>{t(locale, 'deliveryAttentionDead')}</p>{/if}
+			<a
+				class="button"
+				href={`/admin/outbox?channel=telegram&status=${attention.unknown ? 'delivery_unknown' : 'dead'}`}
+				>{t(locale, 'deliveryAttentionLink')}</a
+			>
+		</section>
+	{/if}
 	<form method="GET" action="/admin/trial-intake" class="card">
 		<details open>
 			<summary>{t(locale, 'filters')}</summary>

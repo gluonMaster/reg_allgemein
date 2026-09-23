@@ -2,6 +2,8 @@ import { russianCatalog } from './ru';
 import { ORGANIZATION_NAME } from '$lib/organization';
 import { additionalGermanCatalog } from './ui-additions';
 import { russianCodeLabels } from './ui-codes';
+import { formatBerlinTime } from './locale';
+import type { OutboxWaitReason } from '$lib/outbox-wait';
 export const defaultLocale = 'de' as const;
 
 export const germanCatalog = {
@@ -408,7 +410,7 @@ export const germanCatalog = {
 	'admin.outbox.error': 'Letzter sicherer Fehlercode',
 	'admin.outbox.deliveryReference': 'Zustellreferenz',
 	'admin.outbox.unknownNotice':
-		'Die Übermittlung kann erfolgt sein. Vor einer Entscheidung muss die Zustellreferenz im freigegebenen Telegram-Ziel geprüft werden.',
+		'Das Ergebnis des Versands ist nicht bestätigt: Die Nachricht kann angekommen sein. Ohne Ihre Entscheidung wird sie nicht erneut gesendet, damit sie nicht doppelt im Chat erscheint.',
 	'admin.outbox.resolution': 'Geprüftes Ergebnis',
 	'admin.outbox.confirmSent': 'Nachricht gefunden – als gesendet bestätigen',
 	'admin.outbox.retryAfterReview': 'Nachricht nicht gefunden – erneuten Versuch freigeben',
@@ -977,6 +979,51 @@ export function translateAdminCode(locale: string | undefined, code: string): st
 		: baseLocale(locale) === 'ru'
 			? (russianCodeLabels[code] ?? code)
 			: code;
+}
+
+const outboxTemplateKeys = {
+	'bureau.trial_intake': 'admin.outbox.kind.bureau.trial_intake',
+	'bureau.support': 'admin.outbox.kind.bureau.support',
+	'bureau.contract_signal': 'admin.outbox.kind.bureau.contract_signal',
+	'bureau.price_review_signal': 'admin.outbox.kind.bureau.price_review_signal',
+} as const satisfies Readonly<Record<string, MessageKey>>;
+
+/** Readable name of a queued message; unknown technical codes stay visible as they are. */
+export function translateOutboxTemplate(locale: string | undefined, code: string): string {
+	const key = outboxTemplateKeys[code as keyof typeof outboxTemplateKeys];
+	return key ? translate(locale, key) : code;
+}
+
+/** Why a queued message waits, with times in Berlin. */
+export function translateOutboxWait(
+	locale: string | undefined,
+	wait: OutboxWaitReason,
+	sameRequest = false
+): string {
+	switch (wait.kind) {
+		case 'unknown_decision':
+			return formatMessage(
+				locale,
+				sameRequest ? 'admin.outbox.wait.unknownDecisionRequest' : 'admin.outbox.wait.unknownDecision',
+				{ reference: wait.reference }
+			);
+		case 'lane_stopped':
+			return translate(locale, 'admin.outbox.wait.laneStopped');
+		case 'business_hours':
+			return formatMessage(locale, 'admin.outbox.wait.businessHours', {
+				time: formatBerlinTime(locale, wait.at),
+			});
+		case 'scheduled':
+			return formatMessage(locale, 'admin.outbox.wait.scheduled', {
+				time: formatBerlinTime(locale, wait.at),
+			});
+		case 'backoff':
+			return formatMessage(locale, 'admin.outbox.wait.backoff', {
+				time: formatBerlinTime(locale, wait.at),
+			});
+		case 'due':
+			return translate(locale, 'admin.outbox.wait.due');
+	}
 }
 
 export function translatePrivacyCategory(locale: string | undefined, code: string): string {

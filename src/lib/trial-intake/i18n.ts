@@ -189,6 +189,30 @@ const text = {
 	],
 	backList: ['Zur Anfragenliste', 'К списку заявок'],
 	delivery: ['Benachrichtigungen an das Büro', 'Уведомления бюро'],
+	deliveryPart: ['Teil', 'Часть'],
+	deliveryUnknownHint: [
+		'diesen Code im Büro-Chat suchen und über „Zustellung prüfen / wiederherstellen“ entscheiden.',
+		'найдите этот код в чате бюро и примите решение по кнопке «Проверить / восстановить доставку».',
+	],
+	deliveryAttention: [
+		'Eine Büro-Benachrichtigung muss geprüft werden',
+		'Уведомление бюро требует проверки',
+	],
+	deliveryAttentionUnknown: [
+		'Bei mindestens einer Telegram-Nachricht ist unklar, ob sie im Büro-Chat angekommen ist. Weitere Teile derselben Anfrage warten auf Ihre Entscheidung.',
+		'Минимум для одного сообщения Telegram неизвестно, дошло ли оно в чат бюро. Следующие части той же заявки ждут вашего решения.',
+	],
+	deliveryAttentionDead: [
+		'Mindestens eine Telegram-Nachricht konnte nicht zugestellt werden. Bis zu Ihrer Entscheidung sendet das Portal keine weiteren Telegram-Nachrichten.',
+		'Минимум одно сообщение Telegram не удалось доставить. Пока вы не решите, портал не отправляет другие сообщения в Telegram.',
+	],
+	deliveryAttentionLink: ['Zustellung prüfen', 'Проверить доставку'],
+	outboxReceived: ['eingegangen', 'получена'],
+	outboxOpen: ['Anfrage öffnen', 'Открыть заявку'],
+	outboxDeleted: [
+		'Anfrage nach Ablauf der Aufbewahrungsfrist gelöscht',
+		'Заявка удалена по сроку хранения',
+	],
 	recovery: ['Zustellung prüfen / wiederherstellen', 'Проверить / восстановить доставку'],
 	emailQueue: [
 		'Prüf-E-Mails: ausstehende Zustellungen',

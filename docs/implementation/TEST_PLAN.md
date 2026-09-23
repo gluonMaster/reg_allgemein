@@ -32,6 +32,15 @@ not_before. CTAon разрешён до фактической доставки;
 проверяются provider receipts и видимость сообщения. Pending/failed delivery
 не помечается passed и сама по себе не блокирует приём через admin UI.
 
+TIN-AC-14 покрывают два integration-теста «unknown delivery» в
+`tests/integration/trial-intake/intake-d1.test.ts`: заявка A в `delivery_unknown`,
+заявки B и D уходят и напрямую, и через штатный Cron, части A ждут до решения,
+guard 0030 держит то же правило, `support_thread` сохраняет блокировку по
+destination и сам останавливает всю линию. Формулировки и время по Берлину —
+`tests/unit/outbox-wait.test.ts`. Живую неоднозначность на production намеренно
+не создавать: после deploy read-back только подтверждает, что ни одно
+уведомление заявки не стоит за неразрешённым `delivery_unknown` другой заявки.
+
 Уточнения TIN-02/11/12 проверяются в том же intake browser/release pass:
 полное название учреждения (включая From и доступные auth/reset экраны), перенос
 на mobile, короткий текст сроков без Telegram и дополнительной галочки.

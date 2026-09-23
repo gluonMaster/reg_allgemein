@@ -443,6 +443,10 @@ a.metric-card {
 	cursor: pointer;
 }
 
+.admin-shell button.secondary-button {
+	background: #596273;
+}
+
 .admin-shell .checkbox,
 .admin-shell .radio {
 	display: grid;

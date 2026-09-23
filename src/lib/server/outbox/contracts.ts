@@ -149,4 +149,6 @@ export interface AdminOutboxRow {
 	deliveryAttemptId?: string;
 	deliveryAttemptNo?: number;
 	deliveryStartedAt?: string;
+	/** Delivery reference of the unresolved ambiguous send that holds this row back. */
+	blockedByReference?: string;
 }

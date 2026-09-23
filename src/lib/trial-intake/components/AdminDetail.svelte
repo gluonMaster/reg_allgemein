@@ -7,7 +7,8 @@
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
 	import { ORGANIZATION_NAME } from '$lib/organization';
-	import { translateAdminCode } from '$lib/i18n';
+	import { translateAdminCode, translateOutboxWait } from '$lib/i18n';
+	import { formatBerlinTime } from '$lib/i18n/locale';
 	import '../intake.css';
 	let { data }: { data: { intakeDetail: AdminDetailData; csrfToken: string } } = $props();
 	const locale = $derived(page.data.locale ?? 'de');
@@ -90,9 +91,16 @@
 	</section>
 	<section class="card">
 		<h3>{t(locale, 'delivery')}</h3>
-		{#each detail.delivery as job}<p>
-				<code>{job.id}</code> · <strong>{translateAdminCode(locale, job.status)}</strong> · {job.attempts}{#if job.last_error_code}
-					· {job.last_error_code}{/if}
+		{#each detail.delivery as job (job.id)}<p>
+				{t(locale, 'deliveryPart')}
+				{job.part}/{job.total} · <strong>{translateAdminCode(locale, job.status)}</strong>
+				{#if job.status === 'sent' && job.sentAt}· {formatBerlinTime(locale, job.sentAt)}{/if}
+				{#if job.wait}· {translateOutboxWait(locale, job.wait, true)}{/if}
+				{#if job.status === 'delivery_unknown'}· <code>{job.deliveryReference ?? '—'}</code> — {t(
+						locale,
+						'deliveryUnknownHint'
+					)}{/if}
+				{#if job.status === 'dead' && job.lastErrorCode}· {job.lastErrorCode}{/if}
 			</p>{/each}
 		<a
 			class="button"

@@ -6,6 +6,9 @@ import { requireAdmin } from '$lib/server/security/authorization';
 import type { AdminOutboxStatus, OutboxChannel } from '$lib/server/outbox/contracts';
 import { requestOutboxRuntime } from '$lib/server/outbox/runtime';
 import { loadRuntimeConfig } from '$lib/server/config/runtime';
+import { outboxWaitReason } from '$lib/outbox-wait';
+import { loadIntakeOutboxContext } from '$lib/trial-intake/server/pages.server';
+import type { IntakeOutboxContext } from '$lib/trial-intake/contracts';
 
 const channels = new Set<OutboxChannel>(['email', 'telegram']);
 const statuses = new Set<AdminOutboxStatus>([
@@ -21,12 +24,23 @@ export const load: PageServerLoad = async (event) => {
 		? statusValue as AdminOutboxStatus
 		: '';
 	const q = (event.url.searchParams.get('q') ?? '').trim().slice(0, 160);
+	const now = new Date().toISOString();
+	const { repository } = requestOutboxRuntime(event);
+	const rows = await repository.listAdmin({ channel, status, q });
+	const laneStopped = (await repository.countTerminalTelegramFailures()) > 0;
+	// Request context is trial-intake enrichment and exists only in that portal mode (TIN-11).
+	const intake: Record<string, IntakeOutboxContext> =
+		loadRuntimeConfig(event.platform?.env).portalMode === 'trial_intake'
+			? await loadIntakeOutboxContext(event, rows)
+			: {};
 	return {
 		query: { channel, status, q },
-		rows: (await requestOutboxRuntime(event).repository.listAdmin({ channel, status, q })).map((row) => ({
+		rows: rows.map((row) => ({
 			...row,
 			commandKey: crypto.randomUUID(),
+			wait: outboxWaitReason(row, now, laneStopped) ?? null,
 		})),
+		intake,
 	};
 };
 

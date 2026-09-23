@@ -52,6 +52,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0027_trial_intake.sql',
 			'0028_trial_intake_closed_lessons.sql',
 			'0029_trial_intake_email_kind.sql',
+			'0030_trial_intake_request_scoped_ambiguity.sql',
 		]);
 
 		const result = await context.db

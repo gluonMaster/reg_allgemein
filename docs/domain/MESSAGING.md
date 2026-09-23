@@ -184,6 +184,18 @@ permanent provider outcome. Пока существует unresolved `delivery_u
 terminal `dead`, последующие provider sends для sole bureau destination
 заблокированы, а scheduler продолжает поднимать persistent safe alert даже при
 `TELEGRAM_PROVIDER=disabled`.
+
+Единственное исключение из блокировки по destination — уведомления короткой
+заявки (`source_kind='trial_intake'`, [TRIAL_INTAKE](TRIAL_INTAKE.md#администратор-и-доставка)).
+Unresolved `delivery_unknown` такого уведомления блокирует только части той же
+заявки; уведомления других заявок продолжают уходить, а alert остаётся
+открытым. Причина: каждое уведомление заявки самодостаточно и несёт свой
+delivery reference, порядок между разными заявками смысла не имеет. Риск дубля
+не растёт: само неоднозначное сообщение без audited решения не повторяется.
+Правило одинаково в claim, в guard перехода `pending → processing` (миграция
+0030) и в Cron gate. Неоднозначность любого другого источника по-прежнему
+останавливает весь drain, включая уведомления заявок. Terminal `dead` тоже
+по-прежнему останавливает всю линию: обычно это отказ токена или чата.
 Final external-send boundary принимает только exact per-template payload keys,
 allowlisted category, opaque UUID reference, canonical UTC timestamp и
 предопределённый admin path без query; любое несоответствие становится

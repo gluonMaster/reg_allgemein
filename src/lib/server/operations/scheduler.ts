@@ -196,7 +196,12 @@ async function executeJob(
 						}
 					: { disabled: true, result: { reason: 'provider_disabled' } };
 			}
-			if (unresolvedDeliveryUnknown > 0) {
+			// A trial-intake ambiguity holds back only the parts of its own request (claimTelegram
+			// and the 0030 trigger), so later requests keep draining while the alert below stays open.
+			if (
+				unresolvedDeliveryUnknown > 0 &&
+				(await runtime.repository.countLaneBlockingTelegramDeliveries()) > 0
+			) {
 				return {
 					disabled: false,
 					result: {

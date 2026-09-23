@@ -1,3 +1,5 @@
+import type { OutboxWaitReason } from '$lib/outbox-wait';
+
 export const INTAKE_PRIVACY_VERSION = 'trial-intake-retention-2026-09-16-v1';
 export const INTAKE_BODY_LIMIT = 16 * 1024;
 export type IntakeState = 'pending_email' | 'verified' | 'processed';
@@ -96,10 +98,22 @@ export interface AdminListData {
 }
 export interface DeliveryStatus {
 	id: string;
+	part: number;
+	total: number;
 	status: string;
 	attempts: number;
-	last_error_code: string | null;
-	sent_at: string | null;
+	lastErrorCode: string | null;
+	deliveryReference: string | null;
+	sentAt: string | null;
+	wait: OutboxWaitReason | null;
+}
+/** A request removed by retention keeps only its opaque ID in the delivery ledger. */
+export type IntakeOutboxContext =
+	| { deleted: false; parentLastName: string; subjects: string[]; receivedAt: string }
+	| { deleted: true };
+export interface DeliveryAttention {
+	unknown: boolean;
+	dead: boolean;
 }
 export interface EmailJob {
 	id: string;

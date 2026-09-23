@@ -4,29 +4,74 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-22T11:56:42Z
+updated_utc: 2026-09-23T19:15:25Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN07-closed-lessons-confirmation-email-returning-parent-deployed
-next_gate: TIN07-owner-manual-acceptance
+last_completed_gate: TIN08-local-candidate-telegram-queue-and-outbox-ui
+next_gate: TIN08-owner-deploy-order
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN07-features-live-waiting_owner-manual-acceptance
+current_phase: TIN08-local-candidate-ready-waiting_owner-deploy-order
 last_atomic_action: TIN07-worker-deploy-features-and-route-gate-fix
 last_atomic_result: success
-next_atomic_action: TIN07-owner-manual-acceptance
+next_atomic_action: TIN08-owner-deploy-order
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Next_step_is_owner_manual_acceptance_no_pending_remote_write_and_no_unresolved_ambiguity
+recommended_next_session_mode: High
+mode_reason_plain: Next_step_is_planned_deploy_of_migration_0030_and_worker_with_known_target_and_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN08: очередь Telegram по заявке и читаемая доставка — локальный candidate — 2026-09-23T19:15:25Z
+
+Scope: промпт out/trial-intake-telegram-prompts-2026-09-23/01. Повод — ручная
+приёмка TIN07 владельцем: вторая заявка с того же устройства не пришла в
+Telegram. Первая получила `delivery_unknown` (ответ Bot API не пришёл за 10 с,
+сообщение при этом дошло), а неразрешённая неоднозначность останавливала все
+отправки бюро. Владелец 2026-09-23T18:25Z сам подтвердил её как отправленную;
+следующая строка штатно отложена до 24.09 09:00 Berlin. Остальные пункты ручной
+приёмки TIN07 этим не закрыты.
+
+Сделано локально, remote mutation нет. Таймаут Bot API 25000 мс записан в
+Git-ignored production config и в template. Неоднозначность уведомления заявки
+блокирует только части той же заявки: claim SQL, миграция 0030 (guard перехода,
+ровно один hunk против 0027) и Cron gate. Промпт называл только первые два
+места; без третьего Cron по-прежнему не запускал drain при любом
+`delivery_unknown` — это подтверждено мутационной проверкой теста.
+Неоднозначность другого источника и `dead` по-прежнему останавливают всю линию.
+Страница доставки: названия шаблонов, контекст заявки только в режиме
+trial-intake, время по Берлину, инструкция по коду, причина ожидания; на списке
+заявок — предупреждение, на странице заявки — понятный статус частей.
+Requirements: [TRIAL_INTAKE](../domain/TRIAL_INTAKE.md#администратор-и-доставка),
+[MESSAGING](../domain/MESSAGING.md#telegram-bot-api-provider), TIN-AC-14, TEST_PLAN.
+
+Candidate: коммит, добавивший эту запись и
+`migrations/0030_trial_intake_request_scoped_ambiguity.sql`
+(`git log -1 -- migrations/0030_trial_intake_request_scoped_ambiguity.sql`).
+Checks: `npm run check:src` 0 errors; intake-d1 24 passed, в том числе 2 новых;
+foundation, messaging-outbox, operations-cost, operations-scheduler,
+telegram-drain-safety, telegram-preview-smoke и migration-upgrade вместе с
+intake-d1 — 84 passed; unit outbox-wait/i18n/admin-outbox-route/http-mode;
+intake-ui e2e с `KOLIBRI_E2E_TRIAL_INTAKE=1` — 1 passed, не skipped;
+`npm run docs:check`. Не запускались: полный `npm test`, server-boundaries e2e,
+`npm run build`, `--dry-run` — они входят в процедуру деплоя.
+
+Rollback/containment следующей фазы: `wrangler rollback` на ac88ae8c0df1 с exact
+config. Прежний код совместим с 0030: его claim SQL строже нового guard. Сам 0030
+не переписывается; при необходимости новая миграция возвращает текст guard из
+0027. Быстрое смягчение без отката — прежнее: `TRIAL_INTAKE_ACCEPTING=false`.
+
+Ровно следующий action: **TIN08-owner-deploy-order** — владелец отдельно
+поручает деплой; затем read-only preflight по процедуре промпта, включая
+проверку, что отложенная строка ушла 24.09 после 09:00 Berlin.
+rollover_required: no; recommended_next_session_mode: High — следующий шаг —
+плановый деплой миграции и Worker с известными target и rollback.
 
 ## TIN07: закрытые занятия, письмо-подтверждение и повторная заявка — 2026-09-22T11:56:42Z
 

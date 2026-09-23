@@ -39,6 +39,21 @@ const validEmailRecipient = `u.account_status = 'active' AND u.is_blocked = 0
 			AND t.target_email_normalized = legacy_email.email_normalized
 			AND legacy_email.is_current = 1))))`;
 
+// An unresolved ambiguous send blocks later sends to its destination until an admin decides.
+// A trial-intake notification is self-contained, so its ambiguity holds back only the parts of
+// the same request; every other combination keeps the destination-wide block. The
+// telegram_outbox_allowed_transition trigger (0030) enforces the same rule.
+function unresolvedTelegramBlocker(row: string, select = '1'): string {
+	return `SELECT ${select} FROM telegram_outbox unresolved
+		JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = unresolved.id
+		WHERE unresolved.destination_ref = ${row}.destination_ref
+			AND unresolved.status = 'delivery_unknown'
+			AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL
+			AND NOT (${row}.source_kind = 'trial_intake'
+				AND unresolved.source_kind = 'trial_intake'
+				AND unresolved.source_id <> ${row}.source_id)`;
+}
+
 export class OutboxRepositoryError extends Error {
 	constructor(readonly code: string, options?: { cause?: unknown }) {
 		super(code, options);
@@ -180,12 +195,7 @@ export class OutboxRepository implements OutboxStore {
 					SELECT 1 FROM telegram_destination_activation_floors floor
 					WHERE floor.destination_ref = telegram_outbox.destination_ref
 						AND telegram_outbox.created_at < floor.activation_at
-				) AND NOT EXISTS (
-					SELECT 1 FROM telegram_outbox unresolved
-					JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = unresolved.id
-					WHERE unresolved.destination_ref = telegram_outbox.destination_ref
-						AND unresolved.status = 'delivery_unknown'
-						AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL
+				) AND NOT EXISTS (${unresolvedTelegramBlocker('telegram_outbox')}
 				) AND NOT EXISTS (
 					SELECT 1 FROM operation_locks cooldown
 					WHERE cooldown.scope = 'provider-cooldown'
@@ -229,12 +239,7 @@ export class OutboxRepository implements OutboxStore {
 					SELECT 1 FROM telegram_destination_activation_floors floor
 					WHERE floor.destination_ref = telegram_outbox.destination_ref
 						AND telegram_outbox.created_at < floor.activation_at
-				) AND NOT EXISTS (
-					SELECT 1 FROM telegram_outbox unresolved
-					JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = unresolved.id
-					WHERE unresolved.destination_ref = telegram_outbox.destination_ref
-						AND unresolved.status = 'delivery_unknown'
-						AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL
+				) AND NOT EXISTS (${unresolvedTelegramBlocker('telegram_outbox')}
 				) AND NOT EXISTS (
 					SELECT 1 FROM operation_locks cooldown
 					WHERE cooldown.scope = 'provider-cooldown'
@@ -341,6 +346,17 @@ export class OutboxRepository implements OutboxStore {
 			sql: `SELECT EXISTS(SELECT 1 FROM telegram_outbox outbox
 				JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = outbox.id
 				WHERE outbox.status = 'delivery_unknown'
+					AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL) AS count`,
+		});
+		return row?.count ?? 0;
+	}
+
+	/** An ambiguity outside trial intake blocks every send to the destination, so Cron stops. */
+	async countLaneBlockingTelegramDeliveries(): Promise<number> {
+		const row = await this.db.first<{ count: number }>({
+			sql: `SELECT EXISTS(SELECT 1 FROM telegram_outbox outbox
+				JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = outbox.id
+				WHERE outbox.status = 'delivery_unknown' AND outbox.source_kind <> 'trial_intake'
 					AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL) AS count`,
 		});
 		return row?.count ?? 0;
@@ -639,6 +655,7 @@ export class OutboxRepository implements OutboxStore {
 			delivery_attempt_id: string | null;
 			delivery_attempt_no: number | null;
 			delivery_started_at: string | null;
+			blocked_by_reference: string | null;
 		}>({
 			sql: `SELECT * FROM (
 				SELECT 'email' AS channel, id, source_kind, source_id,
@@ -647,7 +664,7 @@ export class OutboxRepository implements OutboxStore {
 					COALESCE(updated_at, created_at) AS updated_at,
 					NULL AS delivery_state, NULL AS delivery_reference,
 					NULL AS delivery_attempt_id, NULL AS delivery_attempt_no,
-					NULL AS delivery_started_at
+					NULL AS delivery_started_at, NULL AS blocked_by_reference
 				FROM email_outbox
 				UNION ALL
 				SELECT 'telegram' AS channel, outbox.id, outbox.source_kind, outbox.source_id,
@@ -656,7 +673,10 @@ export class OutboxRepository implements OutboxStore {
 					outbox.next_attempt_at, outbox.last_error_code, outbox.lease_until,
 					outbox.sent_at, outbox.created_at, outbox.updated_at,
 					COALESCE(latest.state, 'not_started'), latest.delivery_reference,
-					latest.id, latest.attempt_no, latest.started_at
+					latest.id, latest.attempt_no, latest.started_at,
+					CASE WHEN outbox.status IN ('pending', 'retry') THEN (
+						${unresolvedTelegramBlocker('outbox', 'attempt.delivery_reference')}
+						ORDER BY unresolved.created_at, unresolved.id LIMIT 1) END
 				FROM telegram_outbox outbox
 				LEFT JOIN telegram_delivery_attempts latest ON latest.id = (
 					SELECT attempt.id FROM telegram_delivery_attempts attempt
@@ -694,6 +714,7 @@ export class OutboxRepository implements OutboxStore {
 			deliveryAttemptId: row.delivery_attempt_id ?? undefined,
 			deliveryAttemptNo: row.delivery_attempt_no ?? undefined,
 			deliveryStartedAt: row.delivery_started_at ?? undefined,
+			blockedByReference: row.blocked_by_reference ?? undefined,
 		}));
 	}
 
