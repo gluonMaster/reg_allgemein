@@ -4,29 +4,90 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-24T10:45:08Z
+updated_utc: 2026-09-24T11:14:39Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN09-local-candidate-lane-independence-and-alerts
-next_gate: TIN09-owner-deploy-order
+last_completed_gate: TIN09-lane-independence-and-alerts-deployed
+next_gate: TIN09-owner-manual-acceptance
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN09-local-candidate-ready-waiting_owner-deploy-order
-last_atomic_action: TIN08-worker-deploy
+current_phase: TIN09-live-waiting_owner-manual-acceptance
+last_atomic_action: TIN09-worker-deploy
 last_atomic_result: success
-next_atomic_action: TIN09-owner-deploy-order
+next_atomic_action: TIN09-owner-manual-acceptance
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Next_step_is_planned_deploy_of_migration_0031_and_worker_with_known_target_and_rollback
+recommended_next_session_mode: Medium
+mode_reason_plain: Next_step_is_owner_manual_acceptance_without_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN09: Worker задеплоен, уведомления заявок независимы, письмо бюро включено — 2026-09-24T11:14:39Z
+
+Worker deploy success, exact config deploy/trial-intake/wrangler.production.jsonc,
+runtime 9b0171573caa: previous f27708b71fa9 → активная 0fd694637875 на 100%.
+Один деплой, без повторов. Оба Cron `* * * * *` и `*/15 * * * *` сохранены; пять
+secret names неизменны (deploy без `--secrets-file`); D1 binding и vars прежние,
+включая `TELEGRAM_BOT_API_TIMEOUT_MS=25000`. Provider send, Access/flag change и
+D1 write в этой операции отсутствуют.
+
+HTTP read-back: /probestunde200, /probestunde/catalog200, /admin/trial-intake,
+её detail route, /admin/outbox и /admin/operations — 401 (не 404),
+/auth/login200; /catalog, /admin/users, /auth/register — 404;
+`/_health/operations` 204. D1 read-back: migrations31, FK пуст, requests8,
+emails10, telegram8 без открытых строк, писем бюро 0, users1; первый fast-запуск
+на новой версии 11:14:10Z succeeded. Evidence protected
+tmp/trial-intake-alerts-deploy-20260924/ (W-*, R-*: полные version IDs и
+команда отката).
+
+Не наблюдалось на production: независимость на живом `dead`/неоднозначности и
+реальное письмо бюро — сбой Telegram намеренно не создавали. Покрыто
+integration- и e2e-тестами на том же коммите; первым подтверждением станет
+первый реальный сбой.
+
+Rollback/containment: `wrangler rollback` на f27708b71fa9 с exact config;
+прежний код совместим с 0031. Быстрое смягчение без отката —
+`TRIAL_INTAKE_ACCEPTING=false`, данные сохраняются.
+
+Ровно следующий action: **TIN09-owner-manual-acceptance** — владелец смотрит
+страницу доставки и список заявок; при первом реальном сбое Telegram проверяет,
+что письмо пришло на почту бюро (включая папку «Спам»). rollover_required: no;
+recommended_next_session_mode: Medium — дальше ручная проверка без remote write.
+
+## TIN09: миграция 0031 применена; Worker следующий — 2026-09-24T11:11:51Z
+
+Scope: разрешённый владельцем 2026-09-24 деплой candidate 9b0171573caa
+(независимость уведомлений заявок и письмо бюро). Эта операция — только D1
+migration; Worker, vars, secrets, Access и provider send не менялись.
+
+Preflight: Worker `kolibri-trial-intake`, активная версия f27708b71fa9 на 100%;
+пять secret names неизменны; D1 `kolibri-trial-intake` — применено 30, pending
+ровно 0031; FK пуст; открытых Telegram-строк нет. Гейт по AGENTS.md на точном
+коммите: `npm run test:intake-release` 48 файлов, 324 passed, 1 skipped; обе
+intake e2e — 2 passed; `npm run build`; `wrangler deploy --dry-run` с D1 binding
+и прежними vars.
+
+Migration success через staged config (31 файл, blob 0031 совпадает с
+коммитом, pending ровно одна). Before/after: applied 30 → 31, last 0031; FK пуст
+до и после; requests8, emails10, telegram8 без открытых строк, users1,
+closed_lessons2 — без изменений; таблица, индекс и триггер писем бюро созданы,
+писем 0; guard перехода содержит новое условие и сохраняет ветку retention.
+Read-only ответы: `changed_db=false`, `rows_written=0`. Evidence protected
+tmp/trial-intake-alerts-deploy-20260924/ (S31-*-private.*, preflight, gate logs).
+
+Rollback/containment: миграцию не откатывать. Прежний Worker f27708b71fa9
+совместим с 0031: его claim SQL строже нового guard, новую таблицу он не читает,
+письма из неё просто не уходят; триггер лишь ставит их в очередь.
+
+Ровно следующий action: **TIN09-worker-deploy** — `wrangler deploy` с exact
+config и read-back. rollover_required: no; recommended_next_session_mode: High —
+плановый деплой Worker с известными target и rollback.
 
 ## TIN09: независимость уведомлений заявок и письмо бюро — локальный candidate — 2026-09-24T10:45:08Z
 
