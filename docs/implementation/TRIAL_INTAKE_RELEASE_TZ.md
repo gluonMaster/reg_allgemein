@@ -188,6 +188,18 @@ config/routes/scheduler, а не после каждой UI-правки. Доб
 Не запускать несколько browser engines, нагрузку, весь Python-проект или полный
 manual contract/document lifecycle ради этого release.
 
+Последующие выпуски (решение владельца 2026-09-24): гейт перед deploy —
+`npm run check`, `npm run test:intake-release`, обе intake e2e-спеки с
+`KOLIBRI_E2E_TRIAL_INTAKE=1`, `npm run build`, `wrangler deploy --dry-run`,
+`npm run docs:check`, `npm run release:scan`, `git diff --check`. Набор
+`test:intake-release` покрывает модуль trial-intake и весь общий код, который
+выполняется в этом режиме, включая migrations, outbox, scheduler, auth и config.
+Полный `npm test` — только при изменении модулей полного портала, перед его
+выпуском или по поручению. Повод: полный прогон 2026-09-24 содержал 670 тестов,
+из них 348 (52 %, 62 % времени) проверяли модули, закрытые в режиме trial-intake,
+и единственное падение было известным средовым сбоем там же. Правило — в
+AGENTS.md, состав набора — `tests/intake-release-set.ts`.
+
 ## Публикация короткими фазами
 
 OQ-040 уже выбран; до фазы 1 владелец прямо запускает deployment prompt.

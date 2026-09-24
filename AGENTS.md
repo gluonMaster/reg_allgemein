@@ -186,11 +186,23 @@ tests их покрывают и почему выбранный набор до
 - Полный `npm test` и полный E2E обязательны перед release/deploy после
   материального runtime, shared-infrastructure, migration, dependency/toolchain
   или cross-cutting изменения; при невозможности надёжно ограничить impact; либо
-  по прямому поручению владельца/reviewer.
+  по прямому поручению владельца/reviewer. Исключение для deploy короткой
+  заявки — ниже.
 - Если exact ancestor уже прошёл полный suite, а новый diff ограничен
   docs/checker/tests и не меняет runtime, migrations, dependencies или config,
   полный suite не повторять. В handoff указать reused exact SHA/evidence и
   фактически выполненные focused checks.
+- Deploy короткой заявки (`PORTAL_MODE=trial_intake`) проверяет только код,
+  который этот режим выполняет: `npm run test:intake-release` вместо полного
+  `npm test` и обе intake e2e-спеки с `KOLIBRI_E2E_TRIAL_INTAKE=1` вместо
+  полного E2E. Сюда входят и общие migrations, outbox, scheduler, auth и config.
+  Модули полного портала в этом режиме закрыты, поэтому полный `npm test` нужен,
+  только если diff меняет их, перед выпуском полного портала либо по поручению
+  владельца/reviewer. Состав набора — `tests/intake-release-set.ts`; новый
+  тестовый файл не проходит проверку, пока его явно не отнесут к одной из сторон.
+- Перед deploy не повторять прогон на неизменённом runtime: если нужный набор
+  уже прошёл на том же коммите либо разница — только docs/tests, в checkpoint
+  сослаться на тот прогон.
 - Независимый review применяет ту же risk-proportional матрицу. Новый reviewer
   не должен повторять сотни unrelated tests только ради docs-only или локального
   validator diff.
