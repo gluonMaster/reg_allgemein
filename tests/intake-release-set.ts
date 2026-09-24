@@ -7,7 +7,10 @@
 export const intakeReleaseTests = [
 	// The trial-intake module.
 	'tests/integration/trial-intake/catalog-workers.test.ts',
-	'tests/integration/trial-intake/intake-d1.test.ts',
+	'tests/integration/trial-intake/intake-admin-retention-d1.test.ts',
+	'tests/integration/trial-intake/intake-http-email-d1.test.ts',
+	'tests/integration/trial-intake/intake-lifecycle-d1.test.ts',
+	'tests/integration/trial-intake/intake-telegram-d1.test.ts',
 	'tests/unit/trial-intake/catalog-validation.test.ts',
 	'tests/unit/trial-intake/closed-lessons.test.ts',
 	'tests/unit/trial-intake/exporter-roundtrip.test.ts',

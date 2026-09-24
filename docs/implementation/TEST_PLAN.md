@@ -33,7 +33,7 @@ not_before. CTAon разрешён до фактической доставки;
 не помечается passed и сама по себе не блокирует приём через admin UI.
 
 TIN-AC-14 покрывают два integration-теста «unknown delivery» в
-`tests/integration/trial-intake/intake-d1.test.ts`: заявка A в `delivery_unknown`,
+`tests/integration/trial-intake/intake-telegram-d1.test.ts`: заявка A в `delivery_unknown`,
 заявки B и D уходят и напрямую, и через штатный Cron, части A ждут до решения,
 guard 0030 держит то же правило, `support_thread` сохраняет блокировку по
 destination и сам останавливает всю линию. Формулировки и время по Берлину —
@@ -57,8 +57,9 @@ evidence при неизменённых exporter/callers/config. Это не о
 browser suite редактора; тест вызывает используемый штатным экспортом путь
 на synthetic данных. При deploy отдельно сверяется опубликованный артефакт.
 
-Локальный серверный срез 01 покрывают
-`tests/integration/trial-intake/intake-d1.test.ts` (D1 lifecycle, max 10×10,
+Локальный серверный срез 01 покрывают четыре файла
+`tests/integration/trial-intake/intake-*-d1.test.ts` с общим `intake-harness.ts`,
+разделённые для параллельного запуска (D1 lifecycle, max 10×10,
 create/verify/resend concurrency, assignments, Turnstile/rate limits, retention
 с delivery leases, admin filter/sort/pagination, bootstrap и upgrade 0026→0027),
 `tests/unit/trial-intake/catalog-validation.test.ts` и
