@@ -4,29 +4,68 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-24T09:18:58Z
+updated_utc: 2026-09-24T09:22:07Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN08-migration-0030-applied
-next_gate: TIN08-worker-deploy
+last_completed_gate: TIN08-telegram-queue-and-outbox-ui-deployed
+next_gate: TIN09-owner-decision-lane-independence-and-alarm
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN08-deploy-migration-applied-worker-pending
-last_atomic_action: TIN08-D1-migration-0030
+current_phase: TIN08-live-waiting_owner-decision-lane-independence-and-alarm
+last_atomic_action: TIN08-worker-deploy
 last_atomic_result: success
-next_atomic_action: TIN08-worker-deploy
+next_atomic_action: TIN09-owner-decision-lane-independence-and-alarm
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Planned_worker_deploy_next_with_known_target_and_rollback
+recommended_next_session_mode: Medium
+mode_reason_plain: Next_step_is_owner_decision_and_local_code_without_remote_write
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN08: Worker задеплоен, очередь по заявке действует — 2026-09-24T09:22:07Z
+
+Worker deploy success, exact config deploy/trial-intake/wrangler.production.jsonc,
+runtime 9dc278aa7f7e: previous ac88ae8c0df1 → активная f27708b71fa9 на 100%.
+Один деплой, без повторов. Оба Cron `* * * * *` и `*/15 * * * *` сохранены; пять
+secret names неизменны (deploy без `--secrets-file`); D1 binding прежний; из vars
+изменился только новый `TELEGRAM_BOT_API_TIMEOUT_MS=25000`. Provider send,
+Access/flag change и D1 write в этой операции отсутствуют.
+
+HTTP read-back: /probestunde200, /probestunde/catalog200, /admin/trial-intake,
+её detail route, /admin/outbox и /admin/operations — 401 (не 404),
+/auth/login200; закрытые маршруты полного портала /catalog, /admin/users,
+/auth/register — 404; `/_health/operations` 204 (утренний 503 был хвостом
+неоднозначности 09:00 в 15-минутном окне). D1 read-back: migrations30, FK пуст,
+requests7, emails8, telegram7 без открытых строк, users1; ни одно уведомление
+заявки не стоит за неразрешённым `delivery_unknown` другой заявки; первый
+fast-запуск на новой версии 09:22:01Z succeeded. Evidence protected
+tmp/trial-intake-queue-deploy-20260924/ (W-*, R-*: полные version IDs и
+команда отката).
+
+Не наблюдалось на production: новое правило очереди и новые формулировки
+админки на живой неоднозначности — её намеренно не создавали; покрыто
+integration- и e2e-тестами на том же дереве.
+
+Rollback/containment: `wrangler rollback` на ac88ae8c0df1 с exact config;
+прежний код совместим с 0030. Быстрое смягчение без отката —
+`TRIAL_INTAKE_ACCEPTING=false`, данные сохраняются.
+
+Открыто (P1 для milestone, решение владельца): `dead` любого Telegram-сообщения
+по-прежнему останавливает всю линию, и ни при `dead`, ни при `delivery_unknown`
+никто не получает сигнала вне портала. Предложено: уведомление заявки не
+останавливается чужими `dead`/неоднозначностью, плюс письмо-сигнал без PII.
+
+Ровно следующий action: **TIN09-owner-decision-lane-independence-and-alarm** —
+владелец решает, отменять ли остановку всей линии по `dead` для уведомлений
+заявок и куда слать письмо-сигнал. rollover_required: no;
+recommended_next_session_mode: Medium — дальше решение владельца и локальная
+реализация без remote write; деплой пакета будет отдельной High-сессией.
 
 ## TIN08: миграция 0030 применена; Worker следующий — 2026-09-24T09:18:58Z
 
