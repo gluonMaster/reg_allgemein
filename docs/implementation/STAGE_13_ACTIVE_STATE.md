@@ -4,29 +4,67 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-23T19:15:25Z
+updated_utc: 2026-09-24T09:18:58Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN08-local-candidate-telegram-queue-and-outbox-ui
-next_gate: TIN08-owner-deploy-order
+last_completed_gate: TIN08-migration-0030-applied
+next_gate: TIN08-worker-deploy
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN08-local-candidate-ready-waiting_owner-deploy-order
-last_atomic_action: TIN07-worker-deploy-features-and-route-gate-fix
+current_phase: TIN08-deploy-migration-applied-worker-pending
+last_atomic_action: TIN08-D1-migration-0030
 last_atomic_result: success
-next_atomic_action: TIN08-owner-deploy-order
+next_atomic_action: TIN08-worker-deploy
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Next_step_is_planned_deploy_of_migration_0030_and_worker_with_known_target_and_rollback
+mode_reason_plain: Planned_worker_deploy_next_with_known_target_and_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN08: миграция 0030 применена; Worker следующий — 2026-09-24T09:18:58Z
+
+Scope: разрешённый владельцем 2026-09-24 деплой candidate 9dc278aa7f7e (код,
+миграция 0030, таймаут Bot API 25000 мс). Эта операция — только D1 migration;
+Worker, vars, secrets, Access и provider send не менялись.
+
+Утро до деплоя, read-only факты: отложенное уведомление второй заявки в
+09:00:05 Berlin снова упёрлось в 10-секундный таймаут (11,3 с, как 22.09) и
+стало `delivery_unknown`; на этот раз сообщение в чат не дошло. По прежнему
+правилу вся очередь Telegram стояла до решения владельца в 10:56:22
+(`retry_after_review`); повтор доставлен в 10:57:07 за 1,9 с. Новых заявок в
+этом окне не было. Обычные отправки занимают 1,9–3,6 с; таймаут сработал в
+двух из трёх последних попыток.
+
+Preflight: Worker `kolibri-trial-intake`, активная версия ac88ae8c0df1 на 100%;
+пять secret names неизменны; D1 `kolibri-trial-intake` — применено 29, pending
+ровно 0030; `PRAGMA foreign_key_check` пуст. Local gates на том же дереве:
+`npm test` 668 passed, 1 skipped, 1 failed — известное средовое
+`CLI_PROTECTED_ARTIFACT_ACL_FAILED` в legacy-release CLI; обе intake e2e-спеки с
+`KOLIBRI_E2E_TRIAL_INTAKE=1` — 2 passed; `npm run build`; `wrangler deploy
+--dry-run` показывает D1 binding и все vars, включая таймаут.
+
+Migration success через staged config (30 файлов, blob 0030 совпадает с
+коммитом, pending ровно одна). Before/after: applied 29 → 30, last 0030; FK пуст
+до и после; requests7, emails8, telegram7 (все sent), users1, closed_lessons2 —
+без изменений; guard `telegram_outbox_allowed_transition` один, содержит новое
+условие и сохраняет ветку retention. Read-only ответы: `changed_db=false`,
+`rows_written=0`. Evidence protected tmp/trial-intake-queue-deploy-20260924/
+(S30-*-private.*, preflight, npm-test/gates/dry-run logs).
+
+Rollback/containment: миграцию не откатывать. Прежний Worker ac88ae8c0df1
+совместим с 0030: его claim SQL строже нового guard, поэтому до деплоя поведение
+очереди прежнее. Возврат текста guard из 0027 — только новой миграцией.
+
+Ровно следующий action: **TIN08-worker-deploy** — `wrangler deploy` с exact
+config и read-back. rollover_required: no; recommended_next_session_mode: High —
+плановый деплой Worker с известными target и rollback.
 
 ## TIN08: очередь Telegram по заявке и читаемая доставка — локальный candidate — 2026-09-23T19:15:25Z
 
