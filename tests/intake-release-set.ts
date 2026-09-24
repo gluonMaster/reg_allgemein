@@ -10,6 +10,7 @@ export const intakeReleaseTests = [
 	'tests/integration/trial-intake/intake-admin-retention-d1.test.ts',
 	'tests/integration/trial-intake/intake-http-email-d1.test.ts',
 	'tests/integration/trial-intake/intake-lifecycle-d1.test.ts',
+	'tests/integration/trial-intake/intake-telegram-alert-d1.test.ts',
 	'tests/integration/trial-intake/intake-telegram-d1.test.ts',
 	'tests/unit/trial-intake/catalog-validation.test.ts',
 	'tests/unit/trial-intake/closed-lessons.test.ts',

@@ -64,6 +64,10 @@ describe('admin delivery wording', () => {
 			'Отправка в Telegram остановлена: недоставленное сообщение ждёт вашего решения.'
 		);
 		expect(outboxWaitReason(row({ channel: 'email' }), NOW, true)).toEqual({ kind: 'due' });
+		// A request notification waits only for its own request, not for a stopped lane.
+		expect(outboxWaitReason(row({ sourceKind: 'trial_intake' }), NOW, true)).toEqual({
+			kind: 'due',
+		});
 		expect(
 			outboxWaitReason(row({ blockedByReference: 'TG-6E0F131BA26B' }), NOW, true)
 		).toMatchObject({ kind: 'unknown_decision' });

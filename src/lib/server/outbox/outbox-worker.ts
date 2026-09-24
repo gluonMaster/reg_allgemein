@@ -1,6 +1,10 @@
 import type { RuntimeConfig } from '$lib/server/config/runtime';
 import { nextBusinessWindow, type BusinessHoursSchedule } from './business-hours';
-import type { EmailOutboxStore, TelegramOutboxStore } from './contracts';
+import type {
+	EmailOutboxStore,
+	TelegramOutboxClaimInput,
+	TelegramOutboxStore,
+} from './contracts';
 import { OutboxProviderError, type EmailProvider, type TelegramProvider } from './providers';
 import { OutboxTemplateError, renderEmailTemplate, renderTelegramTemplate } from './templates';
 import type { EmailAttachmentResolver } from './email-attachments';
@@ -193,13 +197,17 @@ export class TelegramOutboxWorker {
 		return reconciled;
 	}
 
-	async dispatchNext(now = this.clock()): Promise<DispatchOutcome> {
+	async dispatchNext(
+		now = this.clock(),
+		scope: Pick<TelegramOutboxClaimInput, 'sourceKind'> = {}
+	): Promise<DispatchOutcome> {
 		assertInstant(now);
 		await this.prepareDrain(now);
 		const row = await this.repository.claimTelegram({
 			now,
 			leaseOwner: this.workerId,
 			leaseUntil: secondsAfter(now, this.timing.leaseSeconds),
+			...scope,
 		});
 		if (!row) return 'empty';
 		const allowedAt = nextBusinessWindow(now, this.schedule);

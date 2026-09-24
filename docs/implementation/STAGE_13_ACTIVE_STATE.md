@@ -4,29 +4,69 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-24T09:22:07Z
+updated_utc: 2026-09-24T10:45:08Z
 reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
 local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
 release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
-last_completed_gate: TIN08-telegram-queue-and-outbox-ui-deployed
-next_gate: TIN09-owner-decision-lane-independence-and-alarm
+last_completed_gate: TIN09-local-candidate-lane-independence-and-alerts
+next_gate: TIN09-owner-deploy-order
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN08-live-waiting_owner-decision-lane-independence-and-alarm
+current_phase: TIN09-local-candidate-ready-waiting_owner-deploy-order
 last_atomic_action: TIN08-worker-deploy
 last_atomic_result: success
-next_atomic_action: TIN09-owner-decision-lane-independence-and-alarm
+next_atomic_action: TIN09-owner-deploy-order
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Next_step_is_owner_decision_and_local_code_without_remote_write
+recommended_next_session_mode: High
+mode_reason_plain: Next_step_is_planned_deploy_of_migration_0031_and_worker_with_known_target_and_rollback
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN09: независимость уведомлений заявок и письмо бюро — локальный candidate — 2026-09-24T10:45:08Z
+
+Решение владельца 2026-09-24: уведомление заявки не останавливается ни `dead`,
+ни неоднозначностью других сообщений; при `delivery_unknown` или `dead`
+уведомления заявки бюро получает письмо на почту бюро (адрес — в TRIAL_INTAKE).
+Requirements: [TRIAL_INTAKE](../domain/TRIAL_INTAKE.md#администратор-и-доставка),
+[MESSAGING](../domain/MESSAGING.md#telegram-bot-api-provider), TIN-AC-14/15,
+TEST_PLAN.
+
+Сделано локально, remote mutation нет. Миграция 0031: guard перехода скопирован
+из 0030 с одним изменённым условием (уведомление заявки ждёт только свою
+заявку); таблица `trial_intake_telegram_alerts` без PII и триггер, ставящий
+письмо в той же операции, что и переход в `delivery_unknown`/`dead`. Claim SQL
+согласован с guard; Cron в режиме trial-intake при остановленной линии отправляет
+только уведомления заявок, полный портал сохраняет остановку всей линии. Письмо
+идёт через существующую очередь писем intake-store; в нём код доставки, номер
+части, код ошибки и ссылки, без данных заявки. Админка перестала обещать
+остановку линии для уведомлений заявок.
+
+Candidate: коммит, добавивший эту запись и
+`migrations/0031_trial_intake_telegram_independence_alerts.sql`
+(`git log -1 -- migrations/0031_trial_intake_telegram_independence_alerts.sql`).
+Checks: `npm run check:src` 0 errors; `npm run test:intake-release` — 47 файлов
+passed, единственное падение (мок конфигурации в unit-тесте маршрута outbox)
+исправлено и перепроверено вместе с новыми тестами; три новых теста в
+`intake-telegram-alert-d1.test.ts` и проверка сверки зависшей отправки; мутация
+«без режима только заявок» роняет оба теста независимости; обе intake e2e —
+2 passed; `npm run docs:check`, `npm run release:scan`.
+
+Rollback/containment следующей фазы: `wrangler rollback` на f27708b71fa9 с exact
+config. Прежний код совместим с 0031: его claim SQL строже нового guard, новая
+таблица им не читается, а письма из неё просто не уходят. Быстрое смягчение —
+`TRIAL_INTAKE_ACCEPTING=false`.
+
+Ровно следующий action: **TIN09-owner-deploy-order** — владелец отдельно
+поручает деплой: preflight, миграция 0031 через staged config, релизный набор
+по AGENTS.md, build, dry-run, Worker deploy, read-back. rollover_required: no;
+recommended_next_session_mode: High — плановый деплой с известными target и
+rollback.
 
 ## TIN08: Worker задеплоен, очередь по заявке действует — 2026-09-24T09:22:07Z
 

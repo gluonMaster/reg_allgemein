@@ -203,8 +203,8 @@ const text = {
 		'Минимум для одного сообщения Telegram неизвестно, дошло ли оно в чат бюро. Следующие части той же заявки ждут вашего решения.',
 	],
 	deliveryAttentionDead: [
-		'Mindestens eine Telegram-Nachricht konnte nicht zugestellt werden. Bis zu Ihrer Entscheidung sendet das Portal keine weiteren Telegram-Nachrichten.',
-		'Минимум одно сообщение Telegram не удалось доставить. Пока вы не решите, портал не отправляет другие сообщения в Telegram.',
+		'Mindestens eine Telegram-Nachricht konnte nicht zugestellt werden. Andere Anfragen werden normal gesendet; diese Nachricht wartet auf Ihre Entscheidung.',
+		'Минимум одно сообщение Telegram не удалось доставить. Другие заявки отправляются как обычно; это сообщение ждёт вашего решения.',
 	],
 	deliveryAttentionLink: ['Zustellung prüfen', 'Проверить доставку'],
 	outboxReceived: ['eingegangen', 'получена'],

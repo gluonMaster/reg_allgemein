@@ -276,6 +276,8 @@ const messages = {
 	'admin.outbox.wait.unknownDecisionRequest': ['Wartet auf Ihre Entscheidung zur Nachricht {reference} derselben Anfrage, deren Zustellung unklar ist.', 'Ждёт вашего решения по сообщению {reference} той же заявки: его доставка не подтверждена.'],
 	'admin.outbox.wait.laneStopped': ['Der Telegram-Versand ist angehalten: Eine nicht zugestellte Nachricht wartet auf Ihre Entscheidung.', 'Отправка в Telegram остановлена: недоставленное сообщение ждёт вашего решения.'],
 	'admin.outbox.deadBlocksLane': ['Bis zu Ihrer Entscheidung werden keine weiteren Telegram-Nachrichten gesendet.', 'Пока вы не решите, другие сообщения в Telegram не отправляются.'],
+	'admin.outbox.deadRequest': ['Andere Anfragen werden normal gesendet; diese Nachricht wartet auf Ihre Entscheidung. Das Büro-Postfach wurde per E-Mail informiert.', 'Другие заявки отправляются как обычно; это сообщение ждёт вашего решения. На почту бюро отправлено письмо об этом.'],
+	'admin.outbox.unknownAlerted': ['Das Büro-Postfach wurde per E-Mail informiert.', 'На почту бюро отправлено письмо об этом.'],
 	'admin.outbox.wait.businessHours': ['Wartet auf die Bürozeiten: Versand nicht vor {time}.', 'Ждёт рабочего времени бюро: отправка не раньше {time}.'],
 	'admin.outbox.wait.scheduled': ['Versand nicht vor {time}.', 'Отправка не раньше {time}.'],
 	'admin.outbox.wait.backoff': ['Nächster Versuch nicht vor {time}.', 'Следующая попытка не раньше {time}.'],

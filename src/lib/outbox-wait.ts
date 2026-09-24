@@ -14,9 +14,13 @@ export interface OutboxWaitInput {
 	notBefore: string;
 	nextAttemptAt: string | null;
 	blockedByReference?: string;
+	sourceKind?: string;
 }
 
-/** `laneStopped`: a terminal Telegram failure stops every send until an admin decides. */
+/**
+ * `laneStopped`: a terminal Telegram failure stops every send until an admin decides, except
+ * trial-intake notifications, which wait only for their own request.
+ */
 export function outboxWaitReason(
 	row: OutboxWaitInput,
 	now: string,
@@ -24,7 +28,8 @@ export function outboxWaitReason(
 ): OutboxWaitReason | undefined {
 	if (row.status !== 'pending' && row.status !== 'retry') return undefined;
 	if (row.blockedByReference) return { kind: 'unknown_decision', reference: row.blockedByReference };
-	if (row.channel === 'telegram' && laneStopped) return { kind: 'lane_stopped' };
+	if (row.channel === 'telegram' && laneStopped && row.sourceKind !== 'trial_intake')
+		return { kind: 'lane_stopped' };
 	const at =
 		row.nextAttemptAt && Date.parse(row.nextAttemptAt) > Date.parse(row.notBefore)
 			? row.nextAttemptAt

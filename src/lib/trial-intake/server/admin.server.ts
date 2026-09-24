@@ -126,9 +126,9 @@ export class IntakeAdmin {
 			throw new IntakeError('INTAKE_NOT_FOUND', 404);
 		const r = detail.request;
 		// The shared admin listing owns the rule for which ambiguity holds a part back.
-		const outbox = new OutboxRepository(this.db);
-		const laneStopped = (await outbox.countTerminalTelegramFailures()) > 0;
-		const parts = (await outbox.listAdmin({ channel: 'telegram', q: `ti:${id}:` }))
+		const parts = (
+			await new OutboxRepository(this.db).listAdmin({ channel: 'telegram', q: `ti:${id}:` })
+		)
 			.filter((row) => row.sourceKind === 'trial_intake' && row.sourceId === id)
 			.map((row) => ({ row, part: Number(row.id.slice(row.id.lastIndexOf(':') + 1)) }))
 			.sort((a, b) => a.part - b.part);
@@ -141,7 +141,7 @@ export class IntakeAdmin {
 			lastErrorCode: row.lastErrorCode,
 			deliveryReference: row.deliveryReference ?? null,
 			sentAt: row.sentAt,
-			wait: outboxWaitReason(row, now, laneStopped) ?? null,
+			wait: outboxWaitReason(row, now) ?? null,
 		}));
 		return {
 			request: {

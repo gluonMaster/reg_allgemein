@@ -59,6 +59,8 @@ export interface OutboxClaimInput {
 export interface TelegramOutboxClaimInput extends OutboxClaimInput {
 	maxAttempts?: number;
 	activationAt?: string;
+	/** Claim only this source, e.g. request notifications while the rest of the lane is stopped. */
+	sourceKind?: 'trial_intake';
 }
 
 export interface OutboxFailureInput {

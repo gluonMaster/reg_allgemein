@@ -196,12 +196,16 @@ async function executeJob(
 						}
 					: { disabled: true, result: { reason: 'provider_disabled' } };
 			}
-			// A trial-intake ambiguity holds back only the parts of its own request (claimTelegram
-			// and the 0030 trigger), so later requests keep draining while the alert below stays open.
-			if (
+			const laneBlockingUnknown =
 				unresolvedDeliveryUnknown > 0 &&
-				(await runtime.repository.countLaneBlockingTelegramDeliveries()) > 0
-			) {
+				(await runtime.repository.countLaneBlockingTelegramDeliveries()) > 0;
+			// A trial-intake notification is self-contained and waits only for an ambiguity of its
+			// own request (claimTelegram and the 0031 trigger). In that mode a stopped lane holds
+			// back every other source while request notifications keep draining; the alert stays
+			// open through the error code. The full portal keeps the whole-lane stop below.
+			const intakeOnly =
+				config.portalMode === 'trial_intake' && (laneBlockingUnknown || terminalDead > 0);
+			if (laneBlockingUnknown && !intakeOnly) {
 				return {
 					disabled: false,
 					result: {
@@ -224,7 +228,7 @@ async function executeJob(
 			// blocks the whole provider lane until an operator performs an audited retry
 			// or cancellation. Continuing on the next cron would repeatedly call a
 			// potentially invalid token/chat after permanent provider or contract drift.
-			if (terminalDead > 0) {
+			if (terminalDead > 0 && !intakeOnly) {
 				return {
 					disabled: false,
 					result: {
@@ -244,7 +248,7 @@ async function executeJob(
 				};
 			}
 			const result = await drainOutbox(
-				(value) => worker.dispatchNext(value),
+				(value) => worker.dispatchNext(value, intakeOnly ? { sourceKind: 'trial_intake' } : {}),
 				config.operations.outboxBatchLimit,
 				clock,
 				TELEGRAM_DRAIN_STOP_OUTCOMES
@@ -261,7 +265,9 @@ async function executeJob(
 					: terminalDead;
 			return {
 				disabled: false,
-				result,
+				result: intakeOnly
+					? { reason: laneBlockingUnknown ? 'delivery_unknown_open' : 'terminal_dead_open', ...result }
+					: result,
 				...(result.deliveryUnknown > 0 || result.unresolvedDeliveryUnknown > 0
 					? { errorCode: 'TELEGRAM_DELIVERY_UNKNOWN' }
 					: result.dead > 0 || result.terminalDead > 0

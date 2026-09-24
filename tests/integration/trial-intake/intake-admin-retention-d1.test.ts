@@ -183,6 +183,13 @@ describe('intake admin and retention', () => {
 		expect(await cleanupIntake(db, reconciled)).toEqual({ deleted: 1 });
 		const ledger = (await outbox.listAdmin({ channel: 'telegram', q: row.id }))[0];
 		expect(ledger.status).toBe('delivery_unknown');
+		// Stale-dispatch reconciliation reaches the bureau the same way as a worker result.
+		expect(
+			await db.first({
+				sql: 'SELECT reason FROM trial_intake_telegram_alerts WHERE telegram_outbox_id = ?',
+				params: [row.id],
+			})
+		).toEqual({ reason: 'delivery_unknown' });
 		const recovery = {
 			admin: requireAdmin(actor),
 			outboxId: row.id,

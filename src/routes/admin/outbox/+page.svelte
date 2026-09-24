@@ -52,6 +52,7 @@
 					<p>{translate(uiLocale, 'admin.outbox.unknownNotice')}</p>
 					<p>{formatMessage(uiLocale, sameRequest ? 'admin.outbox.unknownStepsRequest' : 'admin.outbox.unknownSteps', { reference: row.deliveryReference ?? '—' })}</p>
 					<p><strong>{translate(uiLocale, sameRequest ? 'admin.outbox.unknownBlocksRequest' : 'admin.outbox.unknownBlocksDestination')}</strong></p>
+					{#if sameRequest}<p>{translate(uiLocale, 'admin.outbox.unknownAlerted')}</p>{/if}
 					<form class="admin-action-form" method="POST" action="?/resolveTelegram">
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="idempotencyKey" value={row.commandKey} />
@@ -67,7 +68,7 @@
 						<button type="submit">{translate(uiLocale, 'admin.outbox.resolve')}</button>
 					</form>
 				{:else if row.status === 'dead'}
-					{#if row.channel === 'telegram'}<p><strong>{translate(uiLocale, 'admin.outbox.deadBlocksLane')}</strong></p>{/if}
+					{#if row.channel === 'telegram'}<p><strong>{translate(uiLocale, sameRequest ? 'admin.outbox.deadRequest' : 'admin.outbox.deadBlocksLane')}</strong></p>{/if}
 					<form class="admin-action-form" method="POST" action="?/change">
 						<input type="hidden" name="_csrf" value={data.csrfToken} />
 						<input type="hidden" name="idempotencyKey" value={row.commandKey} />

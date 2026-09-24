@@ -12,6 +12,8 @@ export const BUILDING_ADDRESS: Record<string, string> = {
 	Villa: 'Kraftwerk Mitte 2 • 01067 Dresden',
 };
 export const ORGANIZATION_PHONE = '+49 179 9474938';
+/** Owner decision 2026-09-24: the bureau mailbox learns when Telegram did not take a notification. */
+export const BUREAU_ALERT_EMAIL = 'registration@kolibri-dresden.de';
 const DAYS = ['', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const germanDate = (date: string) => date.split('-').reverse().join('.');
 const escapeHtml = (value: string) =>
@@ -73,6 +75,45 @@ export function confirmationEmail(detail: IntakeDetail): EmailMessage {
 			`Tel. ${ORGANIZATION_PHONE}\n${ORGANIZATION_NAME}`,
 	};
 	message.html = htmlMessage(message.text);
+	return message;
+}
+/** Tells the bureau mailbox that a request notification needs a look; carries no request data. */
+export function telegramAlertEmail(
+	alert: {
+		reason: 'delivery_unknown' | 'dead';
+		requestId: string;
+		part: number;
+		deliveryReference: string | null;
+		errorCode: string | null;
+	},
+	origin: string
+): EmailMessage {
+	const request = new URL(`/admin/trial-intake/${alert.requestId}`, origin).toString();
+	const delivery = new URL(`/admin/outbox?channel=telegram&status=${alert.reason}`, origin).toString();
+	const unknown = alert.reason === 'delivery_unknown';
+	const paragraphs = [
+		unknown
+			? 'Eine Telegram-Benachrichtigung des Portals an das Büro wurde nicht bestätigt. Die Nachricht kann im Büro-Chat angekommen sein oder fehlen.'
+			: `Telegram hat eine Benachrichtigung des Portals an das Büro abgelehnt (Fehlercode: ${alert.errorCode ?? 'unbekannt'}). Die Nachricht ist nicht im Büro-Chat angekommen.`,
+		...(alert.deliveryReference
+			? [`Zustellcode: ${alert.deliveryReference} (Teil ${alert.part})`]
+			: []),
+		unknown
+			? 'Bitte im Büro-Chat nach dem Zustellcode suchen; er steht in der letzten Zeile der Nachricht. Gefunden: auf der Zustellseite „Nachricht gefunden“ wählen. Nicht gefunden: „Nachricht nicht gefunden“ wählen, dann wird sie erneut gesendet. Weitere Teile dieser Anfrage warten bis dahin, andere Anfragen werden normal gesendet.'
+			: 'Andere Anfragen werden weiter gesendet. Nach Klärung der Ursache kann der Versand auf der Zustellseite erneut freigegeben werden.',
+		`Anfrage im Portal: ${request}`,
+		`Zustellung prüfen: ${delivery}`,
+		'Die Anfrage selbst ist im Portal gespeichert.',
+		ORGANIZATION_NAME,
+	];
+	const message: EmailMessage = {
+		to: BUREAU_ALERT_EMAIL,
+		subject: unknown
+			? 'Telegram-Benachrichtigung nicht bestätigt — Probestunden-Anfrage'
+			: 'Telegram-Benachrichtigung nicht zugestellt — Probestunden-Anfrage',
+		text: paragraphs.join('\n\n'),
+	};
+	message.html = htmlMessage(message.text, { label: 'Zustellung prüfen', link: delivery });
 	return message;
 }
 export function telegramParts(detail: IntakeDetail): string[] {

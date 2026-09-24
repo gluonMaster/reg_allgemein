@@ -40,9 +40,9 @@ const validEmailRecipient = `u.account_status = 'active' AND u.is_blocked = 0
 			AND legacy_email.is_current = 1))))`;
 
 // An unresolved ambiguous send blocks later sends to its destination until an admin decides.
-// A trial-intake notification is self-contained, so its ambiguity holds back only the parts of
-// the same request; every other combination keeps the destination-wide block. The
-// telegram_outbox_allowed_transition trigger (0030) enforces the same rule.
+// A trial-intake notification is self-contained, so it waits only for an ambiguity of its own
+// request; every other source keeps the destination-wide block. The
+// telegram_outbox_allowed_transition trigger (0031) enforces the same rule.
 function unresolvedTelegramBlocker(row: string, select = '1'): string {
 	return `SELECT ${select} FROM telegram_outbox unresolved
 		JOIN telegram_delivery_attempts attempt ON attempt.outbox_id = unresolved.id
@@ -50,8 +50,8 @@ function unresolvedTelegramBlocker(row: string, select = '1'): string {
 			AND unresolved.status = 'delivery_unknown'
 			AND attempt.state = 'delivery_unknown' AND attempt.resolved_at IS NULL
 			AND NOT (${row}.source_kind = 'trial_intake'
-				AND unresolved.source_kind = 'trial_intake'
-				AND unresolved.source_id <> ${row}.source_id)`;
+				AND (unresolved.source_kind <> 'trial_intake'
+					OR unresolved.source_id <> ${row}.source_id))`;
 }
 
 export class OutboxRepositoryError extends Error {
@@ -183,7 +183,7 @@ export class OutboxRepository implements OutboxStore {
 		}
 		const candidate = await this.db.first<{ id: string }>({
 			sql: `SELECT id FROM telegram_outbox
-			WHERE NOT (
+			WHERE (? IS NULL OR source_kind = ?) AND NOT (
 					source_kind = 'support_thread'
 					AND template_or_category = 'bureau.support'
 					AND length(dedupe_key) = 124
@@ -209,7 +209,8 @@ export class OutboxRepository implements OutboxStore {
 						AND attempt.state = 'dispatch_started'
 				)))
 			ORDER BY created_at, id LIMIT 1`,
-			params: [input.now, input.now, input.now, input.now],
+			params: [input.sourceKind ?? null, input.sourceKind ?? null,
+				input.now, input.now, input.now, input.now],
 		});
 		if (!candidate) return null;
 		const claimed = await this.db.run({

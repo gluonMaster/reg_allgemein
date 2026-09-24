@@ -141,7 +141,7 @@ describe('intake Telegram delivery and scheduler', () => {
 		expect(ledger.find((row) => row.id === 'support-held')?.blockedByReference).toBe(reference);
 		expect(ledger.find((row) => row.id === `ti:${d.id}:1`)?.blockedByReference).toBeUndefined();
 
-		// The 0030 trigger enforces the same rule on any claim, not only on the repository SQL.
+		// The 0031 trigger enforces the same rule on any claim, not only on the repository SQL.
 		const claimPart = (id: string, now: string) =>
 			db.run({
 				sql: `UPDATE telegram_outbox SET status = 'processing', locked_at = ?, lease_owner = 'direct-claim',
@@ -168,52 +168,6 @@ describe('intake Telegram delivery and scheduler', () => {
 		});
 		await claimPart(`ti:${a.id}:2`, at(540));
 		expect(await statusOf(`ti:${a.id}:2`)).toBe('processing');
-	});
-	it('an unknown delivery outside trial intake still stops the whole Telegram lane', async () => {
-		await db.run(supportRow('support-unknown', NOW));
-		const provider = new FakeTelegramProvider();
-		provider.failNext(
-			new TelegramProviderError('TELEGRAM_DELIVERY_UNKNOWN', false, { delivery: 'unknown' })
-		);
-		const runtime = createOutboxRuntime(config(), { telegramProvider: provider });
-		expect(await runtime.telegramWorker.dispatchNext(afterSeconds(NOW, 10))).toBe(
-			'delivery_unknown'
-		);
-		const a = await service.create(data(), async () => lessons, afterSeconds(NOW, 60));
-		await service.verify(await token(a.id), afterSeconds(NOW, 60));
-		expect(
-			await runtime.repository.claimTelegram({
-				now: afterSeconds(NOW, 120),
-				leaseOwner: 'direct-claim',
-				leaseUntil: afterSeconds(NOW, 180),
-			})
-		).toBeNull();
-		expect(
-			await runScheduledJobs(config(), {
-				triggerKind: 'scheduled',
-				dedupeKey: 'intake-lane-blocked',
-				jobNames: ['email_outbox', 'telegram_outbox'],
-				now: afterSeconds(NOW, 120),
-			})
-		).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({
-					jobName: 'telegram_outbox',
-					errorCode: 'TELEGRAM_DELIVERY_UNKNOWN',
-				}),
-			])
-		);
-		expect(
-			await db.first({
-				sql: 'SELECT status FROM telegram_outbox WHERE id = ?',
-				params: [`ti:${a.id}:1`],
-			})
-		).toEqual({ status: 'pending' });
-		expect(
-			await db.first<{ safe_result_json: string }>({
-				sql: `SELECT safe_result_json FROM scheduled_cadence_state WHERE cadence = 'fast'`,
-			})
-		).toMatchObject({ safe_result_json: expect.stringContaining('delivery_unknown_open') });
 	});
 	it('splits long Telegram data without truncation; every part uses same existing provider and opaque queue payload', async () => {
 		const input = multiPartData();

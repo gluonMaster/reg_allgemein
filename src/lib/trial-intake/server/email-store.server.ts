@@ -7,12 +7,23 @@ import type {
 } from '$lib/server/outbox/contracts';
 import { renderEmailTemplate, OutboxTemplateError } from '$lib/server/outbox/templates';
 import { IntakeService, verificationToken } from './service.server';
-import { confirmationEmail, verificationEmail } from './templates.server';
+import {
+	BUREAU_ALERT_EMAIL,
+	confirmationEmail,
+	telegramAlertEmail,
+	verificationEmail,
+} from './templates.server';
 import { ORGANIZATION_NAME } from '$lib/organization';
 
 const valid = `((o.kind = 'verification' AND r.state = 'pending_email' AND r.pending_expires_at > ?
  AND r.verification_expires_at > ? AND r.verification_version = o.verification_version)
  OR (o.kind = 'confirmation' AND r.state IN ('verified','processed') AND (r.delete_after IS NULL OR r.delete_after > ?)))`;
+/** Guest letters and bureau alerts live in their own tables; admin mail stays in email_outbox. */
+function intakeEmailTable(id: string) {
+	if (id.startsWith('intake-email:')) return 'trial_intake_email_outbox';
+	if (id.startsWith('intake-alert:')) return 'trial_intake_telegram_alerts';
+	return null;
+}
 export class IntakeEmailStore extends OutboxRepository {
 	constructor(private readonly intakeDb: DatabaseBoundary) {
 		super(intakeDb);
@@ -76,7 +87,7 @@ export class IntakeEmailStore extends OutboxRepository {
 				input.now,
 			],
 		});
-		if (!row) return null;
+		if (!row) return this.claimTelegramAlert(input);
 		const r = await this.intakeDb.first<{ email: string }>({
 			sql: 'SELECT email FROM trial_intake_requests WHERE id = ?',
 			params: [row.request_id],
@@ -97,12 +108,46 @@ export class IntakeEmailStore extends OutboxRepository {
 			lease_owner: input.leaseOwner,
 		};
 	}
+	/** The bureau alert of a request notification that Telegram did not confirm or refused. */
+	private async claimTelegramAlert(input: OutboxClaimInput): Promise<EmailOutboxRow | null> {
+		const row = await this.intakeDb.first<{
+			id: string;
+			telegram_outbox_id: string;
+			attempts: number;
+			max_attempts: number;
+		}>({
+			sql: `UPDATE trial_intake_telegram_alerts SET status = 'processing', lease_owner = ?, lease_until = ?, updated_at = ?
+		 WHERE id = (SELECT id FROM trial_intake_telegram_alerts
+		 WHERE (status IN ('pending','retry') AND (next_attempt_at IS NULL OR next_attempt_at <= ?)) OR (status = 'processing' AND lease_until <= ?)
+		 ORDER BY created_at, id LIMIT 1) RETURNING id, telegram_outbox_id, attempts, max_attempts`,
+			params: [input.leaseOwner, input.leaseUntil, input.now, input.now, input.now],
+		});
+		if (!row) return null;
+		return {
+			id: row.id,
+			source_kind: 'trial_intake_alert',
+			source_id: row.telegram_outbox_id,
+			template_or_category: 'intake.telegram_alert',
+			recipient_address_kind: 'guest',
+			user_id: null,
+			locale: 'de',
+			payload_json: '{}',
+			dedupe_key: row.id,
+			attempts: row.attempts,
+			max_attempts: row.max_attempts,
+			email: BUREAU_ALERT_EMAIL,
+			token_id: null,
+			token_kind: null,
+			lease_owner: input.leaseOwner,
+		};
+	}
 	override async markEmailSent(input: Parameters<OutboxRepository['markEmailSent']>[0]) {
-		if (!input.id.startsWith('intake-email:')) return super.markEmailSent(input);
+		const table = intakeEmailTable(input.id);
+		if (!table) return super.markEmailSent(input);
 		return (
 			(
 				await this.intakeDb.run({
-					sql: `UPDATE trial_intake_email_outbox SET status = 'sent', attempts = attempts + 1,
+					sql: `UPDATE ${table} SET status = 'sent', attempts = attempts + 1,
 		 provider_request_id = ?, sent_at = ?, updated_at = ?, lease_owner = NULL, lease_until = NULL, last_error_code = NULL, next_attempt_at = NULL
 		 WHERE id = ? AND status = 'processing' AND lease_owner = ?`,
 					params: [
@@ -119,9 +164,10 @@ export class IntakeEmailStore extends OutboxRepository {
 	override async markEmailFailed(
 		input: OutboxFailureInput
 	): Promise<'retry' | 'dead' | 'lost_lease'> {
-		if (!input.id.startsWith('intake-email:')) return super.markEmailFailed(input);
+		const table = intakeEmailTable(input.id);
+		if (!table) return super.markEmailFailed(input);
 		const row = await this.intakeDb.first<{ status: 'retry' | 'dead' }>({
-			sql: `UPDATE trial_intake_email_outbox
+			sql: `UPDATE ${table}
 		 SET status = CASE WHEN ? OR attempts + 1 >= max_attempts THEN 'dead' ELSE 'retry' END,
 		 next_attempt_at = CASE WHEN ? OR attempts + 1 >= max_attempts THEN NULL ELSE ? END,
 		 attempts = attempts + 1, last_error_code = ?, updated_at = ?, lease_owner = NULL, lease_until = NULL
@@ -152,6 +198,36 @@ export async function renderIntakeEmail(
 		};
 	}
 	const row = input.row;
+	if (row.template_or_category === 'intake.telegram_alert') {
+		if (row.source_kind !== 'trial_intake_alert')
+			throw new OutboxTemplateError('INTAKE_EMAIL_INVALID');
+		const alert = await service.db.first<{
+			reason: 'delivery_unknown' | 'dead';
+			outbox_id: string;
+			request_id: string;
+			error_code: string | null;
+			delivery_reference: string | null;
+		}>({
+			sql: `SELECT a.reason, o.id AS outbox_id, o.source_id AS request_id, o.last_error_code AS error_code,
+		 (SELECT t.delivery_reference FROM telegram_delivery_attempts t WHERE t.outbox_id = o.id
+		 ORDER BY t.attempt_no DESC LIMIT 1) AS delivery_reference
+		 FROM trial_intake_telegram_alerts a JOIN telegram_outbox o ON o.id = a.telegram_outbox_id
+		 WHERE a.id = ? AND a.telegram_outbox_id = ? AND a.status = 'processing' AND a.lease_owner = ?
+		 AND o.source_kind = 'trial_intake'`,
+			params: [row.id, row.source_id, row.lease_owner],
+		});
+		if (!alert) throw new OutboxTemplateError('INTAKE_EMAIL_EXPIRED');
+		return telegramAlertEmail(
+			{
+				reason: alert.reason,
+				requestId: alert.request_id,
+				part: Number(alert.outbox_id.slice(alert.outbox_id.lastIndexOf(':') + 1)),
+				deliveryReference: alert.delivery_reference,
+				errorCode: alert.error_code,
+			},
+			input.config.portalPublicOrigin
+		);
+	}
 	const confirmation = row.template_or_category === 'intake.confirm';
 	if (
 		row.source_kind !== 'trial_intake' ||
