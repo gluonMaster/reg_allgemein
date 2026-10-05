@@ -5522,7 +5522,7 @@ recommended_next_session_mode: High — плановый preview deploy посл
 
 ## 2026-09-15 — PVUI release verification and target lock
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3 -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 8d12076235145f812b1063e457447724addb047a -->
 
 Владелец поручил публикацию исправленного UI в существующий preview.
 [Release review](../reviews/pvui-deploy-20260915.md) закрыл R1/R2 для exact
@@ -6052,12 +6052,12 @@ postconditions не изменились. Локальная установка 
 ### Scope, candidate и решение
 
 Выполнено прямое поручение применить локальный03. Runtime candidate
-`fd17c3dbb28aa270f767592e00e9512fa234ad1a`, server ancestor
+`4cc05624c3db32d7b9f711806c3a6c62fe9bc29e`, server ancestor
 `1912becbde2ecd9ec4c75772f38b618b164ce3b0`, cumulative review от
 `3ea46b12d077568d3fbee6fd65b9317294b8f343`. Новый runtime/config/migration/exporter
 diff на03 не вносился. Изменения03 — пять test expectations, существующий
 continuity checker и документация. Unrelated pricing docs не изменены.
-Exact test/checker commit `f570564785a3241043534e81d8db8379a7be6c54`;
+Exact test/checker commit `21532a0f09dabf4e5a996d71c35b59b1b8f90d67`;
 последующий docs-only checkpoint наследует runtime candidate и gate без нового
 full suite. Source diff относительно runtime candidate пуст для src/migrations/
 exporter/dependencies/build config.
@@ -6244,8 +6244,8 @@ fingerprints `5dbd04a4763a`/`819c92b4f09a`, Worker `53bbcae12769`.
 `4ba876965084`/`02e9638892ee`, private/send rights/1209600s совпали; live108
 без CTA/catalog byte-identical baseline03. Новый Turnstile widget ещё не создан.
 
-Runtime SHA `fd17c3dbb28aa270f767592e00e9512fa234ad1a`, gate SHA
-`f570564785a3241043534e81d8db8379a7be6c54`, frozen gate HEAD
+Runtime SHA `4cc05624c3db32d7b9f711806c3a6c62fe9bc29e`, gate SHA
+`21532a0f09dabf4e5a996d71c35b59b1b8f90d67`, frozen gate HEAD
 `e76353acdc8fe5fe6030a937ed77d7fcf7a85a39` переиспользуются:308 source hashes,
 147 build hashes и installed exporter без drift. Source09.09 hash совпал;
 Office/parser/exporter не запускались. Исходный HEAD этой сессии `ffdead5`.
@@ -6297,7 +6297,7 @@ objects и applied prefix без изменений, FK0. Containment зафик
 
 Причина соответствует [upstream CRLF+trigger issue14991](https://github.com/cloudflare/workers-sdk/issues/14991):
 working file0027 содержит478 CRLF, прежние файлы LF. Prepared transport copy
-из exact Git blob runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a отличается только
+из exact Git blob runtime 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e отличается только
 CRLF→LF; tracked migration и runtime не переписаны. Local focused execution обеих
 версий после schema26 дал одинаковую schema/FK0/requests0. Planned corrective
 checkpoint1663da6 предшествовал единственному S27-LF apply. UTC16:46:13Z read-back:

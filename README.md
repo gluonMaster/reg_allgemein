@@ -1,131 +1,108 @@
-# reg_allgemein
+# Kolibri Registration Portal
 
-Портал регистрации Kolibri на SvelteKit и Cloudflare: каталог занятий,
-ориентировочная цена, аккаунты родителей, перенос будущих legacy-записей,
-заявки, договоры и коммуникация с бюро.
+A standalone registration application for Kinder- und Elternzentrum Kolibri e.V. Dresden, built with SvelteKit, TypeScript and Cloudflare. It provides a limited trial-lesson intake mode and a broader parent/administration portal under development. The interface supports German and Russian.
 
-Это самостоятельное приложение со своим public origin, deployment, D1/R2 и
-auth/session. [Официальный сайт Kolibri](https://kolibri-dresden.de/) живёт в
-отдельной инфраструктуре и связывается с порталом только обычными HTTPS-
-ссылками, включая ссылку со страницы расписания. Этот репозиторий не
-содержит и не разворачивает CMS/код официального сайта.
+The portal has its own origin, Worker, D1 database, storage and authentication. The official Kolibri website is a separate system; integration is through ordinary HTTPS links. This repository does not contain or deploy its CMS.
 
-- [Карта документации](docs/README.md)
-- [Спецификация MVP](docs/spec/MVP_SPEC.md)
-- [Пошаговая реализация](docs/implementation/ROADMAP.md)
+## Current state
 
-Локальная разработка:
+The latest saved [operational checkpoint](docs/implementation/STAGE_13_ACTIVE_STATE.md) records a successful **trial-intake deployment on 24 September 2026**, including independent request notification handling and bureau email alerts for failed or ambiguous Telegram delivery. Its next recorded action is owner manual acceptance. This is a statement about repository evidence, not a fresh check of the live service.
 
-```bash
+The same checkpoint keeps the **full manual preview and full portal production readiness blocked**. The limited intake deployment does not establish readiness of the complete portal. Recorded release evidence, outstanding gates and exact continuation instructions remain in that checkpoint; the README does not advance them.
+
+## What is implemented
+
+**Trial intake** is a separate runtime mode (`PORTAL_MODE=trial_intake`) with `/probestunde` routes. It supports selection of lessons, children and desired dates without creating a parent account, email verification, confirmation messages, bureau notifications, and administrator request/delivery views. Full portal routes are restricted in this mode. The intake-specific implementation is under `src/lib/trial-intake/`, with a separate deployment template and schedule-exporter integration.
+
+**The broader portal code** includes parent accounts and revocable sessions, family/child records and legacy claims, a course catalog, indicative pricing, trial and individual/Nachhilfe requests, document quarantine/review, contract offers and price reviews, messages, administration, audit records, and privacy export/deletion workflows. These modules have feature and release gates; their presence in the source does not mean all are enabled or accepted in production.
+
+Shared infrastructure includes versioned imports, D1 migrations, private R2 storage, outbox delivery, scheduled maintenance, aggregate health reporting, and server-side ownership/role checks. Email and Telegram providers are implemented. Their real delivery, secrets, activation and recovery procedures are controlled separately from local development.
+
+## Stack and prerequisites
+
+- Node.js **22.12 or later**, npm and the checked-in `package-lock.json`.
+- Svelte 5, SvelteKit 2, TypeScript, Tailwind CSS and Zod.
+- Cloudflare Workers, D1, R2 and optional Browser Run for contract rendering.
+- Resend, Cloudflare Turnstile and Telegram integrations for explicitly configured environments.
+- Vitest and Playwright for unit, integration and browser checks.
+
+The locked toolchain includes an alpha Miniflare release; use `npm ci` to preserve the tested dependency selection rather than upgrading it as part of setup.
+
+## Local development
+
+```sh
 npm ci
 npm run db:migrate:local
-npm run dev
+npm run dev -- --host 127.0.0.1
 ```
 
-`wrangler.local.toml` содержит только локальные имена ресурсов и поднимает
-отдельные D1/R2 bindings через Cloudflare platform proxy. Локальное состояние
-попадает в игнорируемый каталог `.wrangler/`. Для очистки только локальной D1 и
-повторного применения миграций:
+Open the URL printed by Vite, normally `http://127.0.0.1:5173`. These migration scripts explicitly use local D1. `wrangler.local.toml` names local resources, and the SvelteKit platform proxy disables remote bindings. State is stored under ignored `.wrangler/`.
 
-```bash
-npm run db:reset:local
-npm run db:migrate:local
-npm run db:migrations:local
+The default local configuration selects the full portal mode, keeps public authentication and document/contract actions disabled, uses fake email, and disables Telegram. A fresh database has no operational catalog, imports, client records or administrator account. This is a development starting point, not a populated demonstration of every workflow.
+
+Copy `.dev.vars.example` to ignored `.dev.vars` only when a local feature requires secrets, replacing its placeholders with suitable local values. Never copy production or preview credentials into a tracked file. Enabling a feature requires its actual configuration and prerequisites; changing one flag alone does not establish a working flow.
+
+`npm run db:migrations:local` lists local migrations. `npm run db:reset:local` destroys only the local D1 state and should be used deliberately. Production import, remote migrations and deployment are separate commands and are not part of this setup.
+
+## Imports and source material
+
+Import tools handle price tables, schedules, Access data and selected PlusBText fields. Imports require an explicitly registered academic period and read-only source files; the period is not inferred from filenames or the current date. For example, an isolated local period can be created with:
+
+```sh
+npm run db:period:local -- --academic-period 2026-2027 --display-name 2026/2027 --starts-on 2026-08-01 --ends-on 2027-07-31
 ```
 
-Проверки foundation:
+Local `import:*:local` commands provide dry-run, promotion, status and rollback operations. A dry-run does not change the runtime's current version. Price/schedule defaults refer to ignored local reference files, which are not supplied by a clean clone. Access and workbook inputs require explicit source paths; PlusBText is published before dependent Access data.
 
-```bash
-npm run check
-npm test
-npx playwright install chromium
-npm run test:e2e
-npm run build
+See [data sources](docs/operations/DATA_SOURCES.md) and [the import pipeline](docs/operations/IMPORT_PIPELINE.md) before using these tools. Real source databases and client workbooks are private inputs, not fixtures. Use the nonexecuting allowlisted parsers; do not open them through Office automation or execute embedded VBA. Generated imports, exports and protected operational evidence stay outside Git.
+
+## Configuration and deployment
+
+| File | Purpose |
+| --- | --- |
+| `wrangler.local.toml` | Local D1/R2 development bindings and restricted feature defaults |
+| `wrangler.e2e.toml` | Synthetic test runtime, used by the E2E harness |
+| `wrangler.adapter.toml` | Build output configuration, not a deployment target |
+| `wrangler.example.toml` | Full portal deployment shape with resource/secret placeholders |
+| `.dev.vars.example` | Local secret placeholders only |
+| `deploy/trial-intake/wrangler.example.jsonc` | Separate intake deployment shape, initially contained/disabled |
+
+The tracked templates contain no deployable resource identity or production credentials. A public schedule-source URL or an approved organization sender is configuration context, not a secret. Real deployment configuration and target evidence are ignored files.
+
+`src/worker.ts` wraps the generated SvelteKit Worker and supplies request handling, scheduled jobs and the aggregate health endpoint. `npm run build` creates local deployment artifacts; `npm run deploy` changes a remote Worker and requires the project's explicit release procedure. Do not deploy a checked-in example directly or infer deployment authorization from a saved historical checkpoint.
+
+Use [the deployment runbook](docs/operations/PRODUCTION_DEPLOYMENT.md), [the trial-intake deployment notes](deploy/trial-intake/README.md), [production readiness](docs/operations/PRODUCTION_READINESS.md), and [recovery procedures](docs/operations/DISASTER_RECOVERY.md) for the relevant mode. The official website, provider sends and production data remain separate operational scopes.
+
+## Checks
+
+For documentation-only changes:
+
+```sh
+npm run docs:check
+npm run release:scan
+git diff --check
 ```
 
-Chromium устанавливается один раз в локальный cache Playwright и не попадает в
-репозиторий. Unit/integration tests используют только synthetic data и
-изолированную in-memory D1.
+`docs:check` validates local links, documented commands and the Stage 13 Git/evidence continuity contract. `release:scan` inspects current tracked/release files for prohibited artifacts and selected high-confidence secret/PII patterns; it is not a full Git-history audit.
 
-Локальный импорт прайса, расписания и legacy-данных требует заранее
-зарегистрированный
-учебный период. Следующий пример создаёт только локальную запись с явно
-переданными датами; importer никогда не определяет период по имени файла или
-текущей дате:
+Runtime changes use targeted Vitest/Playwright checks according to [AGENTS.md](AGENTS.md) and [the test plan](docs/implementation/TEST_PLAN.md). The intake release set is `npm run test:intake-release`; full portal verification and deployment have their own gates. Do not substitute an intake-only run for full portal acceptance or rerun the entire suite for a README edit.
 
-```bash
-npm run db:period:local -- \
-  --academic-period 2026-2027 \
-  --display-name 2026/2027 \
-  --starts-on 2026-08-01 \
-  --ends-on 2027-07-31
-```
+## Project map
 
-Безопасный dry-run выполняет extract/normalize/stage/validate/diff и не меняет
-runtime current version. `--action promote` добавляет атомарную локальную
-публикацию; повтор уже опубликованного fingerprint возвращает `noop`:
+- `src/routes/`: public, parent and administrator routes.
+- `src/lib/server/`: portal services, authorization, data access, imports, providers and operations.
+- `src/lib/trial-intake/`: limited intake implementation.
+- `migrations/`: ordered D1 schema migrations.
+- `scripts/`: local development, documentation/release checks and explicit operational tools.
+- `tests/`: unit, integration and browser coverage with synthetic data.
+- `deploy/trial-intake/`: intake deployment template and instructions.
+- `integrations/schedule-exporter/`: source-export integration for schedule links.
+- `docs/`: canonical requirements, architecture, domain rules, runbooks and checkpoints, mostly in Russian.
+- `references/`: sanitized source descriptions; operational source files are excluded.
 
-```bash
-npm run import:price:local -- --academic-period 2026-2027 --action dry-run
-npm run import:schedule:local -- --academic-period 2026-2027 --action dry-run
-npm run import:price:local -- --academic-period 2026-2027 --action promote
-npm run import:schedule:local -- --academic-period 2026-2027 --action promote
-npm run import:plusbtext:local -- --academic-period 2026-2027 --action dry-run --source <read-only-admin.xlsm>
-npm run import:plusbtext:local -- --academic-period 2026-2027 --action promote --source <read-only-admin.xlsm>
-npm run import:access:local -- --academic-period 2026-2027 --action dry-run --source <read-only-front.accdb>
-npm run import:access:local -- --academic-period 2026-2027 --action promote --source <read-only-front.accdb>
-npm run import:status:local -- --limit 10
-```
+Start with [the documentation map](docs/README.md), [MVP specification](docs/spec/MVP_SPEC.md) and [product decisions](docs/spec/OPEN_QUESTIONS.md). For continuing deployment work, read the top of the active checkpoint before consulting historical handoff entries.
+## Repository maintenance verification
 
-По умолчанию price/schedule команды читают только ignored read-only
-`references/pricing/Price.xlsx`, primary schedule JSON и контрольный HTML.
-Для Access и PlusBText нет default path: нужен `--source` или переменная
-`LOCAL_ACCESS_SOURCE`/`LOCAL_ADMIN_WORKBOOK_SOURCE`. Снача публикуется
-PlusBText; Access использует текущую опубликованную PlusBText-версию или
-явно указанную `--plusbtext-version`. Все source paths остаются вне D1/report.
-Реальные клиентские файлы можно читать только read-only и после отдельного
-прямого поручения. Просмотр одного запуска и rollback предыдущей опубликованной
-версии:
+On 5 October 2026, dependency installation with `npm ci --no-audit --no-fund`, `npm run docs:check`, `npm run release:scan` and `git diff --check` passed in an isolated checkout. The documentation check included Stage 13 Git/evidence continuity. Configuration templates were inspected and retained unchanged.
 
-```bash
-npm run import:status:local -- --run-id <opaque-run-id>
-npm run import:rollback:local -- \
-  --source-kind schedule \
-  --academic-period 2026-2027
-```
-
-Rollback и promotion в этих командах работают только с локальной D1 из
-`.wrangler/state/v3`. Production import/remote migration/deploy ими не
-выполняются.
-
-`PORTAL_PUBLIC_ORIGIN` задаётся явно. В preview/production принимается только
-отдельный canonical HTTPS origin портала; origin официального сайта отклоняется.
-Пример production-shaped конфигурации без идентификаторов и секретов находится
-в `wrangler.example.toml`, примеры локальных secret placeholders — в
-`.dev.vars.example`. Реальные secrets задаются вне Git.
-
-Auth этапа 05 использует migration `0005_auth_security.sql` и server routes
-`/auth/register`, `/auth/login`, `/auth/resend`, `/auth/forgot`, `/auth/verify`,
-`/auth/reset` и `/account/security`. Защищённые routes получают actor только из
-подписанной revocable session; cookie host-only, а изменяющие действия кабинета
-требуют session-bound CSRF token. Raw verification/reset tokens в D1 не
-хранятся: outbox содержит только server references, а одноразовая ссылка
-восстанавливается server-side из secret при dispatch.
-
-Tracked local/production-shaped примеры оставляют `AUTH_PUBLIC_ENABLED=false`.
-Для controlled preview нужны отдельные `JWT_SECRET`, Turnstile keys,
-`PRIVACY_NOTICE_VERSION`, auth TTL/rate-limit настройки и email adapter.
-Автоматические тесты используют только in-memory fake email/Turnstile; реальный
-production provider и initial admin bootstrap намеренно не подключены. Пока они
-не реализованы и не отрепетированы отдельной операторской процедурой, public
-production auth и bootstrap остаются fail-closed.
-
-Сейчас реализованы foundation-инфраструктура, локальные versioned importers
-прайса, расписания, Access и PlusBText, а также server-side course mapping,
-occupancy и pricing/quote engine этапа 04, auth/session/security boundary и
-немецкие auth pages этапа 05. Legacy claim, public catalog и остальные business
-workflows добавляются последующими этапами roadmap; cron placeholder намеренно
-отсутствует.
-
-Персональные базы данных, клиентские Excel-файлы, секреты и import artifacts в
-git не хранятся.
+This documentation update did not run the runtime or browser suites, build/deploy the Worker, migrate a database, log into the application, send provider messages, or verify the current live service. Historical deployment evidence remains historical evidence.

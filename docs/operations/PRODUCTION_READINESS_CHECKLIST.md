@@ -13,12 +13,12 @@ Current candidate, deployed preview version и next atomic action читать �
 commands и не дают permission. Этот файл обновляется только при фактическом
 изменении production gate или на production phase boundary.
 
-<!-- stage-13-continuity-reviewed-candidate-compatibility-only: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3 -->
+<!-- stage-13-continuity-reviewed-candidate-compatibility-only: 8d12076235145f812b1063e457447724addb047a -->
 
 ## Ограниченный SYS-05: локальная готовность 2026-09-16
 
 Это отдельный trial-intake gate; статус полного production record ниже не меняется.
-Runtime candidate `fd17c3dbb28aa270f767592e00e9512fa234ad1a`, evidence:
+Runtime candidate `4cc05624c3db32d7b9f711806c3a6c62fe9bc29e`, evidence:
 [handoff03](../implementation/handoffs/stage-13.md#trial-intake-release-20260916).
 
 | Gate | Статус | Факт / оставшийся выпускной шаг |

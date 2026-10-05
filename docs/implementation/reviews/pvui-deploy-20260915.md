@@ -1,7 +1,7 @@
 # PVUI: проверка исправлений и готовности к preview deploy
 
 **Вердикт: GO** для code-only публикации в существующий Access-protected preview.
-Exact candidate: `f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3`; runtime полностью совпадает с
+Exact candidate: `8d12076235145f812b1063e457447724addb047a`; runtime полностью совпадает с
 `a4a3952cc96c69d43e0692571a2bb3c018b36d52`. Между ними изменены только два E2E specs и тест-план.
 Проверку 2026-09-15T17:41:29.673Z выполнила новая сессия Codex, не реализовавшая UI/R1/R2;
 без subagent и второго человека. Это bounded release verification исправлений

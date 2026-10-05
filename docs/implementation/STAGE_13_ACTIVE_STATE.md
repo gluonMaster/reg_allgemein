@@ -1,13 +1,24 @@
 # Stage 13: current operational state
 
+> Repository maintenance, 2026-10-05: private workstation paths and full
+> deployment identifiers were sanitized in Git history. The three current
+> source-candidate fields below and their documentation references now identify
+> the corresponding sanitized commits. All executable files in those commits
+> are byte-for-byte unchanged. The recorded checks and deployment remain
+> historical evidence; no new runtime review, deployment, provider call or live verification
+> was performed. Review/readiness statuses and the next operational action remain
+> unchanged. Other historical source SHAs refer to the preserved original Git
+> backup; use protected operational evidence for actual deployment identifiers.
+
+
 <!-- stage-13-current-review-status: pending_independent_review -->
 
 <!-- stage-13-continuity
 schema: 1
 updated_utc: 2026-09-24T11:14:39Z
-reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
-local_remediation_candidate: fd17c3dbb28aa270f767592e00e9512fa234ad1a
-release_gate_candidate: f570564785a3241043534e81d8db8379a7be6c54
+reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
+local_remediation_candidate: 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
+release_gate_candidate: 21532a0f09dabf4e5a996d71c35b59b1b8f90d67
 last_completed_gate: TIN09-lane-independence-and-alerts-deployed
 next_gate: TIN09-owner-manual-acceptance
 nearest_milestone: trial-intake
@@ -449,7 +460,7 @@ source SHAd122ff8f2fa03a517276e1c60928a3dbc65f8cad22b4169d39f256430c52cfbc.
 
 Scope04 limited SYS-05: account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
 D1 658404d6566b EU/schema27; version3205a1be1730/runtime
-fd17c3dbb28aa270f767592e00e9512fa234ad1a unchanged, accepting/jobs already enabled.
+4cc05624c3db32d7b9f711806c3a6c62fe9bc29e unchanged, accepting/jobs already enabled.
 No new remote mutations/provider sends this turn; last F2 checkpoint intact:
 one verified request, one Telegram part due17.09 07:00Z (09:00 Berlin).
 Preview/official site excluded. Last verified live Netlify CTAoff; no CTAon
@@ -485,7 +496,7 @@ Telegram sends0. No writes by agent this turn.
 
 Scope04 limited SYS-05: account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
 D1 658404d6566b EU/schema27. Version3205a1be1730/runtime
-fd17c3dbb28aa270f767592e00e9512fa234ad1a unchanged; accepting/jobs enabled,
+4cc05624c3db32d7b9f711806c3a6c62fe9bc29e unchanged; accepting/jobs enabled,
 CTAoff. Preview/official site excluded. Closed rollback/private export retained.
 Waiting_owner/business window: штатный Cron должен отправить сообщение после
 17.09 09:00 Berlin. Владелец проверяет фактическое сообщение и сообщает
@@ -519,7 +530,7 @@ F1-postcondition-safe.json and F1-reconciliation-safe.json. Operator attempts37:
 
 Scope04 limited SYS-05; account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
 D1 658404d6566b EU/schema27; production version3205a1be1730/runtime
-fd17c3dbb28aa270f767592e00e9512fa234ad1a unchanged. Preview/official site excluded.
+4cc05624c3db32d7b9f711806c3a6c62fe9bc29e unchanged. Preview/official site excluded.
 Accepting/jobs true, CTAoff. Compatible closed rollback/private export retained.
 Waiting_owner F2: open received verification email, check German institution name
 and lessons/dates, follow its link and explicitly confirm email on portal page.
@@ -544,7 +555,7 @@ activationAt2026-09-16T18:06:03.000Z. Actual vars/5 secrets/soleDB/2crons/logs
 disabled read-back exact; public form/catalog200 with110 lessons, admin401 without
 session/full-mode cabinet404. Admin owner login previously confirmed/read back.
 Scope04 limited SYS-05: account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/
-D1 658404d6566b EU/schema27. Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a
+D1 658404d6566b EU/schema27. Runtime 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
 unchanged, gate03 inherited; preview/official site excluded. No new build/dry-run/
 full tests; actual-input validation covered only4 operational vars changed.
 Read-back requests0/intakeEmailJobs0/telegramJobs0/telegramAttempts0/admins1/
@@ -581,7 +592,7 @@ Evidence protected tmp/trial-intake-deploy-20260916/A2-read-private.json,
 A2-postcondition-safe.json. Remote attempts35:34success/1failed unchanged(S27),
 ambiguous0, provider sends0. Scope04 limited SYS-05, preview/official site excluded.
 Account5dbd04a4763a/Worker53bbcae12769/origin819c92b4f09a/D1 658404d6566b/schema27.
-Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a, closed version bd6237d3d99f,
+Runtime 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e, closed version bd6237d3d99f,
 gate03 unchanged. Same Telegram private destination/can-send/1209600s rechecked.
 
 Planned W2: deploy unchanged runtime with accepting/jobs true, Telegram bot_api,
@@ -609,7 +620,7 @@ CLI plus independent read-only D1 query: users1/active admins1/latch consumed,
 bootstrap action1/assertion1, requests0. UTC17:59:16Z, CLI exit0; provider sends0.
 Scope04 limited SYS-05 unchanged: account5dbd04a4763a/Worker53bbcae12769/
 origin819c92b4f09a/D1 658404d6566b EU/schema27. Production version bd6237d3d99f
-closed/100%, runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a, gate03 inherited.
+closed/100%, runtime 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e, gate03 inherited.
 Preview/Access/official site excluded. Remote attempts34:33success/1failed
 unchanged(S27), ambiguous0; Netlify1/Worker1/bootstrap1/provider sends0.
 Evidence protected: tmp/trial-intake-deploy-20260916/A1-intent-private.json,
@@ -635,7 +646,7 @@ then planned controlled flow enablement, exact context and rollback preserved.
 W1 result success: production closed version fingerprint bd6237d3d99f,100% traffic;
 before Worker absent. Scope04 limited SYS-05: account5dbd04a4763a,
 Worker53bbcae12769/origin819c92b4f09a/D1 658404d6566b EU/schema27.
-Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a/gate03 unchanged;308 source/147 build
+Runtime 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e/gate03 unchanged;308 source/147 build
 hashes match, actual-input validation/dry-run passed. Preview/official site excluded.
 After read-back: exact vars/soleDB/5secret names/2crons, logs disabled,
 accepting/jobs false, Telegram disabled. Public form200 closed/login200,
@@ -660,8 +671,8 @@ target/procedure/read-back, compatible closed rollback saved.
 ## TIN04: publication checkpoint — 2026-09-16T17:48:55Z
 
 Scope04 сохраняется: отдельный limited SYS-05 Worker/D1, providers/admin;
-preview/Access/официальный сайт исключены. Runtime fd17c3dbb28aa270f767592e00e9512fa234ad1a,
-gate f570564785a3241043534e81d8db8379a7be6c54 без material diff.
+preview/Access/официальный сайт исключены. Runtime 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e,
+gate 21532a0f09dabf4e5a996d71c35b59b1b8f90d67 без material diff.
 Fingerprints: account5dbd04a4763a, Worker53bbcae12769, origin819c92b4f09a,
 D1 658404d6566b EU/schema27, managed widget892e52d5410d. Worker/version ещё отсутствуют.
 
@@ -708,8 +719,8 @@ deploy с известными target/read-back/containment, ambiguity разр�
 
 Разрешён scope04: отдельный limited SYS-05 target, ресурсы/schema/code/admin/
 providers; preview/Access/официальный сайт исключены. Owner inputs DPAPI verified.
-Runtime candidate fd17c3dbb28aa270f767592e00e9512fa234ad1a; gate
-f570564785a3241043534e81d8db8379a7be6c54 унаследован без material diff.
+Runtime candidate 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e; gate
+21532a0f09dabf4e5a996d71c35b59b1b8f90d67 унаследован без material diff.
 Account 5dbd04a4763a, Worker 53bbcae12769, origin 819c92b4f09a;
 D1 658404d6566b, EU; managed widget 892e52d5410d. Worker/version отсутствуют.
 
@@ -798,8 +809,8 @@ auto-delete `1209600` подтверждены. Live расписание по-�
 byte hash совпал с сохранённым rollback03; выбранный источник110 не изменился.
 Отдельный Turnstile widget ещё нужен, existing widget новый hostname не покрывает.
 
-Runtime `fd17c3dbb28aa270f767592e00e9512fa234ad1a` и gate
-`f570564785a3241043534e81d8db8379a7be6c54` наследуются:308 source hashes,
+Runtime `4cc05624c3db32d7b9f711806c3a6c62fe9bc29e` и gate
+`21532a0f09dabf4e5a996d71c35b59b1b8f90d67` наследуются:308 source hashes,
 147 build hashes и installed exporter совпали с evidence03; исходный HEAD04
 `ffdead5` содержит только последующие docs/checker/tests изменения. Полный suite,
 E2E, exporter regression, cold restore и новая сборка не повторялись: material
@@ -946,7 +957,7 @@ rollover_required: no; recommended_next_session_mode: High — известны 
 ## PVUI: разрешённая публикация исправленного UI — 2026-09-15T17:41:29Z
 
 Владелец прямо поручил deploy выполненного UI-пакета и исправлений review в
-существующий preview. Exact candidate f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3;
+существующий preview. Exact candidate 8d12076235145f812b1063e457447724addb047a;
 Runtime совпадает с manifest исправлений; из 397 файлов изменены только два E2E specs. Новая сессия проверила R1/R2
 и непосредственные consumers; [release review](reviews/pvui-deploy-20260915.md)
 разрешает эту публикацию. Исторический NO-GO относится к d58f9db.
@@ -973,7 +984,7 @@ rollover_required: no; recommended_next_session_mode: High — плановый 
 ## PVUI: фактический checkpoint деплоя — 2026-09-15T17:43:03Z
 
 Result: success. Выполнена одна разрешённая code-only deployment operation
-для candidate f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3. Before version fingerprint
+для candidate 8d12076235145f812b1063e457447724addb047a. Before version fingerprint
 d9f6ba236de1; after 761139c10e86; одна версия на 100% traffic.
 Actual module SHA-256 ab054783c68d2329a66ed08ce025625fbfe4b8570bd6cd786506a0db3649557d
 совпадает со strict dry-run и upload; annotation указывает exact candidate.
@@ -1097,7 +1108,7 @@ permission_state: owner_explicit_2026_09_16_remove_preview_recipient_restriction
 review:
   status: pending_independent_review
   candidate: 3638dce8be9bb0a2155860dd055112c3f5b62a43
-  last_independently_reviewed_candidate: f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3
+  last_independently_reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
   verdict_scope: bounded_owner_authorized_preview_email_configuration_change
   reviewer: same_implementing_agent_no_new_independent_verdict_claimed
   local_review_p0: 0

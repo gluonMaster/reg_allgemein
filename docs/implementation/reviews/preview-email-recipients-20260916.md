@@ -8,7 +8,7 @@ Access-protected preview. Новый адрес успешно зарегист�
 она не меняется в этом пакете.
 
 Candidate: `3638dce8be9bb0a2155860dd055112c3f5b62a43`. Runtime diff относительно
-опубликованного `f4ea330c4f637fb0fd09ca3e5bea7bb936cc9db3` ограничен parser/guard
+опубликованного `8d12076235145f812b1063e457447724addb047a` ограничен parser/guard
 `PREVIEW_EMAIL_RECIPIENT_HASHES` в `runtime.ts`. Exact `*` разрешает любой адрес;
 старый список, отсутствующее/ошибочное значение и запрет preview-var в production
 сохраняют прежнее поведение. Provider, outbox, auth routes, schema, dependencies,
