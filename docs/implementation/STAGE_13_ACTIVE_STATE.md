@@ -15,20 +15,20 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-09-24T11:14:39Z
+updated_utc: 2026-10-20T14:42:49Z
 reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
 local_remediation_candidate: 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
 release_gate_candidate: 21532a0f09dabf4e5a996d71c35b59b1b8f90d67
-last_completed_gate: TIN09-lane-independence-and-alerts-deployed
-next_gate: TIN09-owner-manual-acceptance
+last_completed_gate: TIN10-holidays-and-child-age-deployed
+next_gate: TIN10-owner-manual-acceptance
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN09-live-waiting_owner-manual-acceptance
-last_atomic_action: TIN09-worker-deploy
+current_phase: TIN10-live-waiting_owner-manual-acceptance
+last_atomic_action: TIN10-worker-deploy
 last_atomic_result: success
-next_atomic_action: TIN09-owner-manual-acceptance
+next_atomic_action: TIN10-owner-manual-acceptance
 rollover_required: no
 recommended_next_session_mode: Medium
 mode_reason_plain: Next_step_is_owner_manual_acceptance_without_remote_write
@@ -38,6 +38,52 @@ mode_reason_plain: Next_step_is_owner_manual_acceptance_without_remote_write
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN10: праздники, каникулы и возраст ребёнка в production — 2026-10-20T14:42:49Z
+
+Scope: деплой по прямому поручению владельца 2026-10-20, candidate beed372934ba
+(OQ-048: желаемая дата не попадает на праздники Саксонии, Weihnachts- и
+Sommerferien; возраст ребёнка по названию группы — младший блокируется, старший
+допускается с обязательным подтверждением). Только Worker deploy: миграции нет;
+D1 write, vars, secrets, Access и provider send в операции отсутствуют.
+
+Preflight read-only: активная версия 0fd694637875 на 100% совпадает с TIN09,
+drift нет; пять secret names; D1 applied 31, pending 0; requests17, emails28,
+telegram17 все sent, писем бюро 0, users1, closed_lessons5; оба cadence
+succeeded. Гейт по AGENTS.md на точном коммите: `npm run test:intake-release`
+49 файлов, 334 passed, 1 skipped; обе intake e2e — 3 passed, включая новый
+сценарий возраста; `npm run build`; `wrangler deploy --dry-run` с D1 binding и
+прежними vars.
+
+Worker deploy success, exact config deploy/trial-intake/wrangler.production.jsonc:
+previous 0fd694637875 → активная 57003ad0ea0e на 100%. Один деплой, без повторов,
+без `--secrets-file`. Оба Cron `* * * * *` и `*/15 * * * *` сохранены; пять
+secret names неизменны.
+
+HTTP read-back: /probestunde 200, /probestunde/catalog 200 (110 занятий, приём
+открыт, закрыто 5), /auth/login 200; /admin/trial-intake, её detail route,
+/admin/outbox и /admin/operations — 401; /catalog, /admin/users, /auth/register —
+404; `/_health/operations` 204. Новое поведение в живом HTML: среда `Kunst Mi` —
+«Alter: ab 10 Jahren», 25.11 предлагается, 18.11 (Buß- und Bettag) нет, текст о
+каникулах показан; студия Kunst — «nach Absprache»; Gitarre — «ab 10 Jahren»;
+укомплектованная `1B` показывает «5–6 Jahre» на экране отказа. D1 read-back:
+агрегаты как в preflight, `rows_written=0`; первый fast-запуск на новой версии
+14:41:14Z succeeded. Evidence protected tmp/trial-intake-age-holidays-deploy-20261020/
+(P-*, R-*, W-*: полные version IDs и команда отката).
+
+Не наблюдалось на production: реальная заявка со старшим ребёнком (строка о
+возрасте в письме и Telegram) — синтетическую заявку в production не создавали.
+Покрыто unit- и e2e-тестами на том же коммите.
+
+Rollback/containment: `wrangler rollback` на 0fd694637875 с exact config; схема
+не менялась, прежний код совместим. Быстрое смягчение без отката —
+`TRIAL_INTAKE_ACCEPTING=false`, данные сохраняются.
+
+Ровно следующий action: **TIN10-owner-manual-acceptance** — владелец открывает
+форму на телефоне, проверяет подписи возраста, пропуск закрытых дат и
+предупреждение для старшего ребёнка, согласует новые DE/RU тексты по OQ-038.
+rollover_required: no; recommended_next_session_mode: Medium — дальше ручная
+проверка без remote write.
 
 ## TIN09: Worker задеплоен, уведомления заявок независимы, письмо бюро включено — 2026-09-24T11:14:39Z
 
