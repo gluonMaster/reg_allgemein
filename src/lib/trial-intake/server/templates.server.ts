@@ -4,6 +4,8 @@ import type { EmailMessage, TelegramMessage } from '$lib/server/outbox/providers
 import { telegramDeliveryReference, OutboxTemplateError } from '$lib/server/outbox/templates';
 import type { TelegramOutboxRow } from '$lib/server/outbox/contracts';
 import type { DatabaseBoundary } from '$lib/server/db/database';
+import { ageFit, lessonAgeRange } from '../age';
+import { ageRangeLabel } from '../i18n';
 
 export const buildingLabel = (key: string) => (key === 'Kolibri' ? ORGANIZATION_NAME : key);
 /** A guest reads the letter away from the portal, so the building carries its street address. */
@@ -15,6 +17,14 @@ export const ORGANIZATION_PHONE = '+49 179 9474938';
 /** Owner decision 2026-09-24: the bureau mailbox learns when Telegram did not take a notification. */
 export const BUREAU_ALERT_EMAIL = 'registration@kolibri-dresden.de';
 const DAYS = ['', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+/** Children outside the group's age; an older one passed submit only with the parent's acknowledgment. */
+function ageMismatches(item: IntakeDetail['items'][number]) {
+	const range = lessonAgeRange({ subject: item.subject, group: item.group_name });
+	return item.children.flatMap((child) => {
+		const fit = ageFit(range, child.birth_date, item.desired_date);
+		return fit === 'ok' || !range ? [] : [{ child, fit, label: ageRangeLabel(range, 'de') }];
+	});
+}
 const germanDate = (date: string) => date.split('-').reverse().join('.');
 const escapeHtml = (value: string) =>
 	value
@@ -68,6 +78,10 @@ export function confirmationEmail(detail: IntakeDetail): EmailMessage {
 						`${i.children.map((c) => `${c.first_name} ${c.last_name}`).join(', ')}: ${i.subject} — ${i.group_name}`,
 						`${DAYS[i.weekday]}, ${germanDate(i.desired_date)}, ${i.start_time}–${i.end_time}`,
 						`${buildingLabel(i.building)}, ${BUILDING_ADDRESS[i.building] ?? ''}, Raum ${i.room}`,
+						...ageMismatches(i).map(
+							(m) =>
+								`Hinweis: ${m.child.first_name} ${m.child.last_name} ist am Wunschtermin ${m.fit === 'old' ? 'älter' : 'jünger'} als für diese Gruppe vorgesehen (${m.label}). Das Büro prüft, ob die Gruppe passt.`
+						),
 					].join('\n')
 				)
 				.join('\n\n') +
@@ -137,6 +151,10 @@ export function telegramParts(detail: IntakeDetail): string[] {
 			`Raum: ${i.room}`,
 			`Gebäude: ${buildingLabel(i.building)}`,
 			`Kinder: ${i.children.map((c) => detail.children.findIndex((child) => child.id === c.id) + 1).join(', ')}`,
+			...ageMismatches(i).map(
+				(m) =>
+					`Alter: Kind ${detail.children.findIndex((child) => child.id === m.child.id) + 1} ${m.fit === 'old' ? 'älter' : 'jünger'} als die Gruppe (${m.label})${m.fit === 'old' ? ', Hinweis bestätigt' : ''}`
+			),
 		]),
 	];
 	// <= 160 per field; split by lines, reserving 596 UTF-16 units for references/URL.

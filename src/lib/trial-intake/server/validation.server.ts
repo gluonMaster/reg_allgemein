@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { INTAKE_PRIVACY_VERSION, type Lesson } from '../contracts';
 import { berlinDate, weekday } from '../dates';
+import { noLessonDay } from '../holidays';
+import { ageFit, lessonAgeRange } from '../age';
 export { berlinDate, weekday, nextLessonDate } from '../dates';
 
 export class IntakeError extends Error {
@@ -56,6 +58,7 @@ export const intakeInputSchema = z
 						lessonId: z.string().regex(/^[a-f0-9]{64}$/u),
 						desiredDate: dateField,
 						childKeys: z.array(z.string().min(1).max(64)).min(1).max(10),
+						ageConfirmed: z.literal(true).optional(),
 					})
 					.strict()
 			)
@@ -97,6 +100,15 @@ export function validateSubmission(
 		if (item.desiredDate <= today || weekday(item.desiredDate) !== lesson.weekday) {
 			throw new IntakeError('INTAKE_DATE_INVALID');
 		}
+		if (noLessonDay(item.desiredDate)) throw new IntakeError('INTAKE_DATE_HOLIDAY');
+		// A child too young for the group is refused; an older one needs the parent's acknowledgment.
+		const range = lessonAgeRange(lesson);
+		const fits = item.childKeys.map((key) =>
+			ageFit(range, data.children.find((c) => c.key === key)!.birthDate, item.desiredDate)
+		);
+		if (fits.includes('young')) throw new IntakeError('INTAKE_CHILD_TOO_YOUNG');
+		if (fits.includes('old') && !item.ageConfirmed)
+			throw new IntakeError('INTAKE_AGE_UNCONFIRMED');
 		return { ...item, lesson };
 	});
 	return { data, items };

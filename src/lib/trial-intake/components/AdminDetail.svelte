@@ -2,7 +2,8 @@
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { t, formatDate, formatTimestamp, errorKey, type TextKey } from '../i18n';
+	import { t, ageRangeLabel, formatDate, formatTimestamp, errorKey, type TextKey } from '../i18n';
+	import { ageFit, lessonAgeRange } from '../age';
 	import { itemLesson, type AdminDetailData } from '../contracts';
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
@@ -69,13 +70,25 @@
 				</li>{/each}
 		</ul>
 	</section>
-	{#each detail.items as item (item.id)}<article class="card">
+	{#each detail.items as item (item.id)}{@const ages = lessonAgeRange(itemLesson(item))}
+		<article class="card">
 			<LessonCard lesson={itemLesson(item)} {locale} />
 			<p><strong>{t(locale, 'date')}: {formatDate(item.desired_date, locale)}</strong></p>
 			<ul>
-				{#each item.children as child}<li>
+				{#each item.children as child}{@const fit = ageFit(
+						ages,
+						child.birth_date,
+						item.desired_date
+					)}
+					<li>
 						{child.first_name}
 						{child.last_name} · {formatDate(child.birth_date, locale)}
+						{#if ages && fit !== 'ok'}<span class="age-badge"
+								>{t(locale, fit === 'old' ? 'adminAgeOld' : 'adminAgeYoung')} ({ageRangeLabel(
+									ages,
+									locale
+								)})</span
+							>{/if}
 					</li>{/each}
 			</ul>
 		</article>{/each}

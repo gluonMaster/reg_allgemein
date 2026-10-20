@@ -1,0 +1,15 @@
+{
+  "lessons": [
+    {
+      "id": "4020acf2f3d0494f57f6bba99af09fac765cb5d5d8fa3c0fd6c3e0e46bf75b7f",
+      "subject": "Russisch",
+      "group": "1B",
+      "weekday": 5,
+      "start": "16:00",
+      "end": "16:45",
+      "teacher": "Lehrkraft C",
+      "room": "R3",
+      "building": "Kolibri"
+    }
+  ]
+}

@@ -12,7 +12,8 @@
 		type IntakeReceipt,
 	} from '../contracts';
 	import { berlinDate, lessonDates, nextLessonDate, weekday } from '../dates';
-	import { dayLabel, formatDate, t, errorKey, type TextKey } from '../i18n';
+	import { ageFit, lessonAgeRange } from '../age';
+	import { ageRangeLabel, dayLabel, formatDate, t, errorKey, type TextKey } from '../i18n';
 	import { requestJson } from '../client';
 	import '../intake.css';
 	let { data }: { data: IntakeFormData } = $props();
@@ -150,6 +151,26 @@
 			}
 		});
 	});
+	/** Lesson ID -> the older children the parent acknowledged; another set needs a new tick. */
+	let ageAcknowledged = $state<Record<string, string>>({});
+	function ageIssues(item: IntakeInput['items'][number]) {
+		const lesson = lessons.find((l) => l.id === item.lessonId);
+		const range = lesson ? lessonAgeRange(lesson) : null;
+		const assigned = children.filter((c) => item.childKeys.includes(c.key));
+		const fit = (c: (typeof children)[number]) => ageFit(range, c.birthDate, item.desiredDate);
+		const old = assigned.filter((c) => fit(c) === 'old');
+		return {
+			range: range ? ageRangeLabel(range, locale) : '',
+			young: assigned.filter((c) => fit(c) === 'young'),
+			old,
+			signature: old.map((c) => c.key).join(),
+		};
+	}
+	function childName(key: string): string {
+		const index = children.findIndex((c) => c.key === key);
+		const child = children[index];
+		return `${child.firstName || `${t(locale, 'child')} ${index + 1}`} ${child.lastName}`;
+	}
 	function removeChild(key: string) {
 		children = children.filter((c) => c.key !== key);
 		items = items.map((i) => ({ ...i, childKeys: i.childKeys.filter((k) => k !== key) }));
@@ -192,6 +213,10 @@
 			)
 		)
 			return showError('dateError');
+		const ages = items.map(ageIssues);
+		if (ages.some((a) => a.young.length)) return showError('ageError');
+		if (ages.some((a, i) => a.old.length && ageAcknowledged[items[i].lessonId] !== a.signature))
+			return showError('ageConfirmError');
 		const token = new FormData(event.currentTarget).get('cf-turnstile-response');
 		if (!ready || typeof token !== 'string') return showError('captcha');
 		const content: Omit<IntakeInput, 'locale' | 'idempotencyKey'> = {
@@ -200,7 +225,9 @@
 			email,
 			phone,
 			children: $state.snapshot(children),
-			items: $state.snapshot(items),
+			items: $state
+				.snapshot(items)
+				.map((item, i) => (ages[i].old.length ? { ...item, ageConfirmed: true } : item)),
 			privacyVersion: INTAKE_PRIVACY_VERSION,
 		};
 		const fingerprint = JSON.stringify(content);
@@ -422,6 +449,7 @@
 					<p class="muted">{t(locale, 'dateNotice')}</p>
 					{#each items as item, index (item.lessonId)}
 						{@const lesson = lessons.find((l) => l.id === item.lessonId)}
+						{@const ages = ageIssues(item)}
 						<fieldset class="chosen-lesson">
 							<legend>{index + 1}. {lesson?.subject ?? t(locale, 'stale')}</legend>
 							{#if lesson}<LessonCard {lesson} {locale} />{/if}
@@ -459,6 +487,31 @@
 										{t(locale, 'assignmentError')}
 									</p>{/if}
 							</fieldset>
+							{#each ages.young as child (child.key)}<p class="error" role="alert">
+									<strong>{childName(child.key)}</strong>
+									{t(locale, 'ageYoung')} ({t(locale, 'age')}: {ages.range})
+								</p>{/each}
+							{#if ages.old.length}<div class="age-warning" role="alert">
+									<p class="age-warning-title">⚠ {t(locale, 'ageOldTitle')}</p>
+									{#each ages.old as child (child.key)}<p>
+											<strong>{childName(child.key)}</strong>
+											{t(locale, 'ageOld')} ({t(locale, 'age')}: {ages.range})
+										</p>{/each}
+									<p>{t(locale, 'ageOldHint')}</p>
+									<label class="check"
+										><input
+											type="checkbox"
+											required
+											checked={ageAcknowledged[item.lessonId] ===
+												ages.signature}
+											onchange={(e) => {
+												if (e.currentTarget.checked)
+													ageAcknowledged[item.lessonId] = ages.signature;
+												else delete ageAcknowledged[item.lessonId];
+											}}
+										/>{t(locale, 'ageConfirm')}</label
+									>
+								</div>{/if}
 							<button
 								type="button"
 								onclick={() =>

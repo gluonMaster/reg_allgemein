@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlatformProxy } from 'wrangler';
 import fixture from '../../fixtures/trial-intake/catalog-v1.json' with { type: 'json' };
+import ageFixture from '../../fixtures/trial-intake/catalog-e2e-ages.json' with { type: 'json' };
 import { nextLessonDate, weekday } from '../../../src/lib/trial-intake/dates';
 import { ORGANIZATION_NAME } from '../../../src/lib/organization';
 import { newE2eContext, syntheticIdentities, syntheticPassword } from '../support/authenticated';
@@ -404,5 +405,80 @@ test('mobile DE/RU multi-child request, retry, resend, verification and admin re
 	} finally {
 		await context.close().catch(() => {});
 		await proxy.dispose();
+	}
+});
+
+test('a younger child is refused and an older one needs a visible acknowledgment', async ({
+	browser,
+}, testInfo) => {
+	const [ageLesson] = ageFixture.lessons;
+	const date = nextLessonDate(ageLesson.weekday, new Date().toISOString());
+	/** A birth date `years` before the lesson date, shifted by `days`. */
+	const born = (years: number, days = 0) => {
+		const d = new Date(date);
+		d.setUTCFullYear(d.getUTCFullYear() - years);
+		d.setUTCDate(d.getUTCDate() + days);
+		return d.toISOString().slice(0, 10);
+	};
+	const context = await newE2eContext(browser, testInfo);
+	context.setDefaultTimeout(15_000);
+	try {
+		const page = await context.newPage();
+		await page.setViewportSize({ width: 390, height: 844 });
+		await installSyntheticTurnstile(page);
+		await page.goto(`/probestunde?lesson=${ageLesson.id}`);
+		await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+		const lesson = page.locator('.chosen-lesson');
+		await expect(lesson.getByText('Alter: 5–6 Jahre')).toBeVisible();
+		await page.locator('[name=parentFirstName]').fill('Synthetic');
+		await page.locator('[name=parentLastName]').fill('AgeParent');
+		await page.locator('[name=email]').fill('intake-age@example.test');
+		await page.locator('[name=phone]').fill('+49 000 123456');
+		await page.locator('[name=first-child-1]').fill('AgeChild');
+		await page.locator('[name=last-child-1]').fill('Synthetic');
+		const submits: string[] = [];
+		page.on('request', (request) => {
+			if (request.url().endsWith('/probestunde/submit')) submits.push(request.url());
+		});
+		// Turns five the day after the lesson: too young, the form refuses.
+		await page.locator('[name=birth-child-1]').fill(born(5, 1));
+		await expect(lesson.getByRole('alert')).toContainText(
+			'jünger als für diese Gruppe vorgesehen'
+		);
+		await page.getByRole('button', { name: 'Anfrage absenden', exact: true }).click();
+		await expect(page.locator('div.error[role=alert]')).toContainText('noch zu jung');
+		// Seven on the lesson date: allowed only after ticking the prominent warning.
+		await page.locator('[name=birth-child-1]').fill(born(7));
+		const warning = lesson.locator('.age-warning');
+		await expect(warning).toBeVisible();
+		await expect(warning).toContainText('AgeChild Synthetic');
+		await expect(warning).toContainText('älter als für diese Gruppe vorgesehen');
+		const acknowledge = warning.getByRole('checkbox');
+		await page.getByRole('button', { name: 'Anfrage absenden', exact: true }).click();
+		expect(
+			await acknowledge.evaluate((input) => (input as HTMLInputElement).validity.valueMissing)
+		).toBe(true);
+		expect(submits).toHaveLength(0);
+		await noOverflow(page);
+		await page.screenshot({ path: 'tmp/trial-intake-ui-age-warning.png', fullPage: true });
+		await page.getByRole('button', { name: 'Русский', exact: true }).click();
+		await expect(warning).toContainText('старше возраста этой группы');
+		await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
+		await acknowledge.check();
+		const response = page.waitForResponse((r) => r.url().endsWith('/probestunde/submit'));
+		await page.getByRole('button', { name: 'Anfrage absenden', exact: true }).click();
+		expect((await response).request().postDataJSON().items).toEqual([
+			{
+				lessonId: ageLesson.id,
+				desiredDate: date,
+				childKeys: ['child-1'],
+				ageConfirmed: true,
+			},
+		]);
+		await expect(
+			page.getByRole('heading', { name: 'Bitte prüfen Sie Ihr Postfach' })
+		).toBeVisible();
+	} finally {
+		await context.close().catch(() => {});
 	}
 });

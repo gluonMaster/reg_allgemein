@@ -2,7 +2,18 @@
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { t, dayLabel, formatDate, formatTimestamp, errorKey, type TextKey } from '../i18n';
+	import {
+		t,
+		ageRangeLabel,
+		dayLabel,
+		formatDate,
+		formatTimestamp,
+		errorKey,
+		type TextKey,
+	} from '../i18n';
+	import { ageFit, lessonAgeRange } from '../age';
+	import { berlinDate } from '../dates';
+	import { SCHOOL_HOLIDAYS_REMINDER_FROM } from '../holidays';
 	import {
 		itemLesson,
 		type AdminListData,
@@ -61,6 +72,12 @@
 <section class="intake">
 	<h2>{t(locale, 'adminTitle')}</h2>
 	<p>{t(locale, 'adminIntro')}</p>
+	{#if berlinDate(new Date().toISOString()) >= SCHOOL_HOLIDAYS_REMINDER_FROM}<p
+			class="card error"
+			role="status"
+		>
+			{t(locale, 'holidayTableEnding')}
+		</p>{/if}
 	{#if attention.unknown || attention.dead}
 		<section class="card error" role="status">
 			<h3>{t(locale, 'deliveryAttention')}</h3>
@@ -166,6 +183,7 @@
 	</form>
 	<p role="status">{t(locale, 'total')}: {list.total}</p>
 	{#each list.rows as row (row.id)}
+		{@const ages = lessonAgeRange(itemLesson(row))}
 		<article class="card">
 			<span class="badge">{t(locale, row.state)}</span>
 			<p class="muted">
@@ -176,9 +194,20 @@
 			<p><strong>{t(locale, 'date')}: {formatDate(row.desired_date, locale)}</strong></p>
 			<p>{t(locale, 'parent')}: {row.parent_first_name} {row.parent_last_name}</p>
 			<ul>
-				{#each row.children as child}<li>
+				{#each row.children as child}{@const fit = ageFit(
+						ages,
+						child.birthDate,
+						row.desired_date
+					)}
+					<li>
 						{child.firstName}
 						{child.lastName} · {formatDate(child.birthDate, locale)}
+						{#if ages && fit !== 'ok'}<span class="age-badge"
+								>{t(locale, fit === 'old' ? 'adminAgeOld' : 'adminAgeYoung')} ({ageRangeLabel(
+									ages,
+									locale
+								)})</span
+							>{/if}
 					</li>{/each}
 			</ul>
 			<a class="button" href={`/admin/trial-intake/${row.request_id}`}

@@ -12,6 +12,7 @@ export const intakeReleaseTests = [
 	'tests/integration/trial-intake/intake-lifecycle-d1.test.ts',
 	'tests/integration/trial-intake/intake-telegram-alert-d1.test.ts',
 	'tests/integration/trial-intake/intake-telegram-d1.test.ts',
+	'tests/unit/trial-intake/age-holidays.test.ts',
 	'tests/unit/trial-intake/catalog-validation.test.ts',
 	'tests/unit/trial-intake/closed-lessons.test.ts',
 	'tests/unit/trial-intake/exporter-roundtrip.test.ts',

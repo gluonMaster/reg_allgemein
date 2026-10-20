@@ -91,6 +91,15 @@ point, сохранённый config, повторную генерацию и e
 через настоящий portal reader. Source mirror и порядок переноса описаны в
 [README экспортера](../../integrations/schedule-exporter/README.md).
 
+TIN-AC-16/17: правила дат и возраста — `tests/unit/trial-intake/age-holidays.test.ts`
+(праздники по годам, границы каникул, пропуск дат, разбор названий групп,
+полные годы, серверные отказы и строки письма/Telegram). Браузерный сценарий
+в `tests/e2e/trial-intake/intake-ui.spec.ts` проверяет блокировку младшего
+ребёнка и обязательную галочку для старшего; e2e harness добавляет к общей
+фикстуре одно классное занятие из `tests/fixtures/trial-intake/catalog-e2e-ages.json`.
+Покрытие названий живого расписания сверяется read-only по опубликованному
+каталогу, без копии карточек в repo.
+
 - Ни один automated fixture не содержит реальных имен, email, телефонов,
   адресов или документов клиентов.
 - Бизнес-правило получает unit/golden test; граница D1/R2/API — integration test;

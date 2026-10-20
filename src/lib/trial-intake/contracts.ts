@@ -23,7 +23,8 @@ export interface IntakeInput {
 	locale: 'de' | 'ru';
 	privacyVersion: typeof INTAKE_PRIVACY_VERSION;
 	children: { key: string; firstName: string; lastName: string; birthDate: string }[];
-	items: { lessonId: string; desiredDate: string; childKeys: string[] }[];
+	/** `ageConfirmed`: the parent acknowledged that an assigned child is older than the group. */
+	items: { lessonId: string; desiredDate: string; childKeys: string[]; ageConfirmed?: true }[];
 }
 export interface CatalogData {
 	lessons: Lesson[];

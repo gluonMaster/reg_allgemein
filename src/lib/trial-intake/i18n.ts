@@ -1,3 +1,5 @@
+import type { AgeRange } from './age';
+
 export type Locale = 'de' | 'ru';
 const text = {
 	title: ['Probestunde anfragen', 'Запросить пробное занятие'],
@@ -6,8 +8,8 @@ const text = {
 		'Выберите желаемые даты. После подтверждения email бюро свяжется с вами по телефону.',
 	],
 	dateNotice: [
-		'Die Termine sind Wünsche. Platz und Besuch werden vom Büro bestätigt.',
-		'Это желаемые даты. Место и посещение согласует бюро.',
+		'Die Termine sind Wünsche. Platz und Besuch werden vom Büro bestätigt. Feiertage sowie Weihnachts- und Sommerferien in Sachsen sind nicht wählbar.',
+		'Это желаемые даты. Место и посещение согласует бюро. Праздники, рождественские и летние каникулы Саксонии выбрать нельзя.',
 	],
 	selected: ['Ihr ausgewähltes Angebot', 'Выбранное занятие'],
 	contacts: ['Ihre Kontaktdaten', 'Ваши контактные данные'],
@@ -40,6 +42,43 @@ const text = {
 	birthError: [
 		'Das Geburtsdatum darf nicht in der Zukunft liegen.',
 		'Дата рождения не может быть в будущем.',
+	],
+	holidayError: [
+		'An diesem Termin findet kein Unterricht statt (Feiertag oder Ferien). Bitte wählen Sie einen anderen Termin.',
+		'В эту дату занятий нет (праздник или каникулы). Выберите другую дату.',
+	],
+	age: ['Alter', 'Возраст'],
+	ageByArrangement: ['nach Absprache', 'по согласованию'],
+	ageYoung: [
+		'ist am Wunschtermin jünger als für diese Gruppe vorgesehen. Bitte wählen Sie für dieses Kind ein anderes Angebot oder einen späteren Termin.',
+		'на желаемую дату младше возраста этой группы. Выберите для этого ребёнка другое занятие или более позднюю дату.',
+	],
+	ageOldTitle: ['Hinweis zum Alter', 'Внимание: возраст'],
+	ageOld: [
+		'ist am Wunschtermin älter als für diese Gruppe vorgesehen.',
+		'на желаемую дату старше возраста этой группы.',
+	],
+	ageOldHint: [
+		'Sie können die Anfrage trotzdem senden. Das Büro prüft, ob die Gruppe passt, und meldet sich bei Bedarf.',
+		'Запрос можно отправить. Бюро проверит, подходит ли группа, и при необходимости свяжется с вами.',
+	],
+	ageConfirm: [
+		'Ich habe verstanden, dass das Alter nicht zu dieser Gruppe passt, und möchte die Anfrage trotzdem senden.',
+		'Я понимаю, что возраст не соответствует этой группе, и всё равно хочу отправить запрос.',
+	],
+	ageConfirmError: [
+		'Bitte bestätigen Sie den Hinweis zum Alter oder ändern Sie die Auswahl.',
+		'Подтвердите предупреждение о возрасте или измените выбор.',
+	],
+	ageError: [
+		'Mindestens ein Kind ist für das gewählte Angebot noch zu jung. Bitte wählen Sie ein anderes Angebot oder einen späteren Termin.',
+		'Хотя бы один ребёнок слишком мал для выбранного занятия. Выберите другое занятие или более позднюю дату.',
+	],
+	adminAgeYoung: ['jünger als die Gruppe', 'младше возраста группы'],
+	adminAgeOld: ['älter als die Gruppe', 'старше возраста группы'],
+	holidayTableEnding: [
+		'Die sächsischen Ferientermine sind im Portal nur bis Sommer 2030 hinterlegt. Bitte die neuen Termine nachtragen lassen, sonst sind Weihnachts- und Sommerferien wieder wählbar.',
+		'Даты каникул Саксонии внесены в портал только до лета 2030 года. Попросите добавить новые даты, иначе рождественские и летние каникулы снова станут доступны для записи.',
 	],
 	submit: ['Anfrage absenden', 'Подать запрос'],
 	busy: ['Bitte warten …', 'Подождите …'],
@@ -246,6 +285,22 @@ export function dayLabel(day: number, locale: Locale): string {
 		] ?? ''
 	);
 }
+/** Russian noun after a number: 1 год, 2–4 года, 5 лет; `from` is the genitive of «от N». */
+function russianYears(n: number, from = false): string {
+	const one = n % 10 === 1 && n % 100 !== 11;
+	if (from) return one ? 'года' : 'лет';
+	if (one) return 'год';
+	return n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'года' : 'лет';
+}
+export function ageRangeLabel(range: AgeRange, locale: Locale): string {
+	const { min, max } = range;
+	if (locale === 'ru') {
+		if (max === undefined) return `от ${min} ${russianYears(min, true)}`;
+		return `${min === max ? min : `${min}–${max}`} ${russianYears(max)}`;
+	}
+	if (max === undefined) return `ab ${min} ${min === 1 ? 'Jahr' : 'Jahren'}`;
+	return `${min === max ? min : `${min}–${max}`} ${max === 1 ? 'Jahr' : 'Jahre'}`;
+}
 export function formatDate(date: string, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'ru' ? 'ru-RU' : 'de-DE', {
 		timeZone: 'Europe/Berlin',
@@ -265,6 +320,9 @@ export function errorKey(code: string): TextKey {
 		(
 			{
 				INTAKE_DATE_INVALID: 'dateError',
+				INTAKE_DATE_HOLIDAY: 'holidayError',
+				INTAKE_CHILD_TOO_YOUNG: 'ageError',
+				INTAKE_AGE_UNCONFIRMED: 'ageConfirmError',
 				INTAKE_BIRTH_DATE_INVALID: 'birthError',
 				INTAKE_LESSON_UNAVAILABLE: 'stale',
 				INTAKE_LESSON_CLOSED: 'closedError',

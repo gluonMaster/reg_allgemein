@@ -153,6 +153,42 @@
 	padding: 1rem;
 	color: #84271f;
 }
+/* An older child stays allowed, so the warning must be impossible to overlook. */
+.intake .age-warning {
+	background: #fff4d6;
+	border: 2px solid #b37400;
+	border-left-width: 8px;
+	border-radius: 0.5rem;
+	padding: 1rem;
+	margin: 1rem 0;
+	color: #4d3200;
+}
+.intake .age-warning p {
+	margin: 0 0 0.6rem;
+}
+.intake .age-warning-title {
+	font-size: 1.15rem;
+	font-weight: 700;
+}
+.intake .age-warning .check {
+	font-weight: 650;
+	margin-top: 0.5rem;
+}
+.intake .age-warning .check input {
+	flex: none;
+	accent-color: #b37400;
+}
+.intake .age-badge {
+	display: inline-block;
+	margin-left: 0.4rem;
+	border-radius: 2rem;
+	padding: 0.1rem 0.6rem;
+	background: #fff4d6;
+	border: 1px solid #b37400;
+	color: #4d3200;
+	font-size: 0.9rem;
+	font-weight: 650;
+}
 .intake .muted {
 	color: #52665f;
 	font-size: 0.95rem;

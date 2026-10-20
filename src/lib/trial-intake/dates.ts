@@ -1,3 +1,5 @@
+import { noLessonDay } from './holidays';
+
 /** Calendar arithmetic is shared with validation; dates are always Berlin calendar dates. */
 export function berlinDate(now: string): string {
 	const parts = new Intl.DateTimeFormat('en-CA', {
@@ -12,18 +14,21 @@ export function weekday(date: string): number {
 	return new Date(date).getUTCDay() || 7;
 }
 export function nextLessonDate(day: number, now: string): string {
-	const today = berlinDate(now);
-	const d = new Date(today);
-	d.setUTCDate(d.getUTCDate() + ((day - weekday(today) + 7) % 7 || 7));
-	return d.toISOString().slice(0, 10);
+	return lessonDates(day, now, 1)[0];
 }
-/** Upcoming dates of the lesson's own weekday, so no other day can be offered. */
+/**
+ * Upcoming dates of the lesson's own weekday, so no other day can be offered. Holidays and the
+ * blocked school holidays are skipped; the longest of them, summer, spans seven weeks.
+ */
 export function lessonDates(day: number, now: string, count: number): string[] {
-	const dates = [nextLessonDate(day, now)];
+	const today = berlinDate(now);
+	const next = new Date(today);
+	next.setUTCDate(next.getUTCDate() + ((day - weekday(today) + 7) % 7 || 7));
+	const dates: string[] = [];
 	while (dates.length < count) {
-		const next = new Date(dates[dates.length - 1]);
+		const date = next.toISOString().slice(0, 10);
+		if (!noLessonDay(date)) dates.push(date);
 		next.setUTCDate(next.getUTCDate() + 7);
-		dates.push(next.toISOString().slice(0, 10));
 	}
 	return dates;
 }
