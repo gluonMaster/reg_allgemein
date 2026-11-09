@@ -34,13 +34,15 @@ import {
 	buildingLabel,
 	germanDate,
 } from './templates.server';
-import { readEntry } from './waitlist-core.server';
+import { entryWithConfirmation, readEntry } from './waitlist-core.server';
 import {
 	TARIFF,
 	childName,
+	confirmationDay,
 	entryCents,
 	startSum,
 	waitlistStartEmail,
+	type StartEntry,
 	type StartLesson,
 } from './waitlist-templates.server';
 
@@ -116,7 +118,7 @@ export interface WaitlistDocumentInput {
 		'parent_first_name' | 'parent_last_name' | 'email' | 'phone' | 'created_at' | 'verified_at'
 	>;
 	children: Pick<IntakeChild, 'first_name' | 'last_name' | 'birth_date'>[];
-	entry: Pick<WaitlistEntry, 'tariff' | 'monthly_cents' | 'yearly_cents'>;
+	entry: StartEntry;
 	start: StartLesson;
 }
 const CSS = `
@@ -149,6 +151,8 @@ export function waitlistDocumentHtml(input: WaitlistDocumentInput): string {
 	const first = germanDate(start.firstDate);
 	const signupDay = berlinDay(r.created_at);
 	const p = (text: string) => `<p>${escapeHtml(text)}</p>`;
+	// After a duration change the family confirmed a new sum by phone: approved variants of OQ-052.
+	const sum = startSum(entry);
 	const consent = waitlistConsentText(
 		'de',
 		entry.tariff,
@@ -190,13 +194,20 @@ export function waitlistDocumentHtml(input: WaitlistDocumentInput): string {
 		p(`Lehrkraft: ${lesson.teacher}`),
 		'<h2>Beitrag</h2>',
 		p(`Tarif: ${TARIFF[entry.tariff]}`),
-		`<p><strong>${escapeHtml(euroAmount(startSum(entry).cents))} € pro Monat je Kind</strong></p>`,
-		p(`Dieser Betrag wurde bei Ihrer Anmeldung am ${signupDay} festgelegt.`),
+		`<p><strong>${escapeHtml(euroAmount(sum.cents))} € pro Monat je Kind</strong></p>`,
+		p(
+			sum.confirmation
+				? `Die Kursdauer hat sich auf ${sum.confirmation.minutes} Minuten geändert. Den neuen Betrag haben Sie am ${confirmationDay(sum.confirmation)} telefonisch bestätigt.`
+				: `Dieser Betrag wurde bei Ihrer Anmeldung am ${signupDay} festgelegt.`
+		),
 		'<h2>Ihre Zusage</h2>',
 		p(
 			`Sie haben sich am ${berlinDateTime(r.created_at)} auf der Warteliste angemeldet und die Anmeldung am ${r.verified_at ? berlinDateTime(r.verified_at) : '—'} über den Link in unserer E-Mail bestätigt. Dabei haben Sie folgender Erklärung zugestimmt:`
 		),
 		`<p class="consent">${escapeHtml(consent)}</p>`,
+		...(sum.confirmation
+			? [p('Der dort genannte Betrag wurde durch den oben genannten Beitrag ersetzt.')]
+			: []),
 		'<section class="next"><h2>Nächster Schritt</h2>',
 		p(
 			`Bitte kommen Sie bis zum ersten Termin am ${first} in unser Büro in der Villa der Kulturen, ${BUILDING_ADDRESS.Villa}, und schließen Sie den Vertrag ab. Bürozeiten: ${OFFICE_HOURS}. Bringen Sie dieses Schreiben unterschrieben mit. Die Teilnahme am Kurs ist erst mit unterschriebenem Vertrag möglich.`
@@ -227,7 +238,7 @@ interface WaitlistLetter {
 	to: string;
 	request: IntakeRequest;
 	children: IntakeChild[];
-	entry: WaitlistEntry;
+	entry: WaitlistEntry & StartEntry;
 	start: StartLesson;
 }
 /** The letter the worker holds the lease of, if it is still current at dispatch. */
@@ -274,7 +285,7 @@ async function readLetter(
 		to,
 		request,
 		children: children.results,
-		entry,
+		entry: await entryWithConfirmation(db, entry),
 		start: { lesson: JSON.parse(lessonJson) as Lesson, firstDate },
 	};
 }

@@ -260,6 +260,63 @@ describe('waitlist start letter and PDF document (OQ-050, WL-11)', () => {
 			expect(text).toContain(part);
 		expect(html).not.toContain(request.id);
 	});
+	it('uses the approved variants of OQ-052 only for a family that confirmed a new sum by phone', async () => {
+		// The duration went from 45 to 60 minutes; the family accepted 64,00 € on 2026-09-20 (Berlin).
+		const confirmation = {
+			cents: 6400,
+			confirmedAt: '2026-09-20T21:30:00.000Z',
+			minutes: 60,
+		};
+		const confirmed = { ...entry, confirmation };
+		const letter = waitlistStartEmail(detail, confirmed, start);
+		expect(letter.text.split('\n')).toContain(
+			'Ihr Tarif: Jahresvertrag, 64,00 € pro Monat je Kind (von Ihnen am 20.09.2026 telefonisch bestätigt)'
+		);
+		expect(letter.text).not.toContain('59,05');
+		expect(letter.text).not.toContain('bei Ihrer Anmeldung festgelegt');
+		// Everything else of the letter stays as approved.
+		expect(
+			letter.text
+				.replace('64,00 €', '59,05 €')
+				.replace(
+					'von Ihnen am 20.09.2026 telefonisch bestätigt',
+					'bei Ihrer Anmeldung festgelegt'
+				)
+		).toBe(waitlistStartEmail(detail, entry, start).text);
+		// Without a confirmation, or with none recorded, the letter is the approved one.
+		expect(waitlistStartEmail(detail, { ...entry, confirmation: null }, start).text).toBe(
+			waitlistStartEmail(detail, entry, start).text
+		);
+		const document = (value: typeof entry & { confirmation?: typeof confirmation }) =>
+			waitlistDocumentHtml({
+				reference: 'WL-0000-0000',
+				createdAt: '2026-09-17T08:00:00.000Z',
+				request,
+				children: detail.children,
+				entry: value,
+				start,
+			})
+				.replace(/<style>[\s\S]*<\/style>/u, '')
+				.replace(/<[^>]+>/gu, ' ');
+		const text = document(confirmed);
+		expect(text).toContain('64,00 € pro Monat je Kind');
+		expect(text).toContain(
+			'Die Kursdauer hat sich auf 60 Minuten geändert. Den neuen Betrag haben Sie am 20.09.2026 telefonisch bestätigt.'
+		);
+		expect(text).not.toContain('Dieser Betrag wurde bei Ihrer Anmeldung');
+		// The consent stays verbatim with the sum agreed to, followed by the replacement note.
+		const consent = waitlistConsentText('de', 'yearly', 5905, 2);
+		expect(text).toContain(consent);
+		expect(
+			text.indexOf('Der dort genannte Betrag wurde durch den oben genannten Beitrag ersetzt.')
+		).toBeGreaterThan(text.indexOf(consent));
+		const plain = document(entry);
+		expect(plain).toContain(
+			'Dieser Betrag wurde bei Ihrer Anmeldung am 16.09.2026 festgelegt.'
+		);
+		expect(plain).not.toContain('Kursdauer');
+		expect(plain).not.toContain('Der dort genannte Betrag');
+	});
 	it('names the file in ASCII with subject and first date', () => {
 		expect(documentFileName('English', '2026-09-29')).toBe(
 			'Anmeldebestaetigung-English-29.09.2026.pdf'

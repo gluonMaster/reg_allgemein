@@ -2,7 +2,7 @@ import { ORGANIZATION_NAME } from '$lib/organization';
 import type { EmailMessage } from '$lib/server/outbox/providers';
 import type { Lesson } from '../contracts';
 import { ageFit, lessonAgeRange } from '../age';
-import { nextLessonDate } from '../dates';
+import { berlinDate, nextLessonDate } from '../dates';
 import { ageRangeLabel } from '../i18n';
 import { euroAmount } from '../prices';
 import type { IntakeDetail, WaitlistEntry } from './model.server';
@@ -47,13 +47,28 @@ function ageMismatches(detail: IntakeDetail, entry: Entry) {
 }
 export const childName = (c: Pick<IntakeDetail['children'][number], 'first_name' | 'last_name'>) =>
 	`${c.first_name} ${c.last_name}`;
-/**
- * The sum of the start letter and the PDF, per child and month (WL-06 item 5): the snapshot of
- * the signup. The rebind of stage 04 adds the sum a family confirmed by phone.
- */
-export function startSum(entry: Pick<Entry, 'tariff' | 'monthly_cents' | 'yearly_cents'>) {
-	return { cents: entryCents(entry) };
+/** "Neuen Preis bestätigt" (WL-15): the new sum of the family's tariff after a duration change. */
+export interface PriceConfirmation {
+	cents: number;
+	confirmedAt: string;
+	/** The new duration the family accepted. */
+	minutes: number;
 }
+/** A signup as a start letter sees it: the snapshot and, after a duration change, the call. */
+export type StartEntry = Pick<Entry, 'tariff' | 'monthly_cents' | 'yearly_cents'> & {
+	confirmation?: PriceConfirmation | null;
+};
+/**
+ * The sum of the start letter and the PDF, per child and month (WL-06 item 5): the sum the family
+ * confirmed by phone after a duration change, otherwise the snapshot of the signup.
+ */
+export function startSum(entry: StartEntry) {
+	const confirmation = entry.confirmation ?? null;
+	return { cents: confirmation?.cents ?? entryCents(entry), confirmation };
+}
+/** "{Datum}" of a phone confirmation: the Berlin day. */
+export const confirmationDay = (confirmation: PriceConfirmation) =>
+	germanDate(berlinDate(confirmation.confirmedAt));
 /** Time and place of a start: the catalog card at that moment, the first date chosen by the admin. */
 export interface StartLesson {
 	lesson: Lesson;
@@ -65,12 +80,17 @@ export interface StartLesson {
  */
 export function waitlistStartEmail(
 	detail: Pick<IntakeDetail, 'request' | 'children'>,
-	entry: Pick<Entry, 'tariff' | 'monthly_cents' | 'yearly_cents'>,
+	entry: StartEntry,
 	start: StartLesson,
 	probeTo?: string
 ): EmailMessage {
 	const { lesson } = start;
 	const date = germanDate(start.firstDate);
+	const sum = startSum(entry);
+	// Approved variant of OQ-052 for a family that confirmed a new sum by phone.
+	const fixed = sum.confirmation
+		? `von Ihnen am ${confirmationDay(sum.confirmation)} telefonisch bestätigt`
+		: 'bei Ihrer Anmeldung festgelegt';
 	const message: EmailMessage = {
 		to: probeTo ?? detail.request.email,
 		subject: `${probeTo ? '[PROBE] ' : ''}Ihr Kurs ${lesson.subject} beginnt am ${date} — ${ORGANIZATION_NAME}`,
@@ -80,7 +100,7 @@ export function waitlistStartEmail(
 				`Erster Termin: ${DAYS[lesson.weekday]}, ${date}, ${lesson.start}–${lesson.end}`,
 				`Ort: ${buildingLabel(lesson.building)}, ${BUILDING_ADDRESS[lesson.building] ?? ''}, Raum ${lesson.room}`,
 				`Angemeldet: ${detail.children.map(childName).join(', ')}`,
-				`Ihr Tarif: ${TARIFF[entry.tariff]}, ${euroAmount(startSum(entry).cents)} € pro Monat je Kind (bei Ihrer Anmeldung festgelegt)`,
+				`Ihr Tarif: ${TARIFF[entry.tariff]}, ${euroAmount(sum.cents)} € pro Monat je Kind (${fixed})`,
 			].join('\n') +
 			`\n\nWichtig: Bitte kommen Sie bis zum ersten Termin am ${date} in unser Büro in der Villa der Kulturen (${BUILDING_ADDRESS.Villa}) und schließen Sie den Vertrag ab. Bürozeiten: ${OFFICE_HOURS}. Die Teilnahme am Kurs ist erst mit unterschriebenem Vertrag möglich.\n\n` +
 			'Im Anhang finden Sie die Bestätigung Ihrer Anmeldung und Ihrer Zahlungszusage. Bitte bringen Sie sie unterschrieben mit.\n\n' +

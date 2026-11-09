@@ -2,7 +2,16 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { requestJson } from '../client';
-	import { t, dayLabel, errorKey, fill, formatDate, startBlockText, type Locale } from '../i18n';
+	import {
+		t,
+		attentionReasonsText,
+		dayLabel,
+		errorKey,
+		fill,
+		formatDate,
+		startBlockText,
+		type Locale,
+	} from '../i18n';
 	import type { WaitlistCourse, WaitlistStartOptions } from '../contracts';
 	import LessonCard from './LessonCard.svelte';
 	// WL-10: the start dialog of one planned course. Every check is repeated by the server.
@@ -82,6 +91,12 @@
 	{#if !done}
 		<p class="muted">{t(locale, 'startDialogIntro')}</p>
 		<LessonCard {lesson} {locale} duration />
+		<!-- WL-15: the orange mark does not block the start, the dialog reminds of it. -->
+		{#if course.attention?.length}<p class="mark mark-orange">
+				{fill(t(locale, 'startAttention'), {
+					reasons: attentionReasonsText(course.attention, locale),
+				})}
+			</p>{/if}
 		<label
 			>{t(locale, 'startFirstDate')}<select
 				value={firstDate}

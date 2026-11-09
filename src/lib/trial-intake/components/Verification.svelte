@@ -66,6 +66,12 @@
 						})
 					: fill(t(locale, 'waitlistChanged'), { phone: ORGANIZATION_PHONE })}
 			</p>
+			<!-- OQ-052: a signup cancelled by a rebind may join the course its queue moved to. -->
+			{#if !view.firstDate && view.lessonId}<a
+					class="button"
+					href={`/warteliste?lesson=${view.lessonId}`}
+					>{t(locale, 'waitlistSignupAgain')}</a
+				>{/if}
 		{:else if view.state === 'confirm'}<p>
 				{t(locale, waitlist ? 'waitlistConfirmHint' : 'confirmHint')}
 			</p>

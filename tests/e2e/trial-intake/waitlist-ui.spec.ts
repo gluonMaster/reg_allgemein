@@ -98,6 +98,27 @@ test('planned card link -> waitlist form -> changed price -> confirmation by syn
 				new Date().toISOString()
 			)
 			.run();
+		// The second planned card (the rebind target below) has a price too: no "Preis fehlt" banner.
+		const other = plannedFixture.lessons[1] as Lesson;
+		await db
+			.prepare(
+				`INSERT INTO trial_intake_planned_prices(course_key, subject, weekday, start_time, end_time, teacher, building,
+				 room, monthly_cents, yearly_cents, min_participants, updated_by, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 6650, 5905, 3, 'e2e-admin', ?, ?) ON CONFLICT(course_key) DO NOTHING`
+			)
+			.bind(
+				plannedCourseKey(other),
+				other.subject,
+				other.weekday,
+				other.start,
+				other.end,
+				other.teacher,
+				other.building,
+				other.room,
+				new Date().toISOString(),
+				new Date().toISOString()
+			)
+			.run();
 		const page = await context.newPage();
 		await page.setViewportSize({ width: 390, height: 844 });
 		await installSyntheticTurnstile(page);
@@ -410,6 +431,129 @@ test('planned course at its threshold -> start dialog -> probe to the admin -> c
 		await expect(
 			page.getByText('Dieser Kurs ist bereits gestartet', { exact: false })
 		).toBeVisible();
+	} finally {
+		await context.close().catch(() => {});
+		await proxy.dispose();
+	}
+});
+
+test('queue whose card left the schedule -> banner -> orange rebind to the new card -> "Familien informiert"', async ({
+	browser,
+}, testInfo) => {
+	test.setTimeout(120_000);
+	// The second planned card of the fixture is the new card; the old one is not in the catalog.
+	const target = plannedFixture.lessons.find((l) => l.subject === '1 E')! as Lesson;
+	const old = { ...target, start: '15:00', end: '15:45' };
+	const { proxy, db } = await harness(testInfo);
+	const [oldKey, newKey] = [plannedCourseKey(old), plannedCourseKey(target)];
+	const context = await newE2eContext(browser, testInfo);
+	context.setDefaultTimeout(15_000);
+	const now = new Date().toISOString();
+	const request = crypto.randomUUID();
+	try {
+		await db.batch([
+			db
+				.prepare(
+					`INSERT INTO trial_intake_planned_prices(course_key, subject, weekday, start_time, end_time, teacher, building,
+					 room, age_min, age_max, monthly_cents, yearly_cents, min_participants, updated_by, created_at, updated_at)
+					 VALUES (?, '1 E', 2, '15:00', '15:45', 'Lehrkraft Q', 'Kolibri', 'R5', 5, 6, 6650, 5905, 3, 'e2e-admin', ?, ?)`
+				)
+				.bind(oldKey, now, now),
+			db
+				.prepare(
+					`INSERT INTO trial_intake_requests(id, kind, idempotency_key, payload_hash, parent_first_name, parent_last_name,
+					 parent_last_name_search, email, phone, locale, privacy_version, state, receipt_nonce, verification_version,
+					 verification_nonce, verification_hash, verification_expires_at, last_email_at, created_at, pending_expires_at, verified_at)
+					 VALUES (?, 'waitlist', ?, 'h', 'Synthetic', 'RebindParent', 'rebindparent', 'waitlist-rebind@example.test',
+					 '+49 000 777888', 'de', 'trial-intake-waitlist-retention-2026-11-05-v1', 'verified', 'n', 1, 'n', ?, ?, ?, ?, ?, ?)`
+				)
+				.bind(request, request, `hash-${request}`, now, now, now, now, now),
+			db
+				.prepare(
+					`INSERT INTO trial_intake_children(id, request_id, position, first_name, last_name, last_name_search, birth_date)
+					 VALUES (?, ?, 0, 'RebindChild', 'Synthetic', 'synthetic', '2020-05-01')`
+				)
+				.bind(crypto.randomUUID(), request),
+			db
+				.prepare(
+					`INSERT INTO trial_intake_waitlist_entries(request_id, course_key, lesson_json, tariff, monthly_cents, yearly_cents,
+					 min_participants, consent_version, withdraw_nonce, withdraw_hash, created_at, status_changed_at)
+					 VALUES (?, ?, ?, 'monthly', 6650, 5905, 3, 'trial-intake-waitlist-consent-2026-11-05-v1', ?, ?, ?, ?)`
+				)
+				.bind(
+					request,
+					oldKey,
+					JSON.stringify({ ...old, id: 'a'.repeat(64) }),
+					crypto.randomUUID(),
+					`${request}-withdraw`,
+					now,
+					now
+				),
+		]);
+		const page = await context.newPage();
+		await page.goto('/auth/login');
+		await page
+			.getByLabel('E-Mail-Adresse', { exact: true })
+			.fill(syntheticIdentities.admin.email);
+		await page.getByLabel('Passwort', { exact: true }).fill(syntheticPassword);
+		await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+		await page.waitForURL('**/admin/trial-intake');
+		await expect(
+			page.getByText('Kurs nicht mehr im Stundenplan: 1 Familien warten').first()
+		).toBeVisible();
+		await page.goto('/admin/trial-intake/warteliste');
+		await expect(page.locator('[data-enhanced="true"]')).toBeVisible();
+		const gone = page.locator('tr', { hasText: 'Kurs nicht mehr im Stundenplan' });
+		await expect(gone).toContainText('Lehrkraft Q');
+		await expect(gone).toContainText('15:00–15:45');
+		await gone.getByRole('button', { name: 'Neu zuordnen', exact: true }).click();
+		const dialog = page.locator('section.rebind-dialog');
+		await expect(
+			dialog.getByRole('heading', { name: 'Warteliste neu zuordnen: 1 E' })
+		).toBeFocused();
+		await expect(dialog).toContainText('Wartend: 1 Familien, 1 Kinder');
+		const confirm = dialog.getByRole('button', { name: 'Neu zuordnen bestätigen' });
+		await expect(confirm).toBeDisabled();
+		await dialog
+			.getByRole('radio', {
+				name: '1 E, Dienstag 16:00–16:45, Kolibri · Raum R5, Lehrkraft Q',
+			})
+			.check();
+		const effect = dialog.getByRole('status');
+		await expect(effect).toContainText('1 wartende Familien mit 1 Kindern gehen');
+		await expect(effect).toContainText('Familien informieren: Zeit: 15:00 auf 16:00');
+		await page.screenshot({ path: 'tmp/trial-intake-waitlist-rebind.png', fullPage: true });
+		await confirm.click();
+		await expect(page.getByText('Die Warteliste ist neu zugeordnet.')).toBeVisible();
+		await expect(dialog).toHaveCount(0);
+		expect(
+			await db
+				.prepare(
+					'SELECT course_key, status FROM trial_intake_waitlist_entries WHERE request_id = ?'
+				)
+				.bind(request)
+				.first()
+		).toEqual({ course_key: newKey, status: 'waiting' });
+		const row = page.locator('tr', { hasText: 'Lehrkraft Q' }).first();
+		await expect(row).toContainText('sammelt: 1 von 3 Kindern');
+		await expect(row).toContainText('Familien informieren: Zeit: 15:00 auf 16:00');
+		const orange = page.locator('.mark-box.mark-orange');
+		await expect(orange).toContainText(
+			'Synthetic RebindParent · Telefonnummer: +49 000 777888'
+		);
+		await orange.getByRole('button', { name: 'Familien informiert', exact: true }).click();
+		await expect(page.getByText('Gespeichert.')).toBeVisible();
+		await expect(page.locator('.mark-box.mark-orange')).toHaveCount(0);
+		await expect(row).not.toContainText('Familien informieren');
+		expect(
+			await db
+				.prepare(
+					`SELECT COUNT(*) AS n FROM audit_events WHERE action IN ('trial_intake.waitlist_rebound', 'trial_intake.waitlist_attention_cleared')`
+				)
+				.first<{ n: number }>()
+		).toEqual({ n: 2 });
+		await page.goto('/admin/trial-intake');
+		await expect(page.getByText('Kurs nicht mehr im Stundenplan')).toHaveCount(0);
 	} finally {
 		await context.close().catch(() => {});
 		await proxy.dispose();

@@ -12,6 +12,8 @@ import {
 	INTAKE_BODY_LIMIT,
 	INTAKE_PRIVACY_VERSION,
 	type CatalogData,
+	type Lesson,
+	type VerificationResult,
 	type WaitlistAttention,
 } from '../contracts';
 import { CatalogReader, boundedText } from './catalog.server';
@@ -22,6 +24,8 @@ import { IntakeError, intakeInputSchema } from './validation.server';
 import { WaitlistPrices } from './prices.server';
 import { WaitlistSignup, waitlistInputSchema } from './waitlist.server';
 import { WaitlistStart } from './waitlist-start.server';
+import { WaitlistRebind, rebindOptions } from './waitlist-rebind.server';
+import { isPlannedLesson, plannedCourseKey } from '../planned';
 import { readWaitlistDocument, waitlistPdfAdapter } from './waitlist-pdf.server';
 import { IMPORT_MAX_BYTES, priceCsv, priceXlsx } from './price-files.server';
 import { parseEuroCents, parseMinParticipants } from '../prices';
@@ -44,12 +48,18 @@ export function intakeRuntime(event: RequestEvent) {
 		config.messaging.telegramSchedule,
 		config.messaging.emailMaxAttempts
 	);
+	const waitlist = new WaitlistSignup(
+		service,
+		config.jwtSecret,
+		config.messaging.emailMaxAttempts
+	);
 	return {
 		config,
 		service,
 		admin: new IntakeAdmin(service),
 		prices,
-		waitlist: new WaitlistSignup(service, config.jwtSecret, config.messaging.emailMaxAttempts),
+		waitlist,
+		rebind: new WaitlistRebind(db, prices, waitlist),
 		start: new WaitlistStart(
 			db,
 			prices,
@@ -208,11 +218,33 @@ export async function catalog(event: RequestEvent): Promise<CatalogData> {
 		now: new Date().toISOString(),
 	};
 }
+/**
+ * A signup cancelled by a rebind may join the course its queue moved to: the page links the form
+ * when that course has exactly one planned card in the schedule (OQ-052). The key stays internal.
+ */
+async function signupLink(
+	r: ReturnType<typeof intakeRuntime>,
+	result: VerificationResult & { courseKey?: string }
+): Promise<VerificationResult> {
+	const { courseKey, ...rest } = result;
+	if (!courseKey) return rest;
+	let lessons: readonly Lesson[];
+	try {
+		lessons = await r.catalog.read();
+	} catch {
+		return rest;
+	}
+	const cards = lessons.filter((l) => isPlannedLesson(l) && plannedCourseKey(l) === courseKey);
+	return cards.length === 1 ? { ...rest, lessonId: cards[0].id } : rest;
+}
 export async function verify(event: RequestEvent) {
 	const r = intakeRuntime(event);
 	const now = new Date().toISOString();
 	if (event.request.method === 'GET')
-		return r.service.inspectToken(event.url.searchParams.get('token') ?? '', now);
+		return signupLink(
+			r,
+			await r.service.inspectToken(event.url.searchParams.get('token') ?? '', now)
+		);
 	const body = await readJson(event);
 	await r.limiter.consume('intake-verify-ip', requestSubject(event), now);
 	const { email, ...result } = await r.service.verify(z.string().max(128).parse(body.token), now);
@@ -228,7 +260,7 @@ export async function verify(event: RequestEvent) {
 			maxAge: VERIFIED_DEVICE_MAX_AGE,
 		}
 	);
-	return result;
+	return signupLink(r, result);
 }
 export async function resend(event: RequestEvent) {
 	const r = intakeRuntime(event);
@@ -353,6 +385,9 @@ export async function loadWaitlistPrices(event: RequestEvent) {
 	for (const course of [...data.courses, ...data.unscheduled])
 		course.entries = entries.get(course.key) ?? [];
 	for (const course of data.courses) course.start = r.start.options(course, now);
+	// Without a readable schedule the tool stays closed: no course turns into a vanished one.
+	if (!data.catalogError)
+		for (const course of data.unscheduled) course.rebind = rebindOptions(course, data);
 	return data;
 }
 const ATTENTION = new Set(['ready', 'price_missing', 'gone', 'ambiguous']);
@@ -373,17 +408,78 @@ export async function waitlistAttention(event: RequestEvent): Promise<WaitlistAt
 		courses: data.courses.length,
 		children: all.reduce((sum, course) => sum + course.children, 0),
 		attention: all
-			.filter((course) => ATTENTION.has(course.status ?? ''))
-			.map(({ key, course, status, children, price, firstDate, activeEntries }) => ({
-				key,
-				course,
-				status,
-				children,
-				price,
-				firstDate,
-				activeEntries,
-			})),
+			.filter(
+				(course) =>
+					ATTENTION.has(course.status ?? '') ||
+					course.attention?.length ||
+					course.priceOpen.length
+			)
+			.map(
+				({
+					key,
+					course,
+					status,
+					children,
+					price,
+					firstDate,
+					activeEntries,
+					attention,
+					priceOpen,
+				}) => ({
+					key,
+					course,
+					status,
+					children,
+					price,
+					firstDate,
+					activeEntries,
+					attention,
+					priceOpen,
+				})
+			),
 	};
+}
+/** WL-15: rebind of a queue or of a price without one to another planned card. */
+export async function adminWaitlistRebind(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	const body = await adminBody(event);
+	await requireActiveAdmin(r.service.db, event.locals.user);
+	// The server compares against the schedule as it is now; without it the rebind is refused.
+	const lessons = await r.catalog.read();
+	return r.rebind.rebind(
+		event.locals.user,
+		lessons,
+		body,
+		event.locals.requestId,
+		new Date().toISOString()
+	);
+}
+/** "Familien informiert" and the price decisions of the red mark (WL-15). */
+export async function adminWaitlistMarks(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	const body = await adminBody(event);
+	const now = new Date().toISOString();
+	if (body.action === 'informed')
+		return r.rebind.informed(event.locals.user, body, event.locals.requestId, now);
+	if (body.action === 'confirmed' || body.action === 'declined')
+		return r.rebind.decide(
+			event.locals.user,
+			{ requestId: body.requestId, decision: body.action },
+			event.locals.requestId,
+			now
+		);
+	throw new IntakeError('INTAKE_INPUT_INVALID');
+}
+/** "Als neuen Kurs öffnen" (WL-15). */
+export async function adminWaitlistReopen(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	const body = await adminBody(event);
+	return r.rebind.reopen(
+		event.locals.user,
+		body,
+		event.locals.requestId,
+		new Date().toISOString()
+	);
 }
 /** Set both sums and the threshold of a planned course, or delete an unlocked price. */
 export async function adminWaitlistPrice(event: RequestEvent) {

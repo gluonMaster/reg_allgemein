@@ -1,4 +1,5 @@
 import type { OutboxWaitReason } from '$lib/outbox-wait';
+import type { AgeRange } from './age';
 
 export const INTAKE_PRIVACY_VERSION = 'trial-intake-retention-2026-09-16-v1';
 /** Retention text of the waitlist form (WL-13): 14 days, 12 months, 90 days after processing. */
@@ -73,15 +74,78 @@ export interface WaitlistPageData {
 	now: string;
 }
 export type WaitlistEntryStatus = 'waiting' | 'started' | 'withdrawn' | 'cancelled' | 'expired';
+/** The admin's call after a duration change (WL-15): the family accepted the new sum or declined. */
+export interface WaitlistPriceDecision {
+	decision: 'confirmed' | 'declined';
+	/** The new sum per child and month of the family's tariff; null after a refusal. */
+	priceCents: number | null;
+	createdAt: string;
+}
 /** A confirmed signup as the admin sees it in the queue of a course. */
 export interface WaitlistEntrySummary {
 	requestId: string;
 	parentFirstName: string;
 	parentLastName: string;
+	/** The bureau calls the families of an orange or red course (WL-15). */
+	phone: string;
 	children: { firstName: string; lastName: string; birthDate: string }[];
 	tariff: WaitlistTariff;
 	verifiedAt: string;
 	status: WaitlistEntryStatus;
+	/** The latest price decision of this signup. */
+	priceDecision: WaitlistPriceDecision | null;
+}
+/** WL-15: how a rebind changes the course of a queue. */
+export type RebindKind = 'plain' | 'notify' | 'price';
+export type RebindDifference =
+	| { field: 'subject' | 'start' | 'teacher' | 'building'; from: string; to: string }
+	| { field: 'weekday' | 'minutes'; from: number; to: number }
+	| { field: 'age'; from: AgeRange | null; to: AgeRange | null };
+/** Reasons of the orange mark: the families have to be told (WL-15). */
+export type AttentionReason =
+	| { code: 'time'; from: string; to: string }
+	| { code: 'weekday' | 'teacher' | 'age' | 'subject_check' };
+export interface RebindComparison {
+	/** False for another subject: `WAITLIST_REBIND_SUBJECT`. */
+	allowed: boolean;
+	/** The strictest kind of all differences. */
+	kind: RebindKind;
+	differences: RebindDifference[];
+	reasons: AttentionReason[];
+}
+/** Why a planned card cannot take a queue or a price. */
+export type RebindBlock = 'subject' | 'queue' | 'started' | 'ambiguous' | 'closed';
+/** The course of a journal row or a rebind candidate as the admin sees it. */
+export type CourseSummary = Omit<Lesson, 'id' | 'group'>;
+export interface RebindTarget {
+	key: string;
+	lesson: Lesson;
+	comparison: RebindComparison;
+	block: RebindBlock | null;
+	/** The unlocked price of the card that a rebind replaces. */
+	price: WaitlistPrice | null;
+}
+/** The rebind tool of a course that left the schedule (WL-15). */
+export interface RebindOptions {
+	/** Waiting signups exist: statuses and calls apply. Without them only the price moves. */
+	queue: boolean;
+	families: number;
+	children: number;
+	/** Unconfirmed signups the rebind cancels. */
+	unconfirmed: number;
+	targets: RebindTarget[];
+}
+/** A row of the rebind journal. */
+export interface WaitlistRebindRecord {
+	id: string;
+	kind: RebindKind;
+	createdAt: string;
+	from: CourseSummary;
+	to: CourseSummary;
+	differences: RebindDifference[];
+	reasons: AttentionReason[];
+	before: { monthlyCents: number; yearlyCents: number };
+	after: { monthlyCents: number; yearlyCents: number };
 }
 /** Course facts of the withdrawal page; no family data (WL-12). */
 export interface WithdrawalData {
@@ -96,7 +160,15 @@ export interface WaitlistAttention {
 	/** Courses that need the admin: threshold reached, no price, vanished or ambiguous. */
 	attention: Pick<
 		WaitlistCourse,
-		'key' | 'course' | 'status' | 'children' | 'price' | 'firstDate' | 'activeEntries'
+		| 'key'
+		| 'course'
+		| 'status'
+		| 'children'
+		| 'price'
+		| 'firstDate'
+		| 'activeEntries'
+		| 'attention'
+		| 'priceOpen'
 	>[];
 	/** Start letters still on their way or given up (WL-10). */
 	startLetters: { unsent: number; dead: number };
@@ -109,6 +181,7 @@ export type WaitlistStartBlock =
 	| 'closed'
 	| 'price_missing'
 	| 'renderer'
+	| 'price_open'
 	| 'threshold'
 	| 'no_entries';
 /** The start dialog of a planned course on the admin waitlist page. */
@@ -181,10 +254,26 @@ export interface WaitlistCourse {
 	firstDate: string | null;
 	/** Null while the schedule cannot be read: no course turns into a vanished one. */
 	status: WaitlistStatus | null;
+	/** The orange mark: reasons to tell the families; null without a mark (WL-15). */
+	attention: AttentionReason[] | null;
+	/** The latest duration change in the history of the queue, if any. */
+	priceRebind: {
+		id: string;
+		createdAt: string;
+		minutes: number;
+		monthlyCents: number;
+		yearlyCents: number;
+	} | null;
+	/** The red mark: confirmed signups from before that change still without a decision. */
+	priceOpen: string[];
 	/** Confirmed signups of the course; filled only on the admin waitlist page. */
 	entries?: WaitlistEntrySummary[];
 	/** Filled only on the admin waitlist page for a course with a planned card. */
 	start?: WaitlistStartOptions;
+	/** The rebinds that brought this queue to its course, newest first. */
+	rebinds?: WaitlistRebindRecord[];
+	/** Filled only on the admin waitlist page for a course that left the schedule. */
+	rebind?: RebindOptions;
 }
 export interface AdminWaitlistData {
 	courses: WaitlistCourse[];
@@ -235,6 +324,8 @@ export interface VerificationResult {
 	/** Present only for a waitlist signup; the page then shows the waitlist texts. */
 	kind?: 'waitlist';
 	firstDate?: string | null;
+	/** A signup cancelled by a rebind: the planned card its queue moved to, for a new signup. */
+	lessonId?: string;
 }
 export interface AdminQuery {
 	status: 'verified' | 'processed' | 'all';
@@ -331,6 +422,12 @@ export interface AdminWaitlistEntry {
 	letters: WaitlistLetterStatus[];
 	/** The stored PDF of the start letter, once it was rendered. */
 	document: { sha256: string; byteSize: number; createdAt: string } | null;
+	/** Rebinds that moved or cancelled this signup, newest first (WL-15). */
+	rebinds: WaitlistRebindRecord[];
+	/** The status `cancelled` came from a rebind, not from the course start. */
+	cancelledByRebind: boolean;
+	/** The latest price decision after a duration change. */
+	priceDecision: WaitlistPriceDecision | null;
 }
 export interface AdminDetailData {
 	waitlist: AdminWaitlistEntry | null;

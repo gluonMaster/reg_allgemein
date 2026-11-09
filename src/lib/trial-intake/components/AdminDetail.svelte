@@ -6,17 +6,19 @@
 		t,
 		ageRangeLabel,
 		dayLabel,
+		differenceText,
 		entryStatusText,
 		fill,
 		formatDate,
 		formatTimestamp,
 		errorKey,
+		rebindKindText,
 		tariffLabel,
 		type TextKey,
 	} from '../i18n';
 	import { ageFit, lessonAgeRange } from '../age';
 	import { euroAmount } from '../prices';
-	import { itemLesson, type AdminDetailData } from '../contracts';
+	import { itemLesson, type AdminDetailData, type CourseSummary } from '../contracts';
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
 	import { ORGANIZATION_NAME } from '$lib/organization';
@@ -29,6 +31,15 @@
 	const request = $derived(detail.request);
 	const waitlist = $derived(detail.waitlist);
 	const waitlistAges = $derived(waitlist ? lessonAgeRange(waitlist.lesson) : null);
+	// A signup cancelled by a rebind is not one cancelled at the start (WL-15).
+	const waitlistStatus = $derived(
+		waitlist &&
+			(waitlist.cancelledByRebind
+				? t(locale, 'entryCancelledRebind')
+				: entryStatusText(waitlist.status, locale))
+	);
+	const summary = (c: CourseSummary) =>
+		`${c.subject}, ${dayLabel(c.weekday, locale)} ${c.start}–${c.end}, ${c.building} · ${t(locale, 'room')} ${c.room}, ${c.teacher}`;
 	let busy = $state(false),
 		feedback = $state<TextKey | null>(null);
 	let enhanced = $state(false);
@@ -65,9 +76,8 @@
 	</h2>
 	<section class="card">
 		<span class="badge"
-			>{waitlist
-				? entryStatusText(waitlist.status, locale)
-				: t(locale, request.state === 'processed' ? 'processed' : 'verified')}</span
+			>{waitlistStatus ??
+				t(locale, request.state === 'processed' ? 'processed' : 'verified')}</span
 		>
 		<h3>{request.parentFirstName} {request.parentLastName}</h3>
 		<dl>
@@ -116,14 +126,43 @@
 				</dd>
 				<dt>{t(locale, 'entryStatus')}</dt>
 				<dd>
-					{entryStatusText(waitlist.status, locale)} · {formatTimestamp(
-						waitlist.statusChangedAt,
-						locale
-					)}
+					{waitlistStatus} · {formatTimestamp(waitlist.statusChangedAt, locale)}
 				</dd>
 				<dt>{t(locale, 'ageCheckDate')}</dt>
 				<dd>{formatDate(waitlist.ageDate, locale)}</dd>
+				{#if waitlist.priceDecision}{@const decision = waitlist.priceDecision}
+					<dt>{t(locale, 'priceOpenTitle')}</dt>
+					<dd>
+						<strong
+							>{fill(
+								t(
+									locale,
+									decision.decision === 'confirmed'
+										? 'decisionConfirmed'
+										: 'decisionDeclined'
+								),
+								{
+									amount: euroAmount(decision.priceCents ?? 0),
+									date: formatDate(decision.createdAt, locale),
+								}
+							)}</strong
+						>
+					</dd>{/if}
 			</dl>
+			<!-- WL-15: the journal of the rebinds that moved or cancelled this signup. -->
+			{#if waitlist.rebinds.length}<h4>{t(locale, 'rebindJournal')}</h4>
+				<ul>
+					{#each waitlist.rebinds as record (record.id)}<li>
+							{formatTimestamp(record.createdAt, locale)}: {summary(record.from)} → {summary(
+								record.to
+							)} · {rebindKindText(record.kind, locale)}
+							{#if record.differences.length}<br /><span class="muted"
+									>{record.differences
+										.map((d) => differenceText(d, locale))
+										.join('; ')}</span
+								>{/if}
+						</li>{/each}
+				</ul>{/if}
 		</article>
 	{/if}
 	{#if waitlist?.start}{@const start = waitlist.start}

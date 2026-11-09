@@ -13,6 +13,7 @@ export const intakeReleaseTests = [
 	'tests/integration/trial-intake/intake-telegram-alert-d1.test.ts',
 	'tests/integration/trial-intake/intake-telegram-d1.test.ts',
 	'tests/integration/trial-intake/waitlist-prices-d1.test.ts',
+	'tests/integration/trial-intake/waitlist-rebind-d1.test.ts',
 	'tests/integration/trial-intake/waitlist-signup-d1.test.ts',
 	'tests/integration/trial-intake/waitlist-start-d1.test.ts',
 	'tests/unit/trial-intake/age-holidays.test.ts',

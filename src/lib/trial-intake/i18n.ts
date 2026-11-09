@@ -1,6 +1,10 @@
 import type { AgeRange } from './age';
 import type {
+	AttentionReason,
 	IntakeOutboxContext,
+	RebindBlock,
+	RebindDifference,
+	RebindKind,
 	WaitlistCourse,
 	WaitlistEntryStatus,
 	WaitlistStartBlock,
@@ -465,6 +469,137 @@ const text = {
 		'Bitte die Gruppe im Stundenplan umbenennen: Die Karte steht noch als Kurs in Planung.',
 		'Переименуйте группу в расписании: карточка всё ещё помечена как курс в планировании.',
 	],
+	startBlockPriceOpen: [
+		'neuer Preis noch nicht von allen Familien bestätigt',
+		'новую цену подтвердили ещё не все семьи',
+	],
+	startAttention: [
+		'Hinweis: Familien informieren ({reasons}). Der Start ist trotzdem möglich.',
+		'Напоминание: обзвонить семьи ({reasons}). Старт всё равно возможен.',
+	],
+	// Rebind of a queue (WL-15), admin only; service texts outside the approved list.
+	markAttention: ['Familien informieren: {reasons}', 'Обзвонить семьи: {reasons}'],
+	markPrice: ['Neuer Preis: {n} Familien offen', 'Новая цена: не отмечено семей — {n}'],
+	reasonTime: ['Zeit: {from} auf {to}', 'Время: {from} → {to}'],
+	reasonWeekday: ['Wochentag', 'День недели'],
+	reasonTeacher: ['Lehrkraft', 'Преподаватель'],
+	reasonAge: ['Alter', 'Возраст'],
+	reasonSubjectCheck: ['Fach prüfen', 'Проверить предмет'],
+	diffStart: ['Beginn', 'Начало'],
+	diffMinutes: ['Dauer', 'Продолжительность'],
+	diffAge: ['Alter', 'Возраст'],
+	diffNone: ['ohne Altersangabe', 'возраст не указан'],
+	rebindNone: ['keine Unterschiede', 'отличий нет'],
+	rebindPlain: ['ohne weitere Schritte', 'без дополнительных действий'],
+	rebindNotify: ['Familien informieren', 'обзвонить семьи'],
+	rebindPrice: [
+		'neue Beträge, jede Familie bestätigt',
+		'новые суммы, подтверждение каждой семьи',
+	],
+	rebindPriceOnly: ['nur der Preis geht über', 'переходит только цена'],
+	rebindUnavailable: ['nicht möglich: {reason}', 'недоступно: {reason}'],
+	rebindBlockSubject: ['anderes Fach', 'другой предмет'],
+	rebindBlockQueue: ['eigene Warteliste', 'своя очередь'],
+	rebindBlockStarted: ['bereits gestartet', 'уже стартовал'],
+	rebindBlockAmbiguous: ['zwei Karten desselben Kurses', 'две карточки одного курса'],
+	rebindBlockClosed: ['als belegt markiert', 'отмечен как укомплектованный'],
+	rebindOpen: ['Neu zuordnen', 'Перепривязать'],
+	rebindTitle: ['Warteliste neu zuordnen: {subject}', 'Перепривязка очереди: {subject}'],
+	rebindPriceTitle: ['Preis neu zuordnen: {subject}', 'Перенос цены: {subject}'],
+	rebindIntro: [
+		'Der Kurs steht nicht mehr im Stundenplan. Wählen Sie die geplante Karte, auf die Warteliste und Preis übergehen. Zwei Wartelisten werden nicht zusammengelegt.',
+		'Курса больше нет в расписании. Выберите плановую карточку, на которую перейдут очередь и цена. Две очереди не объединяются.',
+	],
+	rebindIntroPrice: [
+		'Zu diesem Preis gibt es keine wartenden Anmeldungen. Er geht ohne Status auf die gewählte Karte über; die Beträge können Sie dabei ändern.',
+		'Для этой цены нет ожидающих записей. Она перейдёт на выбранную карточку без статусов; суммы можно изменить.',
+	],
+	rebindBefore: ['Bisheriger Kurs', 'Прежний курс'],
+	rebindQueue: ['Wartend: {n} Familien, {m} Kinder', 'Ожидают: семей — {n}, детей — {m}'],
+	rebindTargets: ['Geplante Karten des Stundenplans', 'Плановые карточки расписания'],
+	rebindNoTargets: [
+		'Im aktuellen Stundenplan gibt es keine geplante Karte.',
+		'В текущем расписании нет плановых карточек.',
+	],
+	rebindEffect: ['Was passiert', 'Что произойдёт'],
+	rebindEffectMove: [
+		'{n} wartende Familien mit {m} Kindern gehen mit Preis und Mindestzahl auf diese Karte über.',
+		'Ожидающие семьи ({n}) с детьми ({m}) вместе с ценой и минимумом перейдут на эту карточку.',
+	],
+	rebindEffectCancel: [
+		'Unbestätigte Anmeldungen ({n}) werden storniert: Ihre Prüf-E-Mail beschreibt den bisherigen Kurs.',
+		'Неподтверждённые записи ({n}) будут отменены: их проверочное письмо описывает прежний курс.',
+	],
+	rebindEffectReplace: [
+		'Der bisherige Preis dieser Karte ({amounts}) wird ersetzt.',
+		'Прежняя цена этой карточки ({amounts}) будет заменена.',
+	],
+	rebindEffectPlain: [
+		'Danach ist nichts weiter zu tun. E-Mail zum Kursstart und PDF nennen die neuen Angaben.',
+		'Больше ничего делать не нужно. Письмо о старте и PDF покажут новые данные.',
+	],
+	rebindEffectNotify: [
+		'Danach steht beim Kurs „Familien informieren“: Bitte rufen Sie die Familien an und klicken Sie dann „Familien informiert“.',
+		'Затем у курса появится «Обзвонить семьи»: позвоните семьям и нажмите «Семьи обзвонены».',
+	],
+	rebindEffectPrice: [
+		'Die Kursdauer ändert sich. Bitte rufen Sie alle Familien an: Jede bestätigt den neuen Betrag ihres Tarifs oder wird ausgetragen. Bis alle markiert sind, ist der Start gesperrt.',
+		'Продолжительность курса меняется. Обзвоните все семьи: каждая подтверждает новую сумму своего тарифа или выходит из листа. Пока все не отмечены, старт заблокирован.',
+	],
+	rebindEffectPriceOnly: [
+		'Der Preis geht ohne Status auf diese Karte über.',
+		'Цена перейдёт на эту карточку без статусов.',
+	],
+	rebindNewSums: ['Neue Beträge je Kind und Monat', 'Новые суммы за ребёнка в месяц'],
+	rebindConfirm: ['Neu zuordnen bestätigen', 'Подтвердить перепривязку'],
+	rebindDone: ['Die Warteliste ist neu zugeordnet.', 'Очередь перепривязана.'],
+	rebindRepeat: [
+		'Nichts geändert: Der Kurs ist bereits neu zugeordnet.',
+		'Ничего не изменено: курс уже перепривязан.',
+	],
+	rebindSubjectError: [
+		'Ein anderes Fach: Die Warteliste kann nicht auf diese Karte übergehen.',
+		'Другой предмет: очередь нельзя перенести на эту карточку.',
+	],
+	rebindBusyError: [
+		'Diese Karte ist nicht frei: eigene Warteliste, gestartet, mehrdeutig oder belegt.',
+		'Эта карточка занята: своя очередь, старт, неоднозначность или укомплектованность.',
+	],
+	statusConflict: [
+		'Der Stand hat sich inzwischen geändert. Bitte laden Sie die Seite neu.',
+		'Данные тем временем изменились. Обновите страницу.',
+	],
+	rebindJournal: ['Neu zugeordnet', 'Перепривязки'],
+	attentionTitle: ['Familien informieren', 'Обзвонить семьи'],
+	attentionHint: [
+		'Gründe: {reasons}. Bitte rufen Sie die Familien an und klicken Sie danach „Familien informiert“.',
+		'Причины: {reasons}. Позвоните семьям, затем нажмите «Семьи обзвонены».',
+	],
+	attentionDone: ['Familien informiert', 'Семьи обзвонены'],
+	priceOpenTitle: [
+		'Neuer Preis: Bestätigung jeder Familie',
+		'Новая цена: подтверждение каждой семьи',
+	],
+	priceOpenHint: [
+		'Die Kursdauer hat sich auf {minutes} Minuten geändert. Neue Beträge: {amounts}. Jede Familie bestätigt den Betrag ihres Tarifs oder wird ausgetragen; bis dahin ist der Start gesperrt.',
+		'Продолжительность изменилась на {minutes} мин. Новые суммы: {amounts}. Каждая семья подтверждает сумму своего тарифа или выходит из листа; до этого старт заблокирован.',
+	],
+	priceConfirmedAction: ['Neuen Preis bestätigt', 'Новую цену подтвердила'],
+	priceDeclinedAction: ['Abgelehnt', 'Отказалась'],
+	decisionConfirmed: [
+		'neuer Preis bestätigt: {amount} € am {date}',
+		'новая цена подтверждена: {amount} € ({date})',
+	],
+	decisionDeclined: ['neuen Preis abgelehnt am {date}', 'от новой цены отказалась ({date})'],
+	entryCancelledRebind: ['bei Neuzuordnung storniert', 'отменена при перепривязке'],
+	reopenCourse: ['Als neuen Kurs öffnen', 'Открыть как новый курс'],
+	reopenHint: [
+		'Derselbe Tag, dieselbe Zeit und Lehrkraft nehmen wieder Anmeldungen an, z. B. für einen neuen Jahrgang. Der bisherige Start und seine Anmeldungen bleiben erhalten; den Preis können Sie danach ändern.',
+		'Тот же день, время и преподаватель снова принимают записи, например для нового набора. Прежний старт и его записи сохраняются; цену затем можно изменить.',
+	],
+	reopenConfirm: ['Öffnen bestätigen', 'Подтвердить открытие'],
+	cancel: ['Abbrechen', 'Отмена'],
+	waitlistSignupAgain: ['Erneut anmelden', 'Записаться заново'],
 	adminStartLettersUnsent: [
 		'E-Mails zum Kursstart noch nicht versendet: {n}',
 		'Писем о старте ещё не отправлено: {n}',
@@ -703,11 +838,100 @@ export function startBlockText(block: WaitlistStartBlock, locale: Locale): strin
 				closed: 'startBlockClosed',
 				price_missing: 'startBlockPriceMissing',
 				renderer: 'startBlockRenderer',
+				price_open: 'startBlockPriceOpen',
 				threshold: 'startBlockThreshold',
 				no_entries: 'startBlockNoEntries',
 			} as const
 		)[block]
 	);
+}
+/** "Zeit: 16:00 auf 17:00", "Lehrkraft", …: the reasons of the orange mark (WL-15). */
+export function attentionReasonText(reason: AttentionReason, locale: Locale): string {
+	if (reason.code === 'time')
+		return fill(t(locale, 'reasonTime'), { from: reason.from, to: reason.to });
+	return t(
+		locale,
+		(
+			{
+				weekday: 'reasonWeekday',
+				teacher: 'reasonTeacher',
+				age: 'reasonAge',
+				subject_check: 'reasonSubjectCheck',
+			} as const
+		)[reason.code]
+	);
+}
+export const attentionReasonsText = (reasons: readonly AttentionReason[], locale: Locale) =>
+	reasons.map((reason) => attentionReasonText(reason, locale)).join(', ');
+/** One difference of two cards: "Beginn: 16:00 → 17:00". */
+export function differenceText(difference: RebindDifference, locale: Locale): string {
+	const age = (range: AgeRange | null) =>
+		range ? ageRangeLabel(range, locale) : t(locale, 'diffNone');
+	const [label, from, to] =
+		difference.field === 'weekday'
+			? [t(locale, 'day'), dayLabel(difference.from, locale), dayLabel(difference.to, locale)]
+			: difference.field === 'minutes'
+				? [
+						t(locale, 'diffMinutes'),
+						fill(t(locale, 'minutes'), { n: difference.from }),
+						fill(t(locale, 'minutes'), { n: difference.to }),
+					]
+				: difference.field === 'age'
+					? [t(locale, 'diffAge'), age(difference.from), age(difference.to)]
+					: [
+							t(
+								locale,
+								(
+									{
+										subject: 'subject',
+										start: 'diffStart',
+										teacher: 'teacher',
+										building: 'building',
+									} as const
+								)[difference.field]
+							),
+							difference.from,
+							difference.to,
+						];
+	return `${label}: ${from} → ${to}`;
+}
+export function rebindKindText(kind: RebindKind, locale: Locale): string {
+	return t(
+		locale,
+		({ plain: 'rebindPlain', notify: 'rebindNotify', price: 'rebindPrice' } as const)[kind]
+	);
+}
+export function rebindBlockText(block: RebindBlock, locale: Locale): string {
+	return fill(t(locale, 'rebindUnavailable'), {
+		reason: t(
+			locale,
+			(
+				{
+					subject: 'rebindBlockSubject',
+					queue: 'rebindBlockQueue',
+					started: 'rebindBlockStarted',
+					ambiguous: 'rebindBlockAmbiguous',
+					closed: 'rebindBlockClosed',
+				} as const
+			)[block]
+		),
+	});
+}
+/** The orange and red marks of a course next to its status; empty without a mark. */
+export function waitlistMarkTexts(
+	course: Pick<WaitlistCourse, 'attention' | 'priceOpen'>,
+	locale: Locale
+): { orange: string | null; red: string | null } {
+	return {
+		orange: course.attention?.length
+			? fill(t(locale, 'markAttention'), {
+					reasons: attentionReasonsText(course.attention, locale),
+				})
+			: null,
+		red: course.priceOpen.length
+			? fill(t(locale, 'markPrice'), { n: course.priceOpen.length })
+			: null,
+	};
 }
 /** The delivery page names a waitlist notification by its kind of request. */
 export function outboxTemplateLabel(context: IntakeOutboxContext | undefined, locale: Locale) {
@@ -755,6 +979,10 @@ export function errorKey(code: string): TextKey {
 				WAITLIST_START_CLOSED: 'startBlockClosed',
 				WAITLIST_START_PRICE_MISSING: 'startBlockPriceMissing',
 				WAITLIST_START_RENDERER: 'startBlockRenderer',
+				WAITLIST_START_PRICE_OPEN: 'startBlockPriceOpen',
+				WAITLIST_REBIND_SUBJECT: 'rebindSubjectError',
+				WAITLIST_REBIND_TARGET_BUSY: 'rebindBusyError',
+				WAITLIST_STATUS_CONFLICT: 'statusConflict',
 				WAITLIST_START_THRESHOLD: 'startBlockThreshold',
 				WAITLIST_START_NO_ENTRIES: 'startBlockNoEntries',
 				WAITLIST_START_DATE_INVALID: 'startDateInvalid',

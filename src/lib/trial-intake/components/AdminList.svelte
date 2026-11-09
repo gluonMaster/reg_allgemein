@@ -10,6 +10,7 @@
 		formatDate,
 		formatTimestamp,
 		errorKey,
+		waitlistMarkTexts,
 		waitlistStatusText,
 		type TextKey,
 	} from '../i18n';
@@ -99,12 +100,16 @@
 		<section class="card highlight">
 			<h3>{t(locale, 'adminWaitlistAttention')}</h3>
 			<ul>
-				{#each data.waitlist.attention as course (course.key)}<li>
+				{#each data.waitlist.attention as course (course.key)}{@const marks =
+						waitlistMarkTexts(course, locale)}
+					<li>
 						<strong>{course.course.subject}</strong>, {dayLabel(
 							course.course.weekday,
 							locale
 						)}
 						{course.course.start}: {waitlistStatusText(course, locale)}
+						{#if marks.orange}<span class="mark mark-orange">{marks.orange}</span>{/if}
+						{#if marks.red}<span class="mark mark-red">{marks.red}</span>{/if}
 					</li>{/each}
 				{#if data.waitlist.startLetters.unsent}<li>
 						{fill(t(locale, 'adminStartLettersUnsent'), {

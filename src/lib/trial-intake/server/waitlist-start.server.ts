@@ -12,7 +12,7 @@ import { ACTIVE, requireActiveAdmin } from './admin.server';
 import { IntakeError } from './validation.server';
 import type { WaitlistPrices } from './prices.server';
 import type { IntakeChild, IntakeRequest } from './model.server';
-import { readEntry } from './waitlist-core.server';
+import { entryWithConfirmation, readEntry } from './waitlist-core.server';
 import { waitlistStartEmail } from './waitlist-templates.server';
 
 /** WL-10: the next eight allowed dates of the weekday from tomorrow; the default is a week ahead. */
@@ -25,11 +25,11 @@ export function startDates(weekday: number, now: string) {
 }
 /**
  * WL-10: a course starts when its card is in the schedule and unambiguous, the price is set, the
- * threshold is reached, it has not started and a PDF renderer exists. A probe needs the same
- * except the threshold, and one confirmed waiting signup to show.
+ * threshold is reached, no red mark is open (WL-15), it has not started and a PDF renderer exists.
+ * A probe needs the same except the threshold and the red mark, and one confirmed waiting signup.
  */
 export function startBlocks(
-	course: Pick<WaitlistCourse, 'status' | 'lessons' | 'price' | 'waitingFamilies'>,
+	course: Pick<WaitlistCourse, 'status' | 'lessons' | 'price' | 'waitingFamilies' | 'priceOpen'>,
 	renderer: boolean
 ): Pick<WaitlistStartOptions, 'start' | 'probe'> {
 	const common: WaitlistStartBlock | null =
@@ -47,7 +47,13 @@ export function startBlocks(
 								? 'renderer'
 								: null;
 	return {
-		start: common ?? (course.status === 'ready' ? null : 'threshold'),
+		start:
+			common ??
+			(course.priceOpen.length
+				? 'price_open'
+				: course.status === 'ready'
+					? null
+					: 'threshold'),
 		probe: common ?? (course.waitingFamilies > 0 ? null : 'no_entries'),
 	};
 }
@@ -65,6 +71,16 @@ const PARTICIPANTS = `(SELECT COALESCE(SUM((SELECT COUNT(*) FROM trial_intake_ch
  WHERE e.course_key = ? AND e.status = 'waiting' AND q.state = 'verified')`;
 const OPEN_START_OF_KEY = `EXISTS(SELECT 1 FROM trial_intake_waitlist_starts s
  WHERE s.course_key = ? AND s.reopened_at IS NULL)`;
+/**
+ * SQL: the red mark of price row `p` (WL-15). Bound to the latest duration change of the queue; a
+ * confirmed waiting signup from before it without a decision blocks the start. Without such a
+ * change (NULL) nothing is open. While the course has signups no rebind can come into it, so the
+ * change cannot move between the check and this statement.
+ */
+const PRICE_OPEN = `EXISTS(SELECT 1 FROM trial_intake_waitlist_entries e JOIN trial_intake_requests q ON q.id = e.request_id
+ JOIN trial_intake_waitlist_rebinds j ON j.id = ?
+ WHERE e.course_key = p.course_key AND e.status = 'waiting' AND q.state = 'verified' AND e.created_at < j.created_at
+ AND NOT EXISTS(SELECT 1 FROM trial_intake_waitlist_price_confirmations c WHERE c.request_id = e.request_id AND c.rebind_id = j.id))`;
 
 /** Start dialog, probe letter and the confirmed course start (WL-10, TRIAL_INTAKE_WAITLIST). */
 export class WaitlistStart {
@@ -101,6 +117,7 @@ export class WaitlistStart {
 		if (block) throw startBlocked(block);
 		if (!options.dates.includes(firstDate))
 			throw new IntakeError('WAITLIST_START_DATE_INVALID', 409);
+		return course!;
 	}
 	/** A confirmed waiting signup of the course, as the letter needs it. */
 	private async family(key: string, requestId: string) {
@@ -115,7 +132,11 @@ export class WaitlistStart {
 			sql: 'SELECT * FROM trial_intake_children WHERE request_id = ? ORDER BY position',
 			params: [requestId],
 		});
-		return { request, children: children.results, entry };
+		return {
+			request,
+			children: children.results,
+			entry: await entryWithConfirmation(this.db, entry),
+		};
 	}
 	/** The start letter the chosen family would get on the chosen date; nothing is written. */
 	async preview(user: App.Locals['user'], lessons: readonly Lesson[], raw: unknown, now: string) {
@@ -214,7 +235,7 @@ export class WaitlistStart {
 		const { lesson, key } = this.card(lessons, value.lessonId);
 		const existing = await this.openStart(key);
 		if (existing) return startResult(existing, false);
-		await this.check(lessons, key, value.firstDate, 'start', now);
+		const course = await this.check(lessons, key, value.firstDate, 'start', now);
 		const id = crypto.randomUUID();
 		const ours = 'EXISTS(SELECT 1 FROM trial_intake_waitlist_starts s WHERE s.id = ?)';
 		const statements: StatementSpec[] = [
@@ -222,7 +243,7 @@ export class WaitlistStart {
 				sql: `INSERT INTO trial_intake_waitlist_starts(id, course_key, first_date, lesson_json, participants, started_by, started_at)
 			 SELECT ?, p.course_key, ?, ?, n.children, ?, ? FROM trial_intake_planned_prices p, (SELECT ${PARTICIPANTS} AS children) n
 			 WHERE p.course_key = ? AND n.children > 0 AND n.children >= p.min_participants
-			 AND NOT ${OPEN_START_OF_KEY} AND ${ACTIVE}`,
+			 AND NOT ${OPEN_START_OF_KEY} AND NOT ${PRICE_OPEN} AND ${ACTIVE}`,
 				params: [
 					id,
 					value.firstDate,
@@ -232,6 +253,7 @@ export class WaitlistStart {
 					key,
 					key,
 					key,
+					course.priceRebind?.id ?? null,
 					actor.id,
 				],
 			},
@@ -266,7 +288,12 @@ export class WaitlistStart {
 		await this.db.batch(statements);
 		const after = await this.openStart(key);
 		// Not started: a withdrawal or an expiry took the course below its threshold meanwhile.
-		if (!after) throw startBlocked('threshold');
+		if (!after)
+			throw startBlocked(
+				(await this.prices.course(lessons, key))?.priceOpen.length
+					? 'price_open'
+					: 'threshold'
+			);
 		return startResult(after, after.id === id);
 	}
 	/** A start letter given up after its retries, queued again by the admin with audit. */

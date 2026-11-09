@@ -297,3 +297,59 @@
 	overflow-wrap: anywhere;
 	margin: 0;
 }
+/* WL-15: the orange and red marks of a course and the decisions of the rebind tool. */
+.intake .mark {
+	display: inline-block;
+	border-radius: 0.4rem;
+	padding: 0.1rem 0.45rem;
+	font-weight: 650;
+}
+.intake .mark-orange {
+	background: #fff4d6;
+	border: 1px solid #b37400;
+	color: #4d3200;
+}
+.intake .mark-red {
+	background: #fde8e8;
+	border: 1px solid #b42318;
+	color: #5c0f0a;
+}
+.intake .mark-box {
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+	margin-bottom: 0.75rem;
+	overflow-wrap: anywhere;
+}
+.intake .rebind-target {
+	border-bottom: 1px solid #d9e3e0;
+	padding: 0.5rem 0;
+	overflow-wrap: anywhere;
+}
+.intake .rebind-target ul {
+	margin: 0.25rem 0 0;
+}
+.intake .rebind-kind {
+	display: inline-block;
+	border-radius: 2rem;
+	padding: 0.1rem 0.6rem;
+	font-size: 0.9rem;
+	font-weight: 650;
+	border: 1px solid #8993a8;
+	background: #f4f5f8;
+	color: #172033;
+}
+.intake .rebind-kind.plain {
+	background: #edf6f2;
+	border-color: #2f7d5b;
+	color: #12402c;
+}
+.intake .rebind-kind.notify {
+	background: #fff4d6;
+	border-color: #b37400;
+	color: #4d3200;
+}
+.intake .rebind-kind.price {
+	background: #fde8e8;
+	border-color: #b42318;
+	color: #5c0f0a;
+}

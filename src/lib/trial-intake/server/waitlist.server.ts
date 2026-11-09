@@ -272,20 +272,29 @@ export class WaitlistSignup {
 			resendAfter: afterSeconds(r.last_email_at, 60),
 		};
 	}
-	/** The entry a withdrawal link names, if the request still exists. */
+	/** The entry a withdrawal link names, if the request still exists, with its current course. */
 	private async byToken(token: string, now: string) {
 		if (!/^[a-f0-9]{64}$/u.test(token)) return null;
 		const row = await this.db.first<
-			WaitlistEntry & { state: IntakeRequest['state']; open_start: number }
+			WaitlistEntry & {
+				state: IntakeRequest['state'];
+				open_start: number;
+				current_json: string | null;
+			}
 		>({
-			sql: `SELECT e.*, r.state, ${OPEN_START} AS open_start FROM trial_intake_waitlist_entries e
-			 JOIN trial_intake_requests r ON r.id = e.request_id
+			sql: `SELECT e.*, r.state, ${OPEN_START} AS open_start,
+			 (SELECT json_object('subject', p.subject, 'weekday', p.weekday, 'start', p.start_time, 'end', p.end_time,
+			 'room', p.room, 'building', p.building) FROM trial_intake_planned_prices p WHERE p.course_key = e.course_key) AS current_json
+			 FROM trial_intake_waitlist_entries e JOIN trial_intake_requests r ON r.id = e.request_id
 			 WHERE e.withdraw_hash = ? AND (r.delete_after IS NULL OR r.delete_after > ?)`,
 			params: [await sha256Hex(token), now],
 		});
 		return row ?? null;
 	}
-	/** GET of the withdrawal link: the course and one button, nothing changes (WL-12). */
+	/**
+	 * GET of the withdrawal link: the course and one button, nothing changes (WL-12). After a rebind
+	 * the link names the course the queue belongs to now: the price row of its key holds that card.
+	 */
 	async inspectWithdrawal(
 		token: string,
 		now: string
@@ -293,7 +302,9 @@ export class WaitlistSignup {
 		const row = await this.byToken(token, now);
 		if (!row || row.state === 'pending_email' || row.status === 'expired')
 			return { state: 'invalid', course: null };
-		const lesson = entryLesson(row);
+		const lesson = row.current_json
+			? (JSON.parse(row.current_json) as NonNullable<WithdrawalData['course']>)
+			: entryLesson(row);
 		const course = {
 			subject: lesson.subject,
 			weekday: lesson.weekday,
@@ -369,17 +380,27 @@ export class WaitlistSignup {
 			409
 		);
 	}
-	/** "Aus der Warteliste austragen" by phone: the same withdrawal with the admin as actor. */
-	async withdrawByAdmin(user: App.Locals['user'], id: string, requestId: string, now: string) {
+	/**
+	 * "Aus der Warteliste austragen" by phone: the same withdrawal with the admin as actor. `after`
+	 * joins the batch, e.g. the refusal of a new price (WL-15); it should depend on the withdrawal.
+	 */
+	async withdrawByAdmin(
+		user: App.Locals['user'],
+		id: string,
+		requestId: string,
+		now: string,
+		after: StatementSpec[] = []
+	) {
 		const actor: AdminActor = await requireActiveAdmin(this.db, user);
 		const entry = await readEntry(this.db, id);
 		const request = entry && (await this.service.get(id));
 		// An unconfirmed entry expires by itself; 0027 keeps processed requests verified.
 		if (!entry || request?.state !== 'verified' || entry.status !== 'waiting')
 			throw new IntakeError('WAITLIST_STATUS_CONFLICT', 409);
-		await this.db.batch(
-			this.withdrawStatements(id, now, { actorId: actor.id, requestId }, `AND ${ACTIVE}`)
-		);
+		await this.db.batch([
+			...this.withdrawStatements(id, now, { actorId: actor.id, requestId }, `AND ${ACTIVE}`),
+			...after,
+		]);
 		if ((await readEntry(this.db, id))?.status !== 'withdrawn')
 			throw new IntakeError('WAITLIST_STATUS_CONFLICT', 409);
 		return { state: 'withdrawn' as const };
@@ -391,10 +412,12 @@ export class WaitlistSignup {
 			course_key: string;
 			parent_first_name: string;
 			parent_last_name: string;
+			phone: string;
 			tariff: WaitlistEntrySummary['tariff'];
 			verified_at: string;
 			status: WaitlistEntrySummary['status'];
 			children_json: string;
+			decision_json: string | null;
 		}>([
 			{
 				sql: `INSERT INTO audit_events(id, actor_user_id, actor_kind, action, target_kind, target_id, request_id, safe_diff_json, created_at)
@@ -402,9 +425,11 @@ export class WaitlistSignup {
 				params: [crypto.randomUUID(), actor.id, requestId, now, actor.id],
 			},
 			{
-				sql: `SELECT e.request_id, e.course_key, e.tariff, e.status, r.verified_at, r.parent_first_name, r.parent_last_name,
+				sql: `SELECT e.request_id, e.course_key, e.tariff, e.status, r.verified_at, r.parent_first_name, r.parent_last_name, r.phone,
 			 (SELECT json_group_array(json_object('firstName', c.first_name, 'lastName', c.last_name, 'birthDate', c.birth_date))
-			 FROM (SELECT * FROM trial_intake_children WHERE request_id = e.request_id ORDER BY position) c) AS children_json
+			 FROM (SELECT * FROM trial_intake_children WHERE request_id = e.request_id ORDER BY position) c) AS children_json,
+			 (SELECT json_object('decision', d.decision, 'priceCents', d.price_cents, 'createdAt', d.created_at)
+			 FROM trial_intake_waitlist_price_confirmations d WHERE d.request_id = e.request_id ORDER BY d.created_at DESC LIMIT 1) AS decision_json
 			 FROM trial_intake_waitlist_entries e JOIN trial_intake_requests r ON r.id = e.request_id
 			 WHERE r.state IN ('verified','processed') AND ${ACTIVE} ORDER BY r.verified_at, r.id`,
 				params: [actor.id],
@@ -418,10 +443,12 @@ export class WaitlistSignup {
 					requestId: row.request_id,
 					parentFirstName: row.parent_first_name,
 					parentLastName: row.parent_last_name,
+					phone: row.phone,
 					children: JSON.parse(row.children_json),
 					tariff: row.tariff,
 					verifiedAt: row.verified_at,
 					status: row.status,
+					priceDecision: row.decision_json ? JSON.parse(row.decision_json) : null,
 				},
 			]);
 		return byCourse;

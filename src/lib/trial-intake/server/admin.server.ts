@@ -10,8 +10,16 @@ import { outboxWaitReason } from '$lib/outbox-wait';
 import { IntakeService, afterSeconds, searchName } from './service.server';
 import { IntakeError } from './validation.server';
 import { closedKey } from './closed.server';
-import { readEntry } from './waitlist-core.server';
+import {
+	REBINDS_SQL,
+	readEntry,
+	readPriceDecision,
+	rebindLineage,
+	rebindRecord,
+	type RebindRow,
+} from './waitlist-core.server';
 import { entryAgeDate, entryLesson } from './waitlist-templates.server';
+import type { WaitlistEntry } from './model.server';
 import type {
 	AdminDetailData,
 	AdminListRow,
@@ -162,9 +170,17 @@ export class IntakeAdmin {
 		}));
 		const entry = r.kind === 'waitlist' ? await readEntry(this.db, r.id) : null;
 		const started = entry && (await this.waitlistStart(r.id, entry.start_id));
+		const history = entry && (await this.waitlistRebinds(entry));
+		const decision = entry && (await readPriceDecision(this.db, entry.request_id));
 		return {
 			waitlist: entry && {
 				...started!,
+				...history!,
+				priceDecision: decision && {
+					decision: decision.decision,
+					priceCents: decision.priceCents,
+					createdAt: decision.createdAt,
+				},
 				lesson: entryLesson(entry),
 				tariff: entry.tariff,
 				monthlyCents: entry.monthly_cents,
@@ -192,6 +208,30 @@ export class IntakeAdmin {
 			children: detail.children,
 			items: detail.items,
 			delivery,
+		};
+	}
+	/**
+	 * The rebinds that moved this signup since it was made, until it left the queue, and the one
+	 * that cancelled it: that batch writes the journal row and the cancellation at the same time.
+	 */
+	private async waitlistRebinds(entry: WaitlistEntry) {
+		const rows = (await this.db.all<RebindRow>({ sql: REBINDS_SQL })).results;
+		const cancelling =
+			entry.status === 'cancelled'
+				? rows.filter(
+						(row) =>
+							row.from_key === entry.course_key &&
+							row.created_at === entry.status_changed_at
+					)
+				: [];
+		const moved = rebindLineage(
+			rows,
+			entry.course_key,
+			entry.status === 'waiting' ? undefined : entry.status_changed_at
+		).filter((row) => row.created_at > entry.created_at);
+		return {
+			rebinds: [...cancelling, ...moved].map(rebindRecord),
+			cancelledByRebind: cancelling.length > 0,
 		};
 	}
 	/** Start, start letters and stored PDF of a waitlist signup (WL-07, WL-10). */

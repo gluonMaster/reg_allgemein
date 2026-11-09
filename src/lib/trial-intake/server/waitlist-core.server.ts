@@ -1,8 +1,16 @@
 import { hmacSha256Hex } from '$lib/server/auth/tokens';
 import type { DatabaseBoundary, StatementSpec } from '$lib/server/db/database';
+import type {
+	AttentionReason,
+	CourseSummary,
+	RebindDifference,
+	RebindKind,
+	WaitlistPriceDecision,
+	WaitlistRebindRecord,
+} from '../contracts';
 import { IntakeError } from './validation.server';
 import type { IntakeDetail, WaitlistEntry } from './model.server';
-import { waitlistTelegramParts } from './waitlist-templates.server';
+import { waitlistTelegramParts, type PriceConfirmation } from './waitlist-templates.server';
 
 // Shared by the request service, the e-mail store and the waitlist module; it imports neither of
 // them, so the request service can branch on the request kind without an import cycle.
@@ -28,13 +36,132 @@ export function readEntry(db: DatabaseBoundary, requestId: string) {
 		params: [requestId],
 	});
 }
+/** Row of trial_intake_waitlist_rebinds (migration 0032). */
+export interface RebindRow {
+	id: string;
+	from_key: string;
+	to_key: string;
+	from_lesson_json: string;
+	to_lesson_json: string;
+	kind: RebindKind;
+	differences_json: string;
+	from_monthly_cents: number;
+	from_yearly_cents: number;
+	to_monthly_cents: number;
+	to_yearly_cents: number;
+	created_at: string;
+}
+/** The whole journal: a few rows a year, read at once. */
+export const REBINDS_SQL = 'SELECT * FROM trial_intake_waitlist_rebinds ORDER BY created_at, id';
+/**
+ * The rebinds that brought the queue now at `key` there, newest first: the latest rebind into the
+ * course, then the one into its previous course before that, and so on. A rebind into a course
+ * after `until` did not move signups that already left it.
+ */
+export function rebindLineage(rows: readonly RebindRow[], key: string, until = '￿'): RebindRow[] {
+	const chain: RebindRow[] = [];
+	let current = key;
+	let before = until;
+	let inclusive = true;
+	for (;;) {
+		const row = rows
+			.filter(
+				(r) =>
+					r.to_key === current &&
+					(inclusive ? r.created_at <= before : r.created_at < before)
+			)
+			.at(-1);
+		if (!row) return chain;
+		chain.push(row);
+		current = row.from_key;
+		before = row.created_at;
+		inclusive = false;
+	}
+}
+/** Where the queue of `key` went after `from`: the course a cancelled signup could join now. */
+export function reboundKey(rows: readonly RebindRow[], key: string, from: string): string {
+	let current = key;
+	let after = from;
+	for (;;) {
+		const row = rows.find((r) => r.from_key === current && r.created_at >= after);
+		if (!row) return current;
+		current = row.to_key;
+		after = row.created_at;
+	}
+}
+export function rebindRecord(row: RebindRow): WaitlistRebindRecord {
+	const changes = JSON.parse(row.differences_json) as {
+		differences: RebindDifference[];
+		reasons: AttentionReason[];
+	};
+	const summary = (json: string): CourseSummary => {
+		const { subject, weekday, start, end, teacher, room, building } = JSON.parse(
+			json
+		) as CourseSummary;
+		return { subject, weekday, start, end, teacher, room, building };
+	};
+	return {
+		id: row.id,
+		kind: row.kind,
+		createdAt: row.created_at,
+		from: summary(row.from_lesson_json),
+		to: summary(row.to_lesson_json),
+		differences: changes.differences,
+		reasons: changes.reasons,
+		before: { monthlyCents: row.from_monthly_cents, yearlyCents: row.from_yearly_cents },
+		after: { monthlyCents: row.to_monthly_cents, yearlyCents: row.to_yearly_cents },
+	};
+}
+/** The latest price decision of a signup (WL-15); `confirmed` carries the duration it accepted. */
+export async function readPriceDecision(
+	db: DatabaseBoundary,
+	requestId: string
+): Promise<(WaitlistPriceDecision & { confirmation: PriceConfirmation | null }) | null> {
+	const row = await db.first<{
+		decision: 'confirmed' | 'declined';
+		price_cents: number | null;
+		created_at: string;
+		minutes: number;
+	}>({
+		sql: `SELECT c.decision, c.price_cents, c.created_at, json_extract(j.to_key, '$[3]') AS minutes
+		 FROM trial_intake_waitlist_price_confirmations c JOIN trial_intake_waitlist_rebinds j ON j.id = c.rebind_id
+		 WHERE c.request_id = ? ORDER BY c.created_at DESC, j.created_at DESC LIMIT 1`,
+		params: [requestId],
+	});
+	if (!row) return null;
+	return {
+		decision: row.decision,
+		priceCents: row.price_cents,
+		createdAt: row.created_at,
+		confirmation:
+			row.decision === 'confirmed' && row.price_cents !== null
+				? {
+						cents: row.price_cents,
+						confirmedAt: row.created_at,
+						minutes: Number(row.minutes),
+					}
+				: null,
+	};
+}
+/** The signup with the sum it confirmed by phone, as the start letter and the PDF need it. */
+export async function entryWithConfirmation(db: DatabaseBoundary, entry: WaitlistEntry) {
+	return {
+		...entry,
+		confirmation: (await readPriceDecision(db, entry.request_id))?.confirmation ?? null,
+	};
+}
 /** SQL: the course of entry `e` has a start that was not reopened. */
 export const OPEN_START = `EXISTS(SELECT 1 FROM trial_intake_waitlist_starts s
  WHERE s.course_key = e.course_key AND s.reopened_at IS NULL)`;
 /** Status of a signup for the confirmation page; the first date of the start that closed it. */
 export function entryOutcome(db: DatabaseBoundary, requestId: string) {
-	return db.first<{ status: WaitlistEntry['status']; first_date: string | null }>({
-		sql: `SELECT e.status, COALESCE(
+	return db.first<{
+		status: WaitlistEntry['status'];
+		first_date: string | null;
+		course_key: string;
+		status_changed_at: string;
+	}>({
+		sql: `SELECT e.status, e.course_key, e.status_changed_at, COALESCE(
 		 (SELECT s.first_date FROM trial_intake_waitlist_starts s WHERE s.id = e.start_id),
 		 (SELECT s.first_date FROM trial_intake_waitlist_starts s WHERE s.course_key = e.course_key AND s.reopened_at IS NULL)
 		) AS first_date

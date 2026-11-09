@@ -6,7 +6,13 @@ import type { Lesson, VerificationResult } from '../contracts';
 import { IntakeError, intakeInputSchema, validateSubmission } from './validation.server';
 import type { IntakeChild, IntakeDetail, IntakeItem, IntakeRequest } from './model.server';
 import { telegramParts } from './templates.server';
-import { entryOutcome, waitlistAcceptance } from './waitlist-core.server';
+import {
+	REBINDS_SQL,
+	entryOutcome,
+	reboundKey,
+	waitlistAcceptance,
+	type RebindRow,
+} from './waitlist-core.server';
 
 export const afterSeconds = (now: string, seconds: number) =>
 	new Date(Date.parse(now) + seconds * 1000).toISOString();
@@ -214,7 +220,11 @@ export class IntakeService {
 			resendAfter: afterSeconds(r.last_email_at, 60),
 		};
 	}
-	async inspectToken(token: string, now: string): Promise<VerificationResult> {
+	/** `courseKey`: where the queue of a signup cancelled by a rebind went; never sent to the page. */
+	async inspectToken(
+		token: string,
+		now: string
+	): Promise<VerificationResult & { courseKey?: string }> {
 		if (!/^[a-f0-9]{64}$/u.test(token)) return { state: 'invalid' };
 		const r = await this.db.first<IntakeRequest>({
 			sql: 'SELECT * FROM trial_intake_requests WHERE verification_hash = ?',
@@ -225,8 +235,20 @@ export class IntakeService {
 		const kind = r.kind === 'waitlist' ? ({ kind: 'waitlist' } as const) : {};
 		if (r.state !== 'pending_email') {
 			const outcome = r.kind === 'waitlist' ? await entryOutcome(this.db, r.id) : null;
+			// Without an open start of its course the signup was cancelled by a rebind (WL-15).
 			if (outcome?.status === 'cancelled')
-				return { state: 'cancelled', ...kind, firstDate: outcome.first_date };
+				return outcome.first_date
+					? { state: 'cancelled', ...kind, firstDate: outcome.first_date }
+					: {
+							state: 'cancelled',
+							...kind,
+							firstDate: null,
+							courseKey: reboundKey(
+								(await this.db.all<RebindRow>({ sql: REBINDS_SQL })).results,
+								outcome.course_key,
+								outcome.status_changed_at
+							),
+						};
 			return { state: 'accepted', ...kind };
 		}
 		if (r.pending_expires_at <= now || r.verification_expires_at <= now)

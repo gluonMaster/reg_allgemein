@@ -1,5 +1,14 @@
 import examples from '../../fixtures/trial-intake/planned-groups.json';
-import { isPlannedLesson, plannedCourseKey, type CourseLesson } from '$lib/trial-intake/planned';
+import {
+	compareLessons,
+	isClassName,
+	isPlannedLesson,
+	keyAge,
+	mergeReasons,
+	plannedCourseKey,
+	subjectBase,
+	type CourseLesson,
+} from '$lib/trial-intake/planned';
 import { closedKey } from '$lib/trial-intake/closed';
 import { INTAKE_PRIVACY_VERSION, type Lesson } from '$lib/trial-intake/contracts';
 import { validateSubmission } from '$lib/trial-intake/server/validation.server';
@@ -159,5 +168,163 @@ describe('price input', () => {
 		expect(parseTimeRange('9:30 - 10:15')).toEqual({ start: '09:30', end: '10:15' });
 		for (const text of ['16:00', '17:00-16:00', '25:00-26:00', '16-17'])
 			expect(parseTimeRange(text), text).toBeNull();
+	});
+});
+describe('rebind comparison of two cards (WL-15)', () => {
+	const PLANNED = 'Der Kurs befindet sich in der Planung';
+	const russisch: CourseLesson = {
+		subject: 'Russisch',
+		group: PLANNED,
+		weekday: 2,
+		start: '16:00',
+		end: '16:45',
+		teacher: 'Lehrkraft A',
+		building: 'Kolibri',
+	};
+	const firstGrade: CourseLesson = { ...russisch, subject: '1 E' };
+	const compare = (from: CourseLesson, change: Partial<CourseLesson>) =>
+		compareLessons(from, { ...from, ...change });
+	it('follows every row of the WL-15 table', () => {
+		// Another subject is refused, its spelling passes without a status.
+		expect(compare(russisch, { subject: 'English' })).toMatchObject({ allowed: false });
+		expect(compare(russisch, { subject: 'Russisch1' })).toEqual({
+			allowed: true,
+			kind: 'plain',
+			differences: [{ field: 'subject', from: 'Russisch', to: 'Russisch1' }],
+			reasons: [],
+		});
+		// A class of the same age passes, the building is shown and changes nothing.
+		expect(compare(firstGrade, { subject: '1 A' })).toMatchObject({
+			allowed: true,
+			kind: 'plain',
+			reasons: [],
+		});
+		expect(compare(russisch, { building: 'Villa' })).toEqual({
+			allowed: true,
+			kind: 'plain',
+			differences: [{ field: 'building', from: 'Kolibri', to: 'Villa' }],
+			reasons: [],
+		});
+		// Weekday, start, teacher and age need a call, without any threshold of the change.
+		expect(compare(russisch, { weekday: 3 })).toMatchObject({
+			kind: 'notify',
+			reasons: [{ code: 'weekday' }],
+		});
+		for (const start of ['17:00', '19:00'])
+			expect(
+				compare(russisch, { start, end: `${start.slice(0, 2)}:45` }),
+				start
+			).toMatchObject({
+				kind: 'notify',
+				reasons: [{ code: 'time', from: '16:00', to: start }],
+			});
+		expect(compare(russisch, { teacher: 'Lehrkraft B' })).toMatchObject({
+			kind: 'notify',
+			reasons: [{ code: 'teacher' }],
+		});
+		expect(compare(firstGrade, { subject: '2 E' })).toMatchObject({
+			allowed: true,
+			kind: 'notify',
+			differences: [
+				{ field: 'subject', from: '1 E', to: '2 E' },
+				{ field: 'age', from: { min: 5, max: 6 }, to: { min: 6, max: 7 } },
+			],
+			reasons: [{ code: 'age' }],
+		});
+		// A class instead of a subject cannot be checked; the age of the class goes with it.
+		expect(compare(firstGrade, { subject: 'Russisch' })).toMatchObject({
+			allowed: true,
+			kind: 'notify',
+			reasons: [{ code: 'subject_check' }, { code: 'age' }],
+		});
+		expect(compare(russisch, { subject: '1 E' })).toMatchObject({
+			allowed: true,
+			kind: 'notify',
+		});
+		// The duration needs new sums.
+		expect(compare(russisch, { end: '17:00' })).toEqual({
+			allowed: true,
+			kind: 'price',
+			differences: [{ field: 'minutes', from: 45, to: 60 }],
+			reasons: [],
+		});
+	});
+	it('compares subjects without case, digits and spaces; a class is a whole name', () => {
+		expect(subjectBase('Russisch')).toBe(subjectBase('russisch'));
+		expect(subjectBase('Russisch1')).toBe('russisch');
+		expect(subjectBase('Russisch Fremd')).not.toBe('russisch');
+		for (const [from, to, allowed] of [
+			['Russisch', 'russisch', true],
+			['Russisch', 'Russisch1', true],
+			['Russisch', 'Russisch Fremd', false],
+			['Russisch', 'English', false],
+			['English', 'English1', true],
+		] as const)
+			expect(compare({ ...russisch, subject: from }, { subject: to }).allowed, to).toBe(
+				allowed
+			);
+		for (const name of ['1 E', '1A', '1 e', '4D1', '1Kl', '12 C'])
+			expect(isClassName(name), name).toBe(true);
+		for (const name of ['Russisch', '13A', '1 F', 'Deutsch 3-4Kl', '1 E Russisch', ''])
+			expect(isClassName(name), name).toBe(false);
+		// "1 E" and "1A" are both classes: no subject refusal, the age decides.
+		expect(compare(firstGrade, { subject: '1A' })).toMatchObject({
+			allowed: true,
+			kind: 'plain',
+		});
+	});
+	it('never matches a subject that is empty after cleaning', () => {
+		expect(compare({ ...russisch, subject: '' }, { subject: '' }).allowed).toBe(false);
+		expect(compare({ ...russisch, subject: '1' }, { subject: '2' }).allowed).toBe(false);
+		expect(compare(russisch, { subject: '' }).allowed).toBe(false);
+	});
+	it('lists every difference at once and takes the strictest kind', () => {
+		expect(
+			compare(russisch, {
+				subject: 'russisch1',
+				weekday: 4,
+				start: '15:00',
+				end: '16:00',
+				teacher: 'Lehrkraft B',
+				building: 'Villa',
+			})
+		).toEqual({
+			allowed: true,
+			kind: 'price',
+			differences: [
+				{ field: 'subject', from: 'Russisch', to: 'russisch1' },
+				{ field: 'weekday', from: 2, to: 4 },
+				{ field: 'start', from: '16:00', to: '15:00' },
+				{ field: 'minutes', from: 45, to: 60 },
+				{ field: 'teacher', from: 'Lehrkraft A', to: 'Lehrkraft B' },
+				{ field: 'building', from: 'Kolibri', to: 'Villa' },
+			],
+			reasons: [
+				{ code: 'weekday' },
+				{ code: 'time', from: '16:00', to: '15:00' },
+				{ code: 'teacher' },
+			],
+		});
+		// Another subject stays refused whatever else changes.
+		expect(compare(russisch, { subject: 'English', end: '17:00' })).toMatchObject({
+			allowed: false,
+			kind: 'price',
+		});
+	});
+	it('reads the age of a stored course from its key and merges orange reasons once', () => {
+		expect(keyAge(plannedCourseKey(firstGrade))).toEqual({ min: 5, max: 6 });
+		expect(keyAge(plannedCourseKey({ ...russisch, subject: 'English' }))).toEqual({ min: 6 });
+		expect(keyAge(plannedCourseKey(russisch))).toBeNull();
+		expect(
+			mergeReasons(
+				[{ code: 'teacher' }, { code: 'time', from: '16:00', to: '17:00' }],
+				null,
+				[{ code: 'teacher' }, { code: 'age' }]
+			)
+		).toEqual([
+			{ code: 'teacher' },
+			{ code: 'time', from: '16:00', to: '17:00' },
+			{ code: 'age' },
+		]);
 	});
 });

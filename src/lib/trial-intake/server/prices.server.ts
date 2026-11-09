@@ -15,8 +15,10 @@ import {
 	parseMinParticipants,
 } from '../prices';
 import { dayLabel, waitlistStatusText } from '../i18n';
+import { REBINDS_SQL, rebindLineage, rebindRecord, type RebindRow } from './waitlist-core.server';
 import type {
 	AdminWaitlistData,
+	AttentionReason,
 	Lesson,
 	WaitlistCourse,
 	WaitlistImportPreview,
@@ -36,7 +38,15 @@ interface PriceRow {
 	monthly_cents: number;
 	yearly_cents: number;
 	min_participants: number;
+	attention_reasons_json: string | null;
 	updated_at: string;
+}
+/** A confirmed waiting signup with the rebinds it already has a price decision for. */
+interface MarkRow {
+	request_id: string;
+	course_key: string;
+	created_at: string;
+	decided_json: string;
 }
 interface CountRow {
 	course_key: string;
@@ -96,8 +106,10 @@ export function parseTimeRange(value: string): { start: string; end: string } | 
 /** Prices, threshold and queue status of the planned courses (WL-05, WL-06, WL-07). */
 export class WaitlistPrices {
 	constructor(readonly db: DatabaseBoundary) {}
-	private async state() {
-		const [prices, counts, starts] = await this.db.batch<Record<string, unknown>>([
+	async state() {
+		const [prices, counts, starts, journal, marks] = await this.db.batch<
+			Record<string, unknown>
+		>([
 			{ sql: 'SELECT * FROM trial_intake_planned_prices' },
 			{
 				// Confirmed waiting entries count against the threshold; every waiting entry locks the price.
@@ -112,8 +124,34 @@ export class WaitlistPrices {
 			{
 				sql: `SELECT course_key, first_date FROM trial_intake_waitlist_starts WHERE reopened_at IS NULL`,
 			},
+			{ sql: REBINDS_SQL },
+			{
+				sql: `SELECT e.request_id, e.course_key, e.created_at,
+				 (SELECT json_group_array(c.rebind_id) FROM trial_intake_waitlist_price_confirmations c WHERE c.request_id = e.request_id) AS decided_json
+				 FROM trial_intake_waitlist_entries e JOIN trial_intake_requests r ON r.id = e.request_id
+				 WHERE e.status = 'waiting' AND r.state = 'verified'`,
+			},
 		]);
+		const rebinds = journal.results as unknown as RebindRow[];
+		const confirmed = marks.results as unknown as MarkRow[];
 		return {
+			rebinds,
+			/** The red mark of `key` (WL-15), computed from the journal and the decisions. */
+			priceMarks: (key: string) => {
+				const row = rebindLineage(rebinds, key).find((r) => r.kind === 'price');
+				const open = row
+					? confirmed
+							.filter(
+								(m) =>
+									m.course_key === key &&
+									m.created_at < row.created_at &&
+									!(JSON.parse(m.decided_json) as string[]).includes(row.id)
+							)
+							.map((m) => m.request_id)
+							.sort()
+					: [];
+				return { row: row ?? null, open };
+			},
 			prices: new Map(
 				(prices.results as unknown as PriceRow[]).map((row) => [row.course_key, row])
 			),
@@ -130,7 +168,7 @@ export class WaitlistPrices {
 	}
 	/** Without a readable schedule (`lessons === null`) every stored course stays as it was. */
 	private async compute(lessons: readonly Lesson[] | null): Promise<AdminWaitlistData> {
-		const { prices, counts, starts } = await this.state();
+		const { prices, counts, starts, rebinds, priceMarks } = await this.state();
 		const closed = lessons ? await readClosedKeys(this.db) : new Set<string>();
 		const cards = new Map<string, Lesson[]>();
 		for (const lesson of lessons?.filter(isPlannedLesson) ?? []) {
@@ -161,6 +199,7 @@ export class WaitlistPrices {
 						updatedAt: row.updated_at,
 					}
 				: null;
+			const marks = priceMarks(key);
 			const course: WaitlistCourse = {
 				key,
 				lessons: planned,
@@ -180,6 +219,18 @@ export class WaitlistPrices {
 				waitingFamilies: Number(count?.waiting_families ?? 0),
 				firstDate,
 				status: null,
+				attention: row?.attention_reasons_json
+					? (JSON.parse(row.attention_reasons_json) as AttentionReason[])
+					: null,
+				priceRebind: marks.row && {
+					id: marks.row.id,
+					createdAt: marks.row.created_at,
+					minutes: Number((JSON.parse(marks.row.to_key) as unknown[])[3]),
+					monthlyCents: marks.row.to_monthly_cents,
+					yearlyCents: marks.row.to_yearly_cents,
+				},
+				priceOpen: marks.open,
+				rebinds: rebindLineage(rebinds, key).map(rebindRecord),
 			};
 			if (!lessons) course.status = firstDate ? 'started' : null;
 			else if (!card)

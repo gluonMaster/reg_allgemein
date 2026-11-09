@@ -10,6 +10,17 @@
       "teacher": "Lehrkraft W",
       "room": "R4",
       "building": "Villa"
+    },
+    {
+      "id": "36c6460d149cc6a1a1345dfda605b4b573deb11870f2c397d6f9c2c16296d373",
+      "subject": "1 E",
+      "group": "Der Kurs befindet sich in der Planung",
+      "weekday": 2,
+      "start": "16:00",
+      "end": "16:45",
+      "teacher": "Lehrkraft Q",
+      "room": "R5",
+      "building": "Kolibri"
     }
   ]
 }
