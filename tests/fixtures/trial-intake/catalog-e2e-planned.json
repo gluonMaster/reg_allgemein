@@ -1,0 +1,15 @@
+{
+  "lessons": [
+    {
+      "id": "2f3d7b355a82ebd3822bdd09e9812b401534558e9a9f484721dd325ad8abbd1a",
+      "subject": "English",
+      "group": "Der Kurs befindet sich in der Planung",
+      "weekday": 2,
+      "start": "16:00",
+      "end": "17:00",
+      "teacher": "Lehrkraft W",
+      "room": "R4",
+      "building": "Villa"
+    }
+  ]
+}

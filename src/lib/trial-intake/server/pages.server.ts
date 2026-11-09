@@ -1,7 +1,25 @@
-import { error, type RequestEvent } from '@sveltejs/kit';
-import { catalog, intakeRuntime, adminList, adminDetail, verify } from './http.server';
-import { INTAKE_PRIVACY_VERSION, type AdminGroupsData, type IntakeFormData } from '../contracts';
+import { error, redirect, type RequestEvent } from '@sveltejs/kit';
+import {
+	catalog,
+	intakeRuntime,
+	adminList,
+	adminDetail,
+	verify,
+	waitlistAttention,
+	withdrawal,
+} from './http.server';
+import {
+	INTAKE_PRIVACY_VERSION,
+	type AdminGroupsData,
+	type CatalogData,
+	type IntakeFormData,
+	type Lesson,
+	type WaitlistPageData,
+	type WithdrawalData,
+} from '../contracts';
+import { isPlannedLesson } from '../planned';
 import { t } from '../i18n';
+import { courseState } from './waitlist.server';
 
 export async function loadIntakeForm(event: RequestEvent): Promise<IntakeFormData> {
 	const { config } = intakeRuntime(event);
@@ -14,11 +32,53 @@ export async function loadIntakeForm(event: RequestEvent): Promise<IntakeFormDat
 		now: new Date().toISOString(),
 	} satisfies Omit<IntakeFormData, 'lessons' | 'closedLessonIds' | 'catalogError'>;
 	if (!base.accepting) return { ...base, lessons: [], closedLessonIds: [], catalogError: false };
+	let data: CatalogData;
 	try {
-		return { ...base, ...(await catalog(event)), catalogError: false };
+		data = await catalog(event);
 	} catch {
 		return { ...base, lessons: [], closedLessonIds: [], catalogError: true };
 	}
+	// WL-03: an old trial link of a planned course leads to its waitlist, with nothing else.
+	const planned = data.lessons.find((l) => l.id === base.selectedId && isPlannedLesson(l));
+	if (planned) redirect(303, `/warteliste?lesson=${planned.id}`);
+	return { ...base, ...data, catalogError: false };
+}
+/** `/warteliste?lesson=<id>`: the states of TRIAL_INTAKE_WAITLIST in their order (WL-04). */
+export async function loadWaitlistPage(event: RequestEvent): Promise<WaitlistPageData> {
+	const r = intakeRuntime(event);
+	const base = {
+		lesson: null,
+		offer: null,
+		firstDate: null,
+		scheduleUrl: r.config.trialIntake!.scheduleUrl,
+		turnstileSiteKey: r.config.turnstileSiteKey,
+		now: new Date().toISOString(),
+	};
+	if (!r.config.trialIntake!.accepting) return { ...base, state: 'maintenance' };
+	let lessons: Lesson[];
+	try {
+		lessons = await r.catalog.read();
+	} catch {
+		return { ...base, state: 'catalog_error' };
+	}
+	const lesson = lessons.find((l) => l.id === event.url.searchParams.get('lesson'));
+	if (!lesson) return { ...base, state: 'not_found' };
+	if (!isPlannedLesson(lesson)) redirect(303, `/probestunde?lesson=${lesson.id}`);
+	const course = await courseState(r.service.db, lessons, lesson);
+	if (course.state === 'open') return { ...base, state: 'form', lesson, offer: course.offer };
+	return {
+		...base,
+		state: course.state,
+		lesson,
+		firstDate: course.state === 'started' ? course.firstDate : null,
+	};
+}
+export async function loadWithdrawal(event: RequestEvent): Promise<WithdrawalData> {
+	const r = intakeRuntime(event);
+	return {
+		...((await withdrawal(event)) as Omit<WithdrawalData, 'scheduleUrl'>),
+		scheduleUrl: r.config.trialIntake!.scheduleUrl,
+	};
 }
 export async function loadIntakeGroups(event: RequestEvent): Promise<AdminGroupsData> {
 	const runtime = intakeRuntime(event);
@@ -43,6 +103,7 @@ export async function loadIntakeList(event: RequestEvent) {
 			intakeList: await adminList(event),
 			emailQueue: await admin.emailQueue(event.locals.user),
 			deliveryAttention: await admin.deliveryAttention(event.locals.user),
+			waitlist: await waitlistAttention(event),
 		};
 	} catch (e) {
 		if (e instanceof Error && e.name === 'ZodError')

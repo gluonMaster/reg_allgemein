@@ -7,6 +7,7 @@
 	import { formatMessage, translate, translateOutboxTemplate, translateOutboxWait } from '$lib/i18n';
 	import { formatBerlinTime, normalizeUiLocale } from '$lib/i18n/locale';
 	import OutboxIntakeContext from '$lib/trial-intake/components/OutboxIntakeContext.svelte';
+	import { outboxTemplateLabel } from '$lib/trial-intake/i18n';
 	import type { ActionData, PageData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const statuses = ['pending', 'processing', 'retry', 'sent', 'dead', 'cancelled', 'delivery_unknown'] as const;
@@ -38,7 +39,7 @@
 			{@const intake = sameRequest ? data.intake[row.sourceId] : undefined}
 			<article class="admin-card">
 				<p class="item-kicker">{translateAdminCode(uiLocale, row.channel)} · {translateAdminCode(uiLocale, row.status)}</p>
-				<h2>{translateOutboxTemplate(uiLocale, row.templateOrCategory)}</h2>
+				<h2>{outboxTemplateLabel(intake, normalizeUiLocale(uiLocale)) ?? translateOutboxTemplate(uiLocale, row.templateOrCategory)}</h2>
 				{#if intake}<OutboxIntakeContext context={intake} requestId={row.sourceId} locale={normalizeUiLocale(uiLocale)} />
 				{:else}<p>{translateAdminCode(uiLocale, row.sourceKind)} · {row.sourceId}</p>{/if}
 				{#if row.wait}<p><strong>{translateOutboxWait(uiLocale, row.wait, sameRequest)}</strong></p>{/if}

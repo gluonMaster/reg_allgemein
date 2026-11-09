@@ -7,9 +7,12 @@
 	import {
 		t,
 		dayLabel,
+		entryStatusText,
 		errorKey,
 		fill,
+		formatTimestamp,
 		importReasonKey,
+		tariffLabel,
 		waitlistStatusText,
 		type TextKey,
 	} from '../i18n';
@@ -151,6 +154,29 @@
 	</td>
 	<td>{lock(course)}</td>
 {/snippet}
+{#snippet entries(course: WaitlistCourse)}
+	<!-- WL-07: the confirmed signups of the course with a link to each card. -->
+	{#if course.entries?.length}<tr class="waitlist-entries">
+			<td colspan="11">
+				<details open>
+					<summary>{t(locale, 'adminWaitlistEntries')} ({course.entries.length})</summary>
+					<ul>
+						{#each course.entries as entry (entry.requestId)}<li>
+								<a href={`/admin/trial-intake/${entry.requestId}`}
+									>{entry.parentFirstName} {entry.parentLastName}</a
+								>
+								· {entry.children
+									.map((c) => `${c.firstName} ${c.lastName}`)
+									.join(', ')}
+								· {tariffLabel(entry.tariff, locale)} · {t(locale, 'confirmed')}
+								{formatTimestamp(entry.verifiedAt, locale)} ·
+								<strong>{entryStatusText(entry.status, locale)}</strong>
+							</li>{/each}
+					</ul>
+				</details>
+			</td>
+		</tr>{/if}
+{/snippet}
 <section class="intake">
 	<h2>{t(locale, 'adminWaitlist')}</h2>
 	<p>{t(locale, 'adminWaitlistIntro')}</p>
@@ -219,6 +245,7 @@
 								>
 							</td>
 						</tr>
+						{@render entries(course)}
 					{/each}
 				</tbody>
 			</table>
@@ -278,6 +305,7 @@
 										>{/if}
 								</td>
 							</tr>
+							{@render entries(course)}
 						{/each}
 					</tbody>
 				</table>

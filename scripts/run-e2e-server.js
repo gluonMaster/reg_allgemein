@@ -32,9 +32,17 @@ if (intakeTestEnvironment) {
 	// replace only the two external boundaries. No provider request may escape.
 	const actualFetch = globalThis.fetch.bind(globalThis);
 	const fixture = (name) => JSON.parse(readFileSync(join(repositoryRoot, 'tests/fixtures/trial-intake', name), 'utf8'));
-	// The shared reader/exporter fixture plus one class group, so the browser sees the age rules.
+	// The shared reader/exporter fixture plus one class group, so the browser sees the age rules,
+	// and one planned course for the waitlist.
 	const shared = fixture('catalog-v1.json');
-	const catalog = JSON.stringify({ ...shared, lessons: [...shared.lessons, ...fixture('catalog-e2e-ages.json').lessons] });
+	const catalog = JSON.stringify({
+		...shared,
+		lessons: [
+			...shared.lessons,
+			...fixture('catalog-e2e-ages.json').lessons,
+			...fixture('catalog-e2e-planned.json').lessons,
+		],
+	});
 	globalThis.fetch = async (input, init) => {
 		const url = new URL(input instanceof Request ? input.url : String(input));
 		if (url.href === 'https://schedule.example.test/') return new Response(`<script type="application/json" id="trial-intake-catalog">${catalog.replaceAll('<', '\\u003c')}</script>`);

@@ -82,8 +82,18 @@ describe('trial intake mode and HTTP boundaries', () => {
 			'/admin/trial-intake/warteliste/preise.xlsx',
 			'/admin/trial-intake/warteliste/import',
 			'/admin/operations',
+			'/warteliste',
+			'/warteliste/submit',
+			'/warteliste/austragen',
 		])
 			expect(intakeRouteAllowed(route)).toBe(true);
+		// Full mode keeps the waitlist closed like every other intake route.
+		const full = { ...env, PORTAL_MODE: 'full' };
+		for (const route of ['/warteliste', '/warteliste/submit', '/warteliste/austragen']) {
+			const request = event(route, 'GET', '');
+			(request.platform as { env: App.Platform['env'] }).env = full;
+			expect((await handle({ event: request, resolve: vi.fn() })).status).toBe(404);
+		}
 		for (const route of [
 			'/auth/register',
 			'/auth/verify',

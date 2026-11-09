@@ -1,5 +1,11 @@
 import type { AgeRange } from './age';
-import type { WaitlistCourse } from './contracts';
+import type {
+	IntakeOutboxContext,
+	WaitlistCourse,
+	WaitlistEntryStatus,
+	WaitlistTariff,
+} from './contracts';
+import { euroAmount } from './prices';
 
 export type Locale = 'de' | 'ru';
 const text = {
@@ -277,6 +283,131 @@ const text = {
 		'Die Datei ist zu groß: höchstens 256 KiB und 500 Zeilen.',
 		'Файл слишком большой: не более 256 KiB и 500 строк.',
 	],
+	// Waitlist page, mail screens and withdrawal: approved texts of OQ-050/OQ-052, verbatim.
+	waitlistTitle: ['Warteliste: {subject}', 'Лист ожидания: {subject}'],
+	waitlistIntro: [
+		'Dieser Kurs befindet sich in der Planung. Er beginnt, sobald mindestens {n} Kinder angemeldet sind. Tragen Sie sich in die Warteliste ein: Sobald der Kurs zustande kommt, schreiben wir Ihnen eine E-Mail mit dem ersten Termin.',
+		'Этот курс сейчас в планировании. Он начнётся, как только запишутся минимум {n} детей. Запишитесь в лист ожидания: когда курс состоится, мы пришлём письмо с датой первого занятия.',
+	],
+	waitlistPrice: ['Monatlicher Beitrag je Kind', 'Ежемесячный взнос за ребёнка'],
+	waitlistTariffMonthly: [
+		'Monatsvertrag – {amount} € pro Monat',
+		'Месячный договор — {amount} € в месяц',
+	],
+	waitlistTariffYearly: [
+		'Jahresvertrag – {amount} € pro Monat',
+		'Годовой договор — {amount} € в месяц',
+	],
+	waitlistContractNote: [
+		'Der Vertrag wird vor Kursbeginn in unserem Büro abgeschlossen.',
+		'Договор заключается до начала курса в нашем офисе.',
+	],
+	waitlistConsentOne: [
+		'Ich melde mein Kind für diesen Kurs an. Kommt der Kurs zustande, verpflichte ich mich, vor dem ersten Termin in Ihrem Büro in der Villa der Kulturen einen Vertrag abzuschließen und den monatlichen Beitrag von {amount} € je Kind ({tariff}) zu zahlen.',
+		'Я записываю ребёнка на этот курс. Если курс состоится, я обязуюсь до первого занятия заключить договор в вашем офисе в Villa der Kulturen и оплачивать ежемесячный взнос {amount} € за каждого ребёнка ({tariff}).',
+	],
+	waitlistConsentMany: [
+		'Ich melde meine Kinder für diesen Kurs an. Kommt der Kurs zustande, verpflichte ich mich, vor dem ersten Termin in Ihrem Büro in der Villa der Kulturen einen Vertrag abzuschließen und den monatlichen Beitrag von {amount} € je Kind ({tariff}) zu zahlen.',
+		'Я записываю детей на этот курс. Если курс состоится, я обязуюсь до первого занятия заключить договор в вашем офисе в Villa der Kulturen и оплачивать ежемесячный взнос {amount} € за каждого ребёнка ({tariff}).',
+	],
+	tariffMonthly: ['Monatsvertrag', 'Месячный договор'],
+	tariffYearly: ['Jahresvertrag', 'Годовой договор'],
+	waitlistSubmit: ['Auf die Warteliste setzen', 'Записаться в лист ожидания'],
+	waitlistPrivacy: [
+		'Ohne Bestätigung Ihrer E-Mail-Adresse werden die Daten Ihrer Anmeldung 14 Tage nach dem Absenden gelöscht. Nach der Bestätigung bleiben sie gespeichert, solange Sie auf der Warteliste stehen, höchstens 12 Monate. Nach dem Austragen oder nach Kursbeginn werden sie 90 Tage nach Abschluss der Bearbeitung durch unser Büro gelöscht.',
+		'Без подтверждения email данные записи удаляются через 14 дней после отправки. После подтверждения они хранятся, пока вы стоите в листе ожидания, но не дольше 12 месяцев. После выхода из листа или начала курса — через 90 дней после завершения обработки бюро.',
+	],
+	waitlistConfirmed: [
+		'Ihre E-Mail-Adresse wurde bestätigt. Sie stehen jetzt auf der Warteliste. Die Einzelheiten haben wir Ihnen per E-Mail geschickt.',
+		'Email подтверждён. Вы в листе ожидания. Подробности мы отправили письмом.',
+	],
+	waitlistPriceMissing: [
+		'Die Anmeldung zur Warteliste für diesen Kurs ist bald möglich. Bei Fragen rufen Sie uns an: {phone}.',
+		'Запись в лист ожидания на этот курс скоро откроется. Если есть вопросы — позвоните нам: {phone}.',
+	],
+	waitlistUnavailable: [
+		'Für diesen Kurs ist eine Anmeldung zur Warteliste derzeit nicht möglich. Bitte rufen Sie uns an: {phone}.',
+		'Запись в лист ожидания на этот курс сейчас невозможна. Пожалуйста, позвоните нам: {phone}.',
+	],
+	waitlistStarted: [
+		'Dieser Kurs ist bereits gestartet (erster Termin: {date}). Wenn Sie teilnehmen möchten, rufen Sie uns bitte an: {phone}.',
+		'Этот курс уже стартовал (первое занятие: {date}). Если хотите присоединиться, позвоните нам: {phone}.',
+	],
+	waitlistChanged: [
+		'Die Angaben zu diesem Kurs haben sich geändert. Bitte melden Sie sich erneut an oder rufen Sie uns an: {phone}.',
+		'Данные этого курса изменились. Пожалуйста, запишитесь заново или позвоните нам: {phone}.',
+	],
+	withdrawQuestion: [
+		'Von der Warteliste für {subject} austragen?',
+		'Выйти из листа ожидания на курс {subject}?',
+	],
+	withdrawButton: ['Austragen', 'Выйти'],
+	withdrawDone: ['Sie wurden von der Warteliste ausgetragen.', 'Вы вышли из листа ожидания.'],
+	withdrawStarted: [
+		'Der Kurs hat bereits begonnen. Bitte wenden Sie sich an unser Büro: {phone}.',
+		'Курс уже стартовал. Пожалуйста, свяжитесь с бюро: {phone}.',
+	],
+	// Service texts of the waitlist outside the approved list.
+	waitlistHeading: ['Warteliste', 'Лист ожидания'],
+	minutes: ['{n} Min.', '{n} мин.'],
+	waitlistTariffRequired: ['Bitte wählen Sie einen Tarif.', 'Выберите тариф.'],
+	waitlistConsentRequired: [
+		'Bitte bestätigen Sie die Erklärung zur Anmeldung und zum Beitrag.',
+		'Подтвердите согласие с записью и взносом.',
+	],
+	waitlistPriceChanged: [
+		'Der Beitrag für diesen Kurs wurde geändert. Bitte prüfen Sie den neuen Betrag und bestätigen Sie die Erklärung erneut.',
+		'Взнос за этот курс изменился. Проверьте новую сумму и снова отметьте согласие.',
+	],
+	waitlistConfirmTitle: ['Anmeldung bestätigen', 'Подтвердить запись'],
+	waitlistConfirmHint: [
+		'Bestätigen Sie Ihre E-Mail-Adresse. Erst danach stehen Sie auf der Warteliste.',
+		'Подтвердите email. Только после этого вы окажетесь в листе ожидания.',
+	],
+	withdrawTitle: ['Von der Warteliste austragen', 'Выход из листа ожидания'],
+	withdrawInvalid: [
+		'Dieser Link ist ungültig oder nicht mehr gültig.',
+		'Ссылка недействительна или больше не действует.',
+	],
+	adminWaitlistEntries: ['Anmeldungen', 'Записи'],
+	adminWaitlistNoEntries: [
+		'Noch keine bestätigten Anmeldungen.',
+		'Подтверждённых записей пока нет.',
+	],
+	adminWaitlistOpen: ['Anmeldung öffnen', 'Открыть запись'],
+	adminWaitlistCompact: [
+		'Warteliste: {n} Kurse, {m} Kinder',
+		'Лист ожидания: курсов — {n}, детей — {m}',
+	],
+	adminWaitlistAttention: ['Warteliste: bitte prüfen', 'Лист ожидания: требует внимания'],
+	adminWaitlistAttentionLink: ['Zur Warteliste', 'К листу ожидания'],
+	entryWaiting: ['wartet', 'ожидает'],
+	entryStarted: ['gestartet', 'стартовал'],
+	entryWithdrawn: ['ausgetragen', 'вышел'],
+	entryCancelled: ['beim Start storniert', 'отменена при старте'],
+	entryExpired: ['abgelaufen', 'истекла'],
+	waitlistEntry: ['Anmeldung zur Warteliste', 'Запись в лист ожидания'],
+	tariff: ['Tarif', 'Тариф'],
+	perChildMonth: ['{amount} € pro Monat je Kind', '{amount} € в месяц за ребёнка'],
+	shownSums: ['Angezeigte Beträge', 'Показанные суммы'],
+	thresholdAtSignup: ['Mindestzahl bei der Anmeldung', 'Минимум при записи'],
+	consentGiven: ['Zustimmung (Version, Zeitpunkt)', 'Согласие (версия, время)'],
+	entryStatus: ['Status der Anmeldung', 'Статус записи'],
+	ageCheckDate: ['Alter geprüft zum', 'Возраст проверен на'],
+	withdrawAdmin: ['Aus der Warteliste austragen', 'Вывести из листа ожидания'],
+	withdrawAdminHint: [
+		'Nach einem Anruf der Familie. Die Familie erhält keine Nachricht; ihre Kinder zählen nicht mehr.',
+		'По звонку семьи. Семья уведомления не получает; её дети больше не считаются.',
+	],
+	processedWaiting: [
+		'„Bearbeitet“ ist erst nach Start, Austragen oder Storno möglich.',
+		'«Обработано» доступно только после старта, выхода или отмены.',
+	],
+	outboxWaitlist: ['Warteliste', 'Лист ожидания'],
+	outboxWaitlistTemplate: [
+		'Büro-Benachrichtigung über eine Anmeldung zur Warteliste',
+		'Уведомление бюро о записи в лист ожидания',
+	],
 	adminTitle: ['Anfragen für Probestunden', 'Заявки на пробные занятия'],
 	adminGroups: ['Belegte Angebote', 'Укомплектованные занятия'],
 	adminGroupsIntro: [
@@ -454,6 +585,41 @@ export function waitlistStatusText(
 		date: course.firstDate ? formatDate(course.firstDate, locale) : '',
 	});
 }
+export function tariffLabel(tariff: WaitlistTariff, locale: Locale): string {
+	return t(locale, tariff === 'monthly' ? 'tariffMonthly' : 'tariffYearly');
+}
+/** The consent tick of WL-04 with the chosen tariff and sum; one or several children. */
+export function waitlistConsentText(
+	locale: Locale,
+	tariff: WaitlistTariff,
+	cents: number,
+	children: number
+): string {
+	return fill(t(locale, children > 1 ? 'waitlistConsentMany' : 'waitlistConsentOne'), {
+		amount: euroAmount(cents),
+		tariff: tariffLabel(tariff, locale),
+	});
+}
+export function entryStatusText(status: WaitlistEntryStatus, locale: Locale): string {
+	return t(
+		locale,
+		(
+			{
+				waiting: 'entryWaiting',
+				started: 'entryStarted',
+				withdrawn: 'entryWithdrawn',
+				cancelled: 'entryCancelled',
+				expired: 'entryExpired',
+			} as const
+		)[status]
+	);
+}
+/** The delivery page names a waitlist notification by its kind of request. */
+export function outboxTemplateLabel(context: IntakeOutboxContext | undefined, locale: Locale) {
+	return context && !context.deleted && context.kind === 'waitlist'
+		? t(locale, 'outboxWaitlistTemplate')
+		: null;
+}
 /** Reasons of an import row: codes of the price import service. */
 export function importReasonKey(code: string | null): TextKey {
 	return (
@@ -482,6 +648,10 @@ export function errorKey(code: string): TextKey {
 				INTAKE_LESSON_UNAVAILABLE: 'stale',
 				INTAKE_LESSON_CLOSED: 'closedError',
 				INTAKE_LESSON_PLANNED: 'plannedError',
+				WAITLIST_CONSENT_REQUIRED: 'waitlistConsentRequired',
+				WAITLIST_PRICE_CHANGED: 'waitlistPriceChanged',
+				WAITLIST_ENTRY_WAITING: 'processedWaiting',
+				WAITLIST_WITHDRAW_INVALID: 'withdrawInvalid',
 				WAITLIST_PRICE_INVALID: 'priceInvalid',
 				WAITLIST_PRICE_LOCKED: 'priceLockedError',
 				WAITLIST_IMPORT_INVALID: 'importFileInvalid',

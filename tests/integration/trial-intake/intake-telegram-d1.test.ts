@@ -117,6 +117,7 @@ describe('intake Telegram delivery and scheduler', () => {
 		expect(context).toEqual({
 			[a.id]: {
 				deleted: false,
+				kind: 'trial',
 				parentLastName: 'Parent',
 				subjects: [...new Set([lessons[0].subject, lessons[1].subject])].sort(),
 				receivedAt: NOW,

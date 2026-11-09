@@ -6,9 +6,11 @@
 		t,
 		ageRangeLabel,
 		dayLabel,
+		fill,
 		formatDate,
 		formatTimestamp,
 		errorKey,
+		waitlistStatusText,
 		type TextKey,
 	} from '../i18n';
 	import { ageFit, lessonAgeRange } from '../age';
@@ -19,6 +21,7 @@
 		type AdminListData,
 		type DeliveryAttention,
 		type EmailJob,
+		type WaitlistAttention,
 	} from '../contracts';
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
@@ -32,6 +35,7 @@
 			intakeList: AdminListData;
 			emailQueue: EmailJob[];
 			deliveryAttention: DeliveryAttention;
+			waitlist: WaitlistAttention;
 			csrfToken: string;
 		};
 	} = $props();
@@ -89,6 +93,33 @@
 				>{t(locale, 'deliveryAttentionLink')}</a
 			>
 		</section>
+	{/if}
+	<!-- WL-07: waitlist events that need the admin; otherwise one compact line. -->
+	{#if data.waitlist.attention.length}
+		<section class="card highlight">
+			<h3>{t(locale, 'adminWaitlistAttention')}</h3>
+			<ul>
+				{#each data.waitlist.attention as course (course.key)}<li>
+						<strong>{course.course.subject}</strong>, {dayLabel(
+							course.course.weekday,
+							locale
+						)}
+						{course.course.start}: {waitlistStatusText(course, locale)}
+					</li>{/each}
+			</ul>
+			<a class="button" href="/admin/trial-intake/warteliste"
+				>{t(locale, 'adminWaitlistAttentionLink')}</a
+			>
+		</section>
+	{:else}
+		<p>
+			<a href="/admin/trial-intake/warteliste"
+				>{fill(t(locale, 'adminWaitlistCompact'), {
+					n: data.waitlist.courses,
+					m: data.waitlist.children,
+				})}</a
+			>
+		</p>
 	{/if}
 	<form method="GET" action="/admin/trial-intake" class="card">
 		<details open>

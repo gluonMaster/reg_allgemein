@@ -53,7 +53,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.locale = normalizeUiLocale(event.cookies.get(UI_LOCALE_COOKIE));
 	event.locals.requestId = getOrCreateRequestId(event.request.headers.get('x-request-id'));
 	const config = loadRuntimeConfig(event.platform?.env);
-	const isIntakeRoute = event.route.id?.startsWith('/probestunde') || event.route.id?.startsWith('/admin/trial-intake');
+	const isIntakeRoute = event.route.id?.startsWith('/probestunde') || event.route.id?.startsWith('/warteliste')
+		|| event.route.id?.startsWith('/admin/trial-intake');
 	const intakeLogout = event.route.id === '/account/security' && event.request.method === 'POST'
 		&& event.url.search === '?/logout';
 	if ((config.portalMode === 'trial_intake' && !intakeRouteAllowed(event.route.id) && !intakeLogout)

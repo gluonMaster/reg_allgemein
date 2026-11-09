@@ -2,10 +2,11 @@ import { createRandomToken, hmacSha256Hex, constantTimeEqual } from '$lib/server
 import { sha256Hex } from '$lib/server/security/digest';
 import { DatabaseBoundary, type StatementSpec } from '$lib/server/db/database';
 import { nextBusinessWindow, type BusinessHoursSchedule } from '$lib/server/outbox/business-hours';
-import type { Lesson } from '../contracts';
+import type { Lesson, VerificationResult } from '../contracts';
 import { IntakeError, intakeInputSchema, validateSubmission } from './validation.server';
 import type { IntakeChild, IntakeDetail, IntakeItem, IntakeRequest } from './model.server';
 import { telegramParts } from './templates.server';
+import { entryOutcome, waitlistAcceptance } from './waitlist-core.server';
 
 export const afterSeconds = (now: string, seconds: number) =>
 	new Date(Date.parse(now) + seconds * 1000).toISOString();
@@ -213,18 +214,24 @@ export class IntakeService {
 			resendAfter: afterSeconds(r.last_email_at, 60),
 		};
 	}
-	async inspectToken(token: string, now: string) {
-		if (!/^[a-f0-9]{64}$/u.test(token)) return { state: 'invalid' as const };
+	async inspectToken(token: string, now: string): Promise<VerificationResult> {
+		if (!/^[a-f0-9]{64}$/u.test(token)) return { state: 'invalid' };
 		const r = await this.db.first<IntakeRequest>({
 			sql: 'SELECT * FROM trial_intake_requests WHERE verification_hash = ?',
 			params: [await sha256Hex(token)],
 		});
-		if (!r || (r.delete_after !== null && r.delete_after <= now))
-			return { state: 'invalid' as const };
-		if (r.state !== 'pending_email') return { state: 'accepted' as const };
+		if (!r || (r.delete_after !== null && r.delete_after <= now)) return { state: 'invalid' };
+		// A waitlist signup tells its page which texts to show; a trial request stays as it was.
+		const kind = r.kind === 'waitlist' ? ({ kind: 'waitlist' } as const) : {};
+		if (r.state !== 'pending_email') {
+			const outcome = r.kind === 'waitlist' ? await entryOutcome(this.db, r.id) : null;
+			if (outcome?.status === 'cancelled')
+				return { state: 'cancelled', ...kind, firstDate: outcome.first_date };
+			return { state: 'accepted', ...kind };
+		}
 		if (r.pending_expires_at <= now || r.verification_expires_at <= now)
-			return { state: 'expired' as const };
-		return { state: 'confirm' as const };
+			return { state: 'expired', ...kind };
+		return { state: 'confirm', ...kind };
 	}
 	async verify(token: string, now: string) {
 		const inspection = await this.inspectToken(token, now);
@@ -237,24 +244,38 @@ export class IntakeService {
 		});
 		if (!r) throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
 		if (inspection.state === 'confirm') await this.accept(r.id, now, hash);
-		if ((await this.inspectToken(token, now)).state !== 'accepted')
+		const result = await this.inspectToken(token, now);
+		if (result.state !== 'accepted' && result.state !== 'cancelled')
 			throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
-		return { state: 'accepted' as const, email: r.email };
+		return { ...result, email: r.email };
 	}
 	private async accept(requestId: string, now: string, verificationHash?: string) {
 		const detail = await this.detail(requestId);
 		if (!detail) throw new IntakeError('INTAKE_TOKEN_INVALID', 410);
 		const r = detail.request;
 		const hash = verificationHash ?? r.verification_hash;
-		const parts = telegramParts(detail);
-		const statements: StatementSpec[] = [
-			{
-				sql: `UPDATE trial_intake_requests SET state = 'verified', verified_at = ?
-			 WHERE id = ? AND verification_hash = ? AND state = 'pending_email'
+		// A waitlist signup confirms its entry or, after the course start, closes at once.
+		const waitlist =
+			r.kind === 'waitlist'
+				? await waitlistAcceptance(
+						this.db,
+						detail,
+						hash,
+						verificationHash === undefined,
+						now
+					)
+				: null;
+		const parts = waitlist ? waitlist.parts : telegramParts(detail);
+		const statements: StatementSpec[] = waitlist
+			? [...waitlist.confirm]
+			: [
+					{
+						sql: `UPDATE trial_intake_requests SET state = 'verified', verified_at = ?
+			 WHERE id = ? AND kind = 'trial' AND verification_hash = ? AND state = 'pending_email'
 			 AND (? = 1 OR verification_expires_at > ?) AND pending_expires_at > ?`,
-				params: [now, r.id, hash, verificationHash === undefined ? 1 : 0, now, now],
-			},
-		];
+						params: [now, r.id, hash, verificationHash === undefined ? 1 : 0, now, now],
+					},
+				];
 		parts.forEach((body, index) => {
 			const payloadId = `${r.id}:${index + 1}`;
 			statements.push({
@@ -300,6 +321,7 @@ export class IntakeService {
 				hash,
 			],
 		});
+		statements.push(...(waitlist?.after ?? []));
 		await this.db.batch(statements);
 	}
 	async resend(id: string, receipt: string, now: string) {

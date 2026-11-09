@@ -1,0 +1,260 @@
+import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { getPlatformProxy } from 'wrangler';
+import plannedFixture from '../../fixtures/trial-intake/catalog-e2e-planned.json' with { type: 'json' };
+import { plannedCourseKey } from '../../../src/lib/trial-intake/planned';
+import { nextLessonDate } from '../../../src/lib/trial-intake/dates';
+import type { Lesson } from '../../../src/lib/trial-intake/contracts';
+import { newE2eContext, syntheticIdentities, syntheticPassword } from '../support/authenticated';
+import { installSyntheticTurnstile } from '../support/turnstile';
+import { createOutboxRuntime } from '../../../src/lib/server/outbox/runtime';
+import { loadRuntimeConfig } from '../../../src/lib/server/config/runtime';
+import { FakeEmailProvider } from '../../../src/lib/server/outbox/providers';
+
+test.skip(process.env.KOLIBRI_E2E_TRIAL_INTAKE !== '1', 'Isolated intake harness required.');
+
+async function noOverflow(page: Page) {
+	expect(
+		await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+	).toBe(true);
+}
+
+test('planned card link -> waitlist form -> changed price -> confirmation by synthetic mail -> admin queue and lock -> withdrawal', async ({
+	browser,
+}, testInfo) => {
+	test.setTimeout(120_000);
+	const [lesson] = plannedFixture.lessons;
+	const root = process.env.KOLIBRI_E2E_RUNTIME_ROOT!;
+	const proxy = await getPlatformProxy<{ DB: D1Database }>({
+		configPath: 'wrangler.e2e.toml',
+		envFiles: [join(root, 'runtime.env')],
+		persist: { path: join(root, 'state', 'v3') },
+		remoteBindings: false,
+	});
+	const db = proxy.env.DB;
+	const key = plannedCourseKey(lesson as Lesson);
+	const lock = () =>
+		db
+			.prepare('SELECT monthly_cents FROM trial_intake_planned_prices WHERE course_key = ?')
+			.bind(key)
+			.first<{ monthly_cents: number }>();
+	const context = await newE2eContext(browser, testInfo);
+	context.setDefaultTimeout(15_000);
+	/** Delivers queued letters with the fake provider, as the scheduler would, until ours arrives. */
+	const mailbox = new FakeEmailProvider();
+	const deliver = async (to: string, count: number) => {
+		const runtime = createOutboxRuntime(
+			loadRuntimeConfig({
+				...proxy.env,
+				APP_ENV: 'test',
+				PORTAL_MODE: 'trial_intake',
+				PORTAL_PUBLIC_ORIGIN: new URL(testInfo.project.use.baseURL!).origin,
+				JWT_SECRET: /^JWT_SECRET=(.+)$/m.exec(
+					readFileSync(join(root, 'runtime.env'), 'utf8')
+				)![1],
+				TRIAL_INTAKE_SCHEDULE_URL: 'https://schedule.example.test/',
+				EMAIL_PROVIDER: 'fake',
+				TELEGRAM_PROVIDER: 'fake',
+				TELEGRAM_CHAT_ID: 'synthetic-bureau',
+			}),
+			{ emailProvider: mailbox }
+		);
+		for (let i = 0; i < 30; i++) {
+			if (mailbox.messages.filter((m) => m.to === to).length >= count) break;
+			if ((await runtime.emailWorker.dispatchNext(new Date().toISOString())) === 'empty')
+				break;
+		}
+		return mailbox.messages.filter((m) => m.to === to).at(count - 1)!;
+	};
+	const linkPath = (text: string, path: string) => {
+		const url = new URL(
+			new RegExp(`https?://\\S+?${path}\\?token=[a-f0-9]{64}`, 'u').exec(text)![0]
+		);
+		return `${url.pathname}${url.search}`;
+	};
+	try {
+		await db
+			.prepare(
+				`INSERT INTO trial_intake_planned_prices(course_key, subject, weekday, start_time, end_time, teacher, building,
+				 room, monthly_cents, yearly_cents, min_participants, updated_by, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 6650, 5905, 3, 'e2e-admin', ?, ?)`
+			)
+			.bind(
+				key,
+				lesson.subject,
+				lesson.weekday,
+				lesson.start,
+				lesson.end,
+				lesson.teacher,
+				lesson.building,
+				lesson.room,
+				new Date().toISOString(),
+				new Date().toISOString()
+			)
+			.run();
+		const page = await context.newPage();
+		await page.setViewportSize({ width: 390, height: 844 });
+		await installSyntheticTurnstile(page);
+		// The old trial CTA of a planned card leads to its waitlist (WL-03).
+		await page.goto(`/probestunde?lesson=${lesson.id}&utm=ignored`);
+		await expect(page).toHaveURL(new RegExp(`/warteliste\\?lesson=${lesson.id}$`, 'u'));
+		await expect(page.locator('[data-turnstile-state="ready"]')).toHaveCount(1);
+		await expect(page.locator('[data-enhanced="true"]')).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Warteliste: English', exact: true })
+		).toBeVisible();
+		await expect(page.getByText('Kurs in Planung', { exact: true })).toBeVisible();
+		await expect(page.getByText('Dienstag · 16:00–17:00 (60 Min.)')).toBeVisible();
+		await expect(
+			page.getByText('sobald mindestens 3 Kinder angemeldet sind', { exact: false })
+		).toBeVisible();
+		const monthly = page.getByLabel('Monatsvertrag – 66,50 € pro Monat');
+		await expect(monthly).not.toBeChecked();
+		await expect(page.getByLabel('Jahresvertrag – 59,05 € pro Monat')).not.toBeChecked();
+		await expect(page.locator('input[name=consent]')).toHaveCount(0);
+		await noOverflow(page);
+		await page.locator('[name=parentFirstName]').fill('Synthetic');
+		await page.locator('[name=parentLastName]').fill('WaitlistParent');
+		await page.locator('[name=email]').fill('waitlist-ui@example.test');
+		await page.locator('[name=phone]').fill('+49 000 654321');
+		await page.locator('[name=first-child-1]').fill('WaitChild');
+		await page.locator('[name=last-child-1]').fill('Synthetic');
+		// Eight years old on the next lesson date: English starts at six.
+		const born = new Date(nextLessonDate(lesson.weekday, new Date().toISOString()));
+		born.setUTCFullYear(born.getUTCFullYear() - 8);
+		await page.locator('[name=birth-child-1]').fill(born.toISOString().slice(0, 10));
+		await monthly.check();
+		const consent = page.getByLabel(
+			'den monatlichen Beitrag von 66,50 € je Kind (Monatsvertrag)',
+			{
+				exact: false,
+			}
+		);
+		await consent.check();
+		// The language switch keeps the input; the consent reads in Russian with the same sum.
+		await page.getByRole('button', { name: 'Русский', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Лист ожидания: English' })).toBeVisible();
+		await expect(page.getByLabel('ежемесячный взнос 66,50 €', { exact: false })).toBeChecked();
+		await expect(page.locator('[name=parentLastName]')).toHaveValue('WaitlistParent');
+		await noOverflow(page);
+		await page.getByRole('button', { name: 'Deutsch', exact: true }).click();
+		await expect(consent).toBeChecked();
+		await page.screenshot({
+			path: 'tmp/trial-intake-waitlist-form-mobile.png',
+			fullPage: true,
+		});
+
+		// The bureau changes the sum before the first signup locks it.
+		await db
+			.prepare(
+				'UPDATE trial_intake_planned_prices SET monthly_cents = 7000 WHERE course_key = ?'
+			)
+			.bind(key)
+			.run();
+		const refused = page.waitForResponse((r) => r.url().endsWith('/warteliste/submit'));
+		await page.getByRole('button', { name: 'Auf die Warteliste setzen', exact: true }).click();
+		expect((await refused).status()).toBe(409);
+		await expect(page.locator('div.error[role=alert]')).toContainText(
+			'Der Beitrag für diesen Kurs wurde geändert'
+		);
+		await expect(page.getByLabel('Monatsvertrag – 70,00 € pro Monat')).toBeChecked();
+		const newConsent = page.getByLabel(
+			'den monatlichen Beitrag von 70,00 € je Kind (Monatsvertrag)',
+			{
+				exact: false,
+			}
+		);
+		await expect(newConsent).not.toBeChecked();
+		await newConsent.check();
+		const accepted = page.waitForResponse((r) => r.url().endsWith('/warteliste/submit'));
+		await page.getByRole('button', { name: 'Auf die Warteliste setzen', exact: true }).click();
+		const receipt = await (await accepted).json();
+		expect((await accepted).request().postDataJSON()).toMatchObject({
+			lessonId: lesson.id,
+			tariff: 'monthly',
+			expectedPriceCents: 7000,
+			consent: true,
+		});
+		await expect(
+			page.getByRole('heading', { name: 'Bitte prüfen Sie Ihr Postfach' })
+		).toBeVisible();
+		expect(
+			await page.evaluate(() => JSON.parse(localStorage.getItem('trial-intake:parent:v1')!))
+		).toMatchObject({ email: 'waitlist-ui@example.test' });
+		// The price is locked by the unconfirmed signup already (WL-06).
+		await expect(
+			db
+				.prepare(
+					'UPDATE trial_intake_planned_prices SET monthly_cents = 7100 WHERE course_key = ?'
+				)
+				.bind(key)
+				.run()
+		).rejects.toThrow();
+
+		const verification = await deliver('waitlist-ui@example.test', 1);
+		expect(verification.subject).toContain('Anmeldung zur Warteliste');
+		expect(verification.text).toContain('Tarif: Monatsvertrag, 70,00 € pro Monat je Kind');
+		expect(verification.text).not.toContain('WaitChild');
+		await page.goto(linkPath(verification.text, '/probestunde/verify'));
+		await expect(page.locator('[data-enhanced="true"]')).toBeVisible();
+		await page.getByRole('button', { name: 'Anmeldung bestätigen', exact: true }).click();
+		await expect(
+			page.getByText('Sie stehen jetzt auf der Warteliste.', { exact: false })
+		).toBeVisible();
+		await noOverflow(page);
+		const confirmation = await deliver('waitlist-ui@example.test', 2);
+		expect(confirmation.subject).toContain('Sie stehen auf der Warteliste: English');
+		expect(confirmation.text).toContain('WaitChild Synthetic: English (in Planung)');
+		const withdrawPath = linkPath(confirmation.text, '/warteliste/austragen');
+
+		await page.goto('/auth/login');
+		await page
+			.getByLabel('E-Mail-Adresse', { exact: true })
+			.fill(syntheticIdentities.admin.email);
+		await page.getByLabel('Passwort', { exact: true }).fill(syntheticPassword);
+		await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+		await page.waitForURL('**/admin/trial-intake');
+		await expect(page.locator('[data-enhanced="true"]')).toBeVisible();
+		// The trial list does not show the signup; the waitlist line counts it.
+		await expect(page.getByText('WaitlistParent')).toHaveCount(0);
+		await page.getByRole('link', { name: /^Warteliste: \d+ Kurse, 1 Kinder$/u }).click();
+		await expect(page).toHaveURL(/\/admin\/trial-intake\/warteliste$/u);
+		const row = page.locator('tr', { hasText: 'Lehrkraft W' }).first();
+		await expect(row).toContainText('sammelt: 1 von 3 Kindern');
+		await expect(row).toContainText('gesperrt: 1 aktive Anmeldungen');
+		await expect(row.getByLabel(/^Monatsvertrag €\/Monat: English/u)).toBeDisabled();
+		await expect(row.getByLabel(/^Monatsvertrag €\/Monat: English/u)).toHaveValue('70,00');
+		await expect(page.getByText('WaitChild Synthetic', { exact: false })).toBeVisible();
+		await page.screenshot({ path: 'tmp/trial-intake-waitlist-admin.png', fullPage: true });
+		await page.getByRole('link', { name: 'Synthetic WaitlistParent', exact: true }).click();
+		await expect(page).toHaveURL(new RegExp(`/admin/trial-intake/${receipt.id}$`, 'u'));
+		await expect(page.getByText('Monatsvertrag, 70,00 € pro Monat je Kind')).toBeVisible();
+		await expect(
+			page.getByText('„Bearbeitet“ ist erst nach Start, Austragen oder Storno möglich.')
+		).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: 'Gesamte Anfrage als bearbeitet markieren' })
+		).toHaveCount(0);
+		await expect(
+			page.getByRole('button', { name: 'Aus der Warteliste austragen' })
+		).toBeVisible();
+		await noOverflow(page);
+
+		// The family leaves by the link of the confirmation letter; GET alone changes nothing.
+		await page.goto(withdrawPath);
+		await expect(page.getByText('Von der Warteliste für English austragen?')).toBeVisible();
+		expect((await lock())!.monthly_cents).toBe(7000);
+		await page.getByRole('button', { name: 'Austragen', exact: true }).click();
+		await expect(page.getByText('Sie wurden von der Warteliste ausgetragen.')).toBeVisible();
+		await page.reload();
+		await expect(page.getByText('Sie wurden von der Warteliste ausgetragen.')).toBeVisible();
+		await page.goto('/admin/trial-intake/warteliste');
+		await expect(row).toContainText('sammelt: 0 von 3 Kindern');
+		await expect(row.getByLabel(/^Monatsvertrag €\/Monat: English/u)).toBeEnabled();
+		await expect(page.getByText('ausgetragen', { exact: false })).toBeVisible();
+	} finally {
+		await context.close().catch(() => {});
+		await proxy.dispose();
+	}
+});

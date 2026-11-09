@@ -8,13 +8,19 @@ import { AuthRateLimiter, RateLimitExceededError } from '$lib/server/security/ra
 import { AuthorizationError } from '$lib/server/security/authorization';
 import { requireCsrf } from '$lib/server/security/csrf';
 import { requestSubject } from '$lib/server/auth/http';
-import { INTAKE_BODY_LIMIT, INTAKE_PRIVACY_VERSION, type CatalogData } from '../contracts';
+import {
+	INTAKE_BODY_LIMIT,
+	INTAKE_PRIVACY_VERSION,
+	type CatalogData,
+	type WaitlistAttention,
+} from '../contracts';
 import { CatalogReader, boundedText } from './catalog.server';
 import { closedLessonIds } from './closed.server';
 import { IntakeService } from './service.server';
 import { IntakeAdmin, requireActiveAdmin } from './admin.server';
 import { IntakeError, intakeInputSchema } from './validation.server';
 import { WaitlistPrices } from './prices.server';
+import { WaitlistSignup, waitlistInputSchema } from './waitlist.server';
 import { IMPORT_MAX_BYTES, priceCsv, priceXlsx } from './price-files.server';
 import { parseEuroCents, parseMinParticipants } from '../prices';
 import {
@@ -40,6 +46,7 @@ export function intakeRuntime(event: RequestEvent) {
 		service,
 		admin: new IntakeAdmin(service),
 		prices: new WaitlistPrices(db),
+		waitlist: new WaitlistSignup(service, config.jwtSecret, config.messaging.emailMaxAttempts),
 		catalog: new CatalogReader(
 			config.trialIntake.scheduleUrl,
 			undefined,
@@ -115,6 +122,25 @@ export async function intakeEndpoint(action: () => Promise<unknown>): Promise<Re
 		);
 	}
 }
+/** Both submit rate limits and Turnstile, shared by the trial request and the waitlist (TIN-10). */
+async function guardSubmit(
+	event: RequestEvent,
+	r: ReturnType<typeof intakeRuntime>,
+	email: string,
+	turnstileToken: string,
+	now: string
+) {
+	const subject = requestSubject(event);
+	await r.limiter.consume('intake-submit-ip', subject, now);
+	await r.limiter.consume('intake-submit-email', email, now);
+	const verifier = new CloudflareTurnstileVerifier(
+		r.config.turnstileSecretKey ?? '',
+		'trial_intake',
+		r.config.turnstileHostnames
+	);
+	if (!(await verifier.verify({ token: turnstileToken, remoteIp: subject })))
+		throw new IntakeError('INTAKE_TURNSTILE_REJECTED');
+}
 export async function submit(event: RequestEvent) {
 	const r = intakeRuntime(event);
 	if (!r.config.trialIntake?.accepting) throw new IntakeError('INTAKE_MAINTENANCE', 503);
@@ -124,16 +150,7 @@ export async function submit(event: RequestEvent) {
 	if (!parsed.success || typeof turnstileToken !== 'string')
 		throw new IntakeError('INTAKE_INPUT_INVALID');
 	const now = new Date().toISOString();
-	const subject = requestSubject(event);
-	await r.limiter.consume('intake-submit-ip', subject, now);
-	await r.limiter.consume('intake-submit-email', parsed.data.email, now);
-	const verifier = new CloudflareTurnstileVerifier(
-		r.config.turnstileSecretKey ?? '',
-		'trial_intake',
-		r.config.turnstileHostnames
-	);
-	if (!(await verifier.verify({ token: turnstileToken, remoteIp: subject })))
-		throw new IntakeError('INTAKE_TURNSTILE_REJECTED');
+	await guardSubmit(event, r, parsed.data.email, turnstileToken, now);
 	return r.service.create(
 		parsed.data,
 		() => r.catalog.read(),
@@ -145,6 +162,30 @@ export async function submit(event: RequestEvent) {
 			parsed.data.email
 		)
 	);
+}
+/** WL-04: one signup to the waitlist of a planned course; never pre-verified by the device cookie. */
+export async function waitlistSubmit(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	if (!r.config.trialIntake?.accepting) throw new IntakeError('INTAKE_MAINTENANCE', 503);
+	const body = await readJson(event);
+	const { turnstileToken, ...value } = body;
+	if (value.consent !== true) throw new IntakeError('WAITLIST_CONSENT_REQUIRED');
+	const parsed = waitlistInputSchema.safeParse(value);
+	if (!parsed.success || typeof turnstileToken !== 'string')
+		throw new IntakeError('INTAKE_INPUT_INVALID');
+	const now = new Date().toISOString();
+	await guardSubmit(event, r, parsed.data.email, turnstileToken, now);
+	return r.waitlist.create(parsed.data, () => r.catalog.read(), now);
+}
+/** GET shows the course and one button; POST withdraws (WL-12). */
+export async function withdrawal(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	const now = new Date().toISOString();
+	if (event.request.method === 'GET')
+		return r.waitlist.inspectWithdrawal(event.url.searchParams.get('token') ?? '', now);
+	const body = await readJson(event);
+	await r.limiter.consume('waitlist-withdraw-ip', requestSubject(event), now);
+	return r.waitlist.withdraw(z.string().max(128).parse(body.token), event.locals.requestId, now);
 }
 export async function catalog(event: RequestEvent): Promise<CatalogData> {
 	const r = intakeRuntime(event);
@@ -165,10 +206,11 @@ export async function verify(event: RequestEvent) {
 		return r.service.inspectToken(event.url.searchParams.get('token') ?? '', now);
 	const body = await readJson(event);
 	await r.limiter.consume('intake-verify-ip', requestSubject(event), now);
-	const result = await r.service.verify(z.string().max(128).parse(body.token), now);
+	const { email, ...result } = await r.service.verify(z.string().max(128).parse(body.token), now);
+	// The address is confirmed also when a waitlist signup came too late for its course.
 	event.cookies.set(
 		VERIFIED_DEVICE_COOKIE,
-		await verifiedDeviceValue(r.config.jwtSecret!, result.email),
+		await verifiedDeviceValue(r.config.jwtSecret!, email),
 		{
 			httpOnly: true,
 			secure: true,
@@ -177,7 +219,7 @@ export async function verify(event: RequestEvent) {
 			maxAge: VERIFIED_DEVICE_MAX_AGE,
 		}
 	);
-	return { state: result.state };
+	return result;
 }
 export async function resend(event: RequestEvent) {
 	const r = intakeRuntime(event);
@@ -216,6 +258,13 @@ async function adminBody(event: RequestEvent, limit = INTAKE_BODY_LIMIT) {
 }
 export async function adminStatus(event: RequestEvent) {
 	const body = await adminBody(event);
+	if (body.withdraw === true)
+		return intakeRuntime(event).waitlist.withdrawByAdmin(
+			event.locals.user,
+			event.params.id ?? '',
+			event.locals.requestId,
+			new Date().toISOString()
+		);
 	return intakeRuntime(event).admin.setProcessed(
 		event.locals.user,
 		event.params.id ?? '',
@@ -276,8 +325,38 @@ async function catalogLesson(r: ReturnType<typeof intakeRuntime>, lessonId: unkn
 export async function loadWaitlistPrices(event: RequestEvent) {
 	const r = intakeRuntime(event);
 	// The admin check runs first; a missing schedule must still show what is stored.
-	await requireActiveAdmin(r.service.db, event.locals.user);
-	return r.prices.overview(event.locals.user, await plannedCatalog(r));
+	const actor = await requireActiveAdmin(r.service.db, event.locals.user);
+	const data = await r.prices.overview(event.locals.user, await plannedCatalog(r));
+	const entries = await r.waitlist.entries(
+		actor,
+		event.locals.requestId,
+		new Date().toISOString()
+	);
+	for (const course of [...data.courses, ...data.unscheduled])
+		course.entries = entries.get(course.key) ?? [];
+	return data;
+}
+const ATTENTION = new Set(['ready', 'price_missing', 'gone', 'ambiguous']);
+/** WL-07: the banner of `/admin/trial-intake`; without a schedule only the counts remain. */
+export async function waitlistAttention(event: RequestEvent): Promise<WaitlistAttention> {
+	const r = intakeRuntime(event);
+	const data = await r.prices.overview(event.locals.user, await plannedCatalog(r));
+	const all = [...data.courses, ...data.unscheduled];
+	return {
+		courses: data.courses.length,
+		children: all.reduce((sum, course) => sum + course.children, 0),
+		attention: all
+			.filter((course) => ATTENTION.has(course.status ?? ''))
+			.map(({ key, course, status, children, price, firstDate, activeEntries }) => ({
+				key,
+				course,
+				status,
+				children,
+				price,
+				firstDate,
+				activeEntries,
+			})),
+	};
 }
 /** Set both sums and the threshold of a planned course, or delete an unlocked price. */
 export async function adminWaitlistPrice(event: RequestEvent) {

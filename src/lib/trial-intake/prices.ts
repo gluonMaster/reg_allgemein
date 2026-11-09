@@ -17,6 +17,11 @@ export function parseMinParticipants(value: string): number | null {
 	const count = match ? Number(match[0]) : 0;
 	return count >= 1 && count <= MIN_PARTICIPANTS_MAX ? count : null;
 }
+/** The German amount of the approved texts, "{Betrag} €": "66,50", "1.000,00". */
+export function euroAmount(cents: number): string {
+	const euros = new Intl.NumberFormat('de-DE').format(Math.floor(cents / 100));
+	return `${euros},${String(cents % 100).padStart(2, '0')}`;
+}
 /** The plain German amount of a form field or CSV cell, e.g. "66,50". */
 export function centsText(cents: number, separator = ','): string {
 	return `${Math.floor(cents / 100)}${separator}${String(cents % 100).padStart(2, '0')}`;

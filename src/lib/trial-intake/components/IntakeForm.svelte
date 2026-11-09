@@ -16,6 +16,9 @@
 	import { isPlannedLesson } from '../planned';
 	import { ageRangeLabel, dayLabel, formatDate, t, errorKey, type TextKey } from '../i18n';
 	import { requestJson } from '../client';
+	import { saveParent } from '../parent-storage';
+	import ParentFields from './ParentFields.svelte';
+	import ChildrenFields from './ChildrenFields.svelte';
 	import '../intake.css';
 	let { data }: { data: IntakeFormData } = $props();
 	const locale = $derived(page.data.locale ?? 'de');
@@ -36,15 +39,6 @@
 		parentLastName = $state(''),
 		email = $state(''),
 		phone = $state('');
-	const parentStorageKey = 'trial-intake:parent:v1';
-	function forgetParent() {
-		try {
-			localStorage.removeItem(parentStorageKey);
-		} catch {
-			// Storage can be unavailable in private or restricted browsers.
-		}
-		parentFirstName = parentLastName = email = phone = '';
-	}
 	let children = $state<IntakeInput['children']>([
 		{ key: 'child-1', firstName: '', lastName: '', birthDate: '' },
 	]);
@@ -98,19 +92,6 @@
 	);
 	onMount(() => {
 		enhanced = true;
-		try {
-			const saved = JSON.parse(localStorage.getItem(parentStorageKey) ?? 'null');
-			if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
-				if (!parentFirstName && typeof saved.parentFirstName === 'string')
-					parentFirstName = saved.parentFirstName;
-				if (!parentLastName && typeof saved.parentLastName === 'string')
-					parentLastName = saved.parentLastName;
-				if (!email && typeof saved.email === 'string') email = saved.email;
-				if (!phone && typeof saved.phone === 'string') phone = saved.phone;
-			}
-		} catch {
-			// Prefill is optional; invalid or blocked storage must not break the form.
-		}
 		now = new Date().toISOString();
 		const timer = setInterval(() => {
 			now = new Date().toISOString();
@@ -251,14 +232,7 @@
 				...lastAttempt.payload,
 				turnstileToken: token,
 			});
-			try {
-				localStorage.setItem(
-					parentStorageKey,
-					JSON.stringify({ parentFirstName, parentLastName, email, phone })
-				);
-			} catch {
-				// A successful request stays successful when browser storage is blocked.
-			}
+			saveParent({ parentFirstName, parentLastName, email, phone });
 		} catch (e) {
 			await showError(errorKey(e instanceof Error ? e.message : ''));
 		} finally {
@@ -352,107 +326,29 @@
 			>{/if}
 		<form onsubmit={submit}>
 			<fieldset disabled={pending || !enhanced} class="form-controls">
-				<section class="card">
-					<h2>1. {t(locale, 'contacts')}</h2>
-					<div class="fields">
-						<label
-							>{t(locale, 'firstName')}<input
-								name="parentFirstName"
-								autocomplete="given-name"
-								bind:value={parentFirstName}
-								required
-								maxlength="160"
-							/></label
-						>
-						<label
-							>{t(locale, 'lastName')}<input
-								name="parentLastName"
-								autocomplete="family-name"
-								bind:value={parentLastName}
-								required
-								maxlength="160"
-							/></label
-						>
-						<label
-							>{t(locale, 'email')}<input
-								name="email"
-								type="email"
-								autocomplete="email"
-								bind:value={email}
-								required
-								maxlength="160"
-							/></label
-						>
-						<label
-							>{t(locale, 'phone')}<input
-								name="phone"
-								type="tel"
-								autocomplete="tel"
-								bind:value={phone}
-								required
-								minlength="5"
-								maxlength="160"
-							/></label
-						>
-					</div>
-					<button class="text-link" type="button" onclick={forgetParent}
-						>{t(locale, 'notMyDetails')}</button
-					>
-				</section>
-				<section class="card">
-					<h2>2. {t(locale, 'children')}</h2>
-					{#each children as child, index (child.key)}
-						<fieldset>
-							<legend>{t(locale, 'child')} {index + 1}</legend>
-							<div class="fields">
-								<label
-									>{t(locale, 'firstName')}<input
-										name={`first-${child.key}`}
-										autocomplete="off"
-										bind:value={child.firstName}
-										required
-										maxlength="160"
-									/></label
-								>
-								<label
-									>{t(locale, 'lastName')}<input
-										name={`last-${child.key}`}
-										autocomplete="off"
-										bind:value={child.lastName}
-										required
-										maxlength="160"
-									/></label
-								>
-								<label
-									>{t(locale, 'birthDate')}<input
-										name={`birth-${child.key}`}
-										type="date"
-										bind:value={child.birthDate}
-										required
-										max={berlinDate(now)}
-									/></label
-								>
-							</div>
-							{#if children.length > 1}<div class="actions">
-									<button type="button" onclick={() => removeChild(child.key)}
-										>{t(locale, 'remove')} · {t(locale, 'child')}
-										{index + 1}</button
-									>
-								</div>{/if}
-						</fieldset>
-					{/each}
-					<button
-						type="button"
-						disabled={children.length >= 10 || pending}
-						onclick={() =>
-							children.push({
-								key: `child-${++childSequence}`,
-								firstName: '',
-								lastName: '',
-								birthDate: '',
-							})}>+ {t(locale, 'addChild')}</button
-					>
-				</section>
+				<ParentFields
+					bind:firstName={parentFirstName}
+					bind:lastName={parentLastName}
+					bind:email
+					bind:phone
+					{locale}
+					number={1}
+				/>
+				<ChildrenFields
+					bind:children
+					{locale}
+					number={2}
+					maxDate={berlinDate(now)}
+					{pending}
+					onadd={() =>
+						children.push({
+							key: `child-${++childSequence}`,
+							firstName: '',
+							lastName: '',
+							birthDate: '',
+						})}
+					onremove={removeChild}
+				/>
 				<section class="card">
 					<h2>3. {t(locale, 'lessons')}</h2>
 					<p class="muted">{t(locale, 'dateNotice')}</p>

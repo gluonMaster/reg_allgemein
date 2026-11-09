@@ -7,7 +7,11 @@
 	const signedIn = $derived(navigation?.role === 'admin');
 	// The form is the portal's entry point: neither its own visitors nor the office
 	// need a link back to it, so the header only offers what leads somewhere else.
-	const intakeLink = $derived(!signedIn && navigation?.pathname !== '/probestunde');
+	const intakeLink = $derived(
+		!signedIn &&
+			navigation?.pathname !== '/probestunde' &&
+			!navigation?.pathname?.startsWith('/warteliste')
+	);
 	const consoleLink = $derived(signedIn && !navigation?.pathname?.startsWith('/admin'));
 </script>
 

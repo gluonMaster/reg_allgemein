@@ -24,6 +24,7 @@ export function routeAccessPolicy(routeId: string | null): RouteAccess {
 		routeId === '/' ||
 		routeId === '/language' ||
 		routeId === '/probestunde' || routeId.startsWith('/probestunde/') ||
+		routeId === '/warteliste' || routeId.startsWith('/warteliste/') ||
 		routeId === '/catalog' ||
 		routeId === '/auth' ||
 		routeId.startsWith('/auth/')

@@ -14,6 +14,8 @@ import {
 	verificationEmail,
 } from './templates.server';
 import { ORGANIZATION_NAME } from '$lib/organization';
+import { readEntry, withdrawToken } from './waitlist-core.server';
+import { waitlistConfirmationEmail, waitlistVerificationEmail } from './waitlist-templates.server';
 
 const valid = `((o.kind = 'verification' AND r.state = 'pending_email' AND r.pending_expires_at > ?
  AND r.verification_expires_at > ? AND r.verification_version = o.verification_version)
@@ -242,10 +244,21 @@ export async function renderIntakeEmail(
 	});
 	const detail = current ? await service.detail(row.source_id) : null;
 	if (!detail) throw new OutboxTemplateError('INTAKE_EMAIL_EXPIRED');
+	const link = (path: string) => new URL(path, input.config.portalPublicOrigin).toString();
+	// A waitlist signup keeps both kinds of letter; only the text depends on the request kind.
+	if (detail.request.kind === 'waitlist') {
+		const entry = await readEntry(service.db, detail.request.id);
+		if (!entry || !input.secret) throw new OutboxTemplateError('INTAKE_EMAIL_INVALID');
+		if (confirmation)
+			return waitlistConfirmationEmail(
+				detail,
+				entry,
+				link(`/warteliste/austragen?token=${await withdrawToken(input.secret, entry)}`)
+			);
+		const token = await verificationToken(input.secret, detail.request);
+		return waitlistVerificationEmail(detail, entry, link(`/probestunde/verify?token=${token}`));
+	}
 	if (confirmation) return confirmationEmail(detail);
 	const token = await verificationToken(input.secret!, detail.request);
-	return verificationEmail(
-		detail,
-		new URL(`/probestunde/verify?token=${token}`, input.config.portalPublicOrigin).toString()
-	);
+	return verificationEmail(detail, link(`/probestunde/verify?token=${token}`));
 }

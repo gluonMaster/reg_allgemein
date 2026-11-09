@@ -27,6 +27,25 @@ export async function cleanupIntake(db: DatabaseBoundary, now: string, limit = 5
 			notBefore: now,
 			now,
 		});
+	// WL-13: a confirmed waiting signup is kept at most 12 months from submission. It becomes a
+	// processed request due now, so the deletion below and the Telegram TTL guard of 0027 apply.
+	const cutoff = new Date(now);
+	cutoff.setUTCMonth(cutoff.getUTCMonth() - 12);
+	await db.batch([
+		{
+			sql: `UPDATE trial_intake_requests SET state = 'processed', processed_at = ?, delete_after = ?
+		 WHERE id IN (SELECT e.request_id FROM trial_intake_waitlist_entries e JOIN trial_intake_requests r ON r.id = e.request_id
+		 WHERE e.status = 'waiting' AND r.state = 'verified' AND e.created_at <= ? LIMIT ?)`,
+			params: [now, now, cutoff.toISOString(), limit],
+		},
+		{
+			// A waiting entry of a processed request exists only right after the statement above.
+			sql: `UPDATE trial_intake_waitlist_entries SET status = 'expired', status_changed_at = ?
+		 WHERE status = 'waiting' AND EXISTS(SELECT 1 FROM trial_intake_requests r
+		 WHERE r.id = trial_intake_waitlist_entries.request_id AND r.state = 'processed')`,
+			params: [now],
+		},
+	]);
 	const eligible = (
 		await db.all<{ id: string }>({
 			sql: `SELECT r.id FROM trial_intake_requests r WHERE ${due} AND ${idle} ORDER BY r.created_at, r.id LIMIT ?`,

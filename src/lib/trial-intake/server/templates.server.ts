@@ -8,15 +8,20 @@ import { ageFit, lessonAgeRange } from '../age';
 import { ageRangeLabel } from '../i18n';
 
 export const buildingLabel = (key: string) => (key === 'Kolibri' ? ORGANIZATION_NAME : key);
-/** A guest reads the letter away from the portal, so the building carries its street address. */
-export const BUILDING_ADDRESS: Record<string, string> = {
-	Kolibri: 'Ritzenbergstraße 3 • 01067 Dresden',
-	Villa: 'Kraftwerk Mitte 2 • 01067 Dresden',
-};
-export const ORGANIZATION_PHONE = '+49 179 9474938';
+import { BUILDING_ADDRESS, ORGANIZATION_PHONE } from '../organization';
+export { BUILDING_ADDRESS, ORGANIZATION_PHONE };
 /** Owner decision 2026-09-24: the bureau mailbox learns when Telegram did not take a notification. */
 export const BUREAU_ALERT_EMAIL = 'registration@kolibri-dresden.de';
-const DAYS = ['', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+export const DAYS = [
+	'',
+	'Montag',
+	'Dienstag',
+	'Mittwoch',
+	'Donnerstag',
+	'Freitag',
+	'Samstag',
+	'Sonntag',
+];
 /** Children outside the group's age; an older one passed submit only with the parent's acknowledgment. */
 function ageMismatches(item: IntakeDetail['items'][number]) {
 	const range = lessonAgeRange({ subject: item.subject, group: item.group_name });
@@ -25,7 +30,7 @@ function ageMismatches(item: IntakeDetail['items'][number]) {
 		return fit === 'ok' || !range ? [] : [{ child, fit, label: ageRangeLabel(range, 'de') }];
 	});
 }
-const germanDate = (date: string) => date.split('-').reverse().join('.');
+export const germanDate = (date: string) => date.split('-').reverse().join('.');
 const escapeHtml = (value: string) =>
 	value
 		.replaceAll('&', '&amp;')
@@ -33,7 +38,19 @@ const escapeHtml = (value: string) =>
 		.replaceAll('>', '&gt;')
 		.replaceAll('"', '&quot;')
 		.replaceAll("'", '&#39;');
-function htmlMessage(text: string, button?: { label: string; link: string }): string {
+/** `button` turns its "label: link" paragraph into a button; `link` becomes a plain anchor. */
+export function htmlMessage(
+	text: string,
+	button?: { label: string; link: string },
+	link?: string
+): string {
+	const linked = (html: string) =>
+		link
+			? html.replaceAll(
+					escapeHtml(link),
+					`<a href="${escapeHtml(link)}">${escapeHtml(link)}</a>`
+				)
+			: html;
 	return (
 		'<!doctype html><html lang="de"><body>' +
 		text
@@ -41,7 +58,7 @@ function htmlMessage(text: string, button?: { label: string; link: string }): st
 			.map((paragraph) =>
 				button && paragraph === `${button.label}: ${button.link}`
 					? `<p><a href="${escapeHtml(button.link)}" style="display:inline-block;padding:12px 18px;background:#176b4a;color:white;border-radius:6px">${escapeHtml(button.label)}</a></p>`
-					: `<p>${escapeHtml(paragraph).replaceAll('\n', '<br>')}</p>`
+					: `<p>${linked(escapeHtml(paragraph)).replaceAll('\n', '<br>')}</p>`
 			)
 			.join('') +
 		'</body></html>'
@@ -103,7 +120,10 @@ export function telegramAlertEmail(
 	origin: string
 ): EmailMessage {
 	const request = new URL(`/admin/trial-intake/${alert.requestId}`, origin).toString();
-	const delivery = new URL(`/admin/outbox?channel=telegram&status=${alert.reason}`, origin).toString();
+	const delivery = new URL(
+		`/admin/outbox?channel=telegram&status=${alert.reason}`,
+		origin
+	).toString();
 	const unknown = alert.reason === 'delivery_unknown';
 	const paragraphs = [
 		unknown
@@ -157,7 +177,10 @@ export function telegramParts(detail: IntakeDetail): string[] {
 			),
 		]),
 	];
-	// <= 160 per field; split by lines, reserving 596 UTF-16 units for references/URL.
+	return splitTelegram(lines);
+}
+/** <= 160 per field; split by lines, reserving 596 UTF-16 units for references/URL. */
+export function splitTelegram(lines: readonly string[]): string[] {
 	const parts: string[] = [];
 	let part = '';
 	for (const line of lines) {

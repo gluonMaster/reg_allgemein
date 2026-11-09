@@ -1,6 +1,10 @@
 import type { OutboxWaitReason } from '$lib/outbox-wait';
 
 export const INTAKE_PRIVACY_VERSION = 'trial-intake-retention-2026-09-16-v1';
+/** Retention text of the waitlist form (WL-13): 14 days, 12 months, 90 days after processing. */
+export const WAITLIST_PRIVACY_VERSION = 'trial-intake-waitlist-retention-2026-11-05-v1';
+/** The consent tick with tariff and sum (OQ-050); the start PDF quotes this text verbatim. */
+export const WAITLIST_CONSENT_VERSION = 'trial-intake-waitlist-consent-2026-11-05-v1';
 export const INTAKE_BODY_LIMIT = 16 * 1024;
 export type IntakeState = 'pending_email' | 'verified' | 'processed';
 export interface Lesson {
@@ -25,6 +29,75 @@ export interface IntakeInput {
 	children: { key: string; firstName: string; lastName: string; birthDate: string }[];
 	/** `ageConfirmed`: the parent acknowledged that an assigned child is older than the group. */
 	items: { lessonId: string; desiredDate: string; childKeys: string[]; ageConfirmed?: true }[];
+}
+export type WaitlistTariff = 'monthly' | 'yearly';
+/** One waitlist signup: one planned course, all children (WL-04). */
+export interface WaitlistInput {
+	idempotencyKey: string;
+	parentFirstName: string;
+	parentLastName: string;
+	email: string;
+	phone: string;
+	locale: 'de' | 'ru';
+	privacyVersion: typeof WAITLIST_PRIVACY_VERSION;
+	children: IntakeInput['children'];
+	lessonId: string;
+	tariff: WaitlistTariff;
+	/** The monthly sum of the chosen tariff the parent saw and agreed to. */
+	expectedPriceCents: number;
+	consent: true;
+	/** The parent acknowledged that a child is older than the course. */
+	ageConfirmed?: true;
+}
+export interface WaitlistOffer {
+	monthlyCents: number;
+	yearlyCents: number;
+	minParticipants: number;
+}
+/** States of `/warteliste?lesson=<id>` in the order they are checked (WL-04). */
+export type WaitlistPageState =
+	| 'maintenance'
+	| 'catalog_error'
+	| 'not_found'
+	| 'unavailable'
+	| 'started'
+	| 'price_missing'
+	| 'form';
+export interface WaitlistPageData {
+	state: WaitlistPageState;
+	lesson: Lesson | null;
+	offer: WaitlistOffer | null;
+	firstDate: string | null;
+	scheduleUrl: string;
+	turnstileSiteKey?: string;
+	now: string;
+}
+export type WaitlistEntryStatus = 'waiting' | 'started' | 'withdrawn' | 'cancelled' | 'expired';
+/** A confirmed signup as the admin sees it in the queue of a course. */
+export interface WaitlistEntrySummary {
+	requestId: string;
+	parentFirstName: string;
+	parentLastName: string;
+	children: { firstName: string; lastName: string; birthDate: string }[];
+	tariff: WaitlistTariff;
+	verifiedAt: string;
+	status: WaitlistEntryStatus;
+}
+/** Course facts of the withdrawal page; no family data (WL-12). */
+export interface WithdrawalData {
+	state: 'invalid' | 'confirm' | 'withdrawn' | 'started';
+	course: Omit<Lesson, 'id' | 'group' | 'teacher'> | null;
+	scheduleUrl: string;
+}
+/** What `/admin/trial-intake` shows about the waitlist (WL-07). */
+export interface WaitlistAttention {
+	courses: number;
+	children: number;
+	/** Courses that need the admin: threshold reached, no price, vanished or ambiguous. */
+	attention: Pick<
+		WaitlistCourse,
+		'key' | 'course' | 'status' | 'children' | 'price' | 'firstDate' | 'activeEntries'
+	>[];
 }
 export interface CatalogData {
 	lessons: Lesson[];
@@ -79,6 +152,8 @@ export interface WaitlistCourse {
 	firstDate: string | null;
 	/** Null while the schedule cannot be read: no course turns into a vanished one. */
 	status: WaitlistStatus | null;
+	/** Confirmed signups of the course; filled only on the admin waitlist page. */
+	entries?: WaitlistEntrySummary[];
 }
 export interface AdminWaitlistData {
 	courses: WaitlistCourse[];
@@ -122,7 +197,14 @@ export interface IntakeReceipt {
 	state: IntakeState;
 	resendAfter: string;
 }
-export type VerificationState = 'invalid' | 'expired' | 'confirm' | 'accepted';
+/** `cancelled`: a waitlist signup confirmed after its course started (WL-10). */
+export type VerificationState = 'invalid' | 'expired' | 'confirm' | 'accepted' | 'cancelled';
+export interface VerificationResult {
+	state: VerificationState;
+	/** Present only for a waitlist signup; the page then shows the waitlist texts. */
+	kind?: 'waitlist';
+	firstDate?: string | null;
+}
 export interface AdminQuery {
 	status: 'verified' | 'processed' | 'all';
 	subject: string;
@@ -174,7 +256,13 @@ export interface DeliveryStatus {
 }
 /** A request removed by retention keeps only its opaque ID in the delivery ledger. */
 export type IntakeOutboxContext =
-	| { deleted: false; parentLastName: string; subjects: string[]; receivedAt: string }
+	| {
+			deleted: false;
+			kind: 'trial' | 'waitlist';
+			parentLastName: string;
+			subjects: string[];
+			receivedAt: string;
+	  }
 	| { deleted: true };
 export interface DeliveryAttention {
 	unknown: boolean;
@@ -194,9 +282,24 @@ export interface AdminChild {
 	last_name: string;
 	birth_date: string;
 }
+/** The snapshot of a waitlist signup on its admin card (WL-07). */
+export interface AdminWaitlistEntry {
+	lesson: Lesson;
+	tariff: WaitlistTariff;
+	monthlyCents: number;
+	yearlyCents: number;
+	minParticipants: number;
+	consentVersion: string;
+	status: WaitlistEntryStatus;
+	statusChangedAt: string;
+	/** The lesson date the age was checked against at signup. */
+	ageDate: string;
+}
 export interface AdminDetailData {
+	waitlist: AdminWaitlistEntry | null;
 	request: {
 		id: string;
+		kind: 'trial' | 'waitlist';
 		parentFirstName: string;
 		parentLastName: string;
 		email: string;

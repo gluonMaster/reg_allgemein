@@ -2,8 +2,19 @@
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { t, ageRangeLabel, formatDate, formatTimestamp, errorKey, type TextKey } from '../i18n';
+	import {
+		t,
+		ageRangeLabel,
+		entryStatusText,
+		fill,
+		formatDate,
+		formatTimestamp,
+		errorKey,
+		tariffLabel,
+		type TextKey,
+	} from '../i18n';
 	import { ageFit, lessonAgeRange } from '../age';
+	import { euroAmount } from '../prices';
 	import { itemLesson, type AdminDetailData } from '../contracts';
 	import { requestJson } from '../client';
 	import LessonCard from './LessonCard.svelte';
@@ -15,19 +26,21 @@
 	const locale = $derived(page.data.locale ?? 'de');
 	const detail = $derived(data.intakeDetail);
 	const request = $derived(detail.request);
+	const waitlist = $derived(detail.waitlist);
+	const waitlistAges = $derived(waitlist ? lessonAgeRange(waitlist.lesson) : null);
 	let busy = $state(false),
 		feedback = $state<TextKey | null>(null);
 	let enhanced = $state(false);
 	onMount(() => {
 		enhanced = true;
 	});
-	async function setProcessed() {
+	async function post(body: Record<string, unknown>) {
 		if (busy) return;
 		busy = true;
 		feedback = null;
 		try {
 			await requestJson(`/admin/trial-intake/${request.id}`, {
-				processed: request.state !== 'processed',
+				...body,
 				_csrf: data.csrfToken,
 			});
 			await invalidateAll();
@@ -37,15 +50,23 @@
 			busy = false;
 		}
 	}
+	const setProcessed = () => post({ processed: request.state !== 'processed' });
 </script>
 
 <svelte:head><title>{t(locale, 'request')} · {ORGANIZATION_NAME}</title></svelte:head>
 <section class="intake">
-	<a href="/admin/trial-intake">← {t(locale, 'backList')}</a>
-	<h2>{t(locale, 'request')} {request.id.slice(0, 8)}</h2>
+	<a href={waitlist ? '/admin/trial-intake/warteliste' : '/admin/trial-intake'}
+		>← {t(locale, waitlist ? 'adminWaitlist' : 'backList')}</a
+	>
+	<h2>
+		{t(locale, waitlist ? 'waitlistEntry' : 'request')}
+		{request.id.slice(0, 8)}
+	</h2>
 	<section class="card">
 		<span class="badge"
-			>{t(locale, request.state === 'processed' ? 'processed' : 'verified')}</span
+			>{waitlist
+				? entryStatusText(waitlist.status, locale)
+				: t(locale, request.state === 'processed' ? 'processed' : 'verified')}</span
 		>
 		<h3>{request.parentFirstName} {request.parentLastName}</h3>
 		<dl>
@@ -61,12 +82,64 @@
 				<dd>{formatTimestamp(request.processedAt, locale)}</dd>{/if}
 		</dl>
 	</section>
+	{#if waitlist}
+		<article class="card">
+			<LessonCard lesson={waitlist.lesson} {locale} duration />
+			<dl>
+				<dt>{t(locale, 'tariff')}</dt>
+				<dd>
+					<strong
+						>{tariffLabel(waitlist.tariff, locale)}, {fill(t(locale, 'perChildMonth'), {
+							amount: euroAmount(
+								waitlist.tariff === 'monthly'
+									? waitlist.monthlyCents
+									: waitlist.yearlyCents
+							),
+						})}</strong
+					>
+				</dd>
+				<dt>{t(locale, 'shownSums')}</dt>
+				<dd>
+					{tariffLabel('monthly', locale)}
+					{euroAmount(waitlist.monthlyCents)} € · {tariffLabel('yearly', locale)}
+					{euroAmount(waitlist.yearlyCents)} €
+				</dd>
+				<dt>{t(locale, 'thresholdAtSignup')}</dt>
+				<dd>{waitlist.minParticipants}</dd>
+				<dt>{t(locale, 'consentGiven')}</dt>
+				<dd>
+					<code>{waitlist.consentVersion}</code> · {formatTimestamp(
+						request.createdAt,
+						locale
+					)}
+				</dd>
+				<dt>{t(locale, 'entryStatus')}</dt>
+				<dd>
+					{entryStatusText(waitlist.status, locale)} · {formatTimestamp(
+						waitlist.statusChangedAt,
+						locale
+					)}
+				</dd>
+				<dt>{t(locale, 'ageCheckDate')}</dt>
+				<dd>{formatDate(waitlist.ageDate, locale)}</dd>
+			</dl>
+		</article>
+	{/if}
 	<section class="card">
 		<h3>{t(locale, 'children')}</h3>
 		<ul>
-			{#each detail.children as child}<li>
+			{#each detail.children as child}{@const fit = waitlist
+					? ageFit(waitlistAges, child.birth_date, waitlist.ageDate)
+					: 'ok'}
+				<li>
 					{child.first_name}
 					{child.last_name} · {formatDate(child.birth_date, locale)}
+					{#if waitlistAges && fit !== 'ok'}<span class="age-badge"
+							>{t(locale, fit === 'old' ? 'adminAgeOld' : 'adminAgeYoung')} ({ageRangeLabel(
+								waitlistAges,
+								locale
+							)})</span
+						>{/if}
 				</li>{/each}
 		</ul>
 	</section>
@@ -92,14 +165,30 @@
 					</li>{/each}
 			</ul>
 		</article>{/each}
+	{#if waitlist?.status === 'waiting' && request.state === 'verified'}
+		<section class="card">
+			<p>{t(locale, 'withdrawAdminHint')}</p>
+			<button
+				type="button"
+				disabled={busy || !enhanced}
+				onclick={() => post({ withdraw: true })}
+				>{t(locale, busy ? 'busy' : 'withdrawAdmin')}</button
+			>
+		</section>
+	{/if}
 	<section class="card">
-		<p>{t(locale, 'processedHint')}</p>
-		<button class="primary" type="button" disabled={busy || !enhanced} onclick={setProcessed}
-			>{t(
-				locale,
-				busy ? 'busy' : request.state === 'processed' ? 'reopen' : 'markProcessed'
-			)}</button
-		>
+		{#if waitlist?.status === 'waiting'}<p>{t(locale, 'processedWaiting')}</p>
+		{:else}<p>{t(locale, 'processedHint')}</p>
+			<button
+				class="primary"
+				type="button"
+				disabled={busy || !enhanced}
+				onclick={setProcessed}
+				>{t(
+					locale,
+					busy ? 'busy' : request.state === 'processed' ? 'reopen' : 'markProcessed'
+				)}</button
+			>{/if}
 		{#if feedback}<p role="alert" class="error">{t(locale, feedback)}</p>{/if}
 	</section>
 	<section class="card">
@@ -107,12 +196,13 @@
 		{#each detail.delivery as job (job.id)}<p>
 				{t(locale, 'deliveryPart')}
 				{job.part}/{job.total} · <strong>{translateAdminCode(locale, job.status)}</strong>
-				{#if job.status === 'sent' && job.sentAt}· {formatBerlinTime(locale, job.sentAt)}{/if}
-				{#if job.wait}· {translateOutboxWait(locale, job.wait, true)}{/if}
-				{#if job.status === 'delivery_unknown'}· <code>{job.deliveryReference ?? '—'}</code> — {t(
+				{#if job.status === 'sent' && job.sentAt}· {formatBerlinTime(
 						locale,
-						'deliveryUnknownHint'
+						job.sentAt
 					)}{/if}
+				{#if job.wait}· {translateOutboxWait(locale, job.wait, true)}{/if}
+				{#if job.status === 'delivery_unknown'}· <code>{job.deliveryReference ?? '—'}</code>
+					— {t(locale, 'deliveryUnknownHint')}{/if}
 				{#if job.status === 'dead' && job.lastErrorCode}· {job.lastErrorCode}{/if}
 			</p>{/each}
 		<a

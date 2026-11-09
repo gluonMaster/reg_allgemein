@@ -13,6 +13,7 @@ export const intakeReleaseTests = [
 	'tests/integration/trial-intake/intake-telegram-alert-d1.test.ts',
 	'tests/integration/trial-intake/intake-telegram-d1.test.ts',
 	'tests/integration/trial-intake/waitlist-prices-d1.test.ts',
+	'tests/integration/trial-intake/waitlist-signup-d1.test.ts',
 	'tests/unit/trial-intake/age-holidays.test.ts',
 	'tests/unit/trial-intake/catalog-validation.test.ts',
 	'tests/unit/trial-intake/closed-lessons.test.ts',
@@ -20,6 +21,7 @@ export const intakeReleaseTests = [
 	'tests/unit/trial-intake/http-mode.test.ts',
 	'tests/unit/trial-intake/planned-lessons.test.ts',
 	'tests/unit/trial-intake/waitlist-price-files.test.ts',
+	'tests/unit/trial-intake/waitlist-texts.test.ts',
 	// Migrations and the shared D1 guards, including the Telegram transition trigger.
 	'tests/integration/foundation-d1.test.ts',
 	'tests/integration/migration-upgrade-d1.test.ts',

@@ -10,7 +10,10 @@ import { outboxWaitReason } from '$lib/outbox-wait';
 import { IntakeService, afterSeconds, searchName } from './service.server';
 import { IntakeError } from './validation.server';
 import { closedKey } from './closed.server';
+import { readEntry } from './waitlist-core.server';
+import { entryAgeDate, entryLesson } from './waitlist-templates.server';
 import type {
+	AdminDetailData,
 	AdminListRow,
 	ClosedLessonRow,
 	DeliveryAttention,
@@ -75,7 +78,8 @@ export class IntakeAdmin {
 	async list(user: App.Locals['user'], rawQuery: unknown, requestId: string, now: string) {
 		const actor = await this.actor(user);
 		const q = adminQuerySchema.parse(rawQuery);
-		const where = [`r.state IN ('verified','processed')`, ACTIVE];
+		// A waitlist signup has no items and is listed on the waitlist page, never here.
+		const where = [`r.state IN ('verified','processed')`, `r.kind = 'trial'`, ACTIVE];
 		const params: unknown[] = [actor.id];
 		const filter = (sql: string, value: unknown) => {
 			where.push(sql);
@@ -126,7 +130,12 @@ export class IntakeAdmin {
 			})),
 		};
 	}
-	async detail(user: App.Locals['user'], id: string, requestId: string, now: string) {
+	async detail(
+		user: App.Locals['user'],
+		id: string,
+		requestId: string,
+		now: string
+	): Promise<AdminDetailData> {
 		const actor = await this.actor(user);
 		await this.db.run(this.audit(actor, 'trial_intake.detail_read', id, requestId, now));
 		const detail = await this.service.detail(id);
@@ -151,9 +160,22 @@ export class IntakeAdmin {
 			sentAt: row.sentAt,
 			wait: outboxWaitReason(row, now) ?? null,
 		}));
+		const entry = r.kind === 'waitlist' ? await readEntry(this.db, r.id) : null;
 		return {
+			waitlist: entry && {
+				lesson: entryLesson(entry),
+				tariff: entry.tariff,
+				monthlyCents: entry.monthly_cents,
+				yearlyCents: entry.yearly_cents,
+				minParticipants: entry.min_participants,
+				consentVersion: entry.consent_version,
+				status: entry.status,
+				statusChangedAt: entry.status_changed_at,
+				ageDate: entryAgeDate(entry),
+			},
 			request: {
 				id: r.id,
+				kind: r.kind,
 				parentFirstName: r.parent_first_name,
 				parentLastName: r.parent_last_name,
 				email: r.email,
@@ -180,10 +202,15 @@ export class IntakeAdmin {
 		const actor = await this.actor(user);
 		const desired = processed ? 'processed' : 'verified';
 		const previous = processed ? 'verified' : 'processed';
+		// A waiting signup would start its deletion; only start, withdrawal or cancel end it (WL-07).
+		const waiting = `NOT EXISTS(SELECT 1 FROM trial_intake_waitlist_entries e
+		 WHERE e.request_id = trial_intake_requests.id AND e.status = 'waiting')`;
+		if ((await readEntry(this.db, id))?.status === 'waiting')
+			throw new IntakeError('WAITLIST_ENTRY_WAITING', 409);
 		await this.db.batch([
 			{
 				sql: `INSERT INTO audit_events(id, actor_user_id, actor_kind, action, target_kind, target_id, request_id, safe_diff_json, created_at)
-			 SELECT ?, ?, 'user', 'trial_intake.status_changed', 'trial_intake', id, ?, ?, ? FROM trial_intake_requests WHERE id = ? AND state = ? AND ${ACTIVE}`,
+			 SELECT ?, ?, 'user', 'trial_intake.status_changed', 'trial_intake', id, ?, ?, ? FROM trial_intake_requests WHERE id = ? AND state = ? AND ${waiting} AND ${ACTIVE}`,
 				params: [
 					crypto.randomUUID(),
 					actor.id,
@@ -196,7 +223,7 @@ export class IntakeAdmin {
 				],
 			},
 			{
-				sql: `UPDATE trial_intake_requests SET state = ?, processed_at = ?, delete_after = ? WHERE id = ? AND state = ? AND ${ACTIVE}`,
+				sql: `UPDATE trial_intake_requests SET state = ?, processed_at = ?, delete_after = ? WHERE id = ? AND state = ? AND ${waiting} AND ${ACTIVE}`,
 				params: [
 					desired,
 					processed ? now : null,
@@ -295,6 +322,7 @@ export class IntakeAdmin {
 		if (ids.length === 0) return {};
 		const [, found] = await this.db.batch<{
 			id: string;
+			kind: 'trial' | 'waitlist';
 			parent_last_name: string;
 			received_at: string;
 			subjects_json: string;
@@ -302,9 +330,12 @@ export class IntakeAdmin {
 			this.audit(actor, 'trial_intake.outbox_context_read', 'outbox', requestId, now),
 			{
 				// One JSON parameter keeps the lookup below D1's bound-parameter limit.
-				sql: `SELECT r.id, r.parent_last_name, COALESCE(r.verified_at, r.created_at) AS received_at,
-			 (SELECT json_group_array(subject) FROM (SELECT DISTINCT i.subject FROM trial_intake_items i
-			 WHERE i.request_id = r.id ORDER BY i.subject)) AS subjects_json
+				// A waitlist signup names the course of its snapshot instead of trial items.
+				sql: `SELECT r.id, r.kind, r.parent_last_name, COALESCE(r.verified_at, r.created_at) AS received_at,
+			 CASE WHEN r.kind = 'waitlist' THEN (SELECT json_array(json_extract(e.lesson_json, '$.subject'))
+			 FROM trial_intake_waitlist_entries e WHERE e.request_id = r.id)
+			 ELSE (SELECT json_group_array(subject) FROM (SELECT DISTINCT i.subject FROM trial_intake_items i
+			 WHERE i.request_id = r.id ORDER BY i.subject)) END AS subjects_json
 			 FROM trial_intake_requests r WHERE r.id IN (SELECT value FROM json_each(?))
 			 AND r.state IN ('verified','processed') AND ${ACTIVE}`,
 				params: [JSON.stringify(ids), actor.id],
@@ -319,8 +350,9 @@ export class IntakeAdmin {
 					row
 						? {
 								deleted: false,
+								kind: row.kind,
 								parentLastName: row.parent_last_name,
-								subjects: JSON.parse(row.subjects_json) as string[],
+								subjects: JSON.parse(row.subjects_json ?? '[]') as string[],
 								receivedAt: row.received_at,
 							}
 						: { deleted: true },

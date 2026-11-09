@@ -1,6 +1,7 @@
-import type { IntakeState, Lesson } from '../contracts';
+import type { IntakeState, Lesson, WaitlistEntryStatus, WaitlistTariff } from '../contracts';
 export interface IntakeRequest {
 	id: string;
+	kind: 'trial' | 'waitlist';
 	idempotency_key: string;
 	payload_hash: string;
 	parent_first_name: string;
@@ -45,6 +46,23 @@ export interface IntakeItem {
 	teacher: string;
 	room: string;
 	building: Lesson['building'];
+}
+/** Row of trial_intake_waitlist_entries (migration 0032). */
+export interface WaitlistEntry {
+	request_id: string;
+	course_key: string;
+	lesson_json: string;
+	tariff: WaitlistTariff;
+	monthly_cents: number;
+	yearly_cents: number;
+	min_participants: number;
+	consent_version: string;
+	status: WaitlistEntryStatus;
+	start_id: string | null;
+	withdraw_nonce: string;
+	withdraw_hash: string;
+	created_at: string;
+	status_changed_at: string;
 }
 export interface IntakeDetail {
 	request: IntakeRequest;
