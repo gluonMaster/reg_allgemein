@@ -45,9 +45,16 @@ OPEN_QUESTIONS; локальный release gate завершён —
 OQ-044 закрыт: CTA разрешён после verification и проверки Telegram-очереди;
 фактическая доставка следующим рабочим утром не блокирует запуск.
 
+Поручение 2026-11-05 расширяет этот release листом ожидания для плановых курсов:
+[требования](domain/TRIAL_INTAKE_WAITLIST.md) по OQ-049 и
+[план реализации и выпуска](implementation/TRIAL_INTAKE_WAITLIST_TZ.md); тексты
+утверждены по OQ-050, очередь привязана к сущности курса по OQ-051.
+
 | Тема                                        | Канонический документ                                                                                |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Состав и границы MVP                        | [spec/MVP_SPEC.md](spec/MVP_SPEC.md)                                                                 |
+| Лист ожидания плановых курсов               | [domain/TRIAL_INTAKE_WAITLIST.md](domain/TRIAL_INTAKE_WAITLIST.md)                                   |
+| Лист ожидания — план реализации и выпуска   | [implementation/TRIAL_INTAKE_WAITLIST_TZ.md](implementation/TRIAL_INTAKE_WAITLIST_TZ.md)             |
 | Приемка и edge cases                        | [spec/ACCEPTANCE_CRITERIA.md](spec/ACCEPTANCE_CRITERIA.md)                                           |
 | Архитектурные границы                       | [architecture/OVERVIEW.md](architecture/OVERVIEW.md)                                                 |
 | Целевая D1-модель                           | [architecture/DATA_MODEL.md](architecture/DATA_MODEL.md)                                             |

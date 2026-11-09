@@ -65,6 +65,10 @@ Kinder- und Elternzentrum "KOLIBRI" e.V.,
   не объявление готовности полного MVP. Pricing, contracts, uploads и legacy
   import не являются его предпосылками. Подготовка ТЗ не меняет deployed state
   или разрешения на remote операции; operational cursor остаётся в active state.
+  Поручение 2026-11-05 добавляет к нему лист ожидания для плановых курсов с
+  ценами только этих курсов, стартом курса администратором и PDF-подтверждением:
+  `WL-01–15` в [TRIAL_INTAKE_WAITLIST.md](../domain/TRIAL_INTAKE_WAITLIST.md).
+  Pricing-движок и договоры полного портала по-прежнему не используются.
 
 ### Полный MVP
 

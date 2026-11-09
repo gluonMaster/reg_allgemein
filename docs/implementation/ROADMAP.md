@@ -383,7 +383,10 @@ limited release `trial-intake` по SYS-05. Его scope и четыре шаг�
 [TRIAL_INTAKE_RELEASE_TZ](TRIAL_INTAKE_RELEASE_TZ.md). Требования к полному
 preview ниже сохраняются для последующего продолжения; его готовность не
 объявляется по результату ограниченного запуска. Operational state в этой
-сессии планирования не переключался.
+сессии планирования не переключался. Расширение листом ожидания плановых курсов
+(поручение 2026-11-05) идёт семью шагами
+[TRIAL_INTAKE_WAITLIST_TZ](TRIAL_INTAKE_WAITLIST_TZ.md) в том же ограниченном
+release.
 
 `full-manual-preview` по `SYS-04`/`OQ-036` — отдельный delivery gate, а не
 production release. На выделенных Access-protected preview resources и только с
