@@ -79,6 +79,27 @@ describe('trial intake age ranges', () => {
 		for (const [subject, group, range] of cases)
 			expect(lessonAgeRange({ subject, group }), group).toEqual(range);
 	});
+	it('falls back to the subject only where nothing else gives an age (OQ-051)', () => {
+		const cases: [string, string, ReturnType<typeof lessonAgeRange>][] = [
+			// A planned class in the subject field, spelled with a space.
+			['2 E', 'Der Kurs befindet sich in der Planung', { min: 6, max: 7 }],
+			['1 A', 'Der Kurs befindet sich in der Planung 1', { min: 5, max: 6 }],
+			['12 B', 'Der Kurs befindet sich in der Planung', { min: 16, max: 17 }],
+			// A subject rule without the digits of the spelling.
+			['English1', 'Der Kurs befindet sich in der Planung2', { min: 6 }],
+			['Baby 2', 'Der Kurs befindet sich in der Planung', { min: 1, max: 3 }],
+			// The owner rule of `1 E` and the group name keep their result.
+			['1 E', 'Der Kurs befindet sich in der Planung', { min: 5, max: 6 }],
+			['Deutsch 3-4Kl', 'Deutsch Mo ab 9J', { min: 9 }],
+			['3J Di Log', '3J Log', { min: 3, max: 3 }],
+			['Russisch', '1B', { min: 5, max: 6 }],
+			// Nothing to read: still no limit, and a word after the class is no class.
+			['Russisch1', 'Gruppe', null],
+			['2 Eltern', 'Gruppe', null],
+		];
+		for (const [subject, group, range] of cases)
+			expect(lessonAgeRange({ subject, group }), subject).toEqual(range);
+	});
 	it('leaves the Kunst studios to an agreement with the bureau', () => {
 		expect(ageByArrangement({ subject: 'Kunst', group: 'Kunst Mi StudioO' })).toBe(true);
 		expect(ageByArrangement({ subject: 'Kunst', group: 'Kunst Sa StudioP' })).toBe(true);

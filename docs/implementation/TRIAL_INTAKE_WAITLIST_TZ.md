@@ -2,7 +2,7 @@
 
 Дата: 2026-11-05, обновлено 2026-11-09. Статус: **ТЗ подготовлено по решениям
 владельца OQ-049, OQ-050 и OQ-052 (тексты утверждены) и OQ-051 (сущность курса и
-перепривязка); реализация не начата**.
+перепривязка); реализация идёт, выполнен этап 01**.
 
 Требования — [TRIAL_INTAKE_WAITLIST](../domain/TRIAL_INTAKE_WAITLIST.md) (WL-01–15),
 приёмка — [WL-AC](../spec/ACCEPTANCE_CRITERIA.md#лист-ожидания-wl-ac). Документ не
@@ -235,7 +235,7 @@ Checkpoint после каждой попытки remote mutation — по AGENT
 
 | Этап | Статус | Commit | Проверки | Следующий шаг |
 | --- | --- | --- | --- | --- |
-| 01 | не начат | — | — | — |
+| 01 | выполнен 2026-11-09 | коммит этапа 01 в ветке `trial-intake-waitlist` («Add waitlist prices for planned trial-intake courses») | `check:src`; unit `planned-lessons`, `waitlist-price-files`, `age-holidays`, `http-mode`, `closed-lessons`, `catalog-validation`, `intake-release-set`; integration `waitlist-prices-d1`, `foundation-d1`, `migration-upgrade-d1`, `intake-admin-retention-d1`, `catalog-workers`, `intake-http-email-d1`, `intake-lifecycle-d1`; `docs:check`. Не запускались: e2e — страница листа появится в 02; полный `npm test`, `test:intake-release` и `npm audit --omit=dev` — gate 06 (`fflate` стал runtime-зависимостью). Отклонения: redirect `/probestunde?lesson=<плановый>` — этап 02 по промпту, до него форма пробного показывает такую ссылку как неизвестное занятие; триггеры 4, 6 и 7 строже эскиза: ключ строки цены тоже заблокирован, цена цели при переносе записи равна суммам журнала, суммы «откуда» равны текущей цене; служебные тексты админ-страницы и ошибки `INTAKE_LESSON_PLANNED` не входят в утверждённый список OQ-050. Для 03: у `trial_intake_waitlist_email_outbox` нет стража удаления in-flight, как у писем TIN в `0027`. `P0/P1` нет | `02_WAITLIST_SIGNUP.md` |
 | 02 | не начат | — | — | — |
 | 03 | не начат | — | — | — |
 | 04 | не начат | — | — | — |

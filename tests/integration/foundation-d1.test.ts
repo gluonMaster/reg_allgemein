@@ -54,6 +54,7 @@ describe('foundation D1 migration and repositories', () => {
 			'0029_trial_intake_email_kind.sql',
 			'0030_trial_intake_request_scoped_ambiguity.sql',
 			'0031_trial_intake_telegram_independence_alerts.sql',
+			'0032_trial_intake_waitlist.sql',
 		]);
 
 		const result = await context.db
@@ -99,6 +100,14 @@ describe('foundation D1 migration and repositories', () => {
 				'legacy_reconciliation_assertions',
 				'legacy_reconciliation_evidence_bindings',
 				'legacy_reconciliation_materializations',
+				'trial_intake_planned_prices',
+				'trial_intake_waitlist_entries',
+				'trial_intake_waitlist_starts',
+				'trial_intake_waitlist_rebinds',
+				'trial_intake_waitlist_price_confirmations',
+				'trial_intake_waitlist_email_outbox',
+				'trial_intake_waitlist_documents',
+				'trial_intake_waitlist_render_usage',
 			])
 		);
 	});

@@ -249,3 +249,29 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+.intake .table-scroll {
+	overflow-x: auto;
+}
+.intake table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 0.95rem;
+}
+.intake th,
+.intake td {
+	text-align: left;
+	vertical-align: top;
+	padding: 0.5rem;
+	border-bottom: 1px solid #d9e3e0;
+}
+.intake td input.amount {
+	width: 6.5rem;
+}
+.intake .visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}

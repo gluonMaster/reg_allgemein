@@ -1351,6 +1351,62 @@ describe('D1 production migration upgrade', () => {
 		}
 	}, 120_000);
 
+	it('keeps live trial-intake requests across exact 0031 to 0032 as kind trial', async () => {
+		const context = await createMigratedTestD1({ through: '0031' });
+		try {
+			const db = new DatabaseBoundary(context.db);
+			await db.batch([
+				{
+					sql: `INSERT INTO trial_intake_requests(id, idempotency_key, payload_hash, parent_first_name,
+						parent_last_name, parent_last_name_search, email, phone, locale, privacy_version, state,
+						receipt_nonce, verification_version, verification_nonce, verification_hash,
+						verification_expires_at, last_email_at, created_at, pending_expires_at, verified_at)
+					VALUES ('upgrade-intake', 'upgrade-key', 'hash', 'Synthetic', 'Parent', 'parent',
+						'guest@example.test', '+49 000000000', 'de', 'v1', 'verified', 'n', 1, 'n', 'vh',
+						?, ?, ?, ?, ?)`,
+					params: [
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+						SYNTHETIC_NOW,
+					],
+				},
+				{
+					sql: `INSERT INTO trial_intake_email_outbox(id, request_id, verification_version, kind,
+						dedupe_key, status, created_at, updated_at)
+					VALUES ('upgrade-mail', 'upgrade-intake', 0, 'confirmation', 'upgrade-mail', 'pending', ?, ?)`,
+					params: [SYNTHETIC_NOW, SYNTHETIC_NOW],
+				},
+			]);
+
+			const applied = await applyTestD1Migrations(context.db, {
+				after: '0031',
+				through: '0032',
+			});
+			expect(applied).toEqual(['0032_trial_intake_waitlist.sql']);
+			expect(
+				await db.first({
+					sql: `SELECT r.kind, r.state, e.status FROM trial_intake_requests r
+					JOIN trial_intake_email_outbox e ON e.request_id = r.id WHERE r.id = 'upgrade-intake'`,
+				})
+			).toEqual({ kind: 'trial', state: 'verified', status: 'pending' });
+			// The guard of 0027 still fences the in-flight letter.
+			await expect(
+				db.run({ sql: `DELETE FROM trial_intake_requests WHERE id = 'upgrade-intake'` })
+			).rejects.toThrow('intake delivery in flight');
+			const triggers = (
+				await db.all<{ name: string }>({
+					sql: `SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'trial_intake_waitlist%' ORDER BY name`,
+				})
+			).results.map((row) => row.name);
+			expect(triggers).toHaveLength(7);
+			expect((await db.all({ sql: 'PRAGMA foreign_key_check' })).results).toEqual([]);
+		} finally {
+			await context.dispose();
+		}
+	}, 120_000);
+
 	it('rejects an unknown migration boundary before creating a test database', async () => {
 		await expect(createMigratedTestD1({ through: '9999' })).rejects.toThrow(
 			'Unknown D1 migration selector'

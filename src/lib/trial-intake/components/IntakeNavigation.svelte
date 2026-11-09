@@ -16,6 +16,7 @@
 		{#if admin}
 			<a href="/admin/trial-intake">{t(locale, 'adminTitle')}</a>
 			<a href="/admin/trial-intake/groups">{t(locale, 'adminGroups')}</a>
+			<a href="/admin/trial-intake/warteliste">{t(locale, 'adminWaitlist')}</a>
 			<a href="/admin/outbox">{t(locale, 'outbox')}</a>
 			<a href="/admin/operations">{t(locale, 'operations')}</a>
 		{:else}

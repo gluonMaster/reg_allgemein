@@ -27,7 +27,47 @@ SQL queries при максимуме назначений. Verification и по
 cancelled, сохраняя остальные transition guards. Retry после удаления payload
 запрещён; разрешён existing audited cancel/confirm_sent для unknown ledger.
 
-Ревизия: 2026-08-20.
+Лист ожидания плановых курсов
+([TRIAL_INTAKE_WAITLIST](../domain/TRIAL_INTAKE_WAITLIST.md), WL-01–15) добавлен
+одной аддитивной миграцией `0032_trial_intake_waitlist.sql`. `course_key` — ключ
+сущности курса WL-15 из `plannedCourseKey()` (`src/lib/trial-intake/planned.ts`):
+JSON `[день, предмет, начало, минуты, преподаватель, здание, возраст]`; цена,
+очередь и старт принадлежат ему, а не названию группы.
+
+- `trial_intake_requests.kind` — `trial|waitlist`, default `trial`: запись листа
+  переиспользует контакты, детей, verification, idempotency и retention запроса и
+  не имеет `trial_intake_items`.
+- `trial_intake_planned_prices`: PK `course_key`, поля курса и последний кабинет для
+  показа, `monthly_cents`/`yearly_cents` 1–100000, `min_participants` 1–30
+  (default 3), причины оранжевой метки, кто и когда изменил.
+- `trial_intake_waitlist_entries`: 1:1 с запросом (`ON DELETE CASCADE`), ключ,
+  снимок занятия, тариф, обе суммы и порог при записи, версия согласия, статус
+  `waiting|started|withdrawn|cancelled|expired`, ссылка на старт, nonce и UNIQUE
+  hash токена выхода. `waiting` — и неподтверждённая, и подтверждённая запись до
+  старта: обе блокируют цену.
+- `trial_intake_waitlist_starts`: старт с датой, снимком занятия и числом
+  участников; частичный UNIQUE оставляет один незакрытый (`reopened_at IS NULL`)
+  старт на ключ.
+- `trial_intake_waitlist_rebinds` — журнал перепривязок (ключи и снимки, вид
+  `plain|notify|price`, отличия, суммы до и после);
+  `trial_intake_waitlist_price_confirmations` — отметки обзвона по записи и строке
+  журнала.
+- `trial_intake_waitlist_email_outbox` — письма о старте и пробные с полями
+  lease/retry; `trial_intake_waitlist_documents` — PDF письма о старте (BLOB до
+  1 MiB, sha256), каскадно с запросом; `trial_intake_waitlist_render_usage` — расход
+  Browser Run без PII.
+
+Контур цены WL-06 держат семь триггеров `RAISE(ABORT, 'waitlist …')`: снимок записи
+неизменяем; вставка требует строки цены того же ключа с теми же суммами; при
+незакрытом старте новая запись не вставляется; суммы и ключ строки цены не меняются,
+а сама строка не удаляется, пока у ключа есть запись `waiting` (порог меняется);
+смена ключа записи — только у `waiting` и только при строке журнала «откуда → куда»,
+суммы «куда» которой равны цене цели; строка журнала фиксирует текущую цену
+«откуда», без смены продолжительности (`$[3]` ключа) сохраняет суммы, а вид
+`price` означает ровно смену продолжительности. `telegram_outbox`, его триггеры и
+`trial_intake_email_outbox` миграция не меняет.
+
+Ревизия: 2026-11-09.
 
 Документ задает логическую модель и обязательные инварианты. Конкретные SQL-
 миграции создаются поэтапно и могут добавлять технические поля, но не должны

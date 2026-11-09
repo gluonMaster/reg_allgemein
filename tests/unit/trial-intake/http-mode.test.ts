@@ -77,6 +77,10 @@ describe('trial intake mode and HTTP boundaries', () => {
 			'/admin/outbox',
 			'/admin/trial-intake/[id]',
 			'/admin/trial-intake/groups',
+			'/admin/trial-intake/warteliste',
+			'/admin/trial-intake/warteliste/preise.csv',
+			'/admin/trial-intake/warteliste/preise.xlsx',
+			'/admin/trial-intake/warteliste/import',
 			'/admin/operations',
 		])
 			expect(intakeRouteAllowed(route)).toBe(true);

@@ -1,0 +1,15 @@
+[
+	{ "group": "Der Kurs befindet sich in der Planung", "planned": true },
+	{ "group": "Der Kurs befindet sich in der Planung 1", "planned": true },
+	{ "group": "Der Kurs befindet sich in der Planung2", "planned": true },
+	{ "group": "  Der   Kurs befindet  sich in der\tPlanung  ", "planned": true },
+	{ "group": "DER KURS BEFINDET SICH IN DER PLANUNG 3", "planned": true },
+	{ "group": "der kurs befindet sich in der planung", "planned": true },
+	{ "group": "Der Kurs befindet sich in der Planung Übung", "planned": true },
+	{ "group": "Kunst Di 3A", "planned": false },
+	{ "group": "Planung", "planned": false },
+	{ "group": "Der Kurs befindet sich", "planned": false },
+	{ "group": "Kurs in Planung", "planned": false },
+	{ "group": "Deutsch Mo ab 9J", "planned": false },
+	{ "group": "Der Kurs befindet sich in der Plan", "planned": false }
+]

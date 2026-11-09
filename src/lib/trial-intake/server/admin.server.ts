@@ -33,23 +33,31 @@ export const adminQuerySchema = z.object({
 	direction: z.enum(['asc', 'desc']).default('desc'),
 	page: z.coerce.number().int().min(1).max(100000).default(1),
 });
-const ACTIVE = `EXISTS(SELECT 1 FROM users WHERE id = ? AND role = 'admin' AND account_status = 'active' AND is_blocked = 0)`;
+/** SQL guard: the acting admin is still active when the statement runs. Bind the admin ID. */
+export const ACTIVE = `EXISTS(SELECT 1 FROM users WHERE id = ? AND role = 'admin' AND account_status = 'active' AND is_blocked = 0)`;
+/** Role from the session, then the account itself: a blocked or demoted admin is refused. */
+export async function requireActiveAdmin(
+	db: DatabaseBoundary,
+	user: App.Locals['user']
+): Promise<AdminActor> {
+	const actor = requireAdmin(user);
+	if (
+		!(await db.first({
+			sql: `SELECT id FROM users WHERE id = ? AND role = 'admin' AND account_status = 'active' AND is_blocked = 0`,
+			params: [actor.id],
+		}))
+	)
+		throw new AuthorizationError('FORBIDDEN');
+	return actor;
+}
 const childSurname = `(SELECT MIN(c.last_name_search) FROM trial_intake_item_children link JOIN trial_intake_children c ON c.id = link.child_id WHERE link.item_id = i.id)`;
 export class IntakeAdmin {
 	constructor(
 		private readonly service: IntakeService,
 		private readonly db: DatabaseBoundary = service.db
 	) {}
-	private async actor(user: App.Locals['user']): Promise<AdminActor> {
-		const actor = requireAdmin(user);
-		if (
-			!(await this.db.first({
-				sql: `SELECT id FROM users WHERE id = ? AND role = 'admin' AND account_status = 'active' AND is_blocked = 0`,
-				params: [actor.id],
-			}))
-		)
-			throw new AuthorizationError('FORBIDDEN');
-		return actor;
+	private actor(user: App.Locals['user']): Promise<AdminActor> {
+		return requireActiveAdmin(this.db, user);
 	}
 	private audit(
 		actor: AdminActor,

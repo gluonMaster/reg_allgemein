@@ -47,6 +47,70 @@ export interface AdminGroupsData {
 	closed: ClosedLessonRow[];
 	catalogError: boolean;
 }
+/** A course of the waitlist (WL-07); one entity of WL-15 may have several planned cards. */
+export type WaitlistStatus =
+	| 'price_missing'
+	| 'collecting'
+	| 'ready'
+	| 'started'
+	| 'gone'
+	| 'not_in_schedule'
+	| 'ambiguous'
+	| 'closed';
+export interface WaitlistPrice {
+	monthlyCents: number;
+	yearlyCents: number;
+	minParticipants: number;
+	updatedAt: string;
+}
+export interface WaitlistCourse {
+	key: string;
+	/** Planned catalog cards of this course; empty when it is not in the schedule. */
+	lessons: Lesson[];
+	/** What the admin sees: the catalog card, or the stored fields of the price row. */
+	course: Omit<Lesson, 'id' | 'group'>;
+	price: WaitlistPrice | null;
+	/** Children of confirmed waiting entries: the participants counted against the threshold. */
+	children: number;
+	unconfirmedChildren: number;
+	/** Waiting entries, confirmed or not: each of them locks the price. */
+	activeEntries: number;
+	waitingFamilies: number;
+	firstDate: string | null;
+	/** Null while the schedule cannot be read: no course turns into a vanished one. */
+	status: WaitlistStatus | null;
+}
+export interface AdminWaitlistData {
+	courses: WaitlistCourse[];
+	/** Stored prices or queues without a planned card in the current schedule. */
+	unscheduled: WaitlistCourse[];
+	catalogError: boolean;
+}
+export type WaitlistImportOutcome = 'new' | 'change' | 'same' | 'locked' | 'unknown' | 'error';
+export interface WaitlistPriceChange {
+	key: string;
+	monthlyCents: number;
+	yearlyCents: number;
+	minParticipants: number;
+}
+export interface WaitlistImportRow {
+	line: number;
+	cells: {
+		fach: string;
+		wochentag: string;
+		uhrzeit: string;
+		gebaeude: string;
+		lehrkraft: string;
+	};
+	outcome: WaitlistImportOutcome;
+	reason: string | null;
+	before: Omit<WaitlistPriceChange, 'key'> | null;
+	change: WaitlistPriceChange | null;
+}
+export interface WaitlistImportPreview {
+	rows: WaitlistImportRow[];
+	changes: WaitlistPriceChange[];
+}
 export interface IntakeFormData extends CatalogData {
 	selectedId: string;
 	scheduleUrl: string;

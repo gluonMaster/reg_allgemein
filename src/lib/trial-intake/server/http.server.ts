@@ -12,8 +12,11 @@ import { INTAKE_BODY_LIMIT, INTAKE_PRIVACY_VERSION, type CatalogData } from '../
 import { CatalogReader, boundedText } from './catalog.server';
 import { closedLessonIds } from './closed.server';
 import { IntakeService } from './service.server';
-import { IntakeAdmin } from './admin.server';
+import { IntakeAdmin, requireActiveAdmin } from './admin.server';
 import { IntakeError, intakeInputSchema } from './validation.server';
+import { WaitlistPrices } from './prices.server';
+import { IMPORT_MAX_BYTES, priceCsv, priceXlsx } from './price-files.server';
+import { parseEuroCents, parseMinParticipants } from '../prices';
 import {
 	matchesVerifiedDevice,
 	verifiedDeviceValue,
@@ -36,6 +39,7 @@ export function intakeRuntime(event: RequestEvent) {
 		config,
 		service,
 		admin: new IntakeAdmin(service),
+		prices: new WaitlistPrices(db),
 		catalog: new CatalogReader(
 			config.trialIntake.scheduleUrl,
 			undefined,
@@ -51,7 +55,10 @@ export function intakeRuntime(event: RequestEvent) {
 		),
 	};
 }
-async function readJson(event: RequestEvent): Promise<Record<string, unknown>> {
+async function readJson(
+	event: RequestEvent,
+	limit = INTAKE_BODY_LIMIT
+): Promise<Record<string, unknown>> {
 	const config = loadRuntimeConfig(event.platform?.env);
 	const origin = event.request.headers.get('origin');
 	const localTest =
@@ -62,11 +69,11 @@ async function readJson(event: RequestEvent): Promise<Record<string, unknown>> {
 		throw new IntakeError('INTAKE_ORIGIN_FORBIDDEN', 403);
 	if (!event.request.headers.get('content-type')?.startsWith('application/json'))
 		throw new IntakeError('INTAKE_JSON_REQUIRED', 415);
-	if (Number(event.request.headers.get('content-length')) > INTAKE_BODY_LIMIT)
+	if (Number(event.request.headers.get('content-length')) > limit)
 		throw new IntakeError('INTAKE_BODY_TOO_LARGE', 413);
 	try {
 		const value: unknown = JSON.parse(
-			await boundedText(event.request.body, INTAKE_BODY_LIMIT, AbortSignal.timeout(5000))
+			await boundedText(event.request.body, limit, AbortSignal.timeout(5000))
 		);
 		if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error();
 		return value as Record<string, unknown>;
@@ -101,8 +108,9 @@ export async function intakeEndpoint(action: () => Promise<unknown>): Promise<Re
 				: status === 400
 					? 'INTAKE_INPUT_INVALID'
 					: 'INTAKE_UNAVAILABLE';
+		const details = error instanceof IntakeError ? error.details : undefined;
 		return json(
-			{ code },
+			{ code, ...details },
 			{ status, headers: { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } }
 		);
 	}
@@ -197,8 +205,8 @@ export async function adminDetail(event: RequestEvent) {
 		new Date().toISOString()
 	);
 }
-async function adminBody(event: RequestEvent) {
-	const body = await readJson(event);
+async function adminBody(event: RequestEvent, limit = INTAKE_BODY_LIMIT) {
+	const body = await readJson(event, limit);
 	await requireCsrf({
 		cookies: event.cookies,
 		user: event.locals.user,
@@ -247,4 +255,113 @@ export async function adminEmail(event: RequestEvent) {
 		event.locals.requestId,
 		new Date().toISOString()
 	);
+}
+/** The schedule, or null when it cannot be read: stored prices stay visible without it. */
+async function plannedCatalog(r: ReturnType<typeof intakeRuntime>) {
+	try {
+		return [...(await r.catalog.read())];
+	} catch {
+		return null;
+	}
+}
+async function catalogLesson(r: ReturnType<typeof intakeRuntime>, lessonId: unknown) {
+	const id = z
+		.string()
+		.regex(/^[a-f0-9]{64}$/u)
+		.parse(lessonId);
+	const lesson = (await r.catalog.read()).find((l) => l.id === id);
+	if (!lesson) throw new IntakeError('INTAKE_LESSON_UNAVAILABLE', 409);
+	return lesson;
+}
+export async function loadWaitlistPrices(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	// The admin check runs first; a missing schedule must still show what is stored.
+	await requireActiveAdmin(r.service.db, event.locals.user);
+	return r.prices.overview(event.locals.user, await plannedCatalog(r));
+}
+/** Set both sums and the threshold of a planned course, or delete an unlocked price. */
+export async function adminWaitlistPrice(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	if (event.request.method === 'GET') return loadWaitlistPrices(event);
+	const body = await adminBody(event);
+	const now = new Date().toISOString();
+	if (body.delete === true)
+		return r.prices.deletePrice(
+			event.locals.user,
+			z.string().min(2).max(400).parse(body.key),
+			event.locals.requestId,
+			now
+		);
+	const text = (value: unknown) =>
+		typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+	const monthlyCents = parseEuroCents(text(body.monthly));
+	const yearlyCents = parseEuroCents(text(body.yearly));
+	const minParticipants = parseMinParticipants(text(body.minParticipants));
+	if (monthlyCents === null || yearlyCents === null || minParticipants === null)
+		throw new IntakeError('WAITLIST_PRICE_INVALID');
+	await requireActiveAdmin(r.service.db, event.locals.user);
+	return r.prices.setPrice(
+		event.locals.user,
+		await catalogLesson(r, body.lessonId),
+		{ monthlyCents, yearlyCents, minParticipants },
+		event.locals.requestId,
+		now
+	);
+}
+const FILES = {
+	csv: { type: 'text/csv; charset=utf-8', build: priceCsv },
+	xlsx: {
+		type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		build: priceXlsx,
+	},
+};
+export async function adminWaitlistExport(event: RequestEvent, format: keyof typeof FILES) {
+	try {
+		const r = intakeRuntime(event);
+		await requireActiveAdmin(r.service.db, event.locals.user);
+		const rows = await r.prices.exportRows(event.locals.user, await plannedCatalog(r));
+		return new Response(new Blob([FILES[format].build(rows) as Uint8Array<ArrayBuffer>]), {
+			headers: {
+				'content-type': FILES[format].type,
+				'content-disposition': `attachment; filename="Warteliste-Preise.${format}"`,
+				'cache-control': 'no-store',
+				'referrer-policy': 'no-referrer',
+			},
+		});
+	} catch (error) {
+		return intakeEndpoint(() => Promise.reject(error));
+	}
+}
+/** Base64 inflates the file by a third; JSON adds the name and the token. */
+const IMPORT_BODY_LIMIT = Math.ceil((IMPORT_MAX_BYTES * 4) / 3) + 4096;
+/** Two steps: an upload returns the preview, `apply` sends the normalized changes back. */
+export async function adminWaitlistImport(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	const body = await adminBody(event, IMPORT_BODY_LIMIT);
+	await requireActiveAdmin(r.service.db, event.locals.user);
+	if (body.action === 'apply') {
+		return r.prices.applyImport(
+			event.locals.user,
+			body.changes,
+			await r.catalog.read(),
+			event.locals.requestId,
+			new Date().toISOString()
+		);
+	}
+	const file = z
+		.object({
+			fileName: z.string().max(200),
+			content: z
+				.string()
+				.max(IMPORT_BODY_LIMIT)
+				.regex(/^[A-Za-z0-9+/]*={0,2}$/u),
+		})
+		.parse(body);
+	let bytes: Uint8Array;
+	try {
+		bytes = Uint8Array.from(atob(file.content), (char) => char.charCodeAt(0));
+	} catch {
+		throw new IntakeError('WAITLIST_IMPORT_INVALID', 422);
+	}
+	return r.prices.previewImport(event.locals.user, bytes, file.fileName, await r.catalog.read());
 }

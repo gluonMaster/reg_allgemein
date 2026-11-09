@@ -1,4 +1,5 @@
 import type { AgeRange } from './age';
+import type { WaitlistCourse } from './contracts';
 
 export type Locale = 'de' | 'ru';
 const text = {
@@ -167,6 +168,115 @@ const text = {
 		'Dieses Angebot ist belegt. Bitte wählen Sie ein anderes.',
 		'Это занятие укомплектовано. Выберите другое.',
 	],
+	plannedLabel: ['Kurs in Planung', 'Курс в планировании'],
+	plannedError: [
+		'Dieser Kurs befindet sich in der Planung. Eine Probestunde ist dafür nicht möglich.',
+		'Этот курс в планировании, пробное занятие на него невозможно.',
+	],
+	adminWaitlist: ['Warteliste', 'Лист ожидания'],
+	adminWaitlistIntro: [
+		'Geplante Kurse des aktuellen Stundenplans. Beträge gelten je Kind und Monat; die Anmeldung zur Warteliste ist erst mit einem Preis möglich. Solange es aktive Anmeldungen gibt, sind die Beträge gesperrt; die Mindestzahl bleibt änderbar.',
+		'Плановые курсы текущего расписания. Суммы — за ребёнка в месяц; запись в лист возможна только после ввода цены. Пока есть активные записи, суммы заблокированы; минимум участников можно менять.',
+	],
+	adminWaitlistNone: [
+		'Im aktuellen Stundenplan gibt es keine geplanten Kurse.',
+		'В текущем расписании нет плановых курсов.',
+	],
+	adminWaitlistCatalogError: [
+		'Der Stundenplan ist gerade nicht erreichbar; unten stehen nur die gespeicherten Preise.',
+		'Расписание сейчас недоступно; ниже показаны только сохранённые цены.',
+	],
+	adminWaitlistAmbiguous: [
+		'Zwei geplante Karten beschreiben denselben Kurs. Bitte die überzählige Karte im Stundenplan-Editor entfernen.',
+		'Две плановые карточки описывают один курс. Уберите лишнюю карточку в редакторе расписания.',
+	],
+	adminWaitlistUnscheduled: ['Nicht im Stundenplan', 'Нет в расписании'],
+	adminWaitlistUnscheduledIntro: [
+		'Gespeicherte Preise, zu denen der aktuelle Stundenplan keine geplante Karte hat.',
+		'Сохранённые цены, для которых в текущем расписании нет плановой карточки.',
+	],
+	monthlyContract: ['Monatsvertrag €/Monat', 'Месячный договор, €/мес.'],
+	yearlyContract: ['Jahresvertrag €/Monat', 'Годовой договор, €/мес.'],
+	minParticipants: ['Mindestteilnehmer', 'Минимум участников'],
+	waitlistStatus: ['Status', 'Статус'],
+	time: ['Uhrzeit', 'Время'],
+	priceLockColumn: ['Sperre', 'Блокировка'],
+	adminWaitlistStored: ['Gespeicherte Preise', 'Сохранённые цены'],
+	importResult: ['Ergebnis', 'Результат'],
+	importBefore: ['Bisher', 'Было'],
+	importAfter: ['Neu', 'Станет'],
+	save: ['Speichern', 'Сохранить'],
+	saved: ['Gespeichert.', 'Сохранено.'],
+	deletePrice: ['Preis löschen', 'Удалить цену'],
+	priceLocked: ['gesperrt: {n} aktive Anmeldungen', 'заблокировано: активных записей — {n}'],
+	unconfirmed: ['+{n} unbestätigt', '+{n} не подтверждено'],
+	statusPriceMissing: ['Preis fehlt', 'Нет цены'],
+	statusCollecting: ['sammelt: {n} von {m} Kindern', 'набор: {n} из {m} детей'],
+	statusReady: [
+		'Mindestzahl erreicht — Kurs kann gestartet werden',
+		'Минимум набран — курс можно запускать',
+	],
+	statusStarted: ['gestartet: erster Termin {date}', 'стартовал: первое занятие {date}'],
+	statusGone: [
+		'Kurs nicht mehr im Stundenplan: {n} Familien warten',
+		'Курса больше нет в расписании: ждут семей — {n}',
+	],
+	statusNotInSchedule: ['Nicht im Stundenplan', 'Нет в расписании'],
+	statusAmbiguous: ['mehrdeutig', 'неоднозначно'],
+	statusClosed: ['geschlossen', 'закрыт'],
+	priceExport: ['Preisliste exportieren', 'Экспорт прайса'],
+	priceImport: ['Preisliste importieren', 'Импорт прайса'],
+	priceImportHint: [
+		'CSV oder XLSX bis 256 KiB und 500 Zeilen. Zuerst erscheint eine Vorschau; übernommen wird erst mit „Anwenden“. Raum und Status werden nicht eingelesen.',
+		'CSV или XLSX до 256 KiB и 500 строк. Сначала показывается предпросмотр; изменения вносятся только кнопкой «Применить». Кабинет и статус не читаются.',
+	],
+	priceImportFile: ['Datei', 'Файл'],
+	priceImportPreview: ['Vorschau anzeigen', 'Показать предпросмотр'],
+	priceImportApplied: ['Übernommene Zeilen: {n}.', 'Применено строк: {n}.'],
+	priceImportNothing: ['Keine Änderungen zum Übernehmen.', 'Нечего применять.'],
+	importLine: ['Zeile', 'Строка'],
+	importNew: ['neuer Preis', 'новая цена'],
+	importChange: ['Änderung', 'изменение'],
+	importSame: ['ohne Änderung', 'без изменений'],
+	importLocked: ['gesperrt', 'заблокировано'],
+	importUnknown: ['Kurs nicht gefunden', 'курс не найден'],
+	importError: ['Fehler', 'ошибка'],
+	importCourseInvalid: [
+		'Fach, Wochentag, Uhrzeit, Gebäude oder Lehrkraft fehlt oder ist ungültig',
+		'предмет, день, время, здание или преподаватель не указаны или неверны',
+	],
+	importAmbiguous: ['mehrdeutiger Kurs', 'неоднозначный курс'],
+	importDuplicate: ['Kurs mehrfach in der Datei', 'курс повторяется в файле'],
+	importOnePrice: ['nur einer der beiden Beträge angegeben', 'указана только одна из двух сумм'],
+	importPriceInvalid: [
+		'Betrag ungültig (0,01 bis 1000,00 €, ohne Tausenderpunkt)',
+		'неверная сумма (от 0,01 до 1000,00 €, без разделителя тысяч)',
+	],
+	importThresholdInvalid: ['Mindestzahl ungültig (1 bis 30)', 'неверный минимум (от 1 до 30)'],
+	priceInvalid: [
+		'Bitte beide Beträge zwischen 0,01 und 1000,00 € und eine Mindestzahl von 1 bis 30 eingeben.',
+		'Введите обе суммы от 0,01 до 1000,00 € и минимум участников от 1 до 30.',
+	],
+	priceLockedError: [
+		'Der Preis ist gesperrt: Für diesen Kurs gibt es aktive Anmeldungen. Die Mindestzahl kann geändert werden.',
+		'Цена заблокирована: на курс есть активные записи. Минимум участников менять можно.',
+	],
+	importFileInvalid: [
+		'Die Datei konnte nicht gelesen werden. Erwartet wird die exportierte Preisliste als CSV oder XLSX.',
+		'Файл не удалось прочитать. Ожидается экспортированный прайс в CSV или XLSX.',
+	],
+	importFileMacro: [
+		'Dateien mit Makros werden nicht angenommen.',
+		'Файлы с макросами не принимаются.',
+	],
+	importFileEncrypted: [
+		'Verschlüsselte Dateien und das alte XLS-Format werden nicht angenommen.',
+		'Зашифрованные файлы и старый формат XLS не принимаются.',
+	],
+	importFileTooLarge: [
+		'Die Datei ist zu groß: höchstens 256 KiB und 500 Zeilen.',
+		'Файл слишком большой: не более 256 KiB и 500 строк.',
+	],
 	adminTitle: ['Anfragen für Probestunden', 'Заявки на пробные занятия'],
 	adminGroups: ['Belegte Angebote', 'Укомплектованные занятия'],
 	adminGroupsIntro: [
@@ -314,6 +424,51 @@ export function formatTimestamp(date: string, locale: Locale): string {
 		timeStyle: 'short',
 	}).format(new Date(date));
 }
+/** Fills `{name}` placeholders of a text. */
+export function fill(text: string, values: Record<string, string | number>): string {
+	return text.replace(/\{(\w+)\}/gu, (match, name: string) =>
+		name in values ? String(values[name]) : match
+	);
+}
+/** WL-07 status line of a waitlist course; empty while the schedule cannot be read. */
+export function waitlistStatusText(
+	course: Pick<WaitlistCourse, 'status' | 'children' | 'price' | 'firstDate' | 'activeEntries'>,
+	locale: Locale
+): string {
+	if (!course.status) return '';
+	const key = (
+		{
+			price_missing: 'statusPriceMissing',
+			collecting: 'statusCollecting',
+			ready: 'statusReady',
+			started: 'statusStarted',
+			gone: 'statusGone',
+			not_in_schedule: 'statusNotInSchedule',
+			ambiguous: 'statusAmbiguous',
+			closed: 'statusClosed',
+		} as const
+	)[course.status];
+	return fill(t(locale, key), {
+		n: course.status === 'gone' ? course.activeEntries : course.children,
+		m: course.price?.minParticipants ?? 0,
+		date: course.firstDate ? formatDate(course.firstDate, locale) : '',
+	});
+}
+/** Reasons of an import row: codes of the price import service. */
+export function importReasonKey(code: string | null): TextKey {
+	return (
+		(
+			{
+				WAITLIST_IMPORT_COURSE_INVALID: 'importCourseInvalid',
+				WAITLIST_IMPORT_AMBIGUOUS: 'importAmbiguous',
+				WAITLIST_IMPORT_DUPLICATE: 'importDuplicate',
+				WAITLIST_IMPORT_ONE_PRICE: 'importOnePrice',
+				WAITLIST_IMPORT_PRICE_INVALID: 'importPriceInvalid',
+				WAITLIST_IMPORT_THRESHOLD_INVALID: 'importThresholdInvalid',
+			} as Record<string, TextKey>
+		)[code ?? ''] ?? 'importError'
+	);
+}
 export function errorKey(code: string): TextKey {
 	if (code.includes('RATE_LIMIT') || code === 'INTAKE_RESEND_COOLDOWN') return 'rateLimit';
 	return (
@@ -326,6 +481,14 @@ export function errorKey(code: string): TextKey {
 				INTAKE_BIRTH_DATE_INVALID: 'birthError',
 				INTAKE_LESSON_UNAVAILABLE: 'stale',
 				INTAKE_LESSON_CLOSED: 'closedError',
+				INTAKE_LESSON_PLANNED: 'plannedError',
+				WAITLIST_PRICE_INVALID: 'priceInvalid',
+				WAITLIST_PRICE_LOCKED: 'priceLockedError',
+				WAITLIST_IMPORT_INVALID: 'importFileInvalid',
+				WAITLIST_IMPORT_MACRO: 'importFileMacro',
+				WAITLIST_IMPORT_ENCRYPTED: 'importFileEncrypted',
+				WAITLIST_IMPORT_TOO_LARGE: 'importFileTooLarge',
+				WAITLIST_IMPORT_TOO_MANY_ROWS: 'importFileTooLarge',
 				INTAKE_CATALOG_UNAVAILABLE: 'unavailable',
 				INTAKE_MAINTENANCE: 'maintenance',
 				INTAKE_INPUT_INVALID: 'inputError',

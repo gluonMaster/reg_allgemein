@@ -109,6 +109,18 @@ source-specific dry-run реального файла, который требу
   audit и `release:verify` прошли. Это закрывает dependency verification, но не
   является production approval.
 
+### Лист ожидания — 2026-11-09
+
+- `fflate@0.8.3` переведён из `devDependencies` в `dependencies`: админ-страница
+  цен листа ожидания ([TRIAL_INTAKE_WAITLIST](../domain/TRIAL_INTAKE_WAITLIST.md),
+  WL-05) собирает и читает XLSX в Worker runtime. Версия та же, что уже была в
+  lockfile; MIT, чистый JavaScript без Node APIs. Чтение ограничено allowlist частей
+  архива: `[Content_Types].xml`, workbook и его rels, `sharedStrings.xml` и один
+  лист; размер каждой части проверяется до распаковки. Файл с `vbaProject.bin`,
+  macro-enabled типом, OLE/CFB-заголовком или повреждённый отклоняется целиком.
+- `xlsx`/SheetJS не добавлен. `npm audit --omit=dev` для этого изменения
+  выполняется в gate выпуска листа ожидания (этап 06).
+
 Локальный import boundary выбирает поддерживаемый parser после отдельного spike.
 Допустимые
 варианты:

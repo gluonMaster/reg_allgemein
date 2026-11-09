@@ -3,12 +3,15 @@ import { INTAKE_PRIVACY_VERSION, type Lesson } from '../contracts';
 import { berlinDate, weekday } from '../dates';
 import { noLessonDay } from '../holidays';
 import { ageFit, lessonAgeRange } from '../age';
+import { isPlannedLesson } from '../planned';
 export { berlinDate, weekday, nextLessonDate } from '../dates';
 
 export class IntakeError extends Error {
 	constructor(
 		readonly code: string,
-		readonly status = 400
+		readonly status = 400,
+		/** Safe numbers for the client, e.g. the active entries behind a locked price. */
+		readonly details?: Record<string, number>
 	) {
 		super(code);
 	}
@@ -97,6 +100,8 @@ export function validateSubmission(
 		if (!lesson) throw new IntakeError('INTAKE_LESSON_UNAVAILABLE', 409);
 		// The form hides a full group; a direct POST is refused here.
 		if (closedIds.includes(item.lessonId)) throw new IntakeError('INTAKE_LESSON_CLOSED', 409);
+		// A planned course has no lessons yet; its families join the waitlist instead (WL-03).
+		if (isPlannedLesson(lesson)) throw new IntakeError('INTAKE_LESSON_PLANNED', 409);
 		if (item.desiredDate <= today || weekday(item.desiredDate) !== lesson.weekday) {
 			throw new IntakeError('INTAKE_DATE_INVALID');
 		}

@@ -13,6 +13,7 @@
 	} from '../contracts';
 	import { berlinDate, lessonDates, nextLessonDate, weekday } from '../dates';
 	import { ageFit, lessonAgeRange } from '../age';
+	import { isPlannedLesson } from '../planned';
 	import { ageRangeLabel, dayLabel, formatDate, t, errorKey, type TextKey } from '../i18n';
 	import { requestJson } from '../client';
 	import '../intake.css';
@@ -51,7 +52,10 @@
 	let items = $state<IntakeInput['items']>(
 		untrack(() => {
 			const selected = data.lessons.find(
-				(l) => l.id === data.selectedId && !data.closedLessonIds.includes(l.id)
+				(l) =>
+					l.id === data.selectedId &&
+					!data.closedLessonIds.includes(l.id) &&
+					!isPlannedLesson(l)
 			);
 			return selected
 				? [
@@ -69,7 +73,10 @@
 	let feedback = $state<TextKey | null>(null);
 	let errorElement = $state<HTMLDivElement>();
 	let lastAttempt: { fingerprint: string; payload: IntakeInput } | undefined;
-	const initialLesson = $derived(lessons.find((l) => l.id === data.selectedId));
+	// A planned course takes no trial request (WL-03); its link is treated like an unknown one.
+	const initialLesson = $derived(
+		lessons.find((l) => l.id === data.selectedId && !isPlannedLesson(l))
+	);
 	const initialClosed = $derived(!!initialLesson && closedIds.includes(initialLesson.id));
 	const closedSelection = $derived(!showPicker && initialClosed);
 	const available = $derived(
@@ -77,6 +84,7 @@
 			(l) =>
 				!items.some((i) => i.lessonId === l.id) &&
 				!closedIds.includes(l.id) &&
+				!isPlannedLesson(l) &&
 				[l.subject, l.group, l.teacher, l.room, l.building]
 					.join(' ')
 					.toLocaleLowerCase()
@@ -119,6 +127,7 @@
 		if (
 			!lesson ||
 			closedIds.includes(id) ||
+			isPlannedLesson(lesson) ||
 			items.length >= 10 ||
 			items.some((i) => i.lessonId === id)
 		)
