@@ -17,10 +17,12 @@ import {
 import { CatalogReader, boundedText } from './catalog.server';
 import { closedLessonIds } from './closed.server';
 import { IntakeService } from './service.server';
-import { IntakeAdmin, requireActiveAdmin } from './admin.server';
+import { ACTIVE, IntakeAdmin, requireActiveAdmin } from './admin.server';
 import { IntakeError, intakeInputSchema } from './validation.server';
 import { WaitlistPrices } from './prices.server';
 import { WaitlistSignup, waitlistInputSchema } from './waitlist.server';
+import { WaitlistStart } from './waitlist-start.server';
+import { readWaitlistDocument, waitlistPdfAdapter } from './waitlist-pdf.server';
 import { IMPORT_MAX_BYTES, priceCsv, priceXlsx } from './price-files.server';
 import { parseEuroCents, parseMinParticipants } from '../prices';
 import {
@@ -35,6 +37,7 @@ export function intakeRuntime(event: RequestEvent) {
 	if (config.portalMode !== 'trial_intake' || !config.trialIntake || !config.jwtSecret)
 		throw new IntakeError('INTAKE_UNAVAILABLE', 404);
 	const db = new DatabaseBoundary(config.db);
+	const prices = new WaitlistPrices(db);
 	const service = new IntakeService(
 		db,
 		config.jwtSecret,
@@ -45,8 +48,14 @@ export function intakeRuntime(event: RequestEvent) {
 		config,
 		service,
 		admin: new IntakeAdmin(service),
-		prices: new WaitlistPrices(db),
+		prices,
 		waitlist: new WaitlistSignup(service, config.jwtSecret, config.messaging.emailMaxAttempts),
+		start: new WaitlistStart(
+			db,
+			prices,
+			waitlistPdfAdapter(config) !== null,
+			config.messaging.emailMaxAttempts
+		),
 		catalog: new CatalogReader(
 			config.trialIntake.scheduleUrl,
 			undefined,
@@ -258,6 +267,14 @@ async function adminBody(event: RequestEvent, limit = INTAKE_BODY_LIMIT) {
 }
 export async function adminStatus(event: RequestEvent) {
 	const body = await adminBody(event);
+	if (typeof body.retryLetter === 'string')
+		return intakeRuntime(event).start.retryLetter(
+			event.locals.user,
+			event.params.id ?? '',
+			z.string().max(200).parse(body.retryLetter),
+			event.locals.requestId,
+			new Date().toISOString()
+		);
 	if (body.withdraw === true)
 		return intakeRuntime(event).waitlist.withdrawByAdmin(
 			event.locals.user,
@@ -332,8 +349,10 @@ export async function loadWaitlistPrices(event: RequestEvent) {
 		event.locals.requestId,
 		new Date().toISOString()
 	);
+	const now = new Date().toISOString();
 	for (const course of [...data.courses, ...data.unscheduled])
 		course.entries = entries.get(course.key) ?? [];
+	for (const course of data.courses) course.start = r.start.options(course, now);
 	return data;
 }
 const ATTENTION = new Set(['ready', 'price_missing', 'gone', 'ambiguous']);
@@ -342,7 +361,15 @@ export async function waitlistAttention(event: RequestEvent): Promise<WaitlistAt
 	const r = intakeRuntime(event);
 	const data = await r.prices.overview(event.locals.user, await plannedCatalog(r));
 	const all = [...data.courses, ...data.unscheduled];
+	// A dead letter stays in the banner until the bureau marks the signup as processed.
+	const letters = await r.service.db.first<{ unsent: number; dead: number }>({
+		sql: `SELECT COALESCE(SUM(o.status IN ('pending','retry','processing')), 0) AS unsent,
+		 COALESCE(SUM(o.status = 'dead' AND r.state = 'verified'), 0) AS dead
+		 FROM trial_intake_waitlist_email_outbox o JOIN trial_intake_requests r ON r.id = o.request_id
+		 WHERE o.kind = 'start'`,
+	});
 	return {
+		startLetters: { unsent: Number(letters?.unsent ?? 0), dead: Number(letters?.dead ?? 0) },
 		courses: data.courses.length,
 		children: all.reduce((sum, course) => sum + course.children, 0),
 		attention: all
@@ -386,6 +413,55 @@ export async function adminWaitlistPrice(event: RequestEvent) {
 		event.locals.requestId,
 		now
 	);
+}
+/** The start dialog: letter preview, probe to the signed-in admin, confirmed start (WL-10). */
+export async function adminWaitlistStart(event: RequestEvent) {
+	const r = intakeRuntime(event);
+	const body = await adminBody(event);
+	await requireActiveAdmin(r.service.db, event.locals.user);
+	const lessons = await r.catalog.read();
+	const now = new Date().toISOString();
+	if (body.action === 'preview') return r.start.preview(event.locals.user, lessons, body, now);
+	if (body.action === 'probe')
+		return r.start.probe(event.locals.user, lessons, body, event.locals.requestId, now);
+	if (body.action === 'start')
+		return r.start.start(event.locals.user, lessons, body, event.locals.requestId, now);
+	throw new IntakeError('INTAKE_INPUT_INVALID');
+}
+/** "PDF ansehen": the stored start PDF of a signup; it carries family data, so it is audited. */
+export async function adminWaitlistPdf(event: RequestEvent) {
+	try {
+		const r = intakeRuntime(event);
+		const actor = await requireActiveAdmin(r.service.db, event.locals.user);
+		const id = z.uuid().parse(event.params.id);
+		const document = await readWaitlistDocument(r.service.db, id);
+		if (!document) throw new IntakeError('INTAKE_NOT_FOUND', 404);
+		const audit = await r.service.db.run({
+			sql: `INSERT INTO audit_events(id, actor_user_id, actor_kind, action, target_kind, target_id, request_id, safe_diff_json, created_at)
+			 SELECT ?, ?, 'user', 'trial_intake.waitlist_pdf_read', 'trial_intake', ?, ?, ?, ? WHERE ${ACTIVE}`,
+			params: [
+				crypto.randomUUID(),
+				actor.id,
+				id,
+				event.locals.requestId,
+				JSON.stringify({ sha256: document.sha256 }),
+				new Date().toISOString(),
+				actor.id,
+			],
+		});
+		if (audit.meta.changes !== 1) throw new AuthorizationError('FORBIDDEN');
+		return new Response(new Blob([document.bytes as Uint8Array<ArrayBuffer>]), {
+			headers: {
+				'content-type': 'application/pdf',
+				'content-disposition': `attachment; filename="${document.fileName}"`,
+				'cache-control': 'no-store',
+				'referrer-policy': 'no-referrer',
+				'x-content-type-options': 'nosniff',
+			},
+		});
+	} catch (error) {
+		return intakeEndpoint(() => Promise.reject(error));
+	}
 }
 const FILES = {
 	csv: { type: 'text/csv; charset=utf-8', build: priceCsv },

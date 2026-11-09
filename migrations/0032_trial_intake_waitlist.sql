@@ -113,7 +113,8 @@ CREATE TABLE trial_intake_waitlist_price_confirmations (
 
 -- Start letters and admin probes. Verification and confirmation letters stay in
 -- trial_intake_email_outbox; this table is separate like the alerts of 0031, so cancelling a
--- stale verification never touches a start letter. A probe goes to the signed-in admin.
+-- stale verification never touches a start letter. A probe goes to the signed-in admin and
+-- carries the catalog card the admin saw; a start letter takes it from its start.
 CREATE TABLE trial_intake_waitlist_email_outbox (
  id TEXT PRIMARY KEY NOT NULL,
  kind TEXT NOT NULL CHECK(kind IN ('start','probe')),
@@ -121,6 +122,7 @@ CREATE TABLE trial_intake_waitlist_email_outbox (
  start_id TEXT REFERENCES trial_intake_waitlist_starts(id),
  probe_date TEXT,
  probe_recipient_user_id TEXT REFERENCES users(id),
+ probe_lesson_json TEXT CHECK(probe_lesson_json IS NULL OR json_valid(probe_lesson_json)),
  dedupe_key TEXT NOT NULL UNIQUE,
  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','retry','sent','dead','cancelled')),
  attempts INTEGER NOT NULL DEFAULT 0,
@@ -130,8 +132,10 @@ CREATE TABLE trial_intake_waitlist_email_outbox (
  provider_request_id TEXT, last_error_code TEXT,
  pdf_sha256 TEXT,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, sent_at TEXT,
- CHECK((kind = 'start' AND start_id IS NOT NULL AND probe_date IS NULL AND probe_recipient_user_id IS NULL)
-  OR (kind = 'probe' AND start_id IS NULL AND probe_date IS NOT NULL AND probe_recipient_user_id IS NOT NULL))
+ CHECK((kind = 'start' AND start_id IS NOT NULL AND probe_date IS NULL AND probe_recipient_user_id IS NULL
+   AND probe_lesson_json IS NULL)
+  OR (kind = 'probe' AND start_id IS NULL AND probe_date IS NOT NULL AND probe_recipient_user_id IS NOT NULL
+   AND probe_lesson_json IS NOT NULL))
 );
 CREATE INDEX trial_intake_waitlist_email_queue
  ON trial_intake_waitlist_email_outbox(status, next_attempt_at, created_at);

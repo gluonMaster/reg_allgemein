@@ -52,10 +52,11 @@ JSON `[день, предмет, начало, минуты, преподава�
   `plain|notify|price`, отличия, суммы до и после);
   `trial_intake_waitlist_price_confirmations` — отметки обзвона по записи и строке
   журнала.
-- `trial_intake_waitlist_email_outbox` — письма о старте и пробные с полями
-  lease/retry; `trial_intake_waitlist_documents` — PDF письма о старте (BLOB до
-  1 MiB, sha256), каскадно с запросом; `trial_intake_waitlist_render_usage` — расход
-  Browser Run без PII.
+- `trial_intake_waitlist_email_outbox` — письма о старте (ссылка на старт) и пробные
+  (дата, администратор-получатель и снимок карточки каталога `probe_lesson_json`) с
+  полями lease/retry; `trial_intake_waitlist_documents` — PDF письма о старте (BLOB до
+  1 MiB, sha256), один на запись и старт, каскадно с запросом;
+  `trial_intake_waitlist_render_usage` — расход Browser Run без PII.
 
 Контур цены WL-06 держат семь триггеров `RAISE(ABORT, 'waitlist …')`: снимок записи
 неизменяем; вставка требует строки цены того же ключа с теми же суммами; при

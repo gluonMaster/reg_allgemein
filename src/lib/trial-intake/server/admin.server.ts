@@ -161,8 +161,10 @@ export class IntakeAdmin {
 			wait: outboxWaitReason(row, now) ?? null,
 		}));
 		const entry = r.kind === 'waitlist' ? await readEntry(this.db, r.id) : null;
+		const started = entry && (await this.waitlistStart(r.id, entry.start_id));
 		return {
 			waitlist: entry && {
+				...started!,
 				lesson: entryLesson(entry),
 				tariff: entry.tariff,
 				monthlyCents: entry.monthly_cents,
@@ -190,6 +192,58 @@ export class IntakeAdmin {
 			children: detail.children,
 			items: detail.items,
 			delivery,
+		};
+	}
+	/** Start, start letters and stored PDF of a waitlist signup (WL-07, WL-10). */
+	private async waitlistStart(requestId: string, startId: string | null) {
+		const [start, letters, document] = await this.db.batch<Record<string, unknown>>([
+			{
+				sql: 'SELECT first_date, started_at, participants, lesson_json FROM trial_intake_waitlist_starts WHERE id = ?',
+				params: [startId],
+			},
+			{
+				sql: `SELECT id, status, attempts, last_error_code, sent_at FROM trial_intake_waitlist_email_outbox
+				 WHERE request_id = ? AND kind = 'start' ORDER BY created_at, id`,
+				params: [requestId],
+			},
+			{
+				sql: `SELECT sha256, byte_size, created_at FROM trial_intake_waitlist_documents
+				 WHERE request_id = ? AND start_id = ?`,
+				params: [requestId, startId],
+			},
+		]);
+		const s = start.results[0] as
+			| { first_date: string; started_at: string; participants: number; lesson_json: string }
+			| undefined;
+		const d = document.results[0] as
+			{ sha256: string; byte_size: number; created_at: string } | undefined;
+		return {
+			start: s
+				? {
+						firstDate: s.first_date,
+						startedAt: s.started_at,
+						participants: s.participants,
+						lesson: JSON.parse(s.lesson_json) as Lesson,
+					}
+				: null,
+			letters: (
+				letters.results as {
+					id: string;
+					status: string;
+					attempts: number;
+					last_error_code: string | null;
+					sent_at: string | null;
+				}[]
+			).map((l) => ({
+				id: l.id,
+				status: l.status,
+				attempts: l.attempts,
+				lastErrorCode: l.last_error_code,
+				sentAt: l.sent_at,
+			})),
+			document: d
+				? { sha256: d.sha256, byteSize: d.byte_size, createdAt: d.created_at }
+				: null,
 		};
 	}
 	async setProcessed(

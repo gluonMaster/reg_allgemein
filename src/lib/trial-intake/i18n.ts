@@ -3,6 +3,7 @@ import type {
 	IntakeOutboxContext,
 	WaitlistCourse,
 	WaitlistEntryStatus,
+	WaitlistStartBlock,
 	WaitlistTariff,
 } from './contracts';
 import { euroAmount } from './prices';
@@ -408,6 +409,82 @@ const text = {
 		'Büro-Benachrichtigung über eine Anmeldung zur Warteliste',
 		'Уведомление бюро о записи в лист ожидания',
 	],
+	// Course start of the waitlist (WL-10), admin only; the letters themselves are German.
+	startCourse: ['Kurs starten', 'Запустить курс'],
+	startProbeOpen: ['Probe-E-Mail vorbereiten', 'Подготовить пробное письмо'],
+	startDialogTitle: ['Kurs starten: {subject}', 'Запуск курса: {subject}'],
+	startDialogIntro: [
+		'Prüfen Sie Termin, Ort und Empfänger. Die Probe-E-Mail zeigt Ihnen E-Mail und PDF einer Familie, bevor alle Familien sie erhalten.',
+		'Проверьте дату, место и получателей. Пробное письмо покажет вам письмо и PDF одной семьи до отправки всем семьям.',
+	],
+	startFirstDate: ['Erster Termin', 'Первое занятие'],
+	startRecipients: [
+		'Empfänger: {n} Familien, {m} Kinder',
+		'Получатели: семей — {n}, детей — {m}',
+	],
+	startUnconfirmed: [
+		'Unbestätigte Anmeldungen ({n}) werden beim Start storniert.',
+		'Неподтверждённые записи ({n}) при старте будут отменены.',
+	],
+	startFamily: ['Familie für Vorschau und Probe', 'Семья для предпросмотра и пробы'],
+	startLetter: ['Text der E-Mail', 'Текст письма'],
+	startProbe: ['Probe-E-Mail an mich', 'Пробное письмо мне'],
+	startProbeSent: [
+		'Die Probe-E-Mail mit PDF ist an Ihre Adresse eingeplant. An den Anmeldungen ändert sich nichts.',
+		'Пробное письмо с PDF поставлено на отправку на ваш адрес. Записи не меняются.',
+	],
+	startChecked: ['Termin, Ort und Empfänger geprüft', 'Дата, место и получатели проверены'],
+	startConfirm: ['Start bestätigen', 'Подтвердить старт'],
+	startFinal: [
+		'Ein Start lässt sich nicht zurücknehmen, sein Termin nicht ändern. Jede Familie erhält danach ihre E-Mail mit PDF.',
+		'Старт нельзя отменить, а его дату — изменить. Затем каждая семья получит письмо с PDF.',
+	],
+	startDone: [
+		'Der Kurs ist gestartet. Die E-Mails an die Familien sind eingeplant.',
+		'Курс запущен. Письма семьям поставлены на отправку.',
+	],
+	closeDialog: ['Schließen', 'Закрыть'],
+	startBlocked: ['Start nicht möglich: {reason}', 'Старт невозможен: {reason}'],
+	startBlockStarted: ['bereits gestartet', 'уже стартовал'],
+	startBlockNotInSchedule: ['nicht im Stundenplan', 'нет в расписании'],
+	startBlockAmbiguous: ['zwei Karten desselben Kurses', 'две карточки одного курса'],
+	startBlockClosed: ['als belegt markiert', 'отмечен как укомплектованный'],
+	startBlockPriceMissing: ['Preis fehlt', 'нет цены'],
+	startBlockRenderer: ['PDF-Erzeugung nicht eingerichtet', 'формирование PDF не настроено'],
+	startBlockThreshold: ['Mindestzahl noch nicht erreicht', 'минимум участников ещё не набран'],
+	startBlockNoEntries: ['noch keine bestätigte Anmeldung', 'нет подтверждённых записей'],
+	startDateInvalid: [
+		'Dieser Termin ist nicht mehr wählbar. Bitte laden Sie die Seite neu.',
+		'Эту дату больше нельзя выбрать. Обновите страницу.',
+	],
+	startUnchecked: [
+		'Bitte bestätigen Sie, dass Termin, Ort und Empfänger geprüft sind.',
+		'Подтвердите, что дата, место и получатели проверены.',
+	],
+	statusRenameHint: [
+		'Bitte die Gruppe im Stundenplan umbenennen: Die Karte steht noch als Kurs in Planung.',
+		'Переименуйте группу в расписании: карточка всё ещё помечена как курс в планировании.',
+	],
+	adminStartLettersUnsent: [
+		'E-Mails zum Kursstart noch nicht versendet: {n}',
+		'Писем о старте ещё не отправлено: {n}',
+	],
+	adminStartLettersDead: [
+		'E-Mails zum Kursstart nicht zugestellt: {n}',
+		'Писем о старте не доставлено: {n}',
+	],
+	entryStartTitle: ['Kursstart', 'Старт курса'],
+	entryStartedAt: ['Gestartet am', 'Запущен'],
+	entryParticipants: ['Kinder beim Start', 'Детей при старте'],
+	startLetterTitle: ['E-Mail zum Kursstart', 'Письмо о старте'],
+	letterAttempts: ['Versuche: {n}', 'Попыток: {n}'],
+	letterRetry: ['Erneut senden', 'Отправить повторно'],
+	pdfView: ['PDF ansehen', 'Открыть PDF'],
+	pdfPending: [
+		'Das PDF entsteht beim ersten Versand der E-Mail.',
+		'PDF создаётся при первой отправке письма.',
+	],
+	pdfStored: ['PDF gespeichert: {date}, {size} KB', 'PDF сохранён: {date}, {size} КБ'],
 	adminTitle: ['Anfragen für Probestunden', 'Заявки на пробные занятия'],
 	adminGroups: ['Belegte Angebote', 'Укомплектованные занятия'],
 	adminGroupsIntro: [
@@ -614,6 +691,24 @@ export function entryStatusText(status: WaitlistEntryStatus, locale: Locale): st
 		)[status]
 	);
 }
+/** The reason next to a course that cannot be started or probed yet. */
+export function startBlockText(block: WaitlistStartBlock, locale: Locale): string {
+	return t(
+		locale,
+		(
+			{
+				started: 'startBlockStarted',
+				not_in_schedule: 'startBlockNotInSchedule',
+				ambiguous: 'startBlockAmbiguous',
+				closed: 'startBlockClosed',
+				price_missing: 'startBlockPriceMissing',
+				renderer: 'startBlockRenderer',
+				threshold: 'startBlockThreshold',
+				no_entries: 'startBlockNoEntries',
+			} as const
+		)[block]
+	);
+}
 /** The delivery page names a waitlist notification by its kind of request. */
 export function outboxTemplateLabel(context: IntakeOutboxContext | undefined, locale: Locale) {
 	return context && !context.deleted && context.kind === 'waitlist'
@@ -654,6 +749,16 @@ export function errorKey(code: string): TextKey {
 				WAITLIST_WITHDRAW_INVALID: 'withdrawInvalid',
 				WAITLIST_PRICE_INVALID: 'priceInvalid',
 				WAITLIST_PRICE_LOCKED: 'priceLockedError',
+				WAITLIST_START_STARTED: 'startBlockStarted',
+				WAITLIST_START_NOT_IN_SCHEDULE: 'startBlockNotInSchedule',
+				WAITLIST_START_AMBIGUOUS: 'startBlockAmbiguous',
+				WAITLIST_START_CLOSED: 'startBlockClosed',
+				WAITLIST_START_PRICE_MISSING: 'startBlockPriceMissing',
+				WAITLIST_START_RENDERER: 'startBlockRenderer',
+				WAITLIST_START_THRESHOLD: 'startBlockThreshold',
+				WAITLIST_START_NO_ENTRIES: 'startBlockNoEntries',
+				WAITLIST_START_DATE_INVALID: 'startDateInvalid',
+				WAITLIST_START_UNCHECKED: 'startUnchecked',
 				WAITLIST_IMPORT_INVALID: 'importFileInvalid',
 				WAITLIST_IMPORT_MACRO: 'importFileMacro',
 				WAITLIST_IMPORT_ENCRYPTED: 'importFileEncrypted',

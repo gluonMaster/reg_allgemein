@@ -285,3 +285,15 @@
 	clip: rect(0 0 0 0);
 	white-space: nowrap;
 }
+/* WL-10: the start letter as the families get it. */
+.intake .letter-preview {
+	border: 1px solid #d9e3e0;
+	border-radius: 0.5rem;
+	padding: 0.75rem;
+	background: #f7faf9;
+}
+.intake .letter-text {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	margin: 0;
+}

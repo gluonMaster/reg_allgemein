@@ -5,6 +5,7 @@
 	import {
 		t,
 		ageRangeLabel,
+		dayLabel,
 		entryStatusText,
 		fill,
 		formatDate,
@@ -124,6 +125,54 @@
 				<dd>{formatDate(waitlist.ageDate, locale)}</dd>
 			</dl>
 		</article>
+	{/if}
+	{#if waitlist?.start}{@const start = waitlist.start}
+		<!-- WL-10: the start with the catalog card of that moment, the letter and its PDF. -->
+		<section class="card">
+			<h3>{t(locale, 'entryStartTitle')}</h3>
+			<dl>
+				<dt>{t(locale, 'startFirstDate')}</dt>
+				<dd>
+					<strong
+						>{dayLabel(start.lesson.weekday, locale)}, {formatDate(
+							start.firstDate,
+							locale
+						)}</strong
+					>
+				</dd>
+				<dt>{t(locale, 'entryStartedAt')}</dt>
+				<dd>{formatTimestamp(start.startedAt, locale)}</dd>
+				<dt>{t(locale, 'entryParticipants')}</dt>
+				<dd>{start.participants}</dd>
+			</dl>
+			<LessonCard lesson={start.lesson} {locale} duration />
+			<h4>{t(locale, 'startLetterTitle')}</h4>
+			{#each waitlist.letters as letter (letter.id)}<p>
+					<strong>{translateAdminCode(locale, letter.status)}</strong>
+					{#if letter.sentAt}· {formatBerlinTime(locale, letter.sentAt)}{/if}
+					· {fill(t(locale, 'letterAttempts'), { n: letter.attempts })}
+					{#if letter.lastErrorCode}· <code>{letter.lastErrorCode}</code>{/if}
+					{#if letter.status === 'dead'}<button
+							type="button"
+							disabled={busy || !enhanced}
+							onclick={() => post({ retryLetter: letter.id })}
+							>{t(locale, 'letterRetry')}</button
+						>{/if}
+				</p>{/each}
+			{#if waitlist.document}<p>
+					{fill(t(locale, 'pdfStored'), {
+						date: formatTimestamp(waitlist.document.createdAt, locale),
+						size: Math.ceil(waitlist.document.byteSize / 1024),
+					})}
+				</p>
+				<a
+					class="button"
+					href={`/admin/trial-intake/${request.id}/pdf`}
+					download
+					data-sveltekit-reload>{t(locale, 'pdfView')}</a
+				>
+			{:else}<p class="muted">{t(locale, 'pdfPending')}</p>{/if}
+		</section>
 	{/if}
 	<section class="card">
 		<h3>{t(locale, 'children')}</h3>

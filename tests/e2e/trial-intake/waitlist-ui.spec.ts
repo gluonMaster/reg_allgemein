@@ -1,10 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlatformProxy } from 'wrangler';
 import plannedFixture from '../../fixtures/trial-intake/catalog-e2e-planned.json' with { type: 'json' };
 import { plannedCourseKey } from '../../../src/lib/trial-intake/planned';
 import { nextLessonDate } from '../../../src/lib/trial-intake/dates';
+import { startDates } from '../../../src/lib/trial-intake/server/waitlist-start.server';
 import type { Lesson } from '../../../src/lib/trial-intake/contracts';
 import { newE2eContext, syntheticIdentities, syntheticPassword } from '../support/authenticated';
 import { installSyntheticTurnstile } from '../support/turnstile';
@@ -19,12 +20,8 @@ async function noOverflow(page: Page) {
 		await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
 	).toBe(true);
 }
-
-test('planned card link -> waitlist form -> changed price -> confirmation by synthetic mail -> admin queue and lock -> withdrawal', async ({
-	browser,
-}, testInfo) => {
-	test.setTimeout(120_000);
-	const [lesson] = plannedFixture.lessons;
+/** The local D1 of the E2E server and a fake mailbox that drains its letters as the scheduler would. */
+async function harness(testInfo: TestInfo) {
 	const root = process.env.KOLIBRI_E2E_RUNTIME_ROOT!;
 	const proxy = await getPlatformProxy<{ DB: D1Database }>({
 		configPath: 'wrangler.e2e.toml',
@@ -32,17 +29,8 @@ test('planned card link -> waitlist form -> changed price -> confirmation by syn
 		persist: { path: join(root, 'state', 'v3') },
 		remoteBindings: false,
 	});
-	const db = proxy.env.DB;
-	const key = plannedCourseKey(lesson as Lesson);
-	const lock = () =>
-		db
-			.prepare('SELECT monthly_cents FROM trial_intake_planned_prices WHERE course_key = ?')
-			.bind(key)
-			.first<{ monthly_cents: number }>();
-	const context = await newE2eContext(browser, testInfo);
-	context.setDefaultTimeout(15_000);
-	/** Delivers queued letters with the fake provider, as the scheduler would, until ours arrives. */
 	const mailbox = new FakeEmailProvider();
+	/** Delivers queued letters until the `count`-th letter to `to` arrives. */
 	const deliver = async (to: string, count: number) => {
 		const runtime = createOutboxRuntime(
 			loadRuntimeConfig({
@@ -67,6 +55,23 @@ test('planned card link -> waitlist form -> changed price -> confirmation by syn
 		}
 		return mailbox.messages.filter((m) => m.to === to).at(count - 1)!;
 	};
+	return { proxy, db: proxy.env.DB, deliver };
+}
+
+test('planned card link -> waitlist form -> changed price -> confirmation by synthetic mail -> admin queue and lock -> withdrawal', async ({
+	browser,
+}, testInfo) => {
+	test.setTimeout(120_000);
+	const [lesson] = plannedFixture.lessons;
+	const { proxy, db, deliver } = await harness(testInfo);
+	const key = plannedCourseKey(lesson as Lesson);
+	const lock = () =>
+		db
+			.prepare('SELECT monthly_cents FROM trial_intake_planned_prices WHERE course_key = ?')
+			.bind(key)
+			.first<{ monthly_cents: number }>();
+	const context = await newE2eContext(browser, testInfo);
+	context.setDefaultTimeout(15_000);
 	const linkPath = (text: string, path: string) => {
 		const url = new URL(
 			new RegExp(`https?://\\S+?${path}\\?token=[a-f0-9]{64}`, 'u').exec(text)![0]
@@ -253,6 +258,158 @@ test('planned card link -> waitlist form -> changed price -> confirmation by syn
 		await expect(row).toContainText('sammelt: 0 von 3 Kindern');
 		await expect(row.getByLabel(/^Monatsvertrag €\/Monat: English/u)).toBeEnabled();
 		await expect(page.getByText('ausgetragen', { exact: false })).toBeVisible();
+	} finally {
+		await context.close().catch(() => {});
+		await proxy.dispose();
+	}
+});
+
+test('planned course at its threshold -> start dialog -> probe to the admin -> confirmed start -> letter with PDF -> PDF on the card', async ({
+	browser,
+}, testInfo) => {
+	test.setTimeout(120_000);
+	const [lesson] = plannedFixture.lessons;
+	const { proxy, db, deliver } = await harness(testInfo);
+	const key = plannedCourseKey(lesson as Lesson);
+	const context = await newE2eContext(browser, testInfo);
+	context.setDefaultTimeout(15_000);
+	const now = new Date().toISOString();
+	const request = crypto.randomUUID();
+	const entry = () =>
+		db
+			.prepare(
+				'SELECT status, start_id FROM trial_intake_waitlist_entries WHERE request_id = ?'
+			)
+			.bind(request)
+			.first<{ status: string; start_id: string | null }>();
+	try {
+		// One confirmed child reaches the threshold of 1; the signup itself is covered above.
+		await db
+			.prepare(
+				`INSERT INTO trial_intake_planned_prices(course_key, subject, weekday, start_time, end_time, teacher, building,
+				 room, monthly_cents, yearly_cents, min_participants, updated_by, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 6650, 5905, 1, 'e2e-admin', ?, ?)
+				 ON CONFLICT(course_key) DO UPDATE SET monthly_cents = 6650, yearly_cents = 5905, min_participants = 1`
+			)
+			.bind(
+				key,
+				lesson.subject,
+				lesson.weekday,
+				lesson.start,
+				lesson.end,
+				lesson.teacher,
+				lesson.building,
+				lesson.room,
+				now,
+				now
+			)
+			.run();
+		await db.batch([
+			db
+				.prepare(
+					`INSERT INTO trial_intake_requests(id, kind, idempotency_key, payload_hash, parent_first_name, parent_last_name,
+					 parent_last_name_search, email, phone, locale, privacy_version, state, receipt_nonce, verification_version,
+					 verification_nonce, verification_hash, verification_expires_at, last_email_at, created_at, pending_expires_at, verified_at)
+					 VALUES (?, 'waitlist', ?, 'h', 'Synthetic', 'StartParent', 'startparent', 'waitlist-start@example.test',
+					 '+49 000 123456', 'de', 'trial-intake-waitlist-retention-2026-11-05-v1', 'verified', 'n', 1, 'n', ?, ?, ?, ?, ?, ?)`
+				)
+				.bind(request, request, `hash-${request}`, now, now, now, now, now),
+			db
+				.prepare(
+					`INSERT INTO trial_intake_children(id, request_id, position, first_name, last_name, last_name_search, birth_date)
+					 VALUES (?, ?, 0, 'Jürgen', 'Größe', 'größe', '2018-03-01')`
+				)
+				.bind(crypto.randomUUID(), request),
+			db
+				.prepare(
+					`INSERT INTO trial_intake_waitlist_entries(request_id, course_key, lesson_json, tariff, monthly_cents, yearly_cents,
+					 min_participants, consent_version, withdraw_nonce, withdraw_hash, created_at, status_changed_at)
+					 VALUES (?, ?, ?, 'monthly', 6650, 5905, 1, 'trial-intake-waitlist-consent-2026-11-05-v1', ?, ?, ?, ?)`
+				)
+				.bind(
+					request,
+					key,
+					JSON.stringify(lesson),
+					crypto.randomUUID(),
+					`${request}-withdraw`,
+					now,
+					now
+				),
+		]);
+		const { dates, defaultDate } = startDates(lesson.weekday, now);
+		const page = await context.newPage();
+		await page.goto('/auth/login');
+		await page
+			.getByLabel('E-Mail-Adresse', { exact: true })
+			.fill(syntheticIdentities.admin.email);
+		await page.getByLabel('Passwort', { exact: true }).fill(syntheticPassword);
+		await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+		await page.waitForURL('**/admin/trial-intake');
+		await expect(page.getByText('Warteliste: bitte prüfen')).toBeVisible();
+		await page.goto('/admin/trial-intake/warteliste');
+		await expect(page.locator('[data-enhanced="true"]')).toBeVisible();
+		const row = page.locator('tr', { hasText: 'Lehrkraft W' }).first();
+		await expect(row).toContainText('Mindestzahl erreicht — Kurs kann gestartet werden');
+		await row.getByRole('button', { name: 'Kurs starten', exact: true }).click();
+		const dialog = page.locator('section.start-dialog');
+		await expect(dialog.getByRole('heading', { name: 'Kurs starten: English' })).toBeFocused();
+		const date = dialog.getByLabel('Erster Termin');
+		await expect(date).toHaveValue(defaultDate);
+		await expect(date.locator('option')).toHaveCount(dates.length);
+		await expect(dialog).toContainText('Empfänger: 1 Familien, 1 Kinder');
+		await expect(dialog.locator('.letter-text')).toContainText('Angemeldet: Jürgen Größe');
+		await expect(dialog.locator('.letter-text')).toContainText(
+			'Ihr Tarif: Monatsvertrag, 66,50 € pro Monat je Kind (bei Ihrer Anmeldung festgelegt)'
+		);
+		// The confirmation stays disabled until the admin ticks the check.
+		const confirm = dialog.getByRole('button', { name: 'Start bestätigen', exact: true });
+		await expect(confirm).toBeDisabled();
+		await dialog.getByRole('button', { name: 'Probe-E-Mail an mich', exact: true }).click();
+		await expect(dialog.getByRole('status')).toContainText(
+			'Die Probe-E-Mail mit PDF ist an Ihre Adresse eingeplant.'
+		);
+		const probe = await deliver(syntheticIdentities.admin.email, 1);
+		expect(probe.subject).toMatch(/^\[PROBE\] Ihr Kurs English beginnt am /u);
+		expect(probe.attachments?.[0].filename).toMatch(
+			/^Anmeldebestaetigung-English-\d{2}\.\d{2}\.\d{4}\.pdf$/u
+		);
+		expect(new TextDecoder().decode(probe.attachments![0].content.slice(0, 5))).toBe('%PDF-');
+		expect(await entry()).toEqual({ status: 'waiting', start_id: null });
+		await page.screenshot({
+			path: 'tmp/trial-intake-waitlist-start-dialog.png',
+			fullPage: true,
+		});
+
+		await dialog.getByLabel('Termin, Ort und Empfänger geprüft').check();
+		await confirm.click();
+		await expect(dialog.getByRole('status')).toContainText('Der Kurs ist gestartet.');
+		const shown = new Intl.DateTimeFormat('de-DE', {
+			timeZone: 'Europe/Berlin',
+			dateStyle: 'medium',
+		}).format(new Date(defaultDate));
+		await expect(row).toContainText(`gestartet: erster Termin ${shown}`);
+		await expect(row).toContainText('Bitte die Gruppe im Stundenplan umbenennen');
+		await expect(row.getByRole('button', { name: 'Kurs starten', exact: true })).toHaveCount(0);
+		expect((await entry())!.status).toBe('started');
+		const letter = await deliver('waitlist-start@example.test', 1);
+		expect(letter.subject).toContain('Ihr Kurs English beginnt am');
+		expect(letter.attachments).toHaveLength(1);
+
+		await page.goto(`/admin/trial-intake/${request}`);
+		await expect(page.getByRole('heading', { name: 'Kursstart', exact: true })).toBeVisible();
+		await expect(page.getByText('Versuche: 1', { exact: false })).toBeVisible();
+		const href = await page.getByRole('link', { name: 'PDF ansehen' }).getAttribute('href');
+		const response = await page.request.get(href!);
+		expect(response.status()).toBe(200);
+		expect(response.headers()['content-type']).toBe('application/pdf');
+		expect(response.headers()['cache-control']).toBe('no-store');
+		expect((await response.body()).subarray(0, 5).toString()).toBe('%PDF-');
+		await noOverflow(page);
+		// The public page of the started course says so.
+		await page.goto(`/warteliste?lesson=${lesson.id}`);
+		await expect(
+			page.getByText('Dieser Kurs ist bereits gestartet', { exact: false })
+		).toBeVisible();
 	} finally {
 		await context.close().catch(() => {});
 		await proxy.dispose();

@@ -98,6 +98,35 @@ export interface WaitlistAttention {
 		WaitlistCourse,
 		'key' | 'course' | 'status' | 'children' | 'price' | 'firstDate' | 'activeEntries'
 	>[];
+	/** Start letters still on their way or given up (WL-10). */
+	startLetters: { unsent: number; dead: number };
+}
+/** Why a course cannot be started, or a probe letter cannot be sent, right now (WL-10). */
+export type WaitlistStartBlock =
+	| 'started'
+	| 'not_in_schedule'
+	| 'ambiguous'
+	| 'closed'
+	| 'price_missing'
+	| 'renderer'
+	| 'threshold'
+	| 'no_entries';
+/** The start dialog of a planned course on the admin waitlist page. */
+export interface WaitlistStartOptions {
+	/** The next eight allowed dates of the weekday from tomorrow. */
+	dates: string[];
+	/** The first of them at least seven days ahead. */
+	defaultDate: string;
+	start: WaitlistStartBlock | null;
+	probe: WaitlistStartBlock | null;
+}
+/** A start or probe letter of a waitlist signup as its admin card shows it. */
+export interface WaitlistLetterStatus {
+	id: string;
+	status: string;
+	attempts: number;
+	lastErrorCode: string | null;
+	sentAt: string | null;
 }
 export interface CatalogData {
 	lessons: Lesson[];
@@ -154,6 +183,8 @@ export interface WaitlistCourse {
 	status: WaitlistStatus | null;
 	/** Confirmed signups of the course; filled only on the admin waitlist page. */
 	entries?: WaitlistEntrySummary[];
+	/** Filled only on the admin waitlist page for a course with a planned card. */
+	start?: WaitlistStartOptions;
 }
 export interface AdminWaitlistData {
 	courses: WaitlistCourse[];
@@ -294,6 +325,12 @@ export interface AdminWaitlistEntry {
 	statusChangedAt: string;
 	/** The lesson date the age was checked against at signup. */
 	ageDate: string;
+	/** The course start that took this signup, with the catalog card of that moment. */
+	start: { firstDate: string; startedAt: string; participants: number; lesson: Lesson } | null;
+	/** Start letters of this family; probes go to the admin and are not listed. */
+	letters: WaitlistLetterStatus[];
+	/** The stored PDF of the start letter, once it was rendered. */
+	document: { sha256: string; byteSize: number; createdAt: string } | null;
 }
 export interface AdminDetailData {
 	waitlist: AdminWaitlistEntry | null;

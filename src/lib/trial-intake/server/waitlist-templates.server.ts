@@ -9,15 +9,17 @@ import type { IntakeDetail, WaitlistEntry } from './model.server';
 import {
 	BUILDING_ADDRESS,
 	DAYS,
+	OFFICE_HOURS,
 	ORGANIZATION_PHONE,
 	buildingLabel,
+	germanDate,
 	htmlMessage,
 	splitTelegram,
 } from './templates.server';
 
 // Letters and the Telegram notification of a waitlist signup: approved texts of
 // TRIAL_INTAKE_WAITLIST "Texte" (OQ-050), German only. The sum always comes from the snapshot.
-const TARIFF = { monthly: 'Monatsvertrag', yearly: 'Jahresvertrag' } as const;
+export const TARIFF = { monthly: 'Monatsvertrag', yearly: 'Jahresvertrag' } as const;
 type Entry = Pick<
 	WaitlistEntry,
 	'lesson_json' | 'tariff' | 'monthly_cents' | 'yearly_cents' | 'min_participants' | 'created_at'
@@ -43,7 +45,51 @@ function ageMismatches(detail: IntakeDetail, entry: Entry) {
 			: [{ child, index, fit, label: ageRangeLabel(range, 'de') }];
 	});
 }
-const childName = (c: IntakeDetail['children'][number]) => `${c.first_name} ${c.last_name}`;
+export const childName = (c: Pick<IntakeDetail['children'][number], 'first_name' | 'last_name'>) =>
+	`${c.first_name} ${c.last_name}`;
+/**
+ * The sum of the start letter and the PDF, per child and month (WL-06 item 5): the snapshot of
+ * the signup. The rebind of stage 04 adds the sum a family confirmed by phone.
+ */
+export function startSum(entry: Pick<Entry, 'tariff' | 'monthly_cents' | 'yearly_cents'>) {
+	return { cents: entryCents(entry) };
+}
+/** Time and place of a start: the catalog card at that moment, the first date chosen by the admin. */
+export interface StartLesson {
+	lesson: Lesson;
+	firstDate: string;
+}
+/**
+ * WL-09 letter 3: first date, place, children, tariff and sum, the office visit, the PDF attached.
+ * A probe (letter 4) is the same letter to the signed-in admin with "[PROBE]" in the subject.
+ */
+export function waitlistStartEmail(
+	detail: Pick<IntakeDetail, 'request' | 'children'>,
+	entry: Pick<Entry, 'tariff' | 'monthly_cents' | 'yearly_cents'>,
+	start: StartLesson,
+	probeTo?: string
+): EmailMessage {
+	const { lesson } = start;
+	const date = germanDate(start.firstDate);
+	const message: EmailMessage = {
+		to: probeTo ?? detail.request.email,
+		subject: `${probeTo ? '[PROBE] ' : ''}Ihr Kurs ${lesson.subject} beginnt am ${date} — ${ORGANIZATION_NAME}`,
+		text:
+			`Gute Nachricht: Für den Kurs ${lesson.subject} haben sich genügend Kinder angemeldet. Der Kurs findet statt.\n\n` +
+			[
+				`Erster Termin: ${DAYS[lesson.weekday]}, ${date}, ${lesson.start}–${lesson.end}`,
+				`Ort: ${buildingLabel(lesson.building)}, ${BUILDING_ADDRESS[lesson.building] ?? ''}, Raum ${lesson.room}`,
+				`Angemeldet: ${detail.children.map(childName).join(', ')}`,
+				`Ihr Tarif: ${TARIFF[entry.tariff]}, ${euroAmount(startSum(entry).cents)} € pro Monat je Kind (bei Ihrer Anmeldung festgelegt)`,
+			].join('\n') +
+			`\n\nWichtig: Bitte kommen Sie bis zum ersten Termin am ${date} in unser Büro in der Villa der Kulturen (${BUILDING_ADDRESS.Villa}) und schließen Sie den Vertrag ab. Bürozeiten: ${OFFICE_HOURS}. Die Teilnahme am Kurs ist erst mit unterschriebenem Vertrag möglich.\n\n` +
+			'Im Anhang finden Sie die Bestätigung Ihrer Anmeldung und Ihrer Zahlungszusage. Bitte bringen Sie sie unterschrieben mit.\n\n' +
+			'Bei Bedarf melden wir uns bei Ihnen.\n\n' +
+			`Tel. ${ORGANIZATION_PHONE}\n${ORGANIZATION_NAME}`,
+	};
+	message.html = htmlMessage(message.text);
+	return message;
+}
 
 export function waitlistVerificationEmail(
 	detail: IntakeDetail,

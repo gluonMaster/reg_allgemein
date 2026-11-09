@@ -16,6 +16,12 @@ import {
 import { ORGANIZATION_NAME } from '$lib/organization';
 import { readEntry, withdrawToken } from './waitlist-core.server';
 import { waitlistConfirmationEmail, waitlistVerificationEmail } from './waitlist-templates.server';
+import {
+	WAITLIST_LETTER_FROM,
+	WAITLIST_LETTER_SOURCE,
+	WAITLIST_LETTER_VALID,
+	renderWaitlistLetter,
+} from './waitlist-pdf.server';
 
 const valid = `((o.kind = 'verification' AND r.state = 'pending_email' AND r.pending_expires_at > ?
  AND r.verification_expires_at > ? AND r.verification_version = o.verification_version)
@@ -24,6 +30,7 @@ const valid = `((o.kind = 'verification' AND r.state = 'pending_email' AND r.pen
 function intakeEmailTable(id: string) {
 	if (id.startsWith('intake-email:')) return 'trial_intake_email_outbox';
 	if (id.startsWith('intake-alert:')) return 'trial_intake_telegram_alerts';
+	if (id.startsWith('intake-wl:')) return 'trial_intake_waitlist_email_outbox';
 	return null;
 }
 export class IntakeEmailStore extends OutboxRepository {
@@ -60,7 +67,16 @@ export class IntakeEmailStore extends OutboxRepository {
 		 WHERE (o.status IN ('pending','retry') OR (o.status = 'processing' AND o.lease_until <= ?)) AND NOT (${valid}) LIMIT ?)`,
 			params: [now, now, now, now, now, limit],
 		});
-		return old + changed.meta.changes;
+		// A start letter whose signup was deleted, or a probe whose admin lost the role.
+		const waitlist = await this.intakeDb.run({
+			sql: `UPDATE trial_intake_waitlist_email_outbox SET status = 'cancelled', lease_owner = NULL, lease_until = NULL, updated_at = ?
+		 WHERE id IN (SELECT o.id FROM trial_intake_waitlist_email_outbox o LEFT JOIN trial_intake_requests r ON r.id = o.request_id
+		 LEFT JOIN trial_intake_waitlist_entries e ON e.request_id = o.request_id
+		 WHERE (o.status IN ('pending','retry') OR (o.status = 'processing' AND o.lease_until <= ?))
+		 AND (r.id IS NULL OR e.request_id IS NULL OR NOT (${WAITLIST_LETTER_VALID})) LIMIT ?)`,
+			params: [now, now, now, limit],
+		});
+		return old + changed.meta.changes + waitlist.meta.changes;
 	}
 	override async claimEmail(input: OutboxClaimInput): Promise<EmailOutboxRow | null> {
 		// Admin authentication mail keeps its original store/guards and takes precedence.
@@ -89,7 +105,7 @@ export class IntakeEmailStore extends OutboxRepository {
 				input.now,
 			],
 		});
-		if (!row) return this.claimTelegramAlert(input);
+		if (!row) return (await this.claimTelegramAlert(input)) ?? this.claimWaitlistLetter(input);
 		const r = await this.intakeDb.first<{ email: string }>({
 			sql: 'SELECT email FROM trial_intake_requests WHERE id = ?',
 			params: [row.request_id],
@@ -138,6 +154,64 @@ export class IntakeEmailStore extends OutboxRepository {
 			attempts: row.attempts,
 			max_attempts: row.max_attempts,
 			email: BUREAU_ALERT_EMAIL,
+			token_id: null,
+			token_kind: null,
+			lease_owner: input.leaseOwner,
+		};
+	}
+	/** Start letters and admin probes of the waitlist come after every existing source. */
+	private async claimWaitlistLetter(input: OutboxClaimInput): Promise<EmailOutboxRow | null> {
+		const row = await this.intakeDb.first<{
+			id: string;
+			kind: 'start' | 'probe';
+			request_id: string;
+			probe_recipient_user_id: string | null;
+			dedupe_key: string;
+			attempts: number;
+			max_attempts: number;
+		}>({
+			sql: `UPDATE trial_intake_waitlist_email_outbox SET status = 'processing', lease_owner = ?, lease_until = ?, updated_at = ?
+		 WHERE id = (SELECT o.id FROM ${WAITLIST_LETTER_FROM}
+		 WHERE ((o.status IN ('pending','retry') AND (o.next_attempt_at IS NULL OR o.next_attempt_at <= ?)) OR (o.status = 'processing' AND o.lease_until <= ?))
+		 AND ${WAITLIST_LETTER_VALID} ORDER BY o.created_at, o.id LIMIT 1)
+		 RETURNING id, kind, request_id, probe_recipient_user_id, dedupe_key, attempts, max_attempts`,
+			params: [
+				input.leaseOwner,
+				input.leaseUntil,
+				input.now,
+				input.now,
+				input.now,
+				input.now,
+			],
+		});
+		if (!row) return null;
+		// A probe goes to the signed-in admin who asked for it, never to the family.
+		const recipient = await this.intakeDb.first<{ email: string }>(
+			row.kind === 'start'
+				? {
+						sql: 'SELECT email FROM trial_intake_requests WHERE id = ?',
+						params: [row.request_id],
+					}
+				: {
+						sql: 'SELECT email FROM users WHERE id = ?',
+						params: [row.probe_recipient_user_id],
+					}
+		);
+		if (!recipient) return null;
+		return {
+			id: row.id,
+			source_kind: WAITLIST_LETTER_SOURCE,
+			source_id: row.request_id,
+			template_or_category:
+				row.kind === 'start' ? 'intake.waitlist_start' : 'intake.waitlist_probe',
+			recipient_address_kind: 'guest',
+			user_id: null,
+			locale: 'de',
+			payload_json: '{}',
+			dedupe_key: row.dedupe_key,
+			attempts: row.attempts,
+			max_attempts: row.max_attempts,
+			email: recipient.email,
 			token_id: null,
 			token_kind: null,
 			lease_owner: input.leaseOwner,
@@ -200,6 +274,8 @@ export async function renderIntakeEmail(
 		};
 	}
 	const row = input.row;
+	if (row.source_kind === WAITLIST_LETTER_SOURCE)
+		return renderWaitlistLetter(service.db, row, input.now);
 	if (row.template_or_category === 'intake.telegram_alert') {
 		if (row.source_kind !== 'trial_intake_alert')
 			throw new OutboxTemplateError('INTAKE_EMAIL_INVALID');

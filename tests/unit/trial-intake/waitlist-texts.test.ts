@@ -3,9 +3,15 @@ import { euroAmount } from '$lib/trial-intake/prices';
 import { fill, t, waitlistConsentText } from '$lib/trial-intake/i18n';
 import {
 	waitlistConfirmationEmail,
+	waitlistStartEmail,
 	waitlistTelegramParts,
 	waitlistVerificationEmail,
 } from '$lib/trial-intake/server/waitlist-templates.server';
+import {
+	documentFileName,
+	documentReference,
+	waitlistDocumentHtml,
+} from '$lib/trial-intake/server/waitlist-pdf.server';
 import type { IntakeDetail } from '$lib/trial-intake/server/model.server';
 
 // Approved texts of TRIAL_INTAKE_WAITLIST "Тексты" (OQ-050): these tests pin them verbatim.
@@ -152,5 +158,123 @@ describe('waitlist texts (OQ-050)', () => {
 			'Neue Anmeldung zur Warteliste',
 		]);
 		expect(reached.split('\n').at(-1)).toBe('Warteliste: 3 von 3 Kindern');
+	});
+});
+
+describe('waitlist start letter and PDF document (OQ-050, WL-11)', () => {
+	const start = { lesson: { ...lesson, room: 'R7' }, firstDate: '2026-09-29' };
+	const request = {
+		...detail.request,
+		id: '5f0c3a4e-1111-4222-8333-944455556666',
+		parent_first_name: 'Ünal',
+		parent_last_name: "O'Brien & <Söhne>",
+		email: 'guest@example.test',
+		created_at: '2026-09-16T12:00:00.000Z',
+		verified_at: '2026-09-16T12:05:00.000Z',
+	};
+	it('writes the start letter verbatim with the sum of the snapshot; a probe goes to the admin', () => {
+		const letter = waitlistStartEmail(detail, entry, start);
+		expect(letter.to).toBe('guest@example.test');
+		expect(letter.subject).toBe(`Ihr Kurs 1 E beginnt am 29.09.2026 — ${ORGANIZATION_NAME}`);
+		expect(letter.text).toBe(
+			[
+				'Gute Nachricht: Für den Kurs 1 E haben sich genügend Kinder angemeldet. Der Kurs findet statt.',
+				'',
+				'Erster Termin: Dienstag, 29.09.2026, 16:00–16:45',
+				`Ort: ${ORGANIZATION_NAME}, Ritzenbergstraße 3 • 01067 Dresden, Raum R7`,
+				'Angemeldet: Jörg Muster, Иван Тестов',
+				'Ihr Tarif: Jahresvertrag, 59,05 € pro Monat je Kind (bei Ihrer Anmeldung festgelegt)',
+				'',
+				'Wichtig: Bitte kommen Sie bis zum ersten Termin am 29.09.2026 in unser Büro in der Villa der Kulturen (Kraftwerk Mitte 2 • 01067 Dresden) und schließen Sie den Vertrag ab. Bürozeiten: Mo–Fr 9–18 Uhr, Sa 9–14 Uhr. Die Teilnahme am Kurs ist erst mit unterschriebenem Vertrag möglich.',
+				'',
+				'Im Anhang finden Sie die Bestätigung Ihrer Anmeldung und Ihrer Zahlungszusage. Bitte bringen Sie sie unterschrieben mit.',
+				'',
+				'Bei Bedarf melden wir uns bei Ihnen.',
+				'',
+				'Tel. +49 179 9474938',
+				ORGANIZATION_NAME,
+			].join('\n')
+		);
+		const probe = waitlistStartEmail(detail, entry, start, 'admin@example.test');
+		expect(probe.to).toBe('admin@example.test');
+		expect(probe.subject).toBe(`[PROBE] ${letter.subject}`);
+		expect(probe.text).toBe(letter.text);
+	});
+	it('builds a self-contained A4 document with every element of WL-11, all fields escaped', async () => {
+		const reference = await documentReference({ withdraw_nonce: 'synthetic-nonce' });
+		expect(reference).toMatch(/^WL-[0-9A-F]{4}-[0-9A-F]{4}$/u);
+		const html = waitlistDocumentHtml({
+			reference,
+			createdAt: '2026-09-17T08:00:00.000Z',
+			request,
+			children: detail.children,
+			entry,
+			start,
+		});
+		// The Browser Run adapter refuses scripts and external URLs; the fonts are inline.
+		expect(html).not.toMatch(/<script/iu);
+		expect(html).not.toMatch(/(?:src|href)\s*=\s*["'](?:https?:)?\/\//iu);
+		const outsideFonts = html.replace(/data:font\/woff;base64,[A-Za-z0-9+/=]+/gu, '');
+		expect(outsideFonts).not.toMatch(/https?:|\/\/|url\((?!'')/iu);
+		expect(html).toContain('@page { size: A4;');
+		expect(
+			html.match(
+				/@font-face \{ font-family: 'Kolibri Document'; src: url\('data:font\/woff;base64,/gu
+			)
+		).toHaveLength(2);
+		expect(html).toContain('font-weight: 700');
+		// Names with umlauts and Cyrillic arrive as text; markup in a name is escaped.
+		expect(html).toContain('Ünal O&#39;Brien &amp; &lt;Söhne&gt;');
+		expect(html).not.toContain('<Söhne>');
+		const text = html.replace(/<style>[\s\S]*<\/style>/u, '').replace(/<[^>]+>/gu, ' ');
+		for (const part of [
+			ORGANIZATION_NAME.replaceAll('"', '&quot;'),
+			'Ritzenbergstraße 3 • 01067 Dresden',
+			'Villa der Kulturen, Kraftwerk Mitte 2 • 01067 Dresden',
+			'Tel. +49 179 9474938',
+			'registration@kolibri-dresden.de',
+			'Bestätigung der Anmeldung und Zahlungszusage',
+			'Kurs 1 E — Beginn am 29.09.2026',
+			`Nr. ${reference} · Erstellt am 17.09.2026`,
+			'Erziehungsberechtigte(r)',
+			'guest@example.test',
+			'+49 000000000',
+			'Angemeldete Kinder',
+			'Jörg Muster, geboren am 01.05.2020',
+			'Иван Тестов, geboren am 01.01.2018',
+			'Dienstag, 16:00–16:45 (45 Minuten)',
+			'Erster Termin: Dienstag, 29.09.2026',
+			'Ritzenbergstraße 3 • 01067 Dresden, Raum R7',
+			'Lehrkraft: Lehrkraft A',
+			'Tarif: Jahresvertrag',
+			'59,05 € pro Monat je Kind',
+			'Dieser Betrag wurde bei Ihrer Anmeldung am 16.09.2026 festgelegt.',
+			'Sie haben sich am 16.09.2026, 14:00 Uhr auf der Warteliste angemeldet und die Anmeldung am 16.09.2026, 14:05 Uhr über den Link in unserer E-Mail bestätigt. Dabei haben Sie folgender Erklärung zugestimmt:',
+			waitlistConsentText('de', 'yearly', 5905, 2),
+			'Nächster Schritt',
+			'Bitte kommen Sie bis zum ersten Termin am 29.09.2026 in unser Büro in der Villa der Kulturen, Kraftwerk Mitte 2 • 01067 Dresden, und schließen Sie den Vertrag ab. Bürozeiten: Mo–Fr 9–18 Uhr, Sa 9–14 Uhr. Bringen Sie dieses Schreiben unterschrieben mit. Die Teilnahme am Kurs ist erst mit unterschriebenem Vertrag möglich.',
+			'Ort, Datum',
+			'Unterschrift Erziehungsberechtigte(r)',
+			'Dieses Dokument ist kein Vertrag. Der Vertrag kommt erst mit Ihrer Unterschrift in unserem Büro zustande. Das Dokument bestätigt Ihre Anmeldung und Ihre Zusage, den oben genannten Beitrag zu zahlen.',
+		])
+			expect(text).toContain(part);
+		expect(html).not.toContain(request.id);
+	});
+	it('names the file in ASCII with subject and first date', () => {
+		expect(documentFileName('English', '2026-09-29')).toBe(
+			'Anmeldebestaetigung-English-29.09.2026.pdf'
+		);
+		expect(documentFileName('Früh-Förderung ß', '2026-09-29')).toBe(
+			'Anmeldebestaetigung-Frueh-Foerderung-ss-29.09.2026.pdf'
+		);
+		expect(documentFileName('Crème Café', '2026-10-06')).toBe(
+			'Anmeldebestaetigung-Creme-Cafe-06.10.2026.pdf'
+		);
+		expect(documentFileName('Русский', '2026-10-06')).toBe(
+			'Anmeldebestaetigung-Kurs-06.10.2026.pdf'
+		);
+		expect(documentFileName('1 E', '2026-10-06')).toBe(
+			'Anmeldebestaetigung-1-E-06.10.2026.pdf'
+		);
 	});
 });

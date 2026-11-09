@@ -210,6 +210,10 @@ export class WaitlistPrices {
 		await requireActiveAdmin(this.db, user);
 		return this.compute(lessons);
 	}
+	/** The planned course of `key` in the current schedule with its status; callers check the admin. */
+	async course(lessons: readonly Lesson[], key: string): Promise<WaitlistCourse | undefined> {
+		return (await this.compute(lessons)).courses.find((course) => course.key === key);
+	}
 	private audit(
 		actor: AdminActor,
 		action: string,

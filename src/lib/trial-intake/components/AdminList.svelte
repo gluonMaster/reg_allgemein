@@ -95,7 +95,7 @@
 		</section>
 	{/if}
 	<!-- WL-07: waitlist events that need the admin; otherwise one compact line. -->
-	{#if data.waitlist.attention.length}
+	{#if data.waitlist.attention.length || data.waitlist.startLetters.unsent || data.waitlist.startLetters.dead}
 		<section class="card highlight">
 			<h3>{t(locale, 'adminWaitlistAttention')}</h3>
 			<ul>
@@ -106,6 +106,18 @@
 						)}
 						{course.course.start}: {waitlistStatusText(course, locale)}
 					</li>{/each}
+				{#if data.waitlist.startLetters.unsent}<li>
+						{fill(t(locale, 'adminStartLettersUnsent'), {
+							n: data.waitlist.startLetters.unsent,
+						})}
+					</li>{/if}
+				{#if data.waitlist.startLetters.dead}<li>
+						<strong
+							>{fill(t(locale, 'adminStartLettersDead'), {
+								n: data.waitlist.startLetters.dead,
+							})}</strong
+						>
+					</li>{/if}
 			</ul>
 			<a class="button" href="/admin/trial-intake/warteliste"
 				>{t(locale, 'adminWaitlistAttentionLink')}</a

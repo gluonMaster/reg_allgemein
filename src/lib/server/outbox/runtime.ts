@@ -19,22 +19,42 @@ import { IntakeEmailStore, renderIntakeEmail } from '$lib/trial-intake/server/em
 import { IntakeService } from '$lib/trial-intake/server/service.server';
 import { renderIntakeTelegram } from '$lib/trial-intake/server/templates.server';
 import { renderTelegramTemplate } from './templates';
+import type { ContractPdfAdapter } from '$lib/server/contracts/pdf';
+import {
+	WaitlistAttachmentResolver,
+	waitlistPdfAdapter,
+} from '$lib/trial-intake/server/waitlist-pdf.server';
 
 export function createOutboxRuntime(
 	config: RuntimeConfig,
-	overrides: { emailProvider?: EmailProvider; telegramProvider?: TelegramProvider } = {}
+	overrides: {
+		emailProvider?: EmailProvider;
+		telegramProvider?: TelegramProvider;
+		/** Trial-intake mode: replaces the PDF renderer of the waitlist start letters. */
+		waitlistPdfAdapter?: ContractPdfAdapter | null;
+	} = {}
 ) {
 	const database = new DatabaseBoundary(config.db);
 	const intake = config.portalMode === 'trial_intake';
 	const repository = intake ? new IntakeEmailStore(database) : new OutboxRepository(database);
-	const intakeService = intake ? new IntakeService(database, config.jwtSecret!, config.messaging.telegramSchedule) : null;
-	const attachmentResolver = config.r2ArchiveBucket
-		? new ContractEmailAttachmentResolver(
+	const intakeService = intake
+		? new IntakeService(database, config.jwtSecret!, config.messaging.telegramSchedule)
+		: null;
+	// Trial-intake mode attaches only the PDF of the waitlist start letters (ADR-032).
+	const attachmentResolver = intake
+		? new WaitlistAttachmentResolver(
 				database,
-				contractArtifactStore(config.r2ArchiveBucket),
-				config.contracts.maxPdfBytes
+				overrides.waitlistPdfAdapter === undefined
+					? waitlistPdfAdapter(config)
+					: overrides.waitlistPdfAdapter
 			)
-		: undefined;
+		: config.r2ArchiveBucket
+			? new ContractEmailAttachmentResolver(
+					database,
+					contractArtifactStore(config.r2ArchiveBucket),
+					config.contracts.maxPdfBytes
+				)
+			: undefined;
 	const emailProvider =
 		overrides.emailProvider ??
 		(config.messaging.emailProvider === 'fake'
@@ -85,8 +105,12 @@ export function createOutboxRuntime(
 			telegramTiming,
 			undefined,
 			undefined,
-			intake ? (input) => input.row.template_or_category === 'bureau.trial_intake'
-				? renderIntakeTelegram(database, input) : renderTelegramTemplate(input) : undefined
+			intake
+				? (input) =>
+						input.row.template_or_category === 'bureau.trial_intake'
+							? renderIntakeTelegram(database, input)
+							: renderTelegramTemplate(input)
+				: undefined
 		),
 	};
 }

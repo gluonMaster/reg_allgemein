@@ -8,10 +8,15 @@ import { ageFit, lessonAgeRange } from '../age';
 import { ageRangeLabel } from '../i18n';
 
 export const buildingLabel = (key: string) => (key === 'Kolibri' ? ORGANIZATION_NAME : key);
-import { BUILDING_ADDRESS, ORGANIZATION_PHONE } from '../organization';
-export { BUILDING_ADDRESS, ORGANIZATION_PHONE };
+import {
+	BUILDING_ADDRESS,
+	OFFICE_HOURS,
+	ORGANIZATION_EMAIL,
+	ORGANIZATION_PHONE,
+} from '../organization';
+export { BUILDING_ADDRESS, OFFICE_HOURS, ORGANIZATION_EMAIL, ORGANIZATION_PHONE };
 /** Owner decision 2026-09-24: the bureau mailbox learns when Telegram did not take a notification. */
-export const BUREAU_ALERT_EMAIL = 'registration@kolibri-dresden.de';
+export const BUREAU_ALERT_EMAIL = ORGANIZATION_EMAIL;
 export const DAYS = [
 	'',
 	'Montag',

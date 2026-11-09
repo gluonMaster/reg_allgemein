@@ -81,6 +81,8 @@ describe('trial intake mode and HTTP boundaries', () => {
 			'/admin/trial-intake/warteliste/preise.csv',
 			'/admin/trial-intake/warteliste/preise.xlsx',
 			'/admin/trial-intake/warteliste/import',
+			'/admin/trial-intake/warteliste/start',
+			'/admin/trial-intake/[id]/pdf',
 			'/admin/operations',
 			'/warteliste',
 			'/warteliste/submit',

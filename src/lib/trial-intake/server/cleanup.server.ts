@@ -3,7 +3,9 @@ import { OutboxRepository } from '$lib/server/outbox/outbox-repository';
 import { IntakeEmailStore } from './email-store.server';
 
 const due = `((r.state = 'pending_email' AND r.pending_expires_at <= ?) OR (r.state = 'processed' AND r.delete_after <= ?))`;
+// A letter in dispatch keeps its request; unsent waitlist letters and the PDF go with it (0032 cascade).
 const idle = `NOT EXISTS(SELECT 1 FROM trial_intake_email_outbox e WHERE e.request_id = r.id AND e.status = 'processing')
+ AND NOT EXISTS(SELECT 1 FROM trial_intake_waitlist_email_outbox w WHERE w.request_id = r.id AND w.status = 'processing')
  AND NOT EXISTS(SELECT 1 FROM telegram_outbox t WHERE t.source_kind = 'trial_intake' AND t.source_id = r.id AND t.status = 'processing')`;
 export async function cleanupIntake(db: DatabaseBoundary, now: string, limit = 50) {
 	if (!Number.isInteger(limit) || limit < 1 || limit > 100)

@@ -32,6 +32,13 @@ activation cutoff согласно существующему outbox config. Д�
 проверять по D1 query budget фактического плана. Create использует постоянное
 число запросов даже для 10×10 назначений.
 
+Binding `BROWSER` (Browser Run) нужен листу ожидания: PDF письма о старте и пробного
+письма ([ADR-032](../../docs/architecture/DECISIONS.md)). Без него приём и запись в лист
+работают, а «Kurs starten» и пробная отправка закрыты причиной «PDF-Erzeugung nicht
+eingerichtet». Дневной лимит — `BROWSER_RUN_DAILY_BUDGET_MS` (по умолчанию 60 000 мс);
+расход считается в D1 без данных семей. Production config меняется только на этапе
+выпуска листа ожидания.
+
 Automatic Workers request logs/traces выключены: invocation metadata может
 содержать URL с verification/reset token
 ([Cloudflare Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/)).

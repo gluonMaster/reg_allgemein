@@ -12,12 +12,14 @@
 		fill,
 		formatTimestamp,
 		importReasonKey,
+		startBlockText,
 		tariffLabel,
 		waitlistStatusText,
 		type TextKey,
 	} from '../i18n';
 	import { centsText, MIN_PARTICIPANTS_DEFAULT } from '../prices';
 	import { requestJson } from '../client';
+	import WaitlistStartDialog from './WaitlistStartDialog.svelte';
 	import type {
 		AdminWaitlistData,
 		WaitlistCourse,
@@ -35,6 +37,9 @@
 		notice = $state<string | null>(null),
 		preview = $state<WaitlistImportPreview | null>(null),
 		fileInput = $state<HTMLInputElement>();
+	// The course whose start dialog is open (WL-10).
+	let starting = $state<string | null>(null);
+	const startCourse = $derived(data.courses.find((course) => course.key === starting));
 	// Only what the admin typed; everything else shows the stored values.
 	let edits = $state<Record<string, Partial<Record<Field, string>>>>({});
 	onMount(() => {
@@ -151,6 +156,9 @@
 		{#if course.status === 'ambiguous'}<br /><span class="muted"
 				>{t(locale, 'adminWaitlistAmbiguous')}</span
 			>{/if}
+		{#if course.status === 'started' && course.lessons.length}<br /><span class="muted"
+				>{t(locale, 'statusRenameHint')}</span
+			>{/if}
 	</td>
 	<td>{lock(course)}</td>
 {/snippet}
@@ -243,6 +251,28 @@
 									disabled={busy || !enhanced}
 									onclick={() => save(course)}>{t(locale, 'save')}</button
 								>
+								{#if course.start}{@const options = course.start}
+									{#if !options.start}<button
+											class="primary"
+											type="button"
+											disabled={!enhanced}
+											onclick={() => (starting = course.key)}
+											>{t(locale, 'startCourse')}</button
+										>
+									{:else}
+										{#if options.start !== 'started'}<span class="muted"
+												>{fill(t(locale, 'startBlocked'), {
+													reason: startBlockText(options.start, locale),
+												})}</span
+											>{/if}
+										{#if !options.probe}<button
+												type="button"
+												disabled={!enhanced}
+												onclick={() => (starting = course.key)}
+												>{t(locale, 'startProbeOpen')}</button
+											>{/if}
+									{/if}
+								{/if}
 							</td>
 						</tr>
 						{@render entries(course)}
@@ -250,6 +280,13 @@
 				</tbody>
 			</table>
 		</div>
+		{#if startCourse?.start}{#key startCourse.key}<WaitlistStartDialog
+					course={startCourse}
+					options={startCourse.start}
+					csrfToken={data.csrfToken}
+					{locale}
+					onclose={() => (starting = null)}
+				/>{/key}{/if}
 	{/if}
 	{#if data.unscheduled.length}
 		<div class="card">

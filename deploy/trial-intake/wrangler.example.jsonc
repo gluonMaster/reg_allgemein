@@ -11,6 +11,9 @@
   "observability": { "enabled": false, "logs": { "enabled": false, "invocation_logs": false }, "traces": { "enabled": false } },
   "triggers": { "crons": ["* * * * *", "*/15 * * * *"] },
   "d1_databases": [{ "binding": "DB", "database_name": "kolibri-trial-intake", "database_id": "REPLACE_WITH_NEW_D1_ID", "migrations_dir": "../../migrations" }],
+  // Browser Run for the PDF of the waitlist start letters (ADR-032); the daily budget is
+  // BROWSER_RUN_DAILY_BUDGET_MS, 60000 by default.
+  "browser": { "binding": "BROWSER" },
   "vars": {
     "APP_ENV": "production",
     "PORTAL_MODE": "trial_intake",
