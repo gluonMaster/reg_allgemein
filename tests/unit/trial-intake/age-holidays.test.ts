@@ -232,10 +232,10 @@ describe('trial intake submission rules for holidays and age', () => {
 			'Hinweis: Anna Synthetic ist am Wunschtermin älter als für diese Gruppe vorgesehen (5–6 Jahre).'
 		);
 		expect(telegramParts(detail).join('\n')).toContain(
-			'Alter: Kind 1 älter als die Gruppe (5–6 Jahre), Hinweis bestätigt'
+			'⚠️ <b>Anna ist älter als die Gruppe (5–6 Jahre)</b> · Hinweis bestätigt'
 		);
 		detail.children[0].birth_date = detail.items[0].children[0].birth_date = '2021-01-01';
 		expect(confirmationEmail(detail).text).not.toContain('Hinweis:');
-		expect(telegramParts(detail).join('\n')).not.toContain('Alter:');
+		expect(telegramParts(detail).join('\n')).not.toContain('⚠️');
 	});
 });

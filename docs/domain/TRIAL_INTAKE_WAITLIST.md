@@ -436,8 +436,12 @@ XLSX — один лист «Preise».
   по OQ-039: заголовок «Neue Anmeldung zur Warteliste», курс, тариф и сумма,
   родитель с телефоном и email, дети с датами рождения, отметки возраста как TIN,
   строка «Warteliste: n von N Kindern» и ссылка на карточку записи.
-- Если запись довела очередь до порога, первая строка после названия учреждения —
+- Если запись довела очередь до порога, первая строка —
   «Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden».
+- Оформление — Telegram HTML, как у заявки на пробное (решение владельца
+  2026-11-11, [TRIAL_INTAKE](TRIAL_INTAKE.md#вид-telegram-уведомления)): названия
+  учреждения нет, здание коротким ключом, у детей возраст на дату проверки
+  возраста записи, ссылка «Anmeldung im Portal öffnen».
 - Состояние очереди в сообщении — на момент подтверждения; при одновременных
   подтверждениях оно ориентировочное. Авторитетный счёт — в админке.
 - Выход, старт, перепривязка и отменённые записи отдельных сообщений не создают.
@@ -605,24 +609,29 @@ Kulturen (адрес, часы работы) и заключить догово�
 
 ### Telegram
 
+Текст OQ-050 в оформлении 2026-11-11 (жирное — как в TRIAL_INTAKE):
+
 ```text
-Kinder- und Elternzentrum "KOLIBRI" e.V.
-[Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden]
-Neue Anmeldung zur Warteliste
-Kurs: {Fach} (in Planung)
-{Wochentag} {Uhrzeit}, {Gebäude}, Raum {Raum}
-Lehrkraft: {Lehrkraft}
-Tarif: {Tarif}, {Betrag} € pro Monat je Kind
-Eltern: {Vorname Nachname}
-Telefon: {Telefon}
-E-Mail: {E-Mail}
-Kinder:
-1. {Vorname Nachname}; geboren: {Datum}
-[Alter: … wie TRIAL_INTAKE]
-Warteliste: {n} von {N} Kindern
+[🎯 Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden]   (жирным)
+📝 Neue Anmeldung zur Warteliste                                    (жирным)
+
+📚 {Fach} (in Planung)                                              (предмет жирным)
+📅 {Wochentag kurz}, {Beginn}–{Ende}                                (жирным)
+👩‍🏫 {Lehrkraft} · 📍 Raum {Raum}, {Kolibri|Villa}
+💶 {Tarif}, {Betrag} € pro Monat je Kind
+
+👤 {Vorname Nachname}                                               (жирным)
+📞 {Telefon}
+✉️ {E-Mail}
+
+🧒 {Vorname Nachname}, {Alter} J. ({TT.MM.JJJJ})                    (имя жирным)
+[⚠️ … wie TRIAL_INTAKE]
+
+👥 Warteliste: {n} von {N} Kindern                                  (жирным)
 ```
 
-Обрамление (номер части, ссылка на карточку, код доставки) — как у TIN-09.
+Обрамление (номер части, ссылка на карточку, код доставки) — как у TIN-09;
+текст ссылки — «Anmeldung im Portal öffnen».
 
 ### Варианты для перепривязки (утверждены, OQ-052)
 

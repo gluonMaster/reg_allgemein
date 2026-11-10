@@ -233,6 +233,7 @@ export class TelegramBotApiProvider implements TelegramProvider {
 			{
 				chat_id: this.#chatId,
 				text: message.text,
+				...(message.parseMode === 'HTML' ? { parse_mode: 'HTML' } : {}),
 				link_preview_options: { is_disabled: true },
 				protect_content: true,
 			},

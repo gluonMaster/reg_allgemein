@@ -191,12 +191,13 @@ describe('waitlist signup, confirmation, letters and Telegram (WL-04, WL-08, WL-
 		).results;
 		expect(payloads).toHaveLength(1);
 		const lines = payloads[0].body.split('\n');
-		expect(lines.slice(0, 2)).toEqual([ORGANIZATION_NAME, 'Neue Anmeldung zur Warteliste']);
-		expect(lines).toContain('Kurs: English (in Planung)');
-		expect(lines).toContain('Dienstag 16:00–17:00, Villa, Raum R1');
-		expect(lines).toContain('Tarif: Monatsvertrag, 66,50 € pro Monat je Kind');
-		expect(lines).toContain('1. Kind Zulu; geboren: 2018-03-01');
-		expect(lines.at(-1)).toBe('Warteliste: 1 von 2 Kindern');
+		expect(lines[0]).toBe('📝 <b>Neue Anmeldung zur Warteliste</b>');
+		expect(lines).toContain('📚 <b>English</b> (in Planung)');
+		expect(lines).toContain('📅 <b>Di, 16:00–17:00</b>');
+		expect(lines.some((line) => line.endsWith('📍 Raum R1, Villa'))).toBe(true);
+		expect(lines).toContain('💶 Monatsvertrag, 66,50 € pro Monat je Kind');
+		expect(lines).toContain('🧒 <b>Kind Zulu</b>, 8 J. (01.03.2018)');
+		expect(lines.at(-1)).toBe('👥 <b>Warteliste: 1 von 2 Kindern</b>');
 		expect(
 			await db.all({
 				sql: `SELECT source_kind, template_or_category FROM telegram_outbox WHERE source_id = ?`,
@@ -247,19 +248,19 @@ describe('waitlist signup, confirmation, letters and Telegram (WL-04, WL-08, WL-
 			sql: 'SELECT body FROM trial_intake_telegram_payloads WHERE request_id = ?',
 			params: [second.id],
 		}))!.body.split('\n');
-		expect(reached.slice(0, 3)).toEqual([
-			ORGANIZATION_NAME,
-			'Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden',
-			'Neue Anmeldung zur Warteliste',
+		expect(reached.slice(0, 2)).toEqual([
+			'🎯 <b>Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden</b>',
+			'📝 <b>Neue Anmeldung zur Warteliste</b>',
 		]);
-		expect(reached.at(-1)).toBe('Warteliste: 2 von 2 Kindern');
-		// The existing Telegram renderer delivers the waitlist part unchanged.
+		expect(reached.at(-1)).toBe('👥 <b>Warteliste: 2 von 2 Kindern</b>');
+		// The intake Telegram renderer frames the waitlist part with its own link text.
 		const telegram = new FakeTelegramProvider();
 		const sender = createOutboxRuntime(config(), { telegramProvider: telegram });
 		expect(await sender.telegramWorker.dispatchNext(afterSeconds(NOW, 5))).toBe('sent');
+		expect(telegram.messages[0].parseMode).toBe('HTML');
 		expect(telegram.messages[0].text).toContain('Neue Anmeldung zur Warteliste');
 		expect(telegram.messages[0].text).toContain(
-			'https://portal.example.test/admin/trial-intake/'
+			`<a href="https://portal.example.test/admin/trial-intake/${created.id}">Anmeldung im Portal öffnen</a>`
 		);
 
 		// The waitlist page lists both signups; the trial list shows neither.

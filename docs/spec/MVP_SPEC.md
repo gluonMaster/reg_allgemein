@@ -635,7 +635,7 @@ Kinder- und Elternzentrum "KOLIBRI" e.V.,
 - **MSG-03.** Ответ админа сначала сохраняется в D1, затем ставится в email
   outbox. Ошибка email не теряет ответ и видна администратору.
 - **MSG-04.** Telegram является только односторонним служебным уведомлением бюро и содержит лишь минимизированные category/reference/time/delivery reference/admin link без документов, свободного чувствительного текста или избыточных PII.
-- **MSG-05.** Настоящая отправка выполняется только в fail-closed mode `TELEGRAM_PROVIDER=bot_api` через dedicated private bureau destination, отдельные preview/production bot token, exact numeric chat config и reviewed UTC activation cutoff, который исключает автоматическую отправку старого backlog; `sendMessage` использует plain text, отключенный link preview и `protect_content`, а inbound webhook/polling path отсутствует.
+- **MSG-05.** Настоящая отправка выполняется только в fail-closed mode `TELEGRAM_PROVIDER=bot_api` через dedicated private bureau destination, отдельные preview/production bot token, exact numeric chat config и reviewed UTC activation cutoff, который исключает автоматическую отправку старого backlog; `sendMessage` использует plain text (исключение — уведомление короткой заявки: Telegram HTML с экранированием введённых значений, [MESSAGING](../domain/MESSAGING.md#telegram-bot-api-provider)), отключенный link preview и `protect_content`, а inbound webhook/polling path отсутствует.
 - **MSG-06.** Так как Telegram `sendMessage` не имеет документированного
   idempotency key, перед HTTP dispatch сохраняется durable marker. Только
   синтаксически валидный `ok=false` доказывает provider non-delivery: explicit

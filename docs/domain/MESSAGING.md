@@ -154,7 +154,15 @@ inbound Telegram path.
 
 Adapter вызывает только `sendMessage` HTTPS POST с JSON и exact destination из
 конфигурации. Текст plain, без `parse_mode`, entities, reply markup, media или
-documents; `link_preview_options.is_disabled=true` не дает Telegram получать
+documents. Единственное исключение — уведомление короткой заявки
+(`bureau.trial_intake`, решение владельца 2026-11-11): `parse_mode=HTML` ради
+жирного шрифта, эмодзи-маркеров и ссылки с текстом вместо голого URL. Каждое
+введённое семьёй значение экранируется (`&`, `<`, `>`, `"`), поэтому из данных
+формы не получится тег или ссылка; каждая строка сама закрывает свои теги, и
+разбиение на части по строкам разметку не ломает. Части, сохранённые до этого
+формата, уходят прежним plain-текстом. Вид сообщения — в
+[TRIAL_INTAKE](TRIAL_INTAKE.md#вид-telegram-уведомления).
+`link_preview_options.is_disabled=true` не дает Telegram получать
 admin URL для preview, а `protect_content=true` ограничивает пересылку/сохранение.
 Успехом считается только валидный ответ `ok=true` с `message_id` и ожидаемым
 `chat.id`/разрешенным типом destination. В D1 сохраняются только безопасный

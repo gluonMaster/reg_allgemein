@@ -91,6 +91,12 @@ point, сохранённый config, повторную генерацию и e
 через настоящий portal reader. Source mirror и порядок переноса описаны в
 [README экспортера](../../integrations/schedule-exporter/README.md).
 
+TIN-AC-06, вид Telegram-уведомления: `tests/unit/trial-intake/telegram-texts.test.ts`
+(вёрстка одного и нескольких занятий, возраст, экранирование значений формы,
+закрытые теги в каждой строке) и `tests/integration/trial-intake/intake-telegram-d1.test.ts`
+(обрамление ссылкой и кодом, номер части у разбитого сообщения, plain-обрамление
+части, сохранённой до HTML-формата).
+
 TIN-AC-16/17: правила дат и возраста — `tests/unit/trial-intake/age-holidays.test.ts`
 (праздники по годам, границы каникул, пропуск дат, разбор названий групп,
 полные годы, серверные отказы и строки письма/Telegram). Браузерный сценарий
@@ -864,7 +870,8 @@ blocked gates и local suite их не заменяет.
 - `tests/unit/telegram-bot-api-provider.test.ts`: exact `sendMessage` POST JSON,
   numeric configured destination, plain text, `link_preview_options.is_disabled`,
   `protect_content`, no parse mode/media/reply markup и отсутствие token/chat/
-  payload/provider description в diagnostics;
+  payload/provider description в diagnostics; `parse_mode=HTML` только у
+  сообщения, которое его задаёт;
 - `tests/integration/telegram-workers.test.ts`: default native workerd fetch
   выполняет `sendMessage` и четыре read-only preflight метода с deployed
   compatibility date; HTTP redirects не следуются, их `ok=false` body не

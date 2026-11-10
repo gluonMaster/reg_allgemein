@@ -14,7 +14,15 @@ import {
 	buildingLabel,
 	germanDate,
 	htmlMessage,
+	shortDay,
 	splitTelegram,
+	tgAgeWarning,
+	tgBold,
+	tgChildName,
+	tgChildren,
+	tgParent,
+	tgPlace,
+	tgText,
 } from './templates.server';
 
 // Letters and the Telegram notification of a waitlist signup: approved texts of
@@ -29,8 +37,9 @@ export const entryLesson = (entry: Pick<WaitlistEntry, 'lesson_json'>) =>
 /** The monthly sum per child of the tariff the family chose. */
 export const entryCents = (entry: Pick<Entry, 'tariff' | 'monthly_cents' | 'yearly_cents'>) =>
 	entry.tariff === 'monthly' ? entry.monthly_cents : entry.yearly_cents;
-const tariffLine = (entry: Entry) =>
-	`Tarif: ${TARIFF[entry.tariff]}, ${euroAmount(entryCents(entry))} € pro Monat je Kind`;
+const tariffText = (entry: Entry) =>
+	`${TARIFF[entry.tariff]}, ${euroAmount(entryCents(entry))} € pro Monat je Kind`;
+const tariffLine = (entry: Entry) => `Tarif: ${tariffText(entry)}`;
 /** The lesson date the age was checked against at signup: the next allowed date of its weekday. */
 export const entryAgeDate = (entry: Pick<Entry, 'lesson_json' | 'created_at'>) =>
 	nextLessonDate(entryLesson(entry).weekday, entry.created_at);
@@ -171,27 +180,25 @@ export function waitlistTelegramParts(
 	entry: Entry,
 	queue: { children: number; minParticipants: number; reached: boolean }
 ): string[] {
-	const r = detail.request;
 	const lesson = entryLesson(entry);
 	return splitTelegram([
-		ORGANIZATION_NAME,
-		...(queue.reached ? ['Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden'] : []),
-		'Neue Anmeldung zur Warteliste',
-		`Kurs: ${lesson.subject} (in Planung)`,
-		`${DAYS[lesson.weekday]} ${lesson.start}–${lesson.end}, ${buildingLabel(lesson.building)}, Raum ${lesson.room}`,
-		`Lehrkraft: ${lesson.teacher}`,
-		tariffLine(entry),
-		`Eltern: ${r.parent_first_name} ${r.parent_last_name}`,
-		`Telefon: ${r.phone}`,
-		`E-Mail: ${r.email}`,
-		'Kinder:',
-		...detail.children.map(
-			(c, index) => `${index + 1}. ${childName(c)}; geboren: ${c.birth_date}`
+		...(queue.reached
+			? [`🎯 ${tgBold('Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden')}`]
+			: []),
+		`📝 ${tgBold('Neue Anmeldung zur Warteliste')}`,
+		'',
+		`📚 ${tgBold(lesson.subject)} (in Planung)`,
+		`📅 ${tgBold(`${shortDay(lesson.weekday)}, ${lesson.start}–${lesson.end}`)}`,
+		tgPlace(lesson),
+		`💶 ${tgText(tariffText(entry))}`,
+		'',
+		...tgParent(detail.request),
+		'',
+		...tgChildren(detail.children, entryAgeDate(entry)),
+		...ageMismatches(detail, entry).map((m) =>
+			tgAgeWarning(tgChildName(m.child, detail.children), m.fit, m.label)
 		),
-		...ageMismatches(detail, entry).map(
-			(m) =>
-				`Alter: Kind ${m.index + 1} ${m.fit === 'old' ? 'älter' : 'jünger'} als die Gruppe (${m.label})${m.fit === 'old' ? ', Hinweis bestätigt' : ''}`
-		),
-		`Warteliste: ${queue.children} von ${queue.minParticipants} Kindern`,
+		'',
+		`👥 ${tgBold(`Warteliste: ${queue.children} von ${queue.minParticipants} Kindern`)}`,
 	]);
 }

@@ -1,10 +1,10 @@
 import { ORGANIZATION_NAME } from '$lib/organization';
-import type { IntakeDetail } from './model.server';
+import type { IntakeChild, IntakeDetail } from './model.server';
 import type { EmailMessage, TelegramMessage } from '$lib/server/outbox/providers';
 import { telegramDeliveryReference, OutboxTemplateError } from '$lib/server/outbox/templates';
 import type { TelegramOutboxRow } from '$lib/server/outbox/contracts';
 import type { DatabaseBoundary } from '$lib/server/db/database';
-import { ageFit, lessonAgeRange } from '../age';
+import { ageFit, ageOn, lessonAgeRange } from '../age';
 import { ageRangeLabel } from '../i18n';
 
 export const buildingLabel = (key: string) => (key === 'Kolibri' ? ORGANIZATION_NAME : key);
@@ -155,30 +155,67 @@ export function telegramAlertEmail(
 	message.html = htmlMessage(message.text, { label: 'Zustellung prüfen', link: delivery });
 	return message;
 }
+/*
+ * The bureau notification is Telegram HTML (parse_mode HTML, owner decision 2026-11-11): every
+ * value a family typed is escaped, and each line closes its own tags, so a split by lines keeps
+ * every part valid. Inside the bureau chat the building is its short key ("Kolibri", "Villa").
+ */
+export const tgText = escapeHtml;
+export const tgBold = (text: string) => `<b>${escapeHtml(text)}</b>`;
+/** "Di" of "Dienstag". */
+export const shortDay = (weekday: number) => DAYS[weekday].slice(0, 2);
+type TelegramChild = Pick<IntakeChild, 'id' | 'first_name' | 'last_name' | 'birth_date'>;
+/** The first name, or the full name where two children of the request share it. */
+export function tgChildName(child: TelegramChild, all: readonly TelegramChild[]) {
+	return all.filter((c) => c.first_name === child.first_name).length > 1
+		? `${child.first_name} ${child.last_name}`
+		: child.first_name;
+}
+export function tgParent(r: IntakeDetail['request']): string[] {
+	return [
+		`👤 ${tgBold(`${r.parent_first_name} ${r.parent_last_name}`)}`,
+		`📞 ${tgText(r.phone)}`,
+		`✉️ ${tgText(r.email)}`,
+	];
+}
+/** The age counts on the lesson date the family chose (`ageDate`). */
+export function tgChildren(children: readonly TelegramChild[], ageDate: string): string[] {
+	return children.map((c) => {
+		const age = ageDate && c.birth_date ? `${ageOn(c.birth_date, ageDate)} J. ` : '';
+		return `🧒 ${tgBold(`${c.first_name} ${c.last_name}`)}, ${age}(${germanDate(c.birth_date)})`;
+	});
+}
+export function tgAgeWarning(name: string, fit: 'young' | 'old', label: string) {
+	return `⚠️ ${tgBold(`${name} ist ${fit === 'old' ? 'älter' : 'jünger'} als die Gruppe (${label})`)}${fit === 'old' ? ' · Hinweis bestätigt' : ''}`;
+}
+/** "👩‍🏫 Lehrkraft · 📍 Raum 3.3, Kolibri"; an empty teacher is left out. */
+export function tgPlace(lesson: { teacher: string; room: string; building: string }) {
+	return [
+		...(lesson.teacher ? [`👩‍🏫 ${tgText(lesson.teacher)}`] : []),
+		`📍 ${tgText(`Raum ${lesson.room}, ${lesson.building}`)}`,
+	].join(' · ');
+}
 export function telegramParts(detail: IntakeDetail): string[] {
-	const r = detail.request;
+	const n = detail.items.length;
+	const ageDate = detail.items.map((i) => i.desired_date).sort()[0] ?? '';
 	const lines = [
-		ORGANIZATION_NAME,
-		'Neue Anfrage für Probestunden',
-		`Eltern: ${r.parent_first_name} ${r.parent_last_name}`,
-		`Telefon: ${r.phone}`,
-		`E-Mail: ${r.email}`,
-		'Kinder:',
-		...detail.children.map(
-			(c, index) => `${index + 1}. ${c.first_name} ${c.last_name}; geboren: ${c.birth_date}`
-		),
+		`🆕 ${tgBold(n === 1 ? 'Neue Probestunde' : `Neue Anfrage: ${n} Probestunden`)}`,
+		'',
+		...tgParent(detail.request),
+		'',
+		...tgChildren(detail.children, ageDate),
 		...detail.items.flatMap((i) => [
-			`Fach: ${i.subject}`,
-			`Gruppe: ${i.group_name}`,
-			`Wunschtermin: ${i.desired_date}`,
-			`${DAYS[i.weekday]} ${i.start_time}–${i.end_time}`,
-			`Lehrkraft: ${i.teacher}`,
-			`Raum: ${i.room}`,
-			`Gebäude: ${buildingLabel(i.building)}`,
-			`Kinder: ${i.children.map((c) => detail.children.findIndex((child) => child.id === c.id) + 1).join(', ')}`,
-			...ageMismatches(i).map(
-				(m) =>
-					`Alter: Kind ${detail.children.findIndex((child) => child.id === m.child.id) + 1} ${m.fit === 'old' ? 'älter' : 'jünger'} als die Gruppe (${m.label})${m.fit === 'old' ? ', Hinweis bestätigt' : ''}`
+			'',
+			`📚 ${tgBold(i.subject)} · ${tgText(i.group_name)}`,
+			`📅 ${tgBold(`${shortDay(i.weekday)}, ${germanDate(i.desired_date)}, ${i.start_time}–${i.end_time}`)}`,
+			tgPlace(i),
+			...(detail.children.length > 1
+				? [
+						`🧒 ${tgText(i.children.map((c) => tgChildName(c, detail.children)).join(', '))}`,
+					]
+				: []),
+			...ageMismatches(i).map((m) =>
+				tgAgeWarning(tgChildName(m.child, detail.children), m.fit, m.label)
 			),
 		]),
 	];
@@ -228,8 +265,17 @@ export async function renderIntakeTelegram(
 	) {
 		throw new OutboxTemplateError('INTAKE_TELEGRAM_INVALID');
 	}
-	const p = await db.first<{ request_id: string; body: string; part: number; total: number }>({
-		sql: `SELECT p.* FROM trial_intake_telegram_payloads p JOIN trial_intake_requests r ON r.id = p.request_id
+	const p = await db.first<{
+		request_id: string;
+		body: string;
+		part: number;
+		total: number;
+		kind: string;
+		lead: string | null;
+	}>({
+		sql: `SELECT p.*, r.kind,
+			 (SELECT substr(f.body, 1, 64) FROM trial_intake_telegram_payloads f WHERE f.request_id = p.request_id AND f.part = 1) AS lead
+			 FROM trial_intake_telegram_payloads p JOIN trial_intake_requests r ON r.id = p.request_id
 		 JOIN telegram_outbox o ON o.source_id = r.id
 		 WHERE p.id = ? AND r.id = ? AND o.id = ? AND o.status = 'processing' AND o.lease_owner = ?
 		 AND r.state IN ('verified','processed') AND (r.delete_after IS NULL OR r.delete_after > ?)`,
@@ -237,9 +283,25 @@ export async function renderIntakeTelegram(
 	});
 	if (!p) throw new OutboxTemplateError('INTAKE_PAYLOAD_UNAVAILABLE');
 	const deliveryReference = await telegramDeliveryReference(row.dedupe_key);
-	const text =
-		`Anfrage ${p.request_id} — Teil ${p.part}/${p.total}\n${p.body}\n` +
-		`${new URL(`/admin/trial-intake/${p.request_id}`, input.config.portalPublicOrigin)}\nZustellung: ${deliveryReference}`;
+	const link = new URL(
+		`/admin/trial-intake/${p.request_id}`,
+		input.config.portalPublicOrigin
+	).toString();
+	// Parts stored before the HTML template (their first part opens with the organization name)
+	// keep the plain frame; this branch can go once no such part is left in any queue.
+	if (p.lead?.startsWith(`${ORGANIZATION_NAME}\n`)) {
+		const text = `Anfrage ${p.request_id} — Teil ${p.part}/${p.total}\n${p.body}\n${link}\nZustellung: ${deliveryReference}`;
+		if (text.length > 4096) throw new OutboxTemplateError('INTAKE_TELEGRAM_TOO_LONG');
+		return { chatId: input.chatId, text, deliveryReference };
+	}
+	// The request ID travels in the link; the code stays the last line for the bureau's search.
+	const text = [
+		...(p.total > 1 ? [`<i>Teil ${p.part}/${p.total}</i>`] : []),
+		p.body,
+		'',
+		`🔗 <a href="${escapeHtml(link)}">${p.kind === 'waitlist' ? 'Anmeldung' : 'Anfrage'} im Portal öffnen</a>`,
+		`Zustellung: <code>${deliveryReference}</code>`,
+	].join('\n');
 	if (text.length > 4096) throw new OutboxTemplateError('INTAKE_TELEGRAM_TOO_LONG');
-	return { chatId: input.chatId, text, deliveryReference };
+	return { chatId: input.chatId, text, deliveryReference, parseMode: 'HTML' };
 }

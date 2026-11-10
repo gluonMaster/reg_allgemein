@@ -6,6 +6,7 @@ import { FakeTelegramProvider, TelegramProviderError } from '$lib/server/outbox/
 import { runScheduledEvent, runScheduledJobs } from '$lib/server/operations/scheduler';
 import { renderTelegramTemplate } from '$lib/server/outbox/templates';
 import { requireAdmin } from '$lib/server/security/authorization';
+import { ORGANIZATION_NAME } from '$lib/organization';
 import {
 	useIntakeD1,
 	NOW,
@@ -56,9 +57,8 @@ describe('intake Telegram delivery and scheduler', () => {
 		const runtime = createOutboxRuntime(config(), { telegramProvider: provider });
 		expect(await runtime.telegramWorker.dispatchNext(at(120))).toBe('delivery_unknown');
 		expect(await runtime.telegramWorker.dispatchNext(at(180))).toBe('sent');
-		expect(provider.messages.map((m) => m.text.split('\n')[0])).toEqual([
-			`Anfrage ${b.id} — Teil 1/1`,
-		]);
+		expect(provider.messages).toHaveLength(1);
+		expect(provider.messages[0].text).toContain(`/admin/trial-intake/${b.id}"`);
 		expect(await runtime.telegramWorker.dispatchNext(at(240))).toBe('empty');
 		const parts = (
 			await db.all<{ id: string; status: string }>({
@@ -179,10 +179,16 @@ describe('intake Telegram delivery and scheduler', () => {
 			/* bounded by stored parts */
 		}
 		expect(provider.messages.length).toBeGreaterThan(1);
-		for (const message of provider.messages) {
+		for (const [index, message] of provider.messages.entries()) {
 			expect(message.text.length).toBeLessThanOrEqual(4096);
+			expect(message.parseMode).toBe('HTML');
+			expect(message.text.split('\n')[0]).toBe(
+				`<i>Teil ${index + 1}/${provider.messages.length}</i>`
+			);
 			expect(message.text).toContain('/admin/trial-intake/');
-			expect(message.text).toContain('TG-');
+			expect(message.text.split('\n').at(-1)).toBe(
+				`Zustellung: <code>${message.deliveryReference}</code>`
+			);
 		}
 		for (const c of input.children)
 			expect(provider.messages.map((m) => m.text).join('\n')).toContain(c.lastName);
@@ -212,6 +218,37 @@ describe('intake Telegram delivery and scheduler', () => {
 				chatId: 'test',
 			})
 		).rejects.toThrow();
+	});
+	it('frames a single HTML part with the portal link and the code last; a part stored as plain text keeps the plain frame', async () => {
+		const r = await verified();
+		const provider = new FakeTelegramProvider();
+		const runtime = createOutboxRuntime(config(), { telegramProvider: provider });
+		expect(await runtime.telegramWorker.dispatchNext(NOW)).toBe('sent');
+		const [message] = provider.messages;
+		expect(message.parseMode).toBe('HTML');
+		const lines = message.text.split('\n');
+		expect(lines[0]).toBe('🆕 <b>Neue Anfrage: 2 Probestunden</b>');
+		expect(message.text).not.toContain('Teil ');
+		expect(lines.at(-2)).toMatch(
+			new RegExp(`^🔗 <a href="https://[^"]+/admin/trial-intake/${r.id}">Anfrage im Portal öffnen</a>$`)
+		);
+		expect(lines.at(-1)).toBe(`Zustellung: <code>${message.deliveryReference}</code>`);
+
+		// A part queued before the HTML template went live: sent as before, without parse mode.
+		const old = await verified();
+		const body = `${ORGANIZATION_NAME}\nNeue Anfrage für Probestunden\nEltern: A & B <x>`;
+		await db.run({
+			sql: 'UPDATE trial_intake_telegram_payloads SET body = ? WHERE request_id = ?',
+			params: [body, old.id],
+		});
+		expect(await runtime.telegramWorker.dispatchNext(afterSeconds(NOW, 60))).toBe('sent');
+		const plain = provider.messages[1];
+		expect(plain.parseMode).toBeUndefined();
+		expect(plain.text).toBe(
+			`Anfrage ${old.id} — Teil 1/1\n${body}\n` +
+				`${new URL(`/admin/trial-intake/${old.id}`, config().portalPublicOrigin)}\n` +
+				`Zustellung: ${plain.deliveryReference}`
+		);
 	});
 	it('minimal scheduler runs only delivery/security/retention without R2, and full mode never runs intake cleanup', async () => {
 		const pending = await service.create(data(), async () => lessons, NOW);

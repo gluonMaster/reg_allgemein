@@ -117,6 +117,26 @@ describe('Telegram Bot API provider', () => {
 		expect(body).not.toHaveProperty('document');
 	});
 
+	it('marks only a message that asks for it as Telegram HTML, keeping the protected request', async () => {
+		const fetchMock = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+			jsonResponse({
+				ok: true,
+				result: { message_id: 43, chat: { id: Number(chatId), type: 'channel' } },
+			})
+		);
+		const html = { ...message, text: `<b>Neu</b>\n${message.text}`, parseMode: 'HTML' as const };
+		await expect(createProvider(fetchMock).send(html)).resolves.toEqual({
+			providerRequestId: 'telegram-message:43',
+		});
+		expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({
+			chat_id: chatId,
+			text: html.text,
+			parse_mode: 'HTML',
+			link_preview_options: { is_disabled: true },
+			protect_content: true,
+		});
+	});
+
 	it('keeps token and protected destination out of enumerable provider state', () => {
 		const provider = createProvider(vi.fn<typeof globalThis.fetch>());
 		const serialized = JSON.stringify(provider);

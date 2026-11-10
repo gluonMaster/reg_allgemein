@@ -129,22 +129,25 @@ describe('waitlist texts (OQ-050)', () => {
 	});
 	it('Telegram: the whole signup, the queue line and the threshold line when it was reached', () => {
 		const queue = { children: 2, minParticipants: 3, reached: false };
+		// Telegram HTML, owner decision 2026-11-11; the age counts on the next Tuesday.
 		expect(waitlistTelegramParts(detail, entry, queue)).toEqual([
 			[
-				ORGANIZATION_NAME,
-				'Neue Anmeldung zur Warteliste',
-				'Kurs: 1 E (in Planung)',
-				`Dienstag 16:00–16:45, ${ORGANIZATION_NAME}, Raum R2`,
-				'Lehrkraft: Lehrkraft A',
-				'Tarif: Jahresvertrag, 59,05 € pro Monat je Kind',
-				'Eltern: Anna Muster',
-				'Telefon: +49 000000000',
-				'E-Mail: guest@example.test',
-				'Kinder:',
-				'1. Jörg Muster; geboren: 2020-05-01',
-				'2. Иван Тестов; geboren: 2018-01-01',
-				'Alter: Kind 2 älter als die Gruppe (5–6 Jahre), Hinweis bestätigt',
-				'Warteliste: 2 von 3 Kindern',
+				'📝 <b>Neue Anmeldung zur Warteliste</b>',
+				'',
+				'📚 <b>1 E</b> (in Planung)',
+				'📅 <b>Di, 16:00–16:45</b>',
+				'👩‍🏫 Lehrkraft A · 📍 Raum R2, Kolibri',
+				'💶 Jahresvertrag, 59,05 € pro Monat je Kind',
+				'',
+				'👤 <b>Anna Muster</b>',
+				'📞 +49 000000000',
+				'✉️ guest@example.test',
+				'',
+				'🧒 <b>Jörg Muster</b>, 6 J. (01.05.2020)',
+				'🧒 <b>Иван Тестов</b>, 8 J. (01.01.2018)',
+				'⚠️ <b>Иван ist älter als die Gruppe (5–6 Jahre)</b> · Hinweis bestätigt',
+				'',
+				'👥 <b>Warteliste: 2 von 3 Kindern</b>',
 			].join('\n'),
 		]);
 		const [reached] = waitlistTelegramParts(detail, entry, {
@@ -152,12 +155,11 @@ describe('waitlist texts (OQ-050)', () => {
 			children: 3,
 			reached: true,
 		});
-		expect(reached.split('\n').slice(0, 3)).toEqual([
-			ORGANIZATION_NAME,
-			'Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden',
-			'Neue Anmeldung zur Warteliste',
+		expect(reached.split('\n').slice(0, 2)).toEqual([
+			'🎯 <b>Mindestteilnehmerzahl erreicht – Kurs kann gestartet werden</b>',
+			'📝 <b>Neue Anmeldung zur Warteliste</b>',
 		]);
-		expect(reached.split('\n').at(-1)).toBe('Warteliste: 3 von 3 Kindern');
+		expect(reached.split('\n').at(-1)).toBe('👥 <b>Warteliste: 3 von 3 Kindern</b>');
 	});
 });
 

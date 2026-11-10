@@ -27,6 +27,8 @@ export interface TelegramMessage {
 	chatId: string;
 	text: string;
 	deliveryReference: string;
+	/** Only the trial-intake template sets it, with every family value escaped; others stay plain. */
+	parseMode?: 'HTML';
 }
 
 export interface TelegramProvider {

@@ -22,6 +22,7 @@ export const intakeReleaseTests = [
 	'tests/unit/trial-intake/exporter-roundtrip.test.ts',
 	'tests/unit/trial-intake/http-mode.test.ts',
 	'tests/unit/trial-intake/planned-lessons.test.ts',
+	'tests/unit/trial-intake/telegram-texts.test.ts',
 	'tests/unit/trial-intake/waitlist-price-files.test.ts',
 	'tests/unit/trial-intake/waitlist-texts.test.ts',
 	// Migrations and the shared D1 guards, including the Telegram transition trigger.
