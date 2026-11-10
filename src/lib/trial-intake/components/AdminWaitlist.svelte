@@ -139,10 +139,7 @@
 		values
 			? `${formatEuro(locale, values.monthlyCents)} / ${formatEuro(locale, values.yearlyCents)} · ${values.minParticipants}`
 			: '—';
-	const lock = (course: WaitlistCourse) =>
-		course.activeEntries > 0
-			? fill(t(locale, 'priceLocked'), { n: course.activeEntries })
-			: '—';
+	const courseColumn = $derived(`${t(locale, 'subject')} · ${t(locale, 'teacher')}`);
 	const label = (course: WaitlistCourse, column: string) =>
 		`${column}: ${course.course.subject}, ${dayLabel(course.course.weekday, locale)} ${course.course.start}`;
 	/** WL-15: "Familien informiert", a price decision of the red mark, "Als neuen Kurs öffnen". */
@@ -192,33 +189,41 @@
 
 <svelte:head><title>{t(locale, 'adminWaitlist')} · {ORGANIZATION_NAME}</title></svelte:head>
 {#snippet place(course: WaitlistCourse)}
-	<td>
-		<strong>{course.course.subject}</strong><br /><span class="muted"
-			>{t(locale, 'plannedLabel')}</span
+	<td class="cell-course" data-label={courseColumn}>
+		<strong>{course.course.subject}</strong>
+		<span class="cell-line">{course.course.teacher}</span>
+		<span class="cell-line nowrap muted">{t(locale, 'plannedLabel')}</span>
+	</td>
+	<td class="cell-when" data-label={t(locale, 'whenWhere')}>
+		<span class="cell-line nowrap">{dayLabel(course.course.weekday, locale)}</span>
+		<span class="cell-line nowrap">{course.course.start}–{course.course.end}</span>
+		<span class="cell-line nowrap"
+			>{course.course.building} · {t(locale, 'room')} {course.course.room}</span
 		>
 	</td>
-	<td>{dayLabel(course.course.weekday, locale)}</td>
-	<td>{course.course.start}–{course.course.end}</td>
-	<td>{course.course.building} · {t(locale, 'room')} {course.course.room}</td>
-	<td>{course.course.teacher}</td>
 {/snippet}
 {#snippet status(course: WaitlistCourse)}
 	{@const marks = waitlistMarkTexts(course, locale)}
-	<td>
-		{waitlistStatusText(course, locale) || '—'}
-		{#if course.unconfirmedChildren > 0}<br /><span class="muted"
+	<td class="cell-status" data-label={t(locale, 'waitlistStatus')}>
+		<span class="cell-line">{waitlistStatusText(course, locale) || '—'}</span>
+		{#if course.activeEntries > 0}<span class="cell-line muted"
+				>{fill(t(locale, 'priceLocked'), { n: course.activeEntries })}</span
+			>{/if}
+		{#if course.unconfirmedChildren > 0}<span class="cell-line muted"
 				>{fill(t(locale, 'unconfirmed'), { n: course.unconfirmedChildren })}</span
 			>{/if}
-		{#if course.status === 'ambiguous'}<br /><span class="muted"
+		{#if course.status === 'ambiguous'}<span class="cell-line muted"
 				>{t(locale, 'adminWaitlistAmbiguous')}</span
 			>{/if}
-		{#if course.status === 'started' && course.lessons.length}<br /><span class="muted"
+		{#if course.status === 'started' && course.lessons.length}<span class="cell-line muted"
 				>{t(locale, 'statusRenameHint')}</span
 			>{/if}
-		{#if marks.orange}<br /><span class="mark mark-orange">{marks.orange}</span>{/if}
-		{#if marks.red}<br /><span class="mark mark-red">{marks.red}</span>{/if}
+		{#if marks.orange}<span class="cell-line"
+				><span class="mark mark-orange">{marks.orange}</span></span
+			>{/if}
+		{#if marks.red}<span class="cell-line"><span class="mark mark-red">{marks.red}</span></span
+			>{/if}
 	</td>
-	<td>{lock(course)}</td>
 {/snippet}
 {#snippet reopenAction(course: WaitlistCourse)}
 	<!-- WL-15: a started course takes a new group only after an explicit confirmation. -->
@@ -245,7 +250,7 @@
 	{#if course.entries?.length || course.attention?.length || course.rebinds?.length}<tr
 			class="waitlist-entries"
 		>
-			<td colspan="11">
+			<td colspan="7">
 				{#if course.attention?.length}<div class="mark-box mark-orange">
 						<strong>{t(locale, 'attentionTitle')}</strong>
 						<p>
@@ -346,30 +351,26 @@
 		</p>
 	{:else if !data.courses.length}<p class="card">{t(locale, 'adminWaitlistNone')}</p>
 	{:else}
-		<div class="card table-scroll">
+		<div class="card waitlist-table">
 			<table>
 				<thead>
 					<tr>
-						<th scope="col">{t(locale, 'subject')}</th>
-						<th scope="col">{t(locale, 'day')}</th>
-						<th scope="col">{t(locale, 'time')}</th>
-						<th scope="col">{t(locale, 'building')} · {t(locale, 'room')}</th>
-						<th scope="col">{t(locale, 'teacher')}</th>
+						<th scope="col">{courseColumn}</th>
+						<th scope="col">{t(locale, 'whenWhere')}</th>
 						<th scope="col">{t(locale, 'monthlyContract')}</th>
 						<th scope="col">{t(locale, 'yearlyContract')}</th>
 						<th scope="col">{t(locale, 'minParticipants')}</th>
 						<th scope="col">{t(locale, 'waitlistStatus')}</th>
-						<th scope="col">{t(locale, 'priceLockColumn')}</th>
 						<th scope="col"><span class="visually-hidden">{t(locale, 'save')}</span></th
 						>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.courses as course (course.key)}
-						<tr>
+						<tr class="course-row">
 							{@render place(course)}
 							{#each [['monthly', 'monthlyContract'], ['yearly', 'yearlyContract']] as const as [field, column] (field)}
-								<td>
+								<td class={`cell-${field}`} data-label={t(locale, column)}>
 									<input
 										class="amount"
 										inputmode="decimal"
@@ -382,9 +383,9 @@
 									/>
 								</td>
 							{/each}
-							<td>
+							<td class="cell-min" data-label={t(locale, 'minParticipants')}>
 								<input
-									class="amount"
+									class="amount count"
 									type="number"
 									min="1"
 									max="30"
@@ -396,35 +397,41 @@
 								/>
 							</td>
 							{@render status(course)}
-							<td>
-								<button
-									type="button"
-									disabled={busy || !enhanced}
-									onclick={() => save(course)}>{t(locale, 'save')}</button
-								>
-								{#if course.start}{@const options = course.start}
-									{#if !options.start}<button
-											class="primary"
-											type="button"
-											disabled={!enhanced}
-											onclick={() => (starting = course.key)}
-											>{t(locale, 'startCourse')}</button
-										>
-									{:else}
-										{#if options.start !== 'started'}<span class="muted"
-												>{fill(t(locale, 'startBlocked'), {
-													reason: startBlockText(options.start, locale),
-												})}</span
-											>{/if}
-										{#if !options.probe}<button
+							<td class="cell-actions">
+								<div class="cell-buttons">
+									<button
+										type="button"
+										disabled={busy || !enhanced}
+										onclick={() => save(course)}>{t(locale, 'save')}</button
+									>
+									{#if course.start}{@const options = course.start}
+										{#if !options.start}<button
+												class="primary"
 												type="button"
 												disabled={!enhanced}
 												onclick={() => (starting = course.key)}
-												>{t(locale, 'startProbeOpen')}</button
-											>{/if}
+												>{t(locale, 'startCourse')}</button
+											>
+										{:else}
+											{#if options.start !== 'started'}<span
+													class="cell-note muted"
+													>{fill(t(locale, 'startBlocked'), {
+														reason: startBlockText(
+															options.start,
+															locale
+														),
+													})}</span
+												>{/if}
+											{#if !options.probe}<button
+													type="button"
+													disabled={!enhanced}
+													onclick={() => (starting = course.key)}
+													>{t(locale, 'startProbeOpen')}</button
+												>{/if}
+										{/if}
 									{/if}
-								{/if}
-								{@render reopenAction(course)}
+									{@render reopenAction(course)}
+								</div>
 							</td>
 						</tr>
 						{@render entries(course)}
@@ -450,20 +457,16 @@
 			{#if !data.catalogError}<p class="muted">
 					{t(locale, 'adminWaitlistUnscheduledIntro')}
 				</p>{/if}
-			<div class="table-scroll">
+			<div class="waitlist-table">
 				<table>
 					<thead>
 						<tr>
-							<th scope="col">{t(locale, 'subject')}</th>
-							<th scope="col">{t(locale, 'day')}</th>
-							<th scope="col">{t(locale, 'time')}</th>
-							<th scope="col">{t(locale, 'building')} · {t(locale, 'room')}</th>
-							<th scope="col">{t(locale, 'teacher')}</th>
+							<th scope="col">{courseColumn}</th>
+							<th scope="col">{t(locale, 'whenWhere')}</th>
 							<th scope="col">{t(locale, 'monthlyContract')}</th>
 							<th scope="col">{t(locale, 'yearlyContract')}</th>
 							<th scope="col">{t(locale, 'minParticipants')}</th>
 							<th scope="col">{t(locale, 'waitlistStatus')}</th>
-							<th scope="col">{t(locale, 'priceLockColumn')}</th>
 							<th scope="col"
 								><span class="visually-hidden">{t(locale, 'deletePrice')}</span></th
 							>
@@ -471,35 +474,45 @@
 					</thead>
 					<tbody>
 						{#each data.unscheduled as course (course.key)}
-							<tr>
+							<tr class="course-row">
 								{@render place(course)}
 								<td
+									class="cell-monthly nowrap"
+									data-label={t(locale, 'monthlyContract')}
 									>{course.price
 										? formatEuro(locale, course.price.monthlyCents)
 										: '—'}</td
 								>
 								<td
+									class="cell-yearly nowrap"
+									data-label={t(locale, 'yearlyContract')}
 									>{course.price
 										? formatEuro(locale, course.price.yearlyCents)
 										: '—'}</td
 								>
-								<td>{course.price?.minParticipants ?? '—'}</td>
+								<td class="cell-min" data-label={t(locale, 'minParticipants')}
+									>{course.price?.minParticipants ?? '—'}</td
+								>
 								{@render status(course)}
-								<td>
-									{#if course.rebind}<button
-											class={course.rebind.queue ? 'primary' : undefined}
-											type="button"
-											disabled={busy || !enhanced}
-											onclick={() => (rebinding = course.key)}
-											>{t(locale, 'rebindOpen')}</button
-										>{/if}
-									{#if course.price}<button
-											type="button"
-											disabled={busy || !enhanced || course.activeEntries > 0}
-											onclick={() => remove(course)}
-											>{t(locale, 'deletePrice')}</button
-										>{/if}
-									{@render reopenAction(course)}
+								<td class="cell-actions">
+									<div class="cell-buttons">
+										{#if course.rebind}<button
+												class={course.rebind.queue ? 'primary' : undefined}
+												type="button"
+												disabled={busy || !enhanced}
+												onclick={() => (rebinding = course.key)}
+												>{t(locale, 'rebindOpen')}</button
+											>{/if}
+										{#if course.price}<button
+												type="button"
+												disabled={busy ||
+													!enhanced ||
+													course.activeEntries > 0}
+												onclick={() => remove(course)}
+												>{t(locale, 'deletePrice')}</button
+											>{/if}
+										{@render reopenAction(course)}
+									</div>
 								</td>
 							</tr>
 							{@render entries(course)}

@@ -211,7 +211,7 @@ const text = {
 	minParticipants: ['Mindestteilnehmer', 'Минимум участников'],
 	waitlistStatus: ['Status', 'Статус'],
 	time: ['Uhrzeit', 'Время'],
-	priceLockColumn: ['Sperre', 'Блокировка'],
+	whenWhere: ['Termin und Ort', 'Время и место'],
 	adminWaitlistStored: ['Gespeicherte Preise', 'Сохранённые цены'],
 	importResult: ['Ergebnis', 'Результат'],
 	importBefore: ['Bisher', 'Было'],

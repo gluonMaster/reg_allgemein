@@ -252,7 +252,38 @@ test('planned card link -> waitlist form -> changed price -> confirmation by syn
 		await expect(row.getByLabel(/^Monatsvertrag €\/Monat: English/u)).toBeDisabled();
 		await expect(row.getByLabel(/^Monatsvertrag €\/Monat: English/u)).toHaveValue('70,00');
 		await expect(page.getByText('WaitChild Synthetic', { exact: false })).toBeVisible();
+		// WL-07: one card per course on a phone and a tablet, a table row on a desktop; no column
+		// is squeezed to a few letters per line.
+		const layout = () =>
+			row.evaluate((tr) => ({
+				display: getComputedStyle(tr).display,
+				narrowest: Math.min(
+					...[...tr.querySelectorAll(':scope > td')].map(
+						(td) => td.getBoundingClientRect().width
+					)
+				),
+			}));
+		expect(await layout()).toMatchObject({ display: 'grid' });
+		expect((await layout()).narrowest).toBeGreaterThan(90);
+		await noOverflow(page);
 		await page.screenshot({ path: 'tmp/trial-intake-waitlist-admin.png', fullPage: true });
+		await page.setViewportSize({ width: 820, height: 1180 });
+		expect(await layout()).toMatchObject({ display: 'grid' });
+		expect((await layout()).narrowest).toBeGreaterThan(150);
+		await noOverflow(page);
+		await page.screenshot({
+			path: 'tmp/trial-intake-waitlist-admin-tablet.png',
+			fullPage: true,
+		});
+		await page.setViewportSize({ width: 1280, height: 900 });
+		expect(await layout()).toMatchObject({ display: 'table-row' });
+		expect((await layout()).narrowest).toBeGreaterThan(70);
+		await noOverflow(page);
+		await page.screenshot({
+			path: 'tmp/trial-intake-waitlist-admin-desktop.png',
+			fullPage: true,
+		});
+		await page.setViewportSize({ width: 390, height: 844 });
 		await page.getByRole('link', { name: 'Synthetic WaitlistParent', exact: true }).click();
 		await expect(page).toHaveURL(new RegExp(`/admin/trial-intake/${receipt.id}$`, 'u'));
 		await expect(page.getByText('Monatsvertrag, 70,00 € pro Monat je Kind')).toBeVisible();

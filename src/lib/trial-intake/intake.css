@@ -274,8 +274,152 @@
 	padding: 0.5rem;
 	border-bottom: 1px solid #d9e3e0;
 }
+/*
+ * Table cells break words only at spaces. `overflow-wrap: anywhere` of `.intake` and of
+ * buttons would let the automatic table layout squeeze a column down to single letters.
+ */
+.intake :is(th, td),
+.intake :is(th, td) * {
+	overflow-wrap: break-word;
+}
+.intake th {
+	font-size: 0.85rem;
+	line-height: 1.3;
+	color: #46675d;
+}
+.intake .nowrap {
+	white-space: nowrap;
+}
+.intake .cell-line {
+	display: block;
+}
+.intake .cell-line + .cell-line {
+	margin-top: 0.2rem;
+}
 .intake td input.amount {
 	width: 6.5rem;
+}
+.intake td input.amount.count {
+	width: 4.5rem;
+}
+/*
+ * The waitlist courses (WL-07): a table where seven columns fit, otherwise one card per
+ * course. The width of the card decides, not the window: the admin menu and paddings vary.
+ */
+.intake .waitlist-table {
+	container: waitlist / inline-size;
+	overflow-x: auto;
+}
+.intake .waitlist-table .cell-status {
+	min-width: 10rem;
+}
+.intake .cell-buttons {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.5rem;
+	min-width: 11rem;
+}
+.intake .cell-buttons > p {
+	margin: 0;
+}
+.intake .cell-note {
+	font-size: 0.85rem;
+	line-height: 1.4;
+}
+@container waitlist (max-width: 63.99rem) {
+	.intake .waitlist-table :is(table, tbody, tr, td) {
+		display: block;
+	}
+	.intake .waitlist-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+	}
+	.intake .waitlist-table tr.course-row {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-areas:
+			'course course when'
+			'monthly yearly min'
+			'status status status'
+			'actions actions actions';
+		gap: 0.75rem 1rem;
+		padding: 1rem 0;
+		border-top: 1px solid #d9e3e0;
+	}
+	.intake .waitlist-table tr.course-row:first-child {
+		border-top: 0;
+		padding-top: 0;
+	}
+	.intake .waitlist-table td {
+		padding: 0;
+		border: 0;
+	}
+	.intake .waitlist-table td[data-label]::before {
+		content: attr(data-label);
+		display: block;
+		margin-bottom: 0.25rem;
+		font-size: 0.8rem;
+		font-weight: 650;
+		line-height: 1.3;
+		color: #46675d;
+	}
+	.intake .waitlist-table .cell-course {
+		grid-area: course;
+	}
+	.intake .waitlist-table .cell-when {
+		grid-area: when;
+	}
+	.intake .waitlist-table .cell-monthly {
+		grid-area: monthly;
+	}
+	.intake .waitlist-table .cell-yearly {
+		grid-area: yearly;
+	}
+	.intake .waitlist-table .cell-min {
+		grid-area: min;
+	}
+	.intake .waitlist-table .cell-status {
+		grid-area: status;
+		min-width: 0;
+	}
+	.intake .waitlist-table .cell-actions {
+		grid-area: actions;
+	}
+	.intake .waitlist-table td input.amount {
+		width: 100%;
+		max-width: 10rem;
+	}
+	.intake .waitlist-table .cell-buttons {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+		min-width: 0;
+	}
+	.intake .waitlist-table .cell-note {
+		flex-basis: 100%;
+	}
+	.intake .waitlist-table tr.waitlist-entries td {
+		padding-bottom: 1rem;
+	}
+}
+@container waitlist (max-width: 27.99rem) {
+	.intake .waitlist-table tr.course-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-areas:
+			'course course'
+			'when when'
+			'monthly yearly'
+			'min min'
+			'status status'
+			'actions actions';
+	}
+	.intake .waitlist-table .cell-buttons > button {
+		flex: 1 1 100%;
+	}
 }
 .intake .visually-hidden {
 	position: absolute;
