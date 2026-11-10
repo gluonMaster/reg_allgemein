@@ -15,29 +15,92 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-11-10T22:54:47Z
+updated_utc: 2026-11-10T23:41:23Z
 reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
 local_remediation_candidate: 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
 release_gate_candidate: 21532a0f09dabf4e5a996d71c35b59b1b8f90d67
-last_completed_gate: TIN11-worker-deploy-admin-ui
+last_completed_gate: TIN11-worker-deploy-telegram-format
 next_gate: TIN11-telegram-morning-check
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN11-06-done-waiting_telegram-window
-last_atomic_action: TIN11-worker-deploy-admin-ui
+current_phase: TIN11-telegram-format-deployed-waiting_telegram-window
+last_atomic_action: TIN11-worker-deploy-telegram-format
 last_atomic_result: success
 next_atomic_action: TIN11-telegram-morning-check
 rollover_required: no
 recommended_next_session_mode: Medium
-mode_reason_plain: Next_step_is_read_only_check_of_one_queued_Telegram_message
+mode_reason_plain: Next_step_is_read_only_check_of_queued_Telegram_messages
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN11: Worker с новым видом Telegram-уведомлений задеплоен — 2026-11-10T23:41:23Z
+
+Worker deploy success, exact config, runtime 2638b6c0e52b: previous 85038f8f9072 →
+активная 4598140d на 100% (создана 23:40:17Z). Один деплой, без повторов, без
+`--secrets-file`. Оба Cron сохранены; пять secret names; bindings D1, BROWSER, ASSETS
+и прежние 25 vars. D1 write, Access/flag change и provider send в этой операции
+отсутствуют.
+
+HTTP read-back: /probestunde, /probestunde/catalog, /auth/login 200;
+`/warteliste/austragen` с `Accept: text/html` 200 (без него — 405 обработчика
+POST-only, как и прежде); /catalog 404; `/_health/operations` 204;
+`/admin/trial-intake` и `/admin/trial-intake/warteliste` без сессии — 401. D1
+read-back, `changed_db=false`: счётчики равны preflight (migrations 32, requests 33,
+emails 57 без открытых, telegram 31 — открыто одно, alerts 0, users 1,
+closed_lessons 6); открытое уведомление — контрольная запись листа, `pending` до
+2026-11-11T08:00:00Z, plain; FK пуст. Fast-запуск на новой версии 23:40:53Z
+succeeded. Evidence protected tmp/trial-intake-telegram-format-deploy-20261111/
+(W4-*, R4-*: полный version ID и команда отката).
+
+Rollback/containment: `wrangler rollback` на 85038f8f9072 с exact config; схема та
+же. После отката уведомления, сохранённые новым кодом, уйдут текстом с видимыми
+HTML-тегами; данные не теряются.
+
+Ровно следующий action: **TIN11-telegram-morning-check** — после 2026-11-11T08:00:00Z
+read-only сверить, что уведомление контрольной записи `sent` (новый код отправляет
+его прежним plain-текстом), и спросить владельца, пришло ли сообщение «Warteliste»
+в чат бюро. Первое уведомление в новом виде придёт по следующей реальной заявке:
+владелец сверяет его вид с разделом «Вид Telegram-уведомления»; отказ Telegram
+(`dead`) вызовет письмо бюро по TIN-AC-15. Затем этап 07 по `07_EXPORTER_ROLLOUT.md`.
+rollover_required: no; recommended_next_session_mode: Medium — следующий шаг только
+read-only проверка сообщений.
+
+## TIN11: вид Telegram-уведомлений — gate пройден, деплой следующий — 2026-11-10T23:39:21Z
+
+Scope по поручению владельца в чате (уведомления бюро «читаются одним взглядом»,
+решения 2026-11-11): код `2638b6c` переводит уведомления заявки на пробное и записи
+листа в Telegram HTML — жирные заголовки, эмодзи-маркеры, возраст ребёнка, короткий
+ключ здания, ссылка с текстом; код `TG-…` остаётся последней строкой. Значения формы
+экранируются. Части, сохранённые до этого формата, уходят прежним plain-текстом.
+Требование — раздел «Вид Telegram-уведомления»
+[TRIAL_INTAKE](../domain/TRIAL_INTAKE.md), критерий — TIN-AC-06. Один Worker deploy с
+тем же exact config; D1, vars, secrets, Access и provider send не меняются.
+
+Gate на точном коммите 2638b6c0e52b: `npm run check`; `npm run test:intake-release`
+57 файлов, 403 passed, 1 skipped; intake e2e с `KOLIBRI_E2E_TRIAL_INTAKE=1` —
+intake-ui 2, server-boundaries 1, waitlist-ui 3 passed; `npm run build`;
+`docs:check`; `release:scan`; `git diff --check`. Зависимости не менялись.
+Preflight: активная 85038f8f9072 на 100%, drift нет; dry-run — bindings D1,
+BROWSER, ASSETS и прежние 25 vars без отличий. D1 read-only, `changed_db=false`:
+счётчики равны read-back 22:53Z; открыто одно Telegram-уведомление — контрольная
+запись листа, `pending` до 2026-11-11T08:00:00Z, сохранено plain-текстом, новый код
+отправит его прежним plain-обрамлением. Evidence protected
+tmp/trial-intake-telegram-format-deploy-20261111/ (gate4-*, P-*, D4-*).
+
+Rollback/containment: `wrangler rollback` на 85038f8f9072 с exact config; схема та
+же. После отката уведомления, сохранённые новым кодом, уйдут текстом с видимыми
+HTML-тегами; данные не теряются.
+
+Ровно следующий action: **TIN11-worker-deploy-telegram-format** — один
+`wrangler deploy`, read-back версии, Cron, secrets и маршрутов. rollover_required: no;
+recommended_next_session_mode: High — плановый деплой Worker с известными target и
+rollback.
 
 ## TIN11: Worker с новой вёрсткой страницы листа задеплоен — 2026-11-10T22:53:11Z
 
