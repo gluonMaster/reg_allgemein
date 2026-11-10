@@ -94,10 +94,15 @@ export async function boundedText(
 	}
 }
 export class CatalogReader {
+	/**
+	 * `fresh` skips the cached copy but still stores what it reads: an admin sees a schedule
+	 * change at once, and the public pages of that location pick it up with them.
+	 */
 	constructor(
 		private readonly url: string,
 		private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
-		private readonly cache?: Cache | (() => Promise<Cache>)
+		private readonly cache?: Cache | (() => Promise<Cache>),
+		private readonly fresh = false
 	) {}
 	async read(): Promise<Lesson[]> {
 		const url = new URL(this.url);
@@ -105,7 +110,7 @@ export class CatalogReader {
 			throw new IntakeError('INTAKE_CATALOG_UNAVAILABLE', 503);
 		const key = new Request(url);
 		const cache = typeof this.cache === 'function' ? await this.cache() : this.cache;
-		const hit = await cache?.match(key);
+		const hit = this.fresh ? undefined : await cache?.match(key);
 		if (hit) {
 			const age = Date.now() - Number(hit.headers.get('x-intake-cached-at'));
 			if (age >= 0 && age < 300_000)

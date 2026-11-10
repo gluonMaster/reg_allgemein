@@ -2,8 +2,15 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { loadRuntimeConfig, INTAKE_EMAIL_FROM } from '$lib/server/config/runtime';
 import { intakeRouteAllowed } from '$lib/trial-intake/server/mode.server';
 import { handle } from '../../../src/hooks.server';
-import { intakeEndpoint, submit, adminStatus, verify } from '$lib/trial-intake/server/http.server';
+import {
+	intakeEndpoint,
+	intakeRuntime,
+	submit,
+	adminStatus,
+	verify,
+} from '$lib/trial-intake/server/http.server';
 import { INTAKE_PRIVACY_VERSION } from '$lib/trial-intake/contracts';
+import fixture from '../../fixtures/trial-intake/catalog-v1.json';
 
 const db = {
 	prepare: vi.fn(() => {
@@ -131,5 +138,34 @@ describe('trial intake mode and HTTP boundaries', () => {
 				)
 			).status
 		).toBe(200);
+	});
+	it('admin pages read the schedule past the cache; public pages keep the cached copy', async () => {
+		const html = (lessons: unknown[]) =>
+			`<script type="application/json" id="trial-intake-catalog">${JSON.stringify({ ...fixture, lessons })}</script>`;
+		const cache = {
+			match: vi.fn(
+				async () =>
+					new Response(html(fixture.lessons.slice(0, 1)), {
+						headers: { 'x-intake-cached-at': String(Date.now()) },
+					})
+			),
+			put: vi.fn(async () => undefined),
+		};
+		const fetcher = vi.fn(async () => new Response(html(fixture.lessons)));
+		vi.stubGlobal('fetch', fetcher);
+		try {
+			const read = (path: string) => {
+				const e = event(path, 'GET', '');
+				(e.platform as unknown as { caches: unknown }).caches = { open: async () => cache };
+				return intakeRuntime(e).catalog.read();
+			};
+			expect(await read('/warteliste')).toHaveLength(1);
+			expect(fetcher).not.toHaveBeenCalled();
+			expect(await read('/admin/trial-intake/warteliste')).toHaveLength(2);
+			expect(fetcher).toHaveBeenCalledTimes(1);
+			expect(cache.put).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 });

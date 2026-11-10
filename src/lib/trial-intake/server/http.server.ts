@@ -71,7 +71,9 @@ export function intakeRuntime(event: RequestEvent) {
 			undefined,
 			event.platform?.caches
 				? () => event.platform!.caches.open('trial-intake-catalog-v1')
-				: undefined
+				: undefined,
+			// The admin always reads the published schedule; the public pages keep the short cache.
+			event.url.pathname.startsWith('/admin/')
 		),
 		limiter: new AuthRateLimiter(
 			new FoundationRepository(db),

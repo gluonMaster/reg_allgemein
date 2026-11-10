@@ -72,6 +72,27 @@ describe('trial intake catalog and validation', () => {
 			new CatalogReader('https://schedule.example.test/', fetcher, cache).read()
 		).rejects.toMatchObject({ status: 503 });
 	});
+	it('reads fresh past a cached copy and stores what it read', async () => {
+		const changed = fixtureHtml.replace('Musik', 'Changed');
+		const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(fixtureHtml));
+		const cache = {
+			match: vi.fn().mockResolvedValue(
+				new Response(changed, { headers: { 'x-intake-cached-at': String(Date.now()) } })
+			),
+			put: vi.fn().mockResolvedValue(undefined),
+		} as unknown as Cache;
+		const url = 'https://schedule.example.test/';
+		expect(await new CatalogReader(url, fetcher, cache, true).read()).toHaveLength(2);
+		expect(cache.match).not.toHaveBeenCalled();
+		expect(fetcher).toHaveBeenCalledTimes(1);
+		expect(cache.put).toHaveBeenCalledTimes(1);
+		const stored = vi.mocked(cache.put).mock.calls[0][1];
+		expect(await stored.text()).toBe(fixtureHtml);
+		fetcher.mockRejectedValue(new Error('offline'));
+		await expect(new CatalogReader(url, fetcher, cache, true).read()).rejects.toMatchObject({
+			status: 503,
+		});
+	});
 	it('respects Berlin tomorrow across midnight/DST; rejects invalid dates and assignments', async () => {
 		const lessons = await parseCatalog(fixtureHtml);
 		expect(berlinDate('2026-09-16T22:30:00.000Z')).toBe('2026-09-17');
