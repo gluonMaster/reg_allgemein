@@ -15,29 +15,92 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-11-10T22:34:16Z
+updated_utc: 2026-11-10T22:54:47Z
 reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
 local_remediation_candidate: 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
 release_gate_candidate: 21532a0f09dabf4e5a996d71c35b59b1b8f90d67
-last_completed_gate: TIN11-owner-withdrawal
-next_gate: TIN11-worker-deploy-admin-ui
+last_completed_gate: TIN11-worker-deploy-admin-ui
+next_gate: TIN11-telegram-morning-check
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN11-06-done-admin-ui-local
-last_atomic_action: TIN11-owner-withdrawal
+current_phase: TIN11-06-done-waiting_telegram-window
+last_atomic_action: TIN11-worker-deploy-admin-ui
 last_atomic_result: success
-next_atomic_action: TIN11-worker-deploy-admin-ui
+next_atomic_action: TIN11-telegram-morning-check
 rollover_required: no
-recommended_next_session_mode: High
-mode_reason_plain: Planned_Worker_redeploy_with_known_target_and_rollback_no_D1_change
+recommended_next_session_mode: Medium
+mode_reason_plain: Next_step_is_read_only_check_of_one_queued_Telegram_message
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN11: Worker с новой вёрсткой страницы листа задеплоен — 2026-11-10T22:53:11Z
+
+Worker deploy success, exact config, runtime a2a9676f2638: previous 5435e8a77c4c →
+активная 85038f8f9072 на 100%. Один деплой, без повторов, без `--secrets-file`. Оба
+Cron сохранены; пять secret names; bindings D1, BROWSER, ASSETS и прежние 25 vars. D1
+write, Access/flag change и provider send в этой операции отсутствуют.
+
+HTTP read-back: для трёх плановых карточек `/warteliste?lesson=…` — 200 с формой;
+`/admin/trial-intake/warteliste` и `/admin/trial-intake` без сессии — 401;
+/probestunde, /probestunde/catalog, /auth/login, /warteliste/austragen 200;
+/catalog 404; `/_health/operations` 204. D1 read-back, `changed_db=false`:
+migrations 32, requests 33, emails 57 без открытых, telegram 31 — открыто одно
+(ожидающее рабочего окна уведомление контрольной записи), alerts 0, users 1,
+closed_lessons 6; цен 3, запись листа одна `withdrawn`; FK пуст. Fast-запуск на
+новой версии 22:53:54Z succeeded. Новая раскладка на production видна только после
+входа: её проверяет владелец. Evidence protected tmp/trial-intake-waitlist-deploy-20261110/
+(W3-*, R3-*: полный version ID и команда отката).
+
+Rollback/containment: `wrangler rollback` на 5435e8a77c4c с exact config; схема та же.
+
+Перед push checkpoint-коммиты TIN11 объединены по AGENTS.md в три коммита. Кодовые
+коммиты получили новые хеши при тех же деревьях; ссылки в записях TIN11 и в строке 06
+TZ указывают на них. Соответствие прежних и новых хешей — в protected evidence
+(squash-map).
+
+Ровно следующий action: **TIN11-telegram-morning-check** — после 2026-11-11T08:00:00Z
+read-only сверить, что уведомление контрольной записи в Telegram `sent`, и спросить
+владельца, пришло ли сообщение «Warteliste» в чат бюро. Затем этап 07 по
+`07_EXPORTER_ROLLOUT.md`. rollover_required: no; recommended_next_session_mode:
+Medium — следующий шаг только read-only проверка одного сообщения.
+
+## TIN11: вёрстка страницы листа в админке — gate пройден, деплой следующий — 2026-11-10T22:52:38Z
+
+Scope по поручению владельца в чате («привести в порядок UI админки», с адаптивной
+перестройкой под типичные экраны): код `a2a9676` меняет только страницу
+`/admin/trial-intake/warteliste`. Таблица курсов — 7 колонок вместо 11 (курс с
+преподавателем, время и место, две суммы, порог, статус с блокировкой цены,
+действия), слова в ячейках переносятся только по пробелам. Где 7 колонок не
+помещаются, container query превращает курс в карточку с подписанными полями: три в
+ряд на планшете, две на телефоне. Требование —
+[TRIAL_INTAKE_WAITLIST](../domain/TRIAL_INTAKE_WAITLIST.md), критерий — WL-AC-05.
+Один Worker deploy с тем же exact config; D1, vars, secrets, Access и provider send
+не меняются.
+
+Gate на точном коммите a2a9676f2638: `npm run check`; `npm run test:intake-release`
+56 файлов, 399 passed, 1 skipped; intake e2e с `KOLIBRI_E2E_TRIAL_INTAKE=1` —
+intake-ui 2, server-boundaries 1, waitlist-ui 3 passed (новая проверка раскладки на
+390, 820 и 1280 px; снимки просмотрены); `npm run build`; `docs:check`;
+`release:scan`; `git diff --check`. Зависимости не менялись. Preflight: активная
+5435e8a77c4c на 100%, drift нет; dry-run — bindings D1, BROWSER, ASSETS и прежние
+25 vars. Evidence protected tmp/trial-intake-waitlist-deploy-20261110/ (gate3-*,
+D3-*).
+
+Исправление записи 22:27:24Z: факт «бюро предупреждено владельцем» не
+подтверждён — владельцу только рекомендовано предупредить бюро.
+
+Rollback/containment: `wrangler rollback` на 5435e8a77c4c с exact config; схема та же.
+
+Ровно следующий action: **TIN11-worker-deploy-admin-ui** — один `wrangler deploy`,
+read-back версии, Cron, secrets и маршрутов. rollover_required: no;
+recommended_next_session_mode: High — плановый деплой Worker с известными target и
+rollback.
 
 ## TIN11: выход из листа прошёл, этап 06 завершён; следующий — пакет вёрстки админки — 2026-11-10T22:27:24Z
 
@@ -49,7 +112,7 @@ Owner D1 write (06.7), success: владелец вышел из листа по
 чек-листу 06.6: одна страница, умляуты, € и кириллица, тариф и сумма, текст
 согласия, «Nächster Schritt» с адресом и часами офиса, «kein Vertrag». Telegram
 контрольной записи — `pending` до 2026-11-11T08:00:00Z: выход его не отменяет,
-бюро предупреждено владельцем. Доставку проверить утром. Evidence protected
+владельцу рекомендовано предупредить бюро. Доставку проверить утром. Evidence protected
 tmp/trial-intake-waitlist-deploy-20261110/ (S4-*).
 
 Лист открыт для настоящих родителей, курсы не стартовали. Строка 06 в «Ход
@@ -132,7 +195,7 @@ recommended_next_session_mode: High — шаги владельца пишут �
 
 ## TIN11: Worker с чтением расписания в админке без cache задеплоен; waiting_owner — цены — 2026-11-10T17:13:10Z
 
-Worker deploy success, exact config, runtime 03ac27bfe98f: previous 6300bb5ec678 →
+Worker deploy success, exact config, runtime 1e63785aa21e: previous 6300bb5ec678 →
 активная 5435e8a77c4c на 100%. Один деплой, без повторов, без `--secrets-file`.
 Оба Cron `* * * * *` и `*/15 * * * *` сохранены; пять secret names; bindings D1,
 BROWSER, ASSETS и прежние 25 vars. D1 write, Access/flag change и provider send в
@@ -171,13 +234,13 @@ recommended_next_session_mode: High — шаги владельца пишут �
 Портал признал новые карточки в 16:39Z, то есть в пределах cache. Цен в D1 нет
 (0 строк `trial_intake_planned_prices`, 0 записей листа), осиротевших очередей нет.
 
-Scope по прямому решению владельца в чате: код `03ac27b` — страницы и операции
+Scope по прямому решению владельца в чате: код `1e63785` — страницы и операции
 `/admin/…` читают источник заново и кладут прочитанное в cache; публичные
 страницы сохраняют cache до 5 минут. Требование —
 [TRIAL_INTAKE](../domain/TRIAL_INTAKE.md) и TIN-AC-01. Один Worker deploy с тем же
 exact config; D1, vars, secrets, Access и provider send не меняются.
 
-Gate на точном коммите 03ac27bfe98f: `npm run check`; `npm run test:intake-release`
+Gate на точном коммите 1e63785aa21e: `npm run check`; `npm run test:intake-release`
 56 файлов, 399 passed, 1 skipped; intake e2e с `KOLIBRI_E2E_TRIAL_INTAKE=1` —
 intake-ui 2, server-boundaries 1, waitlist-ui 3 passed; `npm run build`;
 `docs:check`; `release:scan`; `git diff --check`. Зависимости не менялись,
