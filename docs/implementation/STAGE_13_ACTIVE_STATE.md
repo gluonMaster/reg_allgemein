@@ -15,29 +15,138 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-10-20T14:42:49Z
+updated_utc: 2026-11-10T14:45:54Z
 reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
 local_remediation_candidate: 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
 release_gate_candidate: 21532a0f09dabf4e5a996d71c35b59b1b8f90d67
-last_completed_gate: TIN10-holidays-and-child-age-deployed
-next_gate: TIN10-owner-manual-acceptance
+last_completed_gate: TIN11-worker-deploy
+next_gate: TIN11-owner-prices
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN10-live-waiting_owner-manual-acceptance
-last_atomic_action: TIN10-worker-deploy
+current_phase: TIN11-06.4-waiting_owner-prices
+last_atomic_action: TIN11-worker-deploy
 last_atomic_result: success
-next_atomic_action: TIN10-owner-manual-acceptance
+next_atomic_action: TIN11-owner-prices
 rollover_required: no
-recommended_next_session_mode: Medium
-mode_reason_plain: Next_step_is_owner_manual_acceptance_without_remote_write
+recommended_next_session_mode: High
+mode_reason_plain: Owner_steps_write_production_D1_and_send_real_mail_with_known_containment
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN11: Worker с листом ожидания задеплоен; waiting_owner — цены — 2026-11-10T14:42:21Z
+
+Worker deploy success, exact config deploy/trial-intake/wrangler.production.jsonc,
+runtime 0322dc00de3b: previous 57003ad0ea0e → активная 6300bb5ec678 на 100%. Один
+деплой, без повторов, без `--secrets-file`. Оба Cron `* * * * *` и `*/15 * * * *`
+сохранены; пять secret names неизменны; bindings версии — D1, BROWSER (Browser
+Run), ASSETS и прежние 25 vars. D1 write, Access/flag change и provider send в этой
+операции отсутствуют.
+
+HTTP read-back: для каждой из трёх плановых карточек `/warteliste?lesson=…` — 200
+с текстом «Die Anmeldung zur Warteliste für diesen Kurs ist bald möglich» (цен ещё
+нет), `/probestunde?lesson=…` — 303 на `/warteliste?lesson=…`; обычная карточка
+English — `/probestunde` 200 без redirect; `/admin/trial-intake/warteliste` без
+сессии — 401 «Seite nicht verfügbar» со ссылкой на вход, как `/admin/trial-intake`
+и `/admin/outbox` (не 404: allowlist действует); `/warteliste/austragen` 200;
+/probestunde, /probestunde/catalog, /auth/login 200; /catalog, /admin/users,
+/auth/register 404; `/_health/operations` 204. D1 read-back: агрегаты как после
+миграции, FK пуст; первые запуски на новой версии — fast 14:42:53Z и maintenance
+14:45:29Z — succeeded.
+Evidence protected tmp/trial-intake-waitlist-deploy-20261110/ (W-*, R-*: полные
+version IDs и команда отката).
+
+Не наблюдалось на production: настоящий Browser Run и вложение Resend — шаг
+пробного письма владельца.
+
+Rollback/containment: `wrangler rollback` на 57003ad0ea0e с exact config; прежний
+код совместим с 0032. Быстрое смягчение без отката: отметить плановые курсы
+закрытыми на странице «Укомплектованные занятия» (лист показывает «запись
+невозможна»); при проблеме с почтой — `TRIAL_INTAKE_ACCEPTING=false`, данные
+сохраняются.
+
+Ровно следующий action: **TIN11-owner-prices** — владелец вводит цены и порог
+плановых курсов на `/admin/trial-intake/warteliste`. Цены `1 E` и Baby — по
+таблице промпта 06; English больше не плановый; цены нового «3Jahrige Di neu»
+задаёт владелец. Затем read-back строк цен, audit и статуса «sammelt: 0 von 3».
+rollover_required: no; recommended_next_session_mode: High — шаги владельца пишут
+в production D1 и отправляют настоящие письма, containment известен.
+
+## TIN11: миграция 0032 применена; Worker следующий — 2026-11-10T14:39:54Z
+
+Scope: как в записи preflight ниже. Эта операция — только D1 migration; Worker,
+vars, secrets, Access и provider send не менялись.
+
+Migration success через staged config (32 файла, blob 0032 совпадает с коммитом,
+pending ровно одна), 23 команды. Before/after: applied 31 → 32, last 0032; FK пуст
+до и после; requests32, emails55, telegram30 без открытых строк, alerts0, users1,
+closed_lessons6 — без изменений; все 32 заявки получили `kind='trial'`. Созданы
+все 20 объектов миграции: 8 таблиц листа ожидания, 7 триггеров WL-06 и 5 индексов;
+новые таблицы пусты. Read-only ответы: `changed_db=false`, `rows_written=0`.
+Evidence protected tmp/trial-intake-waitlist-deploy-20261110/ (S32-*).
+
+Rollback/containment: миграцию не откатывать. Прежний Worker 57003ad0ea0e
+совместим с 0032: новая колонка имеет default, новые триггеры висят только на
+новых таблицах, которые он не читает.
+
+Ровно следующий action: **TIN11-worker-deploy** — один `wrangler deploy` с exact
+config и binding `BROWSER`, read-back версии, Cron, secrets и новых маршрутов.
+rollover_required: no; recommended_next_session_mode: High — плановый деплой Worker
+с известными target и rollback.
+
+## TIN11: лист ожидания — preflight и gate пройдены, миграция 0032 следующая — 2026-11-10T14:37:16Z
+
+Scope: выпуск листа ожидания по прямому запуску владельцем этапа 06
+([TRIAL_INTAKE_WAITLIST_TZ](TRIAL_INTAKE_WAITLIST_TZ.md#публикация-короткими-фазами),
+фазы 06.1–06.7): миграция 0032 в production D1, binding `BROWSER` в Git-ignored
+deploy config, один Worker deploy, затем ручные шаги владельца — цены, контрольная
+запись, пробное письмо с PDF, выход. Не входят: экспортер и сервер редактора,
+Netlify (07), preview, официальный сайт, ротация secrets, реальный старт курса.
+В этой записи remote mutation нет.
+
+Preflight read-only: Worker `kolibri-trial-intake`, активная версия 57003ad0ea0e на
+100% — та же, что в TIN10, drift нет; пять secret names; D1 applied 31 (последняя
+0031), pending ровно 0032; FK пуст; requests32, emails55 и telegram30 без открытых
+строк, alerts0, users1, closed_lessons6; оба cadence succeeded. Живое расписание —
+200 без redirect, каталог version 1, 111 карточек, три плановые (ID — в protected
+evidence).
+
+Расписание изменилось после подготовки промпта: English (Di 16:00–17:00) стал
+обычным курсом с собственной группой. Плановые сейчас — `1 E` (Di 16:00–16:45,
+5–6 лет), новый «3Jahrige Di neu» (Di 16:00–16:45, возраст правилом не
+определяется) и Baby (Do 16:00–16:45, 1–3 года). На деплой это не влияет; цены
+нового курса владелец задаёт на шаге цен.
+
+Gate на точном коммите 0322dc00de3b: `npm run check` 0 errors;
+`npm run test:intake-release` 56 файлов, 397 passed, 1 skipped; intake e2e с
+`KOLIBRI_E2E_TRIAL_INTAKE=1` — intake-ui 2, server-boundaries 1, waitlist-ui 3
+passed; `npm run build`; `docs:check`; `release:scan`; `git diff --check`.
+`npm audit --omit=dev`: изменённая зависимость `fflate` без advisories; 2 high —
+`devalue` и `zod` тех же версий, что в развёрнутом beed372 (класс DoS), `P2` вне
+этого выпуска. Полный `npm test` не нужен: модули полного портала не менялись
+(отчёты 01–04).
+
+Config: в Git-ignored deploy config добавлен только binding `BROWSER`; прочие vars
+и secrets прежние. `BROWSER_RUN_DAILY_BUDGET_MS` не задаётся: default 60 000 мс в
+сутки — десятая часть дневного лимита Browser Run на Workers Free (10 минут; на
+Paid — 10 часов в месяц, документация Cloudflare 2026-10). `wrangler deploy
+--dry-run`: bindings D1, BROWSER (Browser Run), ASSETS и прежние 25 vars.
+Миграция подготовлена staged config: 32 файла byte-identical, blob 0032 совпадает
+с коммитом. Evidence protected tmp/trial-intake-waitlist-deploy-20261110/ (P-*,
+gate-*, C-*, stage-0032).
+
+Rollback/containment: до первой записи не требуется. Миграция аддитивна, прежний
+Worker 57003ad0ea0e с ней совместим, откат схемы не предусмотрен.
+
+Ровно следующий action: **TIN11-migration-0032** — `wrangler d1 migrations apply`
+со staged config, before/after `SELECT name FROM d1_migrations` и
+`PRAGMA foreign_key_check`. rollover_required: no; recommended_next_session_mode:
+High — плановая аддитивная миграция с известным target.
 
 ## TIN10: праздники, каникулы и возраст ребёнка в production — 2026-10-20T14:42:49Z
 
