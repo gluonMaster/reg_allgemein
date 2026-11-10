@@ -15,29 +15,182 @@
 
 <!-- stage-13-continuity
 schema: 1
-updated_utc: 2026-11-10T14:45:54Z
+updated_utc: 2026-11-10T22:34:16Z
 reviewed_candidate: 8d12076235145f812b1063e457447724addb047a
 local_remediation_candidate: 4cc05624c3db32d7b9f711806c3a6c62fe9bc29e
 release_gate_candidate: 21532a0f09dabf4e5a996d71c35b59b1b8f90d67
-last_completed_gate: TIN11-worker-deploy
-next_gate: TIN11-owner-prices
+last_completed_gate: TIN11-owner-withdrawal
+next_gate: TIN11-worker-deploy-admin-ui
 nearest_milestone: trial-intake
 manual_preview_status: blocked
 production_status: blocked
 current_review_status: pending_independent_review
-current_phase: TIN11-06.4-waiting_owner-prices
-last_atomic_action: TIN11-worker-deploy
+current_phase: TIN11-06-done-admin-ui-local
+last_atomic_action: TIN11-owner-withdrawal
 last_atomic_result: success
-next_atomic_action: TIN11-owner-prices
+next_atomic_action: TIN11-worker-deploy-admin-ui
 rollover_required: no
 recommended_next_session_mode: High
-mode_reason_plain: Owner_steps_write_production_D1_and_send_real_mail_with_known_containment
+mode_reason_plain: Planned_Worker_redeploy_with_known_target_and_rollback_no_D1_change
 -->
 
 Этот файл — **единственный источник текущего operational state** Stage 13.
 Roadmap, runbooks, readiness/traceability и handoff задают стабильные правила либо
 хранят историю; из них нельзя выводить current candidate, deployed version или
 следующее действие. Историю открывать только по конкретной ссылке на evidence.
+
+## TIN11: выход из листа прошёл, этап 06 завершён; следующий — пакет вёрстки админки — 2026-11-10T22:27:24Z
+
+Owner D1 write (06.7), success: владелец вышел из листа по ссылке из письма о
+записи. Read-back 22:33Z: запись `withdrawn` с 22:27:24Z, audit
+`trial_intake.waitlist_withdrawn`; цены трёх курсов не изменились, стартов 0;
+пробное письмо `sent`; открытых писем заявок нет (всего 57); FK пуст. Владелец
+подтвердил «0 von 3» и снятую блокировку цены, а пробное письмо и PDF — по
+чек-листу 06.6: одна страница, умляуты, € и кириллица, тариф и сумма, текст
+согласия, «Nächster Schritt» с адресом и часами офиса, «kein Vertrag». Telegram
+контрольной записи — `pending` до 2026-11-11T08:00:00Z: выход его не отменяет,
+бюро предупреждено владельцем. Доставку проверить утром. Evidence protected
+tmp/trial-intake-waitlist-deploy-20261110/ (S4-*).
+
+Лист открыт для настоящих родителей, курсы не стартовали. Строка 06 в «Ход
+выполнения» [TRIAL_INTAKE_WAITLIST_TZ](TRIAL_INTAKE_WAITLIST_TZ.md) заполнена.
+
+Rollback/containment: прежние, см. записи деплоя ниже.
+
+Ровно следующий action: **TIN11-worker-deploy-admin-ui** — по поручению владельца
+пакет вёрстки админки (`P3` из записи 18:05:54Z): локальная правка CSS таблиц
+админки, intake gate на точном коммите, один Worker deploy и read-back.
+rollover_required: no; recommended_next_session_mode: High — плановый деплой
+Worker с известными target и rollback.
+
+## TIN11: контрольная запись и пробное письмо с PDF прошли; waiting_owner — проверка PDF — 2026-11-10T18:05:54Z
+
+Две операции владельца записаны вместе: пробное письмо владелец отправил раньше
+инструкции агента, обе сверены read-only в 22:23Z. Агент remote write не делал.
+
+Контрольная запись (06.5), success: одна заявка `kind='waitlist'` создана
+17:52:24Z, verified 17:53:48Z; запись листа `waiting` на `Russisch 1E`, тариф
+monthly, суммы 3000/2300, порог 3, одна запись ребёнка, consent version листа.
+Письма заявки `verify` и `confirm` — `sent` с первой попытки. Telegram
+`bureau.trial_intake` — `pending`, `not_before` 2026-11-11T08:00:00Z (09:00 Берлин,
+запись вне рабочего окна; по OQ-044 этого достаточно, доставку проверить утром).
+Владелец подтвердил: оба письма пришли, экран «Sie stehen auf der Warteliste»,
+админка «1 von 3», изменение цены отклонено (audit цены нет). FK пуст; открытых
+писем нет (всего 57).
+
+Пробное письмо (06.6), success на стороне портала: `trial_intake.waitlist_probe_sent`
+18:04:57Z; строка `probe` (Russisch 1E, дата 2026-12-08) `sent` 18:05:54Z с первой
+попытки, PDF sha256 65f6056eee66…, без `last_error_code`. Render usage: `probe`,
+`cloudflare-browser-run-pdf-v1`, `succeeded`. Стартов 0, запись по-прежнему
+`waiting`. Пробный PDF по TZ не хранится. Это первая remote conformance Browser Run и
+вложения Resend. Evidence protected tmp/trial-intake-waitlist-deploy-20261110/
+(S2-*, S3-*).
+
+Находки, без P0/P1:
+- `P2`: `browser_ms_used` записан 0. `BrowserRunContractPdfAdapter` превращает
+  отсутствующий заголовок `X-Browser-Ms-Used` в 0 (`Number(null)`), поэтому
+  дневной лимит `BROWSER_RUN_DAILY_BUDGET_MS` фактически не считает время. Риск
+  мал: PDF нужны только при старте курса, Cloudflare учитывает время сам.
+  Исправлять отдельно, это модуль полного портала.
+- `P3` (замечание владельца): таблица `/admin/trial-intake/warteliste` рвёт
+  слова посреди слова. Причина — `overflow-wrap: anywhere` у `.intake` в
+  авто-таблице с полями ввода. Доводка UI в TZ не планировалась; правка — отдельным
+  пакетом после 06.
+
+Rollback/containment: выход по ссылке из письма о записи; пробное письмо без
+последствий для очереди.
+
+Ровно следующий action: **TIN11-owner-probe-check** — владелец проверяет пробное
+письмо и PDF по чек-листу 06.6, затем выход по ссылке (06.7) и read-back.
+rollover_required: no; recommended_next_session_mode: High — шаг владельца пишет в
+production D1, containment известен.
+
+## TIN11: цены введены владельцем, лист ожидания открыт; waiting_owner — контрольная запись — 2026-11-10T17:22:56Z
+
+Owner D1 write через `/admin/trial-intake/warteliste`, success. Read-back
+17:28:51Z — три строки `trial_intake_planned_prices` без `attention_reasons`:
+`Russisch 1E` (Di 16:00–16:45, Villa, 5–6 лет) 3000/2300 cents, порог 3; «3Jahrige
+Di neu» (Di 16:00–16:45, Villa, возраст не определяется) 4500/3450, порог 3; Baby
+(Do 16:00–16:45, Villa, 1–3 года) 4500/3450, порог 3. Audit — три
+`trial_intake.waitlist_price_set` 17:22:19–17:22:56Z. Записей листа, заявок
+`kind='waitlist'`, писем листа и стартов 0; FK пуст. XLSX владелец открыл в Excel.
+
+С этого момента лист открыт для настоящих родителей: `/warteliste?lesson=…` всех
+трёх плановых карточек показывает форму с суммами, а живое расписание уже ведёт
+плановые карточки прямо на `/warteliste`. Evidence protected
+tmp/trial-intake-waitlist-deploy-20261110/ (P1-*).
+
+Rollback/containment: пока записей нет, цену можно удалить в админке (audited) —
+лист снова показывает «bald möglich»; иначе — закрыть занятие на странице
+«Укомплектованные занятия» или `TRIAL_INTAKE_ACCEPTING=false`; данные сохраняются.
+
+Ровно следующий action: **TIN11-owner-control-signup** — после ответа владельца на
+вопрос о письмах: контрольная запись на собственный email владельца с вымышленным
+ребёнком, затем read-back D1 без PII. rollover_required: no;
+recommended_next_session_mode: High — шаги владельца пишут в production D1 и
+отправляют настоящие письма, containment известен.
+
+## TIN11: Worker с чтением расписания в админке без cache задеплоен; waiting_owner — цены — 2026-11-10T17:13:10Z
+
+Worker deploy success, exact config, runtime 03ac27bfe98f: previous 6300bb5ec678 →
+активная 5435e8a77c4c на 100%. Один деплой, без повторов, без `--secrets-file`.
+Оба Cron `* * * * *` и `*/15 * * * *` сохранены; пять secret names; bindings D1,
+BROWSER, ASSETS и прежние 25 vars. D1 write, Access/flag change и provider send в
+этой операции отсутствуют.
+
+HTTP read-back: для трёх текущих плановых карточек (`Russisch 1E`, «3Jahrige Di
+neu», Baby) `/warteliste?lesson=…` — 200 «bald möglich», `/probestunde?lesson=…` —
+303 на лист ожидания; `/admin/trial-intake/warteliste` и `/admin/trial-intake` без
+сессии — 401; /probestunde, /probestunde/catalog, /auth/login,
+/warteliste/austragen 200; /catalog 404; `/_health/operations` 204. D1 read-back:
+агрегаты без изменений (migrations 32, requests 32, emails 55 и telegram 30 без
+открытых строк, alerts 0, users 1, closed_lessons 6), FK пуст, цен и записей листа
+0, `changed_db=false`. Первые запуски на новой версии: fast 17:13:54Z и 17:14:54Z, maintenance 17:15:28Z — succeeded.
+Чтение админки без cache на production видно только после входа: проверяет
+владелец перезагрузкой «Warteliste» на шаге цен. Evidence protected
+tmp/trial-intake-waitlist-deploy-20261110/ (W2-*, R2-*: полный version ID и
+команда отката).
+
+Rollback/containment: `wrangler rollback` на 6300bb5ec678 с exact config; схема та
+же. Смягчения из записи деплоя 14:42:21Z ниже остаются в силе.
+
+Ровно следующий action: **TIN11-owner-prices** — владелец вводит цены и порог
+плановых курсов на `/admin/trial-intake/warteliste`: `Russisch 1E` (бывший `1 E`)
+и Baby — по таблице промпта 06, цены «3Jahrige Di neu» задаёт владелец; затем
+read-back строк цен, audit и статуса «sammelt: 0 von 3». rollover_required: no;
+recommended_next_session_mode: High — шаги владельца пишут в production D1 и
+отправляют настоящие письма, containment известен.
+
+## TIN11: админка читает расписание без cache — gate пройден, деплой следующий — 2026-11-10T17:12:15Z
+
+Причина: владелец опубликовал новое расписание, а `/admin/trial-intake/warteliste`
+ещё показывала прежний плановый курс `1 E`. Портал читает живой HTML расписания
+через cache до 5 минут, и админка пользовалась тем же cache. Read-only в 16:38Z:
+живое расписание — 111 карточек, плановые `Russisch 1E` (Di 16:00–16:45, Villa;
+бывший `1 E`), «3Jahrige Di neu» с новым суффиксом группы и Baby без изменений.
+Портал признал новые карточки в 16:39Z, то есть в пределах cache. Цен в D1 нет
+(0 строк `trial_intake_planned_prices`, 0 записей листа), осиротевших очередей нет.
+
+Scope по прямому решению владельца в чате: код `03ac27b` — страницы и операции
+`/admin/…` читают источник заново и кладут прочитанное в cache; публичные
+страницы сохраняют cache до 5 минут. Требование —
+[TRIAL_INTAKE](../domain/TRIAL_INTAKE.md) и TIN-AC-01. Один Worker deploy с тем же
+exact config; D1, vars, secrets, Access и provider send не меняются.
+
+Gate на точном коммите 03ac27bfe98f: `npm run check`; `npm run test:intake-release`
+56 файлов, 399 passed, 1 skipped; intake e2e с `KOLIBRI_E2E_TRIAL_INTAKE=1` —
+intake-ui 2, server-boundaries 1, waitlist-ui 3 passed; `npm run build`;
+`docs:check`; `release:scan`; `git diff --check`. Зависимости не менялись,
+`npm audit` не повторялся. Preflight: активная 6300bb5ec678 на 100%, drift нет;
+dry-run — bindings D1, BROWSER, ASSETS и прежние 25 vars. Evidence protected
+tmp/trial-intake-waitlist-deploy-20261110/ (gate2-*, D2-*).
+
+Rollback/containment: `wrangler rollback` на 6300bb5ec678 с exact config; схема та же.
+
+Ровно следующий action: **TIN11-worker-deploy-admin-catalog** — один `wrangler
+deploy`, read-back версии, Cron, secrets и публичных/админских маршрутов. Затем
+снова waiting_owner — цены. rollover_required: no; recommended_next_session_mode:
+High — плановый деплой Worker с известными target и rollback.
 
 ## TIN11: Worker с листом ожидания задеплоен; waiting_owner — цены — 2026-11-10T14:42:21Z
 
